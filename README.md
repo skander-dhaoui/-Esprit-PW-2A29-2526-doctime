@@ -5,7 +5,7 @@ This project was developed at Esprit School of Engineering – Tunisia as part o
 
 DocTime is a web application that allows patients to book medical appointments online.
 
----
+
 
 ##  Features
 - Online appointment booking
@@ -13,7 +13,7 @@ DocTime is a web application that allows patients to book medical appointments o
 - Patient dashboard
 - Authentication system
 
----
+
 
 ##  Tech Stack
 - HTML
@@ -22,7 +22,7 @@ DocTime is a web application that allows patients to book medical appointments o
 - PHP / Symfony
 - MySQL
 
----
+
 
 ##  Contributors
 - gorai afnen
@@ -31,7 +31,7 @@ DocTime is a web application that allows patients to book medical appointments o
 - bouzgarrou iheb
 - selmi khawla
 
----
+
 
 ##  Academic Context
 Projet Web (2A) – 2025–2026
