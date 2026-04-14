@@ -163,31 +163,79 @@ class FrontController {
     }
     
     /**
-     * Liste des articles (publique)
+     * Liste des articles du blog (publique)
      */
-    public function listeArticles(): void {
-        $this->renderTemporaryView('Articles du blog', '<p>Page des articles en construction...</p>');
+    public function blogList(): void {
+        require_once __DIR__ . '/../models/Article.php';
+        $articleModel = new Article();
+        $articles = $articleModel->getAll();
+        require_once __DIR__ . '/../views/frontoffice/blog_list.php';
     }
     
     /**
      * Détail d'un article (publique)
      */
-    public function detailArticle($id): void {
-        $this->renderTemporaryView('Détail de l\'article', '<p>Article ID: ' . htmlspecialchars($id) . '</p>');
+    public function blogDetail(int $id): void {
+        require_once __DIR__ . '/../models/Article.php';
+        require_once __DIR__ . '/../models/Reply.php';
+        $articleModel = new Article();
+        $replyModel = new Reply();
+        
+        $article = $articleModel->getById($id);
+        if (!$article) {
+            $this->page404();
+            return;
+        }
+        
+        $replies = $replyModel->getByArticle($id);
+        require_once __DIR__ . '/../views/frontoffice/blog_detail.php';
     }
     
     /**
-     * Liste des événements (publique)
+     * Liste des articles (publique) - ancienne méthode conservée pour compatibilité
+     */
+    public function listeArticles(): void {
+        $this->blogList();
+    }
+    
+    /**
+     * Détail d'un article (publique) - ancienne méthode conservée pour compatibilité
+     */
+    public function detailArticle($id): void {
+        $this->blogDetail($id);
+    }
+    
+    /**
+     * Liste des événements (publique) - CORRIGÉE
      */
     public function listeEvenements(): void {
-        $this->renderTemporaryView('Événements', '<p>Page des événements en construction...</p>');
+        require_once __DIR__ . '/../controllers/EventController.php';
+        $eventController = new EventController();
+        $eventController->frontList();
     }
     
     /**
-     * Détail d'un événement (publique)
+     * Détail d'un événement (publique) - CORRIGÉE
+     * Accepte soit un slug soit un ID
      */
-    public function detailEvenement($id): void {
-        $this->renderTemporaryView('Détail de l\'événement', '<p>Événement ID: ' . htmlspecialchars($id) . '</p>');
+    public function detailEvenement($slugOrId): void {
+        require_once __DIR__ . '/../controllers/EventController.php';
+        require_once __DIR__ . '/../models/Event.php';
+        
+        $eventController = new EventController();
+        
+        // Si c'est un ID numérique, on récupère le slug
+        if (is_numeric($slugOrId)) {
+            $eventModel = new Event();
+            $event = $eventModel->getById((int)$slugOrId);
+            if ($event) {
+                $eventController->frontShow($event['slug']);
+                return;
+            }
+        }
+        
+        // Sinon, on considère que c'est un slug
+        $eventController->frontShow($slugOrId);
     }
     
     /**
@@ -264,7 +312,8 @@ class FrontController {
      */
     public function mesRendezVous(): void {
         $this->requireLogin();
-        $this->renderTemporaryView('Mes rendez-vous', '<p>Liste de vos rendez-vous</p>');
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
     }
     
     /**
@@ -272,7 +321,8 @@ class FrontController {
      */
     public function annulerRendezVous($id): void {
         $this->requireLogin();
-        $this->renderTemporaryView('Annuler rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' annulé</p>');
+        header('Location: index.php?page=annuler_rendez_vous&id=' . $id);
+        exit;
     }
     
     /**
@@ -280,7 +330,8 @@ class FrontController {
      */
     public function confirmerRendezVous($id): void {
         $this->requireLogin();
-        $this->renderTemporaryView('Confirmer rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' confirmé</p>');
+        header('Location: index.php?page=medecin_rendezvous&action=confirm&id=' . $id);
+        exit;
     }
     
     /**
@@ -288,7 +339,8 @@ class FrontController {
      */
     public function mesOrdonnances(): void {
         $this->requireLogin();
-        $this->renderTemporaryView('Mes ordonnances', '<p>Liste de vos ordonnances</p>');
+        header('Location: index.php?page=mes_ordonnances');
+        exit;
     }
     
     /**
@@ -555,7 +607,7 @@ class FrontController {
                         <ul class="navbar-nav me-auto">
                             <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=articles">Blog</a></li>
+                            <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=evenements">Événements</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
                         </ul>
@@ -827,6 +879,7 @@ class FrontController {
                     <ul class="navbar-nav mx-auto">
                         <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
                     </ul>
@@ -855,6 +908,7 @@ class FrontController {
                     <ul class="navbar-nav mx-auto">
                         <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
                     </ul>
@@ -899,38 +953,165 @@ class FrontController {
     /**
      * Génère le HTML du dashboard public
      */
-private function getPublicDashboardHTML(): string {
-    $isLoggedIn = !empty($_SESSION['user_id']);
-    $userRole   = $_SESSION['user_role'] ?? '';
-    $userName   = htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur');
+    private function getPublicDashboardHTML(): string {
+        $isLoggedIn = !empty($_SESSION['user_id']);
+        $userRole   = $_SESSION['user_role'] ?? '';
+        $userName   = htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur');
 
-    if ($isLoggedIn) {
-        // ── Contenu personnalisé selon le rôle ──
-        $roleContent = '';
+        if ($isLoggedIn) {
+            // ── Contenu personnalisé selon le rôle ──
+            $roleContent = '';
 
-        if ($userRole === 'admin') {
-            $roleContent = '
+            if ($userRole === 'admin') {
+                $roleContent = '
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-tachometer-alt fa-3x text-danger mb-3"></i>
+                            <h5>Administration</h5>
+                            <p class="small text-muted">Gérer les utilisateurs et le contenu</p>
+                            <a href="index.php?page=dashboard" class="btn btn-danger btn-sm">Tableau de bord</a>
+                        </div>
+                    </div>
+                </div>';
+            }
+
+            if (in_array($userRole, ['patient', 'admin'])) {
+                $roleContent .= '
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
+                            <h5>Mes rendez-vous</h5>
+                            <p class="small text-muted">Voir et gérer vos rendez-vous</p>
+                            <a href="index.php?page=mes_rendez_vous" class="btn btn-primary btn-sm">Voir</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-prescription fa-3x text-success mb-3"></i>
+                            <h5>Mes ordonnances</h5>
+                            <p class="small text-muted">Consultez vos ordonnances</p>
+                            <a href="index.php?page=mes_ordonnances" class="btn btn-success btn-sm">Voir</a>
+                        </div>
+                    </div>
+                </div>';
+            }
+
+            if ($userRole === 'medecin') {
+                $roleContent .= '
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                            <h5>Mes rendez-vous</h5>
+                            <p class="small text-muted">Consulter vos consultations</p>
+                            <a href="index.php?page=medecin_rendezvous" class="btn btn-primary btn-sm">Voir</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-clock fa-3x text-info mb-3"></i>
+                            <h5>Disponibilités</h5>
+                            <p class="small text-muted">Gérer vos créneaux</p>
+                            <a href="index.php?page=medecin_disponibilites" class="btn btn-info btn-sm">Gérer</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100 text-center p-3">
+                        <div class="card-body">
+                            <i class="fas fa-prescription fa-3x text-success mb-3"></i>
+                            <h5>Mes ordonnances</h5>
+                            <p class="small text-muted">Consultez vos ordonnances</p>
+                            <a href="index.php?page=medecin_ordonnances" class="btn btn-success btn-sm">Voir</a>
+                        </div>
+                    </div>
+                </div>';
+            }
+
+            // Carte commune : profil
+            $roleContent .= '
             <div class="col-md-3">
                 <div class="card h-100 text-center p-3">
                     <div class="card-body">
-                        <i class="fas fa-tachometer-alt fa-3x text-danger mb-3"></i>
-                        <h5>Administration</h5>
-                        <p class="small text-muted">Gérer les utilisateurs et le contenu</p>
-                        <a href="index.php?page=dashboard" class="btn btn-danger btn-sm">Tableau de bord</a>
+                        <i class="fas fa-user-circle fa-3x text-secondary mb-3"></i>
+                        <h5>Mon profil</h5>
+                        <p class="small text-muted">Consulter et modifier vos informations</p>
+                        <a href="index.php?page=mon_profil" class="btn btn-secondary btn-sm">Mon profil</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 text-center p-3">
+                    <div class="card-body">
+                        <i class="fas fa-box fa-3x text-info mb-3"></i>
+                        <h5>Pharmacie</h5>
+                        <p class="small text-muted">Achetez vos médicaments</p>
+                        <a href="index.php?page=produits" class="btn btn-outline-primary btn-sm">Découvrir</a>
+                    </div>
+                </div>
+            </div>';
+
+            return '
+            <div class="text-center mb-5">
+                <h1 class="display-4 mb-3">Bonjour, ' . $userName . '&nbsp;!</h1>
+                <p class="lead text-muted">Bienvenue sur votre espace Valorys</p>
+            </div>
+            <div class="row g-4 mb-5">' . $roleContent . '</div>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i> Prochain Rendez-vous</h5>
+                        </div>
+                        <div class="card-body text-center py-4">
+                            <p class="text-muted">Aucun rendez-vous planifié</p>
+                            <a href="index.php?page=prendre_rendez_vous" class="btn btn-primary btn-sm">Prendre un rendez-vous</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-ticket-alt text-success me-2"></i> Événements à Venir</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>🏥 Conférence sur la cardiologie</span>
+                                <small class="text-muted">15 Avril 2026</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>🍎 Atelier bien-être</span>
+                                <small class="text-muted">22 Avril 2026</small>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="index.php?page=evenements" class="btn btn-sm btn-outline-primary">Voir tous</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>';
         }
 
-        if (in_array($userRole, ['patient', 'admin'])) {
-            $roleContent .= '
+        // ── Page publique (non connecté) ──────────────────────────
+        return '
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">Bienvenue sur Valorys!</h1>
+            <p class="lead text-muted">Connectez-vous pour accéder à tous nos services</p>
+        </div>
+        <div class="row g-4 mb-5">
             <div class="col-md-3">
                 <div class="card h-100 text-center p-3">
                     <div class="card-body">
                         <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
-                        <h5>Mes rendez-vous</h5>
-                        <p class="small text-muted">Voir et gérer vos rendez-vous</p>
-                        <a href="index.php?page=mes_rendez_vous" class="btn btn-primary btn-sm">Voir</a>
+                        <h5>Prendre Rendez-vous</h5>
+                        <p class="small text-muted">Demandez un rendez-vous en ligne</p>
+                        <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
                     </div>
                 </div>
             </div>
@@ -938,67 +1119,33 @@ private function getPublicDashboardHTML(): string {
                 <div class="card h-100 text-center p-3">
                     <div class="card-body">
                         <i class="fas fa-prescription fa-3x text-success mb-3"></i>
-                        <h5>Mes ordonnances</h5>
+                        <h5>Ordonnances</h5>
                         <p class="small text-muted">Consultez vos ordonnances</p>
-                        <a href="index.php?page=mes_ordonnances" class="btn btn-success btn-sm">Voir</a>
-                    </div>
-                </div>
-            </div>';
-        }
-
-        if ($userRole === 'medecin') {
-            $roleContent .= '
-            <div class="col-md-3">
-                <div class="card h-100 text-center p-3">
-                    <div class="card-body">
-                        <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
-                        <h5>Mes rendez-vous</h5>
-                        <p class="small text-muted">Consulter vos consultations</p>
-                        <a href="index.php?page=mes_rendez_vous" class="btn btn-primary btn-sm">Voir</a>
+                        <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card h-100 text-center p-3">
                     <div class="card-body">
-                        <i class="fas fa-clock fa-3x text-info mb-3"></i>
-                        <h5>Disponibilités</h5>
-                        <p class="small text-muted">Gérer vos créneaux</p>
-                        <a href="index.php?page=disponibilites" class="btn btn-info btn-sm">Gérer</a>
+                        <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+                        <h5>Réclamations</h5>
+                        <p class="small text-muted">Signalez un problème</p>
+                        <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
                     </div>
                 </div>
-            </div>';
-        }
-
-        // Carte commune : profil
-        $roleContent .= '
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-user-circle fa-3x text-secondary mb-3"></i>
-                    <h5>Mon profil</h5>
-                    <p class="small text-muted">Consulter et modifier vos informations</p>
-                    <a href="index.php?page=mon_profil" class="btn btn-secondary btn-sm">Mon profil</a>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 text-center p-3">
+                    <div class="card-body">
+                        <i class="fas fa-box fa-3x text-info mb-3"></i>
+                        <h5>Pharmacie</h5>
+                        <p class="small text-muted">Achetez vos médicaments</p>
+                        <a href="index.php?page=produits" class="btn btn-outline-primary btn-sm">Découvrir</a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-box fa-3x text-info mb-3"></i>
-                    <h5>Pharmacie</h5>
-                    <p class="small text-muted">Achetez vos médicaments</p>
-                    <a href="index.php?page=produits" class="btn btn-outline-primary btn-sm">Découvrir</a>
-                </div>
-            </div>
-        </div>';
-
-        return '
-        <div class="text-center mb-5">
-            <h1 class="display-4 mb-3">Bonjour, ' . $userName . '&nbsp;!</h1>
-            <p class="lead text-muted">Bienvenue sur votre espace Valorys</p>
-        </div>
-        <div class="row g-4 mb-5">' . $roleContent . '</div>
         <div class="row g-4">
             <div class="col-md-6">
                 <div class="card">
@@ -1006,8 +1153,8 @@ private function getPublicDashboardHTML(): string {
                         <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i> Prochain Rendez-vous</h5>
                     </div>
                     <div class="card-body text-center py-4">
-                        <p class="text-muted">Aucun rendez-vous planifié</p>
-                        <a href="index.php?page=medecins" class="btn btn-primary btn-sm">Prendre un rendez-vous</a>
+                        <p class="text-muted">Connectez-vous pour voir vos rendez-vous</p>
+                        <a href="index.php?page=login" class="btn btn-primary">Se connecter</a>
                     </div>
                 </div>
             </div>
@@ -1033,87 +1180,6 @@ private function getPublicDashboardHTML(): string {
             </div>
         </div>';
     }
-
-    // ── Page publique (non connecté) ──────────────────────────
-    return '
-    <div class="text-center mb-5">
-        <h1 class="display-4 mb-3">Bienvenue sur Valorys!</h1>
-        <p class="lead text-muted">Connectez-vous pour accéder à tous nos services</p>
-    </div>
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
-                    <h5>Prendre Rendez-vous</h5>
-                    <p class="small text-muted">Demandez un rendez-vous en ligne</p>
-                    <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-prescription fa-3x text-success mb-3"></i>
-                    <h5>Ordonnances</h5>
-                    <p class="small text-muted">Consultez vos ordonnances</p>
-                    <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
-                    <h5>Réclamations</h5>
-                    <p class="small text-muted">Signalez un problème</p>
-                    <a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 text-center p-3">
-                <div class="card-body">
-                    <i class="fas fa-box fa-3x text-info mb-3"></i>
-                    <h5>Pharmacie</h5>
-                    <p class="small text-muted">Achetez vos médicaments</p>
-                    <a href="index.php?page=produits" class="btn btn-outline-primary btn-sm">Découvrir</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i> Prochain Rendez-vous</h5>
-                </div>
-                <div class="card-body text-center py-4">
-                    <p class="text-muted">Connectez-vous pour voir vos rendez-vous</p>
-                    <a href="index.php?page=login" class="btn btn-primary">Se connecter</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-ticket-alt text-success me-2"></i> Événements à Venir</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>🏥 Conférence sur la cardiologie</span>
-                        <small class="text-muted">15 Avril 2026</small>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>🍎 Atelier bien-être</span>
-                        <small class="text-muted">22 Avril 2026</small>
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="index.php?page=evenements" class="btn btn-sm btn-outline-primary">Voir tous</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>';
 }
-}
+// FIN DE LA CLASSE - RIEN NE DOIT ÊTRE ÉCRIT APRÈS CETTE LIGNE
+?>

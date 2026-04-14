@@ -1,245 +1,204 @@
 <?php
-
 require_once __DIR__ . '/../models/Disponibilite.php';
-require_once __DIR__ . '/../models/Medecin.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/AuthController.php';
 
 class DisponibiliteController {
-
-    private Disponibilite $disponibiliteModel;
-    private Medecin $medecinModel;
+    private Disponibilite $dispoModel;
+    private User $userModel;
     private AuthController $auth;
-    private Database $db;
 
     public function __construct() {
-        $this->disponibiliteModel = new Disponibilite();
-        $this->medecinModel = new Medecin();
+        $this->dispoModel = new Disponibilite();
+        $this->userModel = new User();
         $this->auth = new AuthController();
-        $this->db = Database::getInstance();
     }
 
     // ─────────────────────────────────────────
-    //  Liste des disponibilités (médecin)
+    //  BACKOFFICE - Gestion des disponibilités
     // ─────────────────────────────────────────
-    public function indexMedecin(): void {
-        $this->auth->requireRole('medecin');
 
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $disponibilites = $this->disponibiliteModel->getByMedecin($medecinId);
-
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/disponibilite_list_medecin.php';
-        } catch (Exception $e) {
-            error_log('Erreur DisponibiliteController::indexMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors du chargement des disponibilités.';
-            header('Location: index.php?page=accueil');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Liste des disponibilités (admin)
-    // ─────────────────────────────────────────
-    public function indexAdmin(): void {
+    public function adminIndex(): void {
         $this->auth->requireRole('admin');
+        $dispos = $this->dispoModel->getAll();
+        require_once __DIR__ . '/../views/backoffice/disponibilite/list.php';
+    }
 
-        try {
-            $medecinId = $_GET['medecin'] ?? null;
-            $filter = $_GET['filter'] ?? 'all';
+    public function adminCreate(): void {
+        $this->auth->requireRole('admin');
+        $medecins = $this->userModel->getByRole('medecin');
+        require_once __DIR__ . '/../views/backoffice/disponibilite/form.php';
+    }
 
-            if ($medecinId) {
-                $disponibilites = $this->disponibiliteModel->getByMedecin((int)$medecinId, $filter);
-            } else {
-                $disponibilites = $this->disponibiliteModel->getAll($filter);
-            }
-
-            $medecins = $this->medecinModel->getAllWithUsers();
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/disponibilite_list_admin.php';
-        } catch (Exception $e) {
-            error_log('Erreur DisponibiliteController::indexAdmin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors du chargement.';
-            header('Location: index.php?page=accueil');
+    public function adminStore(): void {
+        $this->auth->requireRole('admin');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=admin_disponibilite');
             exit;
         }
+        
+        $data = [
+            'medecin_id' => (int)$_POST['medecin_id'],
+            'jour_semaine' => $_POST['jour_semaine'],
+            'heure_debut' => $_POST['heure_debut'],
+            'heure_fin' => $_POST['heure_fin'],
+            'actif' => isset($_POST['actif']) ? (int)$_POST['actif'] : 1
+        ];
+        
+        $this->dispoModel->create($data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité ajoutée avec succès.'];
+        header('Location: index.php?page=admin_disponibilite');
+        exit;
+    }
+
+    public function adminEdit(int $id): void {
+        $this->auth->requireRole('admin');
+        $dispo = $this->dispoModel->getById($id);
+        if (!$dispo) $this->notFound();
+        $medecins = $this->userModel->getByRole('medecin');
+        require_once __DIR__ . '/../views/backoffice/disponibilite/form.php';
+    }
+
+    public function adminUpdate(int $id): void {
+        $this->auth->requireRole('admin');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header("Location: index.php?page=admin_disponibilite&action=edit&id=$id");
+            exit;
+        }
+        
+        $data = [
+            'medecin_id' => (int)$_POST['medecin_id'],
+            'jour_semaine' => $_POST['jour_semaine'],
+            'heure_debut' => $_POST['heure_debut'],
+            'heure_fin' => $_POST['heure_fin'],
+            'actif' => isset($_POST['actif']) ? (int)$_POST['actif'] : 1
+        ];
+        
+        $this->dispoModel->update($id, $data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité mise à jour.'];
+        header('Location: index.php?page=admin_disponibilite');
+        exit;
+    }
+
+    public function adminToggle(int $id): void {
+        $this->auth->requireRole('admin');
+        $this->dispoModel->toggleActive($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Statut modifié.'];
+        header('Location: index.php?page=admin_disponibilite');
+        exit;
+    }
+
+    public function adminDelete(int $id): void {
+        $this->auth->requireRole('admin');
+        $this->dispoModel->delete($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité supprimée.'];
+        header('Location: index.php?page=admin_disponibilite');
+        exit;
     }
 
     // ─────────────────────────────────────────
-    //  Créer une disponibilité (médecin)
+    //  FRONTOFFICE - Médecin
     // ─────────────────────────────────────────
+
+    public function medecinMesDisponibilites(): void {
+        $this->auth->requireRole('medecin');
+        $userId = (int)$_SESSION['user_id'];
+        $dispos = $this->dispoModel->getByMedecin($userId);
+        require_once __DIR__ . '/../views/frontoffice/medecin/mes_disponibilites.php';
+    }
+
+    public function medecinStore(): void {
+        $this->auth->requireRole('medecin');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=medecin_disponibilites');
+            exit;
+        }
+        
+        $data = [
+            'medecin_id' => (int)$_SESSION['user_id'],
+            'jour_semaine' => $_POST['jour_semaine'],
+            'heure_debut' => $_POST['heure_debut'],
+            'heure_fin' => $_POST['heure_fin'],
+            'actif' => 1
+        ];
+        
+        $this->dispoModel->create($data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité ajoutée.'];
+        header('Location: index.php?page=medecin_disponibilites');
+        exit;
+    }
+
+    public function medecinToggle(int $id): void {
+        $this->auth->requireRole('medecin');
+        $dispo = $this->dispoModel->getById($id);
+        if (!$dispo || $dispo['medecin_id'] != $_SESSION['user_id']) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Disponibilité introuvable.'];
+            header('Location: index.php?page=medecin_disponibilites');
+            exit;
+        }
+        $this->dispoModel->toggleActive($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Statut modifié.'];
+        header('Location: index.php?page=medecin_disponibilites');
+        exit;
+    }
+
+    public function medecinDelete(int $id): void {
+        $this->auth->requireRole('medecin');
+        $dispo = $this->dispoModel->getById($id);
+        if (!$dispo || $dispo['medecin_id'] != $_SESSION['user_id']) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Disponibilité introuvable.'];
+            header('Location: index.php?page=medecin_disponibilites');
+            exit;
+        }
+        $this->dispoModel->delete($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité supprimée.'];
+        header('Location: index.php?page=medecin_disponibilites');
+        exit;
+    }
+
+    // ─────────────────────────────────────────
+    //  ANCIENNES ROUTES (compatibilité)
+    // ─────────────────────────────────────────
+
+    public function indexMedecin(): void {
+        $this->medecinMesDisponibilites();
+    }
+
+    public function indexAdmin(): void {
+        $this->adminIndex();
+    }
+
     public function createMedecin(): void {
-        $this->auth->requireRole('medecin');
-
-        try {
-            $csrfToken = $this->generateCsrfToken();
-            $old = $_SESSION['old'] ?? null;
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/disponibilite_form_medecin.php';
-        } catch (Exception $e) {
-            error_log('Erreur DisponibiliteController::createMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors du chargement du formulaire.';
-            header('Location: index.php?page=accueil');
-            exit;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->medecinStore();
+        } else {
+            $this->medecinMesDisponibilites();
         }
     }
 
     // ─────────────────────────────────────────
-    //  Enregistrer une disponibilité (médecin)
+    //  API
     // ─────────────────────────────────────────
-    public function storeMedecin(): void {
-        $this->auth->requireRole('medecin');
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: index.php?page=disponibilites&action=create');
+    public function apiGetByMedecin(): void {
+        header('Content-Type: application/json');
+        $medecinId = (int)($_GET['medecin_id'] ?? 0);
+        if (!$medecinId) {
+            echo json_encode(['error' => 'Médecin non spécifié']);
             exit;
         }
-
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $dateDebut = $_POST['date_debut'] ?? '';
-            $dateFin = $_POST['date_fin'] ?? '';
-            $heureDebut = $_POST['heure_debut'] ?? '';
-            $heureFin = $_POST['heure_fin'] ?? '';
-
-            if (empty($dateDebut) || empty($dateFin) || empty($heureDebut) || empty($heureFin)) {
-                $_SESSION['error'] = 'Tous les champs sont obligatoires.';
-                $_SESSION['old'] = $_POST;
-                header('Location: index.php?page=disponibilites&action=create');
-                exit;
-            }
-
-            $disponibiliteId = $this->disponibiliteModel->create([
-                'medecin_id' => $medecinId,
-                'date_debut' => $dateDebut,
-                'date_fin' => $dateFin,
-                'heure_debut' => $heureDebut,
-                'heure_fin' => $heureFin,
-            ]);
-
-            if (!$disponibiliteId) {
-                throw new Exception('Erreur lors de la création.');
-            }
-
-            $_SESSION['success'] = 'Disponibilité créée avec succès.';
-            header('Location: index.php?page=disponibilites');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur storeMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors de l\'enregistrement.';
-            header('Location: index.php?page=disponibilites&action=create');
-            exit;
-        }
+        $dispos = $this->dispoModel->getByMedecin($medecinId);
+        echo json_encode(['success' => true, 'disponibilites' => $dispos]);
+        exit;
     }
 
     // ─────────────────────────────────────────
-    //  Éditer une disponibilité (médecin)
+    //  HELPERS
     // ─────────────────────────────────────────
-    public function editMedecin(int $id): void {
-        $this->auth->requireRole('medecin');
 
-        try {
-            $disponibilite = $this->disponibiliteModel->getById($id);
-
-            if (!$disponibilite) {
-                http_response_code(404);
-                die('Disponibilité introuvable.');
-            }
-
-            $csrfToken = $this->generateCsrfToken();
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/disponibilite_form_medecin_edit.php';
-        } catch (Exception $e) {
-            error_log('Erreur editMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors du chargement.';
-            header('Location: index.php?page=disponibilites');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Mettre à jour une disponibilité
-    // ─────────────────────────────────────────
-    public function updateMedecin(int $id): void {
-        $this->auth->requireRole('medecin');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: index.php?page=disponibilites&id=$id&action=edit");
-            exit;
-        }
-
-        try {
-            $dateDebut = $_POST['date_debut'] ?? '';
-            $dateFin = $_POST['date_fin'] ?? '';
-            $heureDebut = $_POST['heure_debut'] ?? '';
-            $heureFin = $_POST['heure_fin'] ?? '';
-
-            if (empty($dateDebut) || empty($dateFin) || empty($heureDebut) || empty($heureFin)) {
-                $_SESSION['error'] = 'Tous les champs sont obligatoires.';
-                header("Location: index.php?page=disponibilites&id=$id&action=edit");
-                exit;
-            }
-
-            $this->disponibiliteModel->update($id, [
-                'date_debut' => $dateDebut,
-                'date_fin' => $dateFin,
-                'heure_debut' => $heureDebut,
-                'heure_fin' => $heureFin,
-            ]);
-
-            $_SESSION['success'] = 'Disponibilité mise à jour.';
-            header('Location: index.php?page=disponibilites');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur updateMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors de la mise à jour.';
-            header("Location: index.php?page=disponibilites&id=$id&action=edit");
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Supprimer une disponibilité
-    // ─────────────────────────────────────────
-    public function delete(int $id): void {
-        $this->auth->requireRole('medecin');
-
-        try {
-            $this->disponibiliteModel->delete($id);
-            $_SESSION['success'] = 'Disponibilité supprimée.';
-            header('Location: index.php?page=disponibilites');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur delete - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors de la suppression.';
-            header('Location: index.php?page=disponibilites');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Helpers privés
-    // ─────────────────────────────────────────
-    private function generateCsrfToken(): string {
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
-    }
-
-    private function verifyCsrfToken(string $token): bool {
-        return !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    private function notFound(): void {
+        http_response_code(404);
+        die('Disponibilité introuvable.');
     }
 }
 ?>
-
-

@@ -30,9 +30,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=produits_admin" class="<?= $current_page === 'produits_admin' ? 'active' : '' ?>">
             <i class="fas fa-box"></i> Produits
         </a>
-        <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
-            <i class="fas fa-blog"></i> Blog
-        </a>
+<a href="index.php?page=blog" class="<?= $current_page === 'blog' ? 'active' : '' ?>">
+    <i class="fas fa-blog"></i> <span>Blog / Forum</span>
+</a>
         <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-day"></i> Événements
         </a>
