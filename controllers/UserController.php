@@ -104,6 +104,8 @@ class UserController {
             header('Location: index.php?page=profil');
             exit;
         }
+        
+        unset($_SESSION['error_profil']);
         if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error_profil'] = 'Email invalide.';
             header('Location: index.php?page=profil');
@@ -139,6 +141,7 @@ class UserController {
         $_SESSION['user_name']  = $data['prenom'] . ' ' . $data['nom'];
         $_SESSION['user_email'] = $data['email'];
 
+        unset($_SESSION['error_profil']);
         $_SESSION['success_profil'] = 'Profil mis à jour avec succès.';
         header('Location: index.php?page=profil');
         exit;
@@ -162,7 +165,6 @@ class UserController {
         $newPassword     = $_POST['new_password']     ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        // Récupérer l'utilisateur
         $user = $this->userModel->findById($userId);
         if (!$user) {
             $_SESSION['error_password_profil'] = 'Utilisateur introuvable.';
@@ -170,14 +172,12 @@ class UserController {
             exit;
         }
 
-        // Vérifier mot de passe actuel
         if (!password_verify($currentPassword, $user['password'])) {
             $_SESSION['error_password_profil'] = 'Mot de passe actuel incorrect.';
             header('Location: index.php?page=profil');
             exit;
         }
 
-        // Valider le nouveau mot de passe
         if (strlen($newPassword) < 8) {
             $_SESSION['error_password_profil'] = 'Le nouveau mot de passe doit contenir au moins 8 caractères.';
             header('Location: index.php?page=profil');
@@ -208,7 +208,70 @@ class UserController {
             'password' => password_hash($newPassword, PASSWORD_DEFAULT),
         ]);
 
+        unset($_SESSION['error_password_profil']);
         $_SESSION['success_password_profil'] = 'Mot de passe modifié avec succès.';
+        header('Location: index.php?page=profil');
+        exit;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ✅ NOUVELLES MÉTHODES POUR L'AVATAR
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Mettre à jour l'avatar
+     */
+    public function updateAvatar(): void {
+        if (empty($_SESSION['user_id'])) {
+            header('Location: index.php?page=login');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['avatar'])) {
+            header('Location: index.php?page=profil');
+            exit;
+        }
+
+        $userId = (int)$_SESSION['user_id'];
+        
+        // Vérifier que l'utilisateur existe
+        $user = $this->userModel->findById($userId);
+        if (!$user) {
+            $_SESSION['error_profil'] = "Utilisateur non trouvé.";
+            header('Location: index.php?page=profil');
+            exit;
+        }
+        
+        $result = $this->userModel->uploadAvatar($_FILES['avatar'], $userId);
+        
+        if ($result) {
+            $_SESSION['success_profil'] = "Photo de profil mise à jour avec succès.";
+        } else {
+            $_SESSION['error_profil'] = "Erreur lors de l'upload. Vérifiez le format (JPG, PNG, GIF, WEBP) et la taille (max 2 Mo).";
+        }
+        
+        header('Location: index.php?page=profil');
+        exit;
+    }
+
+    /**
+     * Supprimer l'avatar
+     */
+    public function deleteAvatar(): void {
+        if (empty($_SESSION['user_id'])) {
+            header('Location: index.php?page=login');
+            exit;
+        }
+
+        $userId = (int)$_SESSION['user_id'];
+        $result = $this->userModel->deleteAvatar($userId);
+        
+        if ($result) {
+            $_SESSION['success_profil'] = "Photo de profil supprimée avec succès.";
+        } else {
+            $_SESSION['error_profil'] = "Erreur lors de la suppression.";
+        }
+        
         header('Location: index.php?page=profil');
         exit;
     }

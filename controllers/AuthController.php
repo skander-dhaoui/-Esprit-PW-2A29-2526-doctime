@@ -2,16 +2,20 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../config/mail.php';
+require_once __DIR__ . '/../models/FaceRecognition.php';
 
 class AuthController {
 
     private User $userModel;
+    private FaceRecognition $faceModel;
 
     public function __construct() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
         $this->userModel = new User();
+        $this->faceModel = new FaceRecognition();
     }
 
     // ─────────────────────────────────────────
@@ -50,16 +54,14 @@ class AuthController {
     }
 
     // ─────────────────────────────────────────
-    //  Afficher le formulaire de connexion (toujours accessible)
+    //  Afficher le formulaire de connexion
     // ─────────────────────────────────────────
     public function showLogin(): void {
-        // On ne redirige plus ici ! La page login reste accessible
-        // même si l'utilisateur est connecté
         $error = $_SESSION['error'] ?? null;
         unset($_SESSION['error']);
 
-$viewPath = __DIR__ . '/../views/frontoffice/login.php';
-$viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
+        $viewPath = __DIR__ . '/../views/frontoffice/login.php';
+        $viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
         if (file_exists($viewPath)) {
             require_once $viewPath;
         } elseif (file_exists($viewPathHtml)) {
@@ -128,7 +130,6 @@ $viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
                 // Non bloquant
             }
 
-            // Redirection après connexion
             $redirect = $_SESSION['redirect_after_login'] ?? null;
             unset($_SESSION['redirect_after_login']);
 
@@ -168,22 +169,22 @@ $viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
     // ─────────────────────────────────────────
     //  Inscription
     // ─────────────────────────────────────────
-public function showRegister(): void {
-    $error = $_SESSION['error'] ?? null;
-    $old   = $_SESSION['old']   ?? null;
-    unset($_SESSION['error'], $_SESSION['old']);
+    public function showRegister(): void {
+        $error = $_SESSION['error'] ?? null;
+        $old   = $_SESSION['old']   ?? null;
+        unset($_SESSION['error'], $_SESSION['old']);
 
-    $viewPath     = __DIR__ . '/../views/frontoffice/register.php';
-    $viewPathHtml = __DIR__ . '/../views/frontoffice/register.html';
+        $viewPath = __DIR__ . '/../views/frontoffice/register.php';
+        $viewPathHtml = __DIR__ . '/../views/frontoffice/register.html';
 
-    if (file_exists($viewPath)) {
-        require_once $viewPath;
-    } elseif (file_exists($viewPathHtml)) {
-        require_once $viewPathHtml;
-    } else {
-        $this->renderRegisterFallback($error, $old);
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } elseif (file_exists($viewPathHtml)) {
+            require_once $viewPathHtml;
+        } else {
+            $this->renderRegisterFallback($error, $old);
+        }
     }
-}
 
     public function register(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -238,6 +239,26 @@ public function showRegister(): void {
                 throw new Exception("Erreur lors de la création du compte.");
             }
 
+            // Envoyer email de bienvenue
+            $welcomeBody = "
+                <h1>Bienvenue sur DocTime !</h1>
+                <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
+                <p>Votre compte a été créé avec succès sur DocTime.</p>
+                <p>Vous pouvez dès maintenant :</p>
+                <ul>
+                    <li>Prendre des rendez-vous en ligne</li>
+                    <li>Consulter vos ordonnances</li>
+                    <li>Discuter avec vos médecins</li>
+                </ul>
+                <p style='margin-top: 30px;'>
+                    <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
+                </p>
+                <hr>
+                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+            ";
+            
+            MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
+
             if ($role === 'medecin') {
                 $_SESSION['success'] = "Compte créé. En attente de validation par un administrateur.";
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
@@ -261,14 +282,14 @@ public function showRegister(): void {
     }
 
     // ─────────────────────────────────────────
-    //  Mot de passe oublié
+    //  Mot de passe oublié (avec envoi d'email)
     // ─────────────────────────────────────────
     public function showForgotPassword(): void {
         $error   = $_SESSION['error']   ?? null;
         $success = $_SESSION['success'] ?? null;
         unset($_SESSION['error'], $_SESSION['success']);
 
-        $viewPath = __DIR__ . '/../views/forgot_password.php';
+        $viewPath = __DIR__ . '/../views/frontoffice/forgot_password.php';
         if (file_exists($viewPath)) {
             require_once $viewPath;
         } else {
@@ -285,25 +306,202 @@ public function showRegister(): void {
             exit;
         }
 
-        $_SESSION['success'] = "Si cet email existe, un lien de réinitialisation a été envoyé.";
+        $user = $this->userModel->findByEmail($email);
+        
+        if ($user) {
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            
+            $this->userModel->update($user['id'], [
+                'reset_token' => $token,
+                'reset_expires' => $expires
+            ]);
+            
+            $resetLink = $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token;
+            
+            $resetBody = "
+                <h1>Réinitialisation de votre mot de passe</h1>
+                <p>Bonjour <strong>" . htmlspecialchars($user['prenom'] . ' ' . $user['nom']) . "</strong>,</p>
+                <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous :</p>
+                <p style='margin: 30px 0;'>
+                    <a href='" . $resetLink . "' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Réinitialiser mon mot de passe</a>
+                </p>
+                <p>Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.</p>
+                <div style='background:#f8f9fa;padding:10px;border-left:4px solid #ffc107;margin-top:20px;'>
+                    <strong>⚠️ Ce lien expirera dans 1 heure.</strong>
+                </div>
+                <hr>
+                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+            ";
+            
+            MailConfig::send($user['email'], $user['prenom'] . ' ' . $user['nom'], 'Réinitialisation de votre mot de passe - DocTime', $resetBody);
+        }
+        
+        $_SESSION['success'] = "Si cet email existe, vous recevrez un lien de réinitialisation.";
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
         exit;
     }
 
     public function showResetPassword($token = null): void {
-        $viewPath = __DIR__ . '/../views/reset_password.php';
+        $error = null;
+        $validToken = false;
+        
+        if ($token) {
+            $token = preg_replace('/[^a-f0-9]/', '', $token);
+            
+            $stmt = $this->userModel->db->prepare(
+                "SELECT id FROM users WHERE reset_token = :token AND reset_expires > NOW()"
+            );
+            $stmt->execute([':token' => $token]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                $validToken = true;
+                $_SESSION['reset_token'] = $token;
+            } else {
+                $error = "Lien invalide ou expiré. Veuillez refaire une demande.";
+            }
+        }
+        
+        $viewPath = __DIR__ . '/../views/frontoffice/reset_password.php';
         if (file_exists($viewPath)) {
             require_once $viewPath;
         } else {
-            echo '<p>Réinitialisation non disponible.</p>';
+            $this->renderResetFallback($error, $validToken);
         }
     }
 
     public function resetPassword(): void {
-        $_SESSION['success'] = "Mot de passe réinitialisé.";
-        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
+        
+        $token = $_SESSION['reset_token'] ?? null;
+        $newPassword = trim($_POST['password'] ?? '');
+        $confirmPassword = trim($_POST['confirm_password'] ?? '');
+        
+        if (!$token) {
+            $_SESSION['error'] = "Demande invalide. Veuillez refaire une demande.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
+            exit;
+        }
+        
+        if (strlen($newPassword) < 8) {
+            $_SESSION['error'] = "Le mot de passe doit contenir au moins 8 caractères.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            exit;
+        }
+        
+        if (!preg_match('/[A-Z]/', $newPassword)) {
+            $_SESSION['error'] = "Le mot de passe doit contenir au moins une majuscule.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            exit;
+        }
+        
+        if (!preg_match('/[0-9]/', $newPassword)) {
+            $_SESSION['error'] = "Le mot de passe doit contenir au moins un chiffre.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            exit;
+        }
+        
+        if ($newPassword !== $confirmPassword) {
+            $_SESSION['error'] = "Les mots de passe ne correspondent pas.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            exit;
+        }
+        
+        $stmt = $this->userModel->db->prepare(
+            "UPDATE users SET password = :password, reset_token = NULL, reset_expires = NULL 
+             WHERE reset_token = :token AND reset_expires > NOW()"
+        );
+        $result = $stmt->execute([
+            ':password' => password_hash($newPassword, PASSWORD_DEFAULT),
+            ':token' => $token
+        ]);
+        
+        if ($result && $stmt->rowCount() > 0) {
+            unset($_SESSION['reset_token']);
+            $_SESSION['success'] = "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        } else {
+            $_SESSION['error'] = "Lien invalide ou expiré.";
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
+        }
         exit;
     }
+
+// ─────────────────────────────────────────
+//  Reconnaissance faciale
+// ─────────────────────────────────────────
+public function faceLogin(): void {
+    header('Content-Type: application/json');
+    
+    $imageData = $_POST['face_image'] ?? '';
+    if (empty($imageData)) {
+        echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
+        exit;
+    }
+    
+    // Vérifier l'utilisateur par reconnaissance faciale
+    $user = $this->faceModel->findUserByFace($imageData);
+    
+    if (!$user) {
+        echo json_encode(['success' => false, 'message' => 'Visage non reconnu. Veuillez utiliser email/mot de passe.']);
+        exit;
+    }
+    
+    // Vérifier si le compte est actif
+    if ($user['statut'] !== 'actif') {
+        echo json_encode(['success' => false, 'message' => 'Votre compte est ' . $user['statut'] . '. Contactez l\'administrateur.']);
+        exit;
+    }
+    
+    // Démarrer la session
+    session_regenerate_id(true);
+    $_SESSION['user_id']    = $user['id'];
+    $_SESSION['user_role']  = $user['role'];
+    $_SESSION['user_name']  = trim($user['nom'] . ' ' . $user['prenom']);
+    $_SESSION['user_email'] = $user['email'];
+    
+    // Déterminer la redirection selon le rôle
+    $redirect = match($user['role']) {
+        'admin'   => 'index.php?page=dashboard',
+        'medecin' => 'index.php?page=accueil',
+        default   => 'index.php?page=accueil'
+    };
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Reconnaissance faciale réussie !',
+        'redirect' => $redirect,
+        'role' => $user['role']
+    ]);
+    exit;
+}
+
+public function registerFace(): void {
+    header('Content-Type: application/json');
+    
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter d\'abord.']);
+        exit;
+    }
+    
+    $imageData = $_POST['face_image'] ?? '';
+    if (empty($imageData)) {
+        echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
+        exit;
+    }
+    
+    $result = $this->faceModel->saveFacePhoto($_SESSION['user_id'], $imageData);
+    
+    echo json_encode([
+        'success' => $result,
+        'message' => $result ? 'Visage enregistré avec succès ! Vous pourrez vous connecter par reconnaissance faciale.' : 'Erreur lors de l\'enregistrement'
+    ]);
+    exit;
+}
 
     // ─────────────────────────────────────────
     //  Vérifier email (AJAX)
@@ -356,10 +554,6 @@ public function showRegister(): void {
                         <div class="card-body p-4">
                             <?php if ($error): ?>
                                 <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-                            <?php endif; ?>
-                            <?php if (!empty($_SESSION['success'])): ?>
-                                <div class="alert alert-success"><?= htmlspecialchars($_SESSION['success']) ?></div>
-                                <?php unset($_SESSION['success']); ?>
                             <?php endif; ?>
                             <form method="POST" action="index.php?page=login">
                                 <div class="mb-3">
@@ -485,6 +679,53 @@ public function showRegister(): void {
                             <div class="text-center">
                                 <a href="index.php?page=login">Retour à la connexion</a>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </body>
+        </html>
+        <?php
+    }
+    
+    private function renderResetFallback(?string $error, bool $validToken): void {
+        ?>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <title>Réinitialisation - Valorys</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-light">
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-5">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white text-center">
+                            <h4>Réinitialisation du mot de passe</h4>
+                        </div>
+                        <div class="card-body p-4">
+                            <?php if ($error): ?>
+                                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                            <?php endif; ?>
+                            <?php if ($validToken): ?>
+                                <form method="POST" action="index.php?page=reset_password">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nouveau mot de passe *</label>
+                                        <input type="password" name="password" class="form-control" required>
+                                        <small class="text-muted">Minimum 8 caractères, 1 majuscule, 1 chiffre</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Confirmer le mot de passe *</label>
+                                        <input type="password" name="confirm_password" class="form-control" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Réinitialiser</button>
+                                </form>
+                            <?php else: ?>
+                                <a href="index.php?page=forgot_password" class="btn btn-primary w-100">Faire une nouvelle demande</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

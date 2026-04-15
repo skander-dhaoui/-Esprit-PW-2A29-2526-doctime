@@ -1,16 +1,15 @@
 <?php
 
 error_reporting(E_ALL);
-ini_set('display_errors', 1); // Activer pour debug
-ob_start(); // Buffer de sortie
+ini_set('display_errors', 1);
+ob_start();
 
 if (session_status() === PHP_SESSION_NONE) {
-    // Session expire à la fermeture du navigateur
     ini_set('session.cookie_lifetime', 0);
     session_start();
 }
 
-define('DEBUG_MODE', true);
+define('DEBUG_MODE', false);
 
 // =============================================
 // INCLUDES — MODÈLES
@@ -53,7 +52,6 @@ foreach ($optionalControllers as $ctrl) {
 // =============================================
 // RÉCUPÉRATION DES PARAMÈTRES
 // =============================================
-// Si pas de page demandée -> accueil (page publique)
 if (!isset($_GET['page'])) {
     $page = 'accueil';
 } else {
@@ -63,7 +61,7 @@ $action = isset($_GET['action']) ? preg_replace('/[^a-z0-9_]/', '', trim($_GET['
 $id     = isset($_GET['id'])     ? (int)$_GET['id'] : null;
 
 if (DEBUG_MODE) {
-    echo "<!-- DEBUG PARAMS: GET page='" . ($_GET['page'] ?? 'N/A') . "' action='" . ($_GET['action'] ?? 'N/A') . "' id='" . ($_GET['id'] ?? 'N/A') . "' -->\n";
+    echo "<!-- DEBUG PARAMS: page='$page' action='$action' id='$id' -->\n";
 }
 
 // =============================================
@@ -83,18 +81,50 @@ $disponibiliteCtrl = class_exists('DisponibiliteController') ? new Disponibilite
 // =============================================
 // PAGES PUBLIQUES / PROTÉGÉES
 // =============================================
-// Pages accessibles SANS connexion (publiques)
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
     'medecins', 'detail_medecin', 'articles', 'detail_article',
     'evenements', 'detail_evenement', 'contact', 'about',
 ];
 
-// Pages réservées aux non-connectés (guests only)
 $guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login'];
 
 $isLoggedIn = !empty($_SESSION['user_id']);
 $userRole   = $_SESSION['user_role'] ?? '';
+
+// =============================================
+// ROUTES SPÉCIALES (sans vérification de connexion)
+// =============================================
+
+// Reconnaissance faciale - routes publiques (pas besoin d'être connecté)
+if ($page === 'face_login') {
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $auth->faceLogin();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+    }
+    exit;
+}
+
+if ($page === 'register_face') {
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Vérifier si connecté pour l'enregistrement
+        if (empty($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter d\'abord']);
+            exit;
+        }
+        $auth->registerFace();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+    }
+    exit;
+}
+
+// =============================================
+// VÉRIFICATION PAGES PROTÉGÉES
+// =============================================
 
 // Redirection si page protégée et non connecté
 if (!in_array($page, $publicPages) && !$isLoggedIn) {
@@ -122,7 +152,7 @@ if ($isLoggedIn && in_array($page, $guestOnlyPages)) {
 }
 
 // =============================================
-// FONCTIONS HELPERS D'ACCÈS
+// FONCTIONS HELPERS
 // =============================================
 function adminOnly(): void {
     if (($_SESSION['user_role'] ?? '') !== 'admin') {
@@ -164,9 +194,6 @@ function requireLogin(): void {
     }
 }
 
-// =============================================
-// FONCTION FLASH MESSAGES
-// =============================================
 function showFlash(): void {
     foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $key => $bsClass) {
         if (isset($_SESSION[$key])) {
@@ -189,18 +216,17 @@ function showFlash(): void {
     }
 }
 
+if (DEBUG_MODE) {
+    echo "<!-- DEBUG: Page = $page | Role = $userRole | Connecté = " . ($isLoggedIn ? 'OUI' : 'NON') . " -->\n";
+}
+
 // =============================================
 // ROUTAGE PRINCIPAL
 // =============================================
-if (DEBUG_MODE) {
-    echo "<!-- DEBUG: Page = $page | Action = $action | Role = $userRole | Connecté = " . ($isLoggedIn ? 'OUI' : 'NON') . " -->\n";
-}
-
 switch ($page) {
 
     // ─── Pages publiques ───────────────────
     case 'accueil':
-        // Page d'accueil publique - accessible à tous
         $front->accueilPublic();
         break;
 
@@ -266,36 +292,40 @@ switch ($page) {
             header('Location: index.php?page=accueil');
             exit;
         }
-        $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->resetPassword() : $auth->showResetPassword($id);
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->resetPassword() : $auth->showResetPassword($_GET['token'] ?? null);
         break;
 
     case 'logout':
         $auth->logout();
         break;
 
-    // ─── Profil utilisateur connecté ───────
-    case 'profil':
-    case 'mon_profil':
-    case 'modifier_profil':
-        requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $actionPost = $_POST['action'] ?? '';
-            if ($actionPost === 'change_password') {
-                $userCtrl->changePassword();
-            } else {
-                $userCtrl->updateProfil();
-            }
+ case 'profil':
+case 'mon_profil':
+case 'modifier_profil':
+    requireLogin();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $actionPost = $_POST['action'] ?? '';
+        if ($actionPost === 'change_password') {
+            $userCtrl->changePassword();
+        } elseif ($actionPost === 'update_avatar') {
+            $userCtrl->updateAvatar();  // ← ajouter ce cas
         } else {
-            $userCtrl->showProfil();
+            $userCtrl->updateProfil();
         }
-        break;
+    } elseif ($action === 'update_avatar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        // ← gérer aussi via GET action=update_avatar
+        $userCtrl->updateAvatar();
+    } else {
+        $userCtrl->showProfil();
+    }
+    break;
 
     case 'mes_notifications':
         requireLogin();
         $front->mesNotifications();
         break;
 
-    // ─── Rendez-vous (patient/médecin) ─────
+    // ─── Rendez-vous ───────────────────────
     case 'prendre_rendez_vous':
         patientOnly();
         $_SERVER['REQUEST_METHOD'] === 'POST'
@@ -323,13 +353,12 @@ switch ($page) {
         $front->mesOrdonnances();
         break;
 
-    // ─── BACKOFFICE — Admin ─────────────────
+    // ─── BACKOFFICE ADMIN ──────────────────
     case 'dashboard':
         adminOnly();
         $adminCtrl->dashboard();
         break;
 
-    // Gestion utilisateurs
     case 'users':
         adminOnly();
         if ($action === 'create') {
@@ -347,7 +376,6 @@ switch ($page) {
         }
         break;
 
-    // Gestion patients (ADMIN)
     case 'patients':
         adminOnly();
         if ($action === 'add') {
@@ -363,7 +391,6 @@ switch ($page) {
         }
         break;
 
-    // Gestion médecins admin
     case 'medecins_admin':
         adminOnly();
         if ($action === 'add') {
@@ -385,13 +412,11 @@ switch ($page) {
         }
         break;
 
-    // Rendez-vous admin
     case 'rendez_vous_admin':
         adminOnly();
         $action === 'delete' && $id ? $adminCtrl->deleteRendezVous($id) : $adminCtrl->listRendezVous();
         break;
 
-    // Articles admin
     case 'articles_admin':
         adminOnly();
         if ($action === 'create') {
@@ -405,7 +430,6 @@ switch ($page) {
         }
         break;
 
-    // Événements admin
     case 'evenements_admin':
         adminOnly();
         if ($action === 'create') {
@@ -419,7 +443,6 @@ switch ($page) {
         }
         break;
 
-    // Produits admin
     case 'produits_admin':
         adminOnly();
         if ($action === 'create') {
@@ -433,7 +456,6 @@ switch ($page) {
         }
         break;
 
-    // Stats, logs, settings
     case 'stats':
         adminOnly();
         $adminCtrl->stats();
@@ -504,12 +526,36 @@ switch ($page) {
         }
         break;
 
+    // ─── Reconnaissance faciale ────────────
+// ─── Reconnaissance faciale ────────────
+case 'face_login':
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $auth->faceLogin();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+    }
+    exit;
+    break;
+
+case 'register_face':
+    header('Content-Type: application/json');
+    requireLogin();  // Seulement register_face nécessite la connexion
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $auth->registerFace();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+    }
+    exit;
+    break;
+
     // ─── 404 ───────────────────────────────
     default:
-        if (DEBUG_MODE) echo "<!-- DEBUG: Page non trouvée - Case default activé pour page='$page' -->\n";
+        if (DEBUG_MODE) echo "<!-- DEBUG: 404 page='$page' -->\n";
         http_response_code(404);
         $front->page404();
         break;
 }
 
 if (DEBUG_MODE) echo "<!-- DEBUG: Switch terminé pour page='$page' -->\n";
+?>

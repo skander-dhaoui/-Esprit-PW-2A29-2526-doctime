@@ -41,6 +41,10 @@
         .captcha-code { font-size: 28px; font-weight: bold; letter-spacing: 8px; background: #2A7FAA; color: white; display: inline-block; padding: 10px 20px; border-radius: 10px; font-family: monospace; margin-bottom: 10px; }
         .captcha-refresh { cursor: pointer; color: #2A7FAA; margin-left: 10px; }
         .captcha-refresh:hover { color: #4CAF50; }
+        
+        /* Spinner */
+        .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
+        .text-info i { margin-right: 5px; }
     </style>
 </head>
 <body>
@@ -162,7 +166,7 @@
                     <i class="fas fa-times"></i> Annuler
                 </button>
             </div>
-            <div id="cameraMessage" class="mt-2 text-danger"></div>
+            <div id="cameraMessage" class="mt-2"></div>
         </div>
     </div>
 
@@ -207,7 +211,6 @@
                 document.getElementById('captchaInput').value = '';
                 return;
             }
-            // Si tout est bon → le formulaire soumet normalement vers PHP
         });
 
         // ── MESSAGES JS ──────────────────────────────
@@ -223,39 +226,81 @@
             d.style.display = 'block';
         }
 
-        // ── CAMÉRA ───────────────────────────────────
+        // ── CAMÉRA AVEC RECONNAISSANCE FACIALE ─────────────────
         let stream = null;
+        
         function openCameraModal() {
             document.getElementById('cameraModal').style.display = 'flex';
             startCamera();
         }
+        
         function closeCameraModal() {
             if (stream) stream.getTracks().forEach(t => t.stop());
             document.getElementById('cameraModal').style.display = 'none';
-            document.getElementById('cameraMessage').innerText = '';
+            const msgDiv = document.getElementById('cameraMessage');
+            if (msgDiv) msgDiv.innerHTML = '';
         }
+        
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 document.getElementById('video').srcObject = stream;
             } catch (err) {
-                document.getElementById('cameraMessage').innerText = "Impossible d'accéder à la caméra.";
+                const msgDiv = document.getElementById('cameraMessage');
+                if (msgDiv) msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible d\'accéder à la caméra.</span>';
             }
         }
-        function captureFace() {
-            const video  = document.getElementById('video');
+        
+        async function captureFace() {
+            const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            const ctx    = canvas.getContext('2d');
-            canvas.width  = video.videoWidth;
+            const ctx = canvas.getContext('2d');
+            const msgDiv = document.getElementById('cameraMessage');
+            
+            canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            document.getElementById('cameraMessage').innerHTML =
-                '<span class="text-success">Reconnaissance réussie ! Connexion en cours...</span>';
-            setTimeout(() => {
-                closeCameraModal();
-                showSuccess('Reconnaissance faciale réussie ! Redirection...');
-                // TODO: connecter à ton API de reconnaissance faciale
-            }, 1500);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            if (msgDiv) {
+                msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Reconnaissance en cours...</span>';
+            }
+            
+            try {
+                const response = await fetch('index.php?page=face_login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'face_image=' + encodeURIComponent(imageData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (msgDiv) {
+                        msgDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>' + result.message + '</span>';
+                    }
+                    setTimeout(() => {
+                        closeCameraModal();
+                        window.location.href = result.redirect;
+                    }, 1500);
+                } else {
+                    if (msgDiv) {
+                        msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>' + result.message + '</span>';
+                    }
+                    setTimeout(() => {
+                        closeCameraModal();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                if (msgDiv) {
+                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion au serveur</span>';
+                }
+                setTimeout(() => {
+                    closeCameraModal();
+                }, 2000);
+            }
         }
     </script>
 </body>
