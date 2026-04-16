@@ -19,10 +19,12 @@ require_once __DIR__ . '/models/User.php';
 require_once __DIR__ . '/models/Patient.php';
 require_once __DIR__ . '/models/Medecin.php';
 require_once __DIR__ . '/models/Admin.php';
+require_once __DIR__ . '/models/Article.php';
+require_once __DIR__ . '/models/Reply.php';
 
 // Modèles optionnels
 $optionalModels = [
-    'RendezVous', 'Disponibilite', 'Article', 'Event', 'Produit', 'Ordonnance',
+    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance',
 ];
 foreach ($optionalModels as $model) {
     $path = __DIR__ . "/models/{$model}.php";
@@ -38,10 +40,12 @@ require_once __DIR__ . '/controllers/AdminController.php';
 require_once __DIR__ . '/controllers/FrontController.php';
 require_once __DIR__ . '/controllers/PatientController.php';
 require_once __DIR__ . '/controllers/MedecinController.php';
+require_once __DIR__ . '/controllers/ArticleController.php';
+require_once __DIR__ . '/controllers/ReplyController.php';
 
 // Contrôleurs optionnels
 $optionalControllers = [
-    'RendezVousController', 'ArticleController', 'EventController',
+    'RendezVousController', 'EventController',
     'ProduitController', 'OrdonnanceController', 'DisponibiliteController',
 ];
 foreach ($optionalControllers as $ctrl) {
@@ -59,9 +63,10 @@ if (!isset($_GET['page'])) {
 }
 $action = isset($_GET['action']) ? preg_replace('/[^a-z0-9_]/', '', trim($_GET['action'])) : 'index';
 $id     = isset($_GET['id'])     ? (int)$_GET['id'] : null;
+$slug   = isset($_GET['slug'])   ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
 
 if (DEBUG_MODE) {
-    echo "<!-- DEBUG PARAMS: page='$page' action='$action' id='$id' -->\n";
+    echo "<!-- DEBUG PARAMS: page='$page' action='$action' id='$id' slug='$slug' -->\n";
 }
 
 // =============================================
@@ -73,6 +78,8 @@ $adminCtrl   = new AdminController();
 $front       = new FrontController();
 $patientCtrl = new PatientController();
 $medecinCtrl = new MedecinController();
+$articleCtrl = new ArticleController();
+$replyCtrl   = new ReplyController();
 
 $rendezVousCtrl    = class_exists('RendezVousController')    ? new RendezVousController()    : null;
 $ordonnanceCtrl    = class_exists('OrdonnanceController')    ? new OrdonnanceController()    : null;
@@ -83,7 +90,7 @@ $disponibiliteCtrl = class_exists('DisponibiliteController') ? new Disponibilite
 // =============================================
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
-    'medecins', 'detail_medecin', 'articles', 'detail_article',
+    'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
     'evenements', 'detail_evenement', 'contact', 'about',
 ];
 
@@ -96,7 +103,7 @@ $userRole   = $_SESSION['user_role'] ?? '';
 // ROUTES SPÉCIALES (sans vérification de connexion)
 // =============================================
 
-// Reconnaissance faciale - routes publiques (pas besoin d'être connecté)
+// Reconnaissance faciale - routes publiques
 if ($page === 'face_login') {
     header('Content-Type: application/json');
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -110,7 +117,6 @@ if ($page === 'face_login') {
 if ($page === 'register_face') {
     header('Content-Type: application/json');
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Vérifier si connecté pour l'enregistrement
         if (empty($_SESSION['user_id'])) {
             echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter d\'abord']);
             exit;
@@ -121,6 +127,90 @@ if ($page === 'register_face') {
     }
     exit;
 }
+
+// Routes API
+if ($page === 'api_article') {
+    $rawBody = file_get_contents('php://input');
+    $bodyData = json_decode($rawBody, true) ?? [];
+    $method = strtoupper($_SERVER['REQUEST_METHOD']);
+    if ($method === 'POST' && !empty($bodyData['_method'])) {
+        $method = strtoupper($bodyData['_method']);
+    }
+    if ($method === 'GET' && isset($_GET['list'])) {
+        $articleCtrl->list();
+    } elseif ($method === 'GET' && $id) {
+        $articleCtrl->show($id);
+    } elseif ($method === 'POST') {
+        requireLogin();
+        $articleCtrl->store();
+    } elseif ($method === 'PUT' && $id) {
+        requireLogin();
+        $articleCtrl->update($id);
+    } elseif ($method === 'DELETE' && $id) {
+        requireLogin();
+        $articleCtrl->destroy($id);
+    } else {
+        http_response_code(405);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+    }
+    exit;
+}
+
+if ($page === 'api_reply') {
+    $rawBody = file_get_contents('php://input');
+    $bodyData = json_decode($rawBody, true) ?? [];
+    $method = strtoupper($_SERVER['REQUEST_METHOD']);
+    if ($method === 'POST' && !empty($bodyData['_method'])) {
+        $method = strtoupper($bodyData['_method']);
+    }
+    $articleId = isset($_GET['article_id']) ? (int)$_GET['article_id'] : null;
+    
+    // GET avec ID - récupérer un commentaire spécifique (pour modification)
+    if ($method === 'GET' && isset($_GET['id'])) {
+        requireLogin();
+        $replyCtrl->show((int)$_GET['id']);
+        exit;
+    }
+    
+    if ($method === 'GET' && isset($_GET['all'])) {
+        requireLogin();
+        $replyCtrl->all();
+        exit;
+    }
+    
+    if ($method === 'GET' && $articleId) {
+        $replyCtrl->index($articleId);
+        exit;
+    }
+    
+    if ($method === 'POST') {
+        requireLogin();
+        $replyCtrl->store();
+        exit;
+    }
+    
+    if ($method === 'PUT' && $id) {
+        requireLogin();
+        $replyCtrl->update($id);
+        exit;
+    }
+    
+    if ($method === 'DELETE' && $id) {
+        requireLogin();
+        $replyCtrl->destroy($id);
+        exit;
+    }
+    
+    http_response_code(405);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+    exit;
+}
+
+// =============================================
+// VÉRIFICATION PAGES PROTÉGÉES
+// =============================================
 
 // =============================================
 // VÉRIFICATION PAGES PROTÉGÉES
@@ -238,12 +328,12 @@ switch ($page) {
         $front->detailMedecin($id);
         break;
 
-    case 'articles':
-        $front->listeArticles();
+    case 'blog_public':
+        $front->blogList();
         break;
 
-    case 'detail_article':
-        $front->detailArticle($id);
+    case 'detail_article_public':
+        $front->blogDetail($id);
         break;
 
     case 'evenements':
@@ -261,7 +351,17 @@ switch ($page) {
     case 'about':
         $front->about();
         break;
+case 'admin_article_create':
+    requireLogin();
+    $front->adminArticleCreate();
+    break;
 
+    case 'admin_article_edit':
+    requireLogin();
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    $front->adminArticleEdit($id);
+    break;
+    
     // ─── Authentification ──────────────────
     case 'login':
         if ($isLoggedIn) {
@@ -299,26 +399,26 @@ switch ($page) {
         $auth->logout();
         break;
 
- case 'profil':
-case 'mon_profil':
-case 'modifier_profil':
-    requireLogin();
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $actionPost = $_POST['action'] ?? '';
-        if ($actionPost === 'change_password') {
-            $userCtrl->changePassword();
-        } elseif ($actionPost === 'update_avatar') {
-            $userCtrl->updateAvatar();  // ← ajouter ce cas
+    // ─── Profil utilisateur ────────────────
+    case 'profil':
+    case 'mon_profil':
+    case 'modifier_profil':
+        requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $actionPost = $_POST['action'] ?? '';
+            if ($actionPost === 'change_password') {
+                $userCtrl->changePassword();
+            } else {
+                $userCtrl->updateProfil();
+            }
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'update_avatar') {
+            $userCtrl->updateAvatar();
+        } elseif (isset($_GET['action']) && $_GET['action'] === 'delete_avatar') {
+            $userCtrl->deleteAvatar();
         } else {
-            $userCtrl->updateProfil();
+            $userCtrl->showProfil();
         }
-    } elseif ($action === 'update_avatar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        // ← gérer aussi via GET action=update_avatar
-        $userCtrl->updateAvatar();
-    } else {
-        $userCtrl->showProfil();
-    }
-    break;
+        break;
 
     case 'mes_notifications':
         requireLogin();
@@ -417,18 +517,26 @@ case 'modifier_profil':
         $action === 'delete' && $id ? $adminCtrl->deleteRendezVous($id) : $adminCtrl->listRendezVous();
         break;
 
-    case 'articles_admin':
-        adminOnly();
-        if ($action === 'create') {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createArticle() : $adminCtrl->showCreateArticle();
-        } elseif ($action === 'edit' && $id) {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateArticle($id) : $adminCtrl->editArticle($id);
-        } elseif ($action === 'delete' && $id) {
-            $adminCtrl->deleteArticle($id);
+case 'articles_admin':
+    requireLogin();
+    if ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $front->adminArticleCreate();
         } else {
-            $adminCtrl->listArticles();
+            $front->adminArticleCreate();
         }
-        break;
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $front->adminArticleEdit($id);
+        } else {
+            $front->adminArticleEdit($id);
+        }
+    } elseif ($action === 'delete' && $id) {
+        $front->adminArticleDelete($id);
+    } else {
+        header('Location: index.php?page=blog_public');
+    }
+    break;
 
     case 'evenements_admin':
         adminOnly();
@@ -525,29 +633,6 @@ case 'modifier_profil':
                 echo json_encode(['error' => 'Endpoint introuvable']);
         }
         break;
-
-    // ─── Reconnaissance faciale ────────────
-// ─── Reconnaissance faciale ────────────
-case 'face_login':
-    header('Content-Type: application/json');
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $auth->faceLogin();
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
-    }
-    exit;
-    break;
-
-case 'register_face':
-    header('Content-Type: application/json');
-    requireLogin();  // Seulement register_face nécessite la connexion
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $auth->registerFace();
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
-    }
-    exit;
-    break;
 
     // ─── 404 ───────────────────────────────
     default:

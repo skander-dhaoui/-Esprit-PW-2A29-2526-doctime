@@ -700,7 +700,27 @@ public function editMedecin(int $id): void {
 
     public function createArticle(): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article créé.'];
+        require_once __DIR__ . '/../models/Article.php';
+        
+        $titre = trim($_POST['titre'] ?? '');
+        $contenu = trim($_POST['contenu'] ?? '');
+        $categorie = trim($_POST['categorie'] ?? '');
+        
+        if(empty($titre) || empty($contenu)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Titre et contenu obligatoires.'];
+        } else {
+            try {
+                $articleModel = new Article();
+                $newId = $articleModel->create([
+                    'titre' => $titre,
+                    'contenu' => $contenu,
+                    'auteur_id' => $_SESSION['user_id'] ?? 1
+                ]);
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article créé avec succès.'];
+            } catch(Exception $e) {
+                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+            }
+        }
         header('Location: index.php?page=articles_admin');
         exit;
     }
@@ -713,14 +733,45 @@ public function editMedecin(int $id): void {
 
     public function updateArticle(int $id): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article mis à jour.'];
+        require_once __DIR__ . '/../models/Article.php';
+        
+        $titre = trim($_POST['titre'] ?? '');
+        $contenu = trim($_POST['contenu'] ?? '');
+        
+        if(empty($titre) || empty($contenu)) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Titre et contenu obligatoires.'];
+        } else {
+            try {
+                $articleModel = new Article();
+                $result = $articleModel->update($id, $titre, $contenu, $_SESSION['user_id']);
+                if($result) {
+                    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article mis à jour avec succès.'];
+                } else {
+                    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur lors de la mise à jour.'];
+                }
+            } catch(Exception $e) {
+                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+            }
+        }
         header('Location: index.php?page=articles_admin');
         exit;
     }
 
     public function deleteArticle(int $id): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article supprimé.'];
+        require_once __DIR__ . '/../models/Article.php';
+        
+        try {
+            $articleModel = new Article();
+            $result = $articleModel->delete($id);
+            if($result) {
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article supprimé avec succès.'];
+            } else {
+                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur lors de la suppression.'];
+            }
+        } catch(Exception $e) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+        }
         header('Location: index.php?page=articles_admin');
         exit;
     }
