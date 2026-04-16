@@ -1,5 +1,5 @@
 <?php
-
+if (class_exists('UserController')) return;
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/mail.php';
@@ -479,7 +479,35 @@ public function faceLogin(): void {
     ]);
     exit;
 }
-
+/**
+ * Supprimer le visage enregistré de l'utilisateur
+ */
+public function deleteFace(): void {
+    $this->requireAuth();
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+        exit;
+    }
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        $userId = (int)$_SESSION['user_id'];
+        
+        $stmt = $db->prepare("UPDATE users SET face_descriptor = NULL WHERE id = :id");
+        $result = $stmt->execute([':id' => $userId]);
+        
+        if ($result) {
+            echo json_encode(['success' => true, 'message' => 'Visage supprimé avec succès']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Erreur lors de la suppression']);
+        }
+    } catch (Exception $e) {
+        error_log('Erreur deleteFace: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Erreur serveur']);
+    }
+    exit;
+}
 public function registerFace(): void {
     header('Content-Type: application/json');
     

@@ -48,14 +48,13 @@
             <table id="logsTable" class="table table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th><th>Utilisateur</th><th>Action</th>
+                        <th>Utilisateur</th><th>Action</th>
                         <th>Description</th><th>IP</th><th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($logs as $log): ?>
                     <tr>
-                        <td><?= $log['id'] ?></td>
                         <td>
                             <?php if (!empty($log['prenom'])): ?>
                                 <?= htmlspecialchars($log['prenom'] . ' ' . $log['nom']) ?>
@@ -83,7 +82,7 @@
     $(document).ready(function() {
         $('#logsTable').DataTable({
             language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
-            pageLength: 15, order: [[5, 'desc']]
+            pageLength: 15, order: [[4, 'desc']]
         });
     });
 </script>

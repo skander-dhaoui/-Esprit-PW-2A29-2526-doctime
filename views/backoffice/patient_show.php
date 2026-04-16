@@ -66,7 +66,6 @@ $current_page = 'patients';
     </div>
 
     <div class="content-card">
-        <div class="info-row"><div class="info-label">ID</div><div class="info-value"><?= $patient['id'] ?></div></div>
         <div class="info-row"><div class="info-label">Nom complet</div><div class="info-value"><?= htmlspecialchars($patient['prenom'] . ' ' . $patient['nom']) ?></div></div>
         <div class="info-row"><div class="info-label">Email</div><div class="info-value"><?= htmlspecialchars($patient['email']) ?></div></div>
         <div class="info-row"><div class="info-label">Téléphone</div><div class="info-value"><?= htmlspecialchars($patient['telephone'] ?? 'Non renseigné') ?></div></div>

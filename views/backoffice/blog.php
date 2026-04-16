@@ -130,8 +130,8 @@
             </div>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>ID</th><th>Titre</th><th>Contenu</th><th>Auteur</th><th>Date</th><th>Commentaires</th><th>Actions</th></tr></thead>
-                    <tbody id="artBody"><tr class="loader-row"><td colspan="7"><span class="spinner"></span>Chargement...</td></tr></tbody>
+                    <thead><tr><th>Titre</th><th>Contenu</th><th>Auteur</th><th>Date</th><th>Commentaires</th><th>Actions</th></tr></thead>
+                    <tbody id="artBody"><tr class="loader-row"><td colspan="6"><span class="spinner"></span>Chargement...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -149,8 +149,8 @@
             </div>
             <div class="table-responsive">
                 <table class="table">
-                    <thead><tr><th>ID</th><th>Article</th><th>Type</th><th>Contenu</th><th>Auteur</th><th>Date</th><th>Actions</th></tr></thead>
-                    <tbody id="repBody"><tr class="loader-row"><td colspan="7"><span class="spinner"></span>Chargement...</td></tr></tbody>
+                    <thead><tr><th>Article</th><th>Type</th><th>Contenu</th><th>Auteur</th><th>Date</th><th>Actions</th></tr></thead>
+                    <tbody id="repBody"><tr class="loader-row"><td colspan="6"><span class="spinner"></span>Chargement...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -242,14 +242,13 @@ async function loadStats(){
 // ════ ARTICLES ════
 let allArticles=[];
 async function loadArticles(){
-    $('artBody').innerHTML='<tr class="loader-row"><td colspan="7"><span class="spinner"></span>Chargement...</td></tr>';
+    $('artBody').innerHTML='<tr class="loader-row"><td colspan="6"><span class="spinner"></span>Chargement...</td></tr>';
     const r=await apiGet({page:'api_article',list:1});
-    if(!r.success){$('artBody').innerHTML='<tr class="loader-row"><td colspan="7">Erreur de chargement.</td></tr>';return}
+    if(!r.success){$('artBody').innerHTML='<tr class="loader-row"><td colspan="6">Erreur de chargement.</td></tr>';return}
     allArticles=r.articles||[];
-    if(!allArticles.length){$('artBody').innerHTML='<tr class="loader-row"><td colspan="7">Aucun article.</td></tr>';return}
+    if(!allArticles.length){$('artBody').innerHTML='<tr class="loader-row"><td colspan="6">Aucun article.</td></tr>';return}
     $('artBody').innerHTML=allArticles.map(a=>`
         <tr>
-            <td style="color:#6c757d;font-weight:600">#${a.id_article}</td>
             <td style="font-weight:600">${trunc(esc(a.titre),40)}</td>
             <td style="color:#6c757d;font-size:12px">${trunc(esc(a.contenu),60)}</td>
             <td style="font-size:12px;color:#6c757d">${esc(a.auteur)||'—'}</td>
@@ -301,9 +300,9 @@ async function loadAllReplies(){
     currentArtFilter=null;
     $('repTitle').innerHTML='<i class="fas fa-comments me-2"></i>Tous les commentaires';
     $('backBtn').style.display='none';
-    $('repBody').innerHTML='<tr class="loader-row"><td colspan="7"><span class="spinner"></span>Chargement...</td></tr>';
+    $('repBody').innerHTML='<tr class="loader-row"><td colspan="6"><span class="spinner"></span>Chargement...</td></tr>';
     const r=await apiGet({page:'api_reply',all:1});
-    if(!r.success){$('repBody').innerHTML='<tr class="loader-row"><td colspan="7">Erreur.</td></tr>';return}
+    if(!r.success){$('repBody').innerHTML='<tr class="loader-row"><td colspan="6">Erreur.</td></tr>';return}
     renderReplies(r.replies||[]);
 }
 
@@ -314,21 +313,20 @@ async function viewRepliesOf(artId,artTitle){
     currentArtFilter=artId;
     $('repTitle').innerHTML=`<i class="fas fa-comments me-2"></i>Commentaires — ${artTitle}`;
     $('backBtn').style.display='';
-    $('repBody').innerHTML='<tr class="loader-row"><td colspan="7"><span class="spinner"></span>Chargement...</td></tr>';
+    $('repBody').innerHTML='<tr class="loader-row"><td colspan="6"><span class="spinner"></span>Chargement...</td></tr>';
     const r=await apiGet({page:'api_article',id:artId});
-    if(!r.success){$('repBody').innerHTML='<tr class="loader-row"><td colspan="7">Erreur.</td></tr>';return}
+    if(!r.success){$('repBody').innerHTML='<tr class="loader-row"><td colspan="6">Erreur.</td></tr>';return}
     renderReplies(r.replies||[]);
 }
 
 function renderReplies(replies){
-    if(!replies.length){$('repBody').innerHTML='<tr class="loader-row"><td colspan="7">Aucun commentaire.</td></tr>';return}
+    if(!replies.length){$('repBody').innerHTML='<tr class="loader-row"><td colspan="6">Aucun commentaire.</td></tr>';return}
     $('repBody').innerHTML=replies.map(r=>{
         const badge=r.type_reply==='emoji'?'<span class="badge-type badge-emoji">Emoji</span>':r.type_reply==='photo'?'<span class="badge-type badge-photo">Photo</span>':'<span class="badge-type badge-text">Texte</span>';
         const content=r.type_reply==='emoji'?`<span style="font-size:20px">${esc(r.emoji)}</span>`:r.type_reply==='photo'?`<img src="${esc(r.photo)}" style="max-height:40px;border-radius:6px">`:trunc(esc(r.contenu_text||''),60);
         const art=allArticles.find(a=>a.id_article==r.id_article);
         const artLabel=art?trunc(esc(art.titre),30):`#${r.id_article}`;
         return`<tr>
-            <td style="color:#6c757d;font-weight:600">#${r.id_reply}</td>
             <td style="font-size:12px">${artLabel}</td>
             <td>${badge}</td>
             <td>${content}</td>

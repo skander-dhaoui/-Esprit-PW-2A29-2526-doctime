@@ -1,9 +1,10 @@
 <?php
+if (class_exists('UserController')) return;
 
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Medecin.php';
-require_once __DIR__ . '/AuthController.php';
 
 class UserController {
 
@@ -34,12 +35,10 @@ class UserController {
         $user   = $this->userModel->findById($userId);
         $extras = $this->userModel->getExtras($userId, $userRole);
 
-        // Fusionner les extras dans $user pour la vue
         if (!empty($extras)) {
             $user = array_merge($user, $extras);
         }
 
-        // Statistiques selon le rôle
         $stats = [];
         if ($userRole === 'patient') {
             $stats = $this->patientModel->getStats($userId);
@@ -55,7 +54,6 @@ class UserController {
             ];
         }
 
-        // Vider les messages flash avant affichage
         $success         = $_SESSION['success_profil']         ?? null;
         $error           = $_SESSION['error_profil']           ?? null;
         $successPassword = $_SESSION['success_password_profil'] ?? null;
@@ -76,6 +74,45 @@ class UserController {
         }
     }
 
+    /**
+     * Afficher le formulaire de modification de profil
+     */
+    public function editProfilForm(): void {
+        if (empty($_SESSION['user_id'])) {
+            header('Location: index.php?page=login');
+            exit;
+        }
+
+        $userId   = (int)$_SESSION['user_id'];
+        $userRole = $_SESSION['user_role'] ?? 'patient';
+
+        $user = $this->userModel->findById($userId);
+        if (!$user) {
+            $_SESSION['error'] = "Utilisateur non trouvé";
+            header('Location: index.php?page=profil');
+            exit;
+        }
+
+        $extras = $this->userModel->getExtras($userId, $userRole);
+        if (!empty($extras)) {
+            $user = array_merge($user, $extras);
+        }
+
+        $success = $_SESSION['success'] ?? null;
+        $error = $_SESSION['error'] ?? null;
+        unset($_SESSION['success'], $_SESSION['error']);
+
+        $viewPath = __DIR__ . '/../views/frontoffice/modifier_profil.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            $this->renderSimpleEditForm($user, $userRole, $success, $error);
+        }
+    }
+
+    /**
+     * Mettre à jour le profil
+     */
     public function updateProfil(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -98,21 +135,18 @@ class UserController {
             'date_naissance' => $_POST['date_naissance']      ?? null,
         ];
 
-        // Vérification de base
         if (empty($data['nom']) || empty($data['prenom'])) {
             $_SESSION['error_profil'] = 'Le nom et le prénom sont obligatoires.';
             header('Location: index.php?page=profil');
             exit;
         }
         
-        unset($_SESSION['error_profil']);
         if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $_SESSION['error_profil'] = 'Email invalide.';
             header('Location: index.php?page=profil');
             exit;
         }
 
-        // Vérifier unicité email
         $existing = $this->userModel->findByEmail($data['email']);
         if ($existing && (int)$existing['id'] !== $userId) {
             $_SESSION['error_profil'] = 'Cet email est déjà utilisé.';
@@ -122,7 +156,6 @@ class UserController {
 
         $this->userModel->update($userId, $data);
 
-        // Extras selon le rôle
         if ($userRole === 'patient') {
             $this->userModel->upsertPatient($userId, [
                 'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
@@ -137,11 +170,9 @@ class UserController {
             ]);
         }
 
-        // Mettre à jour la session
         $_SESSION['user_name']  = $data['prenom'] . ' ' . $data['nom'];
         $_SESSION['user_email'] = $data['email'];
 
-        unset($_SESSION['error_profil']);
         $_SESSION['success_profil'] = 'Profil mis à jour avec succès.';
         header('Location: index.php?page=profil');
         exit;
@@ -208,19 +239,15 @@ class UserController {
             'password' => password_hash($newPassword, PASSWORD_DEFAULT),
         ]);
 
-        unset($_SESSION['error_password_profil']);
         $_SESSION['success_password_profil'] = 'Mot de passe modifié avec succès.';
         header('Location: index.php?page=profil');
         exit;
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  ✅ NOUVELLES MÉTHODES POUR L'AVATAR
+    //  AVATAR
     // ═══════════════════════════════════════════════════════════
 
-    /**
-     * Mettre à jour l'avatar
-     */
     public function updateAvatar(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -233,8 +260,6 @@ class UserController {
         }
 
         $userId = (int)$_SESSION['user_id'];
-        
-        // Vérifier que l'utilisateur existe
         $user = $this->userModel->findById($userId);
         if (!$user) {
             $_SESSION['error_profil'] = "Utilisateur non trouvé.";
@@ -254,9 +279,6 @@ class UserController {
         exit;
     }
 
-    /**
-     * Supprimer l'avatar
-     */
     public function deleteAvatar(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -490,5 +512,99 @@ class UserController {
             echo "<tr><td>{$u['id']}</td><td>{$u['prenom']} {$u['nom']}</td><td>{$u['email']}</td><td>{$u['role']}</td><td>{$u['statut']}</td></tr>";
         }
         echo '</table>';
+    }
+
+    /**
+     * Fallback simple pour l'édition du profil
+     */
+    private function renderSimpleEditForm($user, $userRole, $success, $error): void {
+        ?>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Modifier mon profil - MediConnect</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                :root { --primary: #2A7FAA; --secondary: #4CAF50; }
+                body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; font-family: 'Segoe UI', sans-serif; }
+                .profile-card { max-width: 550px; width: 100%; background: white; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; }
+                .card-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); padding: 40px 28px; text-align: center; color: white; }
+                .avatar-icon { width: 90px; height: 90px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+                .avatar-icon i { font-size: 45px; }
+                .card-header h2 { font-size: 28px; margin: 0; }
+                .card-header p { margin: 8px 0 0; opacity: 0.9; }
+                .card-body { padding: 32px 28px; }
+                .form-group { margin-bottom: 24px; }
+                .form-label { font-weight: 600; color: #2d3748; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; display: block; }
+                .input-icon { position: relative; }
+                .input-icon i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+                .form-control { width: 100%; border-radius: 14px; padding: 14px 16px 14px 46px; border: 1.5px solid #e2e8f0; font-size: 15px; background: #f8fafc; transition: all 0.3s; }
+                .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(42,127,170,0.1); background: white; }
+                .password-section { background: #f8fafc; border-radius: 20px; padding: 20px; margin: 24px 0; border: 1px solid #e2e8f0; }
+                .password-section-title { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 16px; }
+                .btn-save { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 14px; padding: 14px 28px; border: none; font-weight: 600; width: 100%; transition: all 0.3s; }
+                .btn-save:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(76,175,80,0.3); }
+                .btn-cancel { background: #f1f3f5; color: #6c757d; border-radius: 14px; padding: 14px 28px; text-decoration: none; display: inline-block; text-align: center; width: 100%; margin-top: 12px; font-weight: 600; transition: all 0.3s; }
+                .btn-cancel:hover { background: #e9ecef; color: #495057; transform: translateY(-2px); }
+                .alert-custom { border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; border-left: 4px solid; }
+                .alert-success-custom { background: #d4edda; color: #155724; border-left-color: #28a745; }
+                .alert-error-custom { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
+                .back-link { text-align: center; margin-top: 20px; }
+                .back-link a { color: white; text-decoration: none; opacity: 0.9; }
+                .back-link a:hover { opacity: 1; text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <div class="profile-card">
+                <div class="card-header">
+                    <div class="avatar-icon"><i class="fas fa-user-edit"></i></div>
+                    <h2>Modifier mon profil</h2>
+                    <p>Mettez à jour vos informations personnelles</p>
+                </div>
+                <div class="card-body">
+                    <?php if ($success): ?>
+                        <div class="alert-custom alert-success-custom"><i class="fas fa-check-circle me-2"></i> <?= htmlspecialchars($success) ?></div>
+                    <?php endif; ?>
+                    <?php if ($error): ?>
+                        <div class="alert-custom alert-error-custom"><i class="fas fa-exclamation-circle me-2"></i> <?= htmlspecialchars($error) ?></div>
+                    <?php endif; ?>
+                    <form method="POST" action="index.php?page=modifier_profil">
+                        <div class="form-group">
+                            <label class="form-label">Nom complet</label>
+                            <div class="input-icon"><i class="fas fa-user"></i><input type="text" name="nom" class="form-control" value="<?= htmlspecialchars($user['nom'] ?? '') ?>" required></div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-icon"><i class="fas fa-user"></i><input type="text" name="prenom" class="form-control" value="<?= htmlspecialchars($user['prenom'] ?? '') ?>" required></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Adresse email</label>
+                            <div class="input-icon"><i class="fas fa-envelope"></i><input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? '') ?>" required></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Téléphone</label>
+                            <div class="input-icon"><i class="fas fa-phone"></i><input type="tel" name="telephone" class="form-control" value="<?= htmlspecialchars($user['telephone'] ?? '') ?>"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Adresse</label>
+                            <div class="input-icon"><i class="fas fa-map-marker-alt"></i><textarea name="adresse" class="form-control" rows="2" style="padding-top: 14px;"><?= htmlspecialchars($user['adresse'] ?? '') ?></textarea></div>
+                        </div>
+                        <div class="password-section">
+                            <div class="password-section-title"><i class="fas fa-lock me-2"></i> Mot de passe <span style="font-size: 12px;">(optionnel)</span></div>
+                            <div class="form-group" style="margin-bottom: 16px;"><div class="input-icon"><i class="fas fa-key"></i><input type="password" name="password" class="form-control" placeholder="Nouveau mot de passe"></div></div>
+                            <div class="form-group" style="margin-bottom: 0;"><div class="input-icon"><i class="fas fa-check-circle"></i><input type="password" name="confirm_password" class="form-control" placeholder="Confirmer le mot de passe"></div></div>
+                            <div class="password-hint" style="font-size: 12px; color: #718096; margin-top: 12px;"><i class="fas fa-info-circle"></i> Laisser vide pour ne pas changer. Minimum 6 caractères.</div>
+                        </div>
+                        <button type="submit" class="btn-save"><i class="fas fa-save me-2"></i> Enregistrer les modifications</button>
+                        <a href="index.php?page=profil" class="btn-cancel"><i class="fas fa-times me-2"></i> Annuler</a>
+                    </form>
+                </div>
+            </div>
+            <div class="back-link"><a href="index.php?page=profil"><i class="fas fa-arrow-left me-2"></i> Retour à mon profil</a></div>
+        </body>
+        </html>
+        <?php
     }
 }

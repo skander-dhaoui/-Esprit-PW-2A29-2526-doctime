@@ -66,7 +66,6 @@ $current_page = 'medecins_admin';
     </div>
 
     <div class="content-card">
-        <div class="info-row"><div class="info-label">ID</div><div class="info-value"><?= $medecin['id'] ?></div></div>
         <div class="info-row"><div class="info-label">Nom complet</div><div class="info-value">Dr. <?= htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) ?></div></div>
         <div class="info-row"><div class="info-label">Email</div><div class="info-value"><?= htmlspecialchars($medecin['email']) ?></div></div>
         <div class="info-row"><div class="info-label">Téléphone</div><div class="info-value"><?= htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') ?></div></div>

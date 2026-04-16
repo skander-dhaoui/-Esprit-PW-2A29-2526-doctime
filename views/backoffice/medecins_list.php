@@ -358,7 +358,6 @@ $page_title = 'Gestion des médecins';
             <table id="medecinsTable" class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Nom complet</th>
                         <th>Email</th>
                         <th>Téléphone</th>
@@ -373,7 +372,6 @@ $page_title = 'Gestion des médecins';
                 <?php if (!empty($medecins)): ?>
                     <?php foreach ($medecins as $m): ?>
                     <tr>
-                        <td><?= htmlspecialchars($m['id']) ?></td>
                         <td><strong>Dr. <?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($m['email']) ?></td>
                         <td><?= htmlspecialchars($m['telephone'] ?? '—') ?></td>
@@ -412,7 +410,7 @@ $page_title = 'Gestion des médecins';
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="fas fa-user-md fa-2x mb-2 d-block opacity-25"></i>
                             Aucun médecin trouvé
                         </td>
@@ -435,10 +433,10 @@ $page_title = 'Gestion des médecins';
                 url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
             },
             pageLength: 10,
-            order: [[0, 'desc']],
+            order: [[6, 'desc']],
             responsive: true,
             columnDefs: [
-                { orderable: false, targets: 8 }
+                { orderable: false, targets: 7 }
             ]
         });
     });

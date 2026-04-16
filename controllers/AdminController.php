@@ -650,38 +650,728 @@ public function editMedecin(int $id): void {
     // ─────────────────────────────────────────
     //  Rendez-vous (admin)
     // ─────────────────────────────────────────
-    public function listRendezVous(): void {
-        $this->auth->requireRole('admin');
-        try {
-            $db   = Database::getInstance()->getConnection();
-            $stmt = $db->query(
-                "SELECT rv.*,
-                        up.nom AS patient_nom, up.prenom AS patient_prenom,
-                        um.nom AS medecin_nom, um.prenom AS medecin_prenom
-                 FROM rendez_vous rv
-                 JOIN users up ON rv.patient_id = up.id
-                 JOIN users um ON rv.medecin_id = um.id
-                 ORDER BY rv.created_at DESC"
-            );
-            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            $rendezVous = [];
+public function listRendezVous(): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        // Requête de base
+        $sql = "
+            SELECT rv.*,
+                   u_patient.prenom AS patient_prenom, u_patient.nom AS patient_nom,
+                   u_patient.email AS patient_email, u_patient.telephone AS patient_telephone,
+                   u_medecin.prenom AS medecin_prenom, u_medecin.nom AS medecin_nom,
+                   u_medecin.email AS medecin_email,
+                   m.specialite
+            FROM rendez_vous rv
+            JOIN users u_patient ON rv.patient_id = u_patient.id
+            JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+            LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        
+        // Filtre par date
+        if (!empty($_GET['date'])) {
+            $sql .= " AND DATE(rv.date_rendezvous) = :date";
+            $params[':date'] = $_GET['date'];
         }
-        $viewPath = __DIR__ . '/../views/backoffice/rendez_vous_list.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        
+        // Filtre par statut
+        if (!empty($_GET['statut'])) {
+            $sql .= " AND rv.statut = :statut";
+            $params[':statut'] = $_GET['statut'];
+        }
+        
+        // Recherche par patient ou médecin
+        if (!empty($_GET['search'])) {
+            $sql .= " AND (u_patient.nom LIKE :search OR u_patient.prenom LIKE :search 
+                       OR u_medecin.nom LIKE :search OR u_medecin.prenom LIKE :search)";
+            $params[':search'] = '%' . $_GET['search'] . '%';
+        }
+        
+        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
+        
+        $stmt = $db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        $rdvs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calculer les statistiques
+        $stats = [
+            'total' => count($rdvs),
+            'en_attente' => count(array_filter($rdvs, fn($r) => $r['statut'] === 'en_attente')),
+            'confirmes' => count(array_filter($rdvs, fn($r) => $r['statut'] === 'confirmé')),
+            'termines' => count(array_filter($rdvs, fn($r) => $r['statut'] === 'terminé')),
+        ];
+        
+    } catch (Exception $e) {
+        error_log('Erreur listRendezVous: ' . $e->getMessage());
+        $rdvs = [];
+        $stats = ['total' => 0, 'en_attente' => 0, 'confirmes' => 0, 'termines' => 0];
     }
+    
+    // Inclure la vue
+    $viewPath = __DIR__ . '/../views/backoffice/rendezvous/list.php';
+    if (file_exists($viewPath)) {
+        require_once $viewPath;
+    } else {
+        // Fallback si la vue n'existe pas
+        echo "Vue non trouvée: " . $viewPath;
+        echo "<pre>Liste des rendez-vous: " . print_r($rdvs, true) . "</pre>";
+    }
+}
 
-    public function deleteRendezVous(int $id): void {
-        $this->auth->requireRole('admin');
-        try {
-            $db   = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("DELETE FROM rendez_vous WHERE id = :id");
-            $stmt->execute([':id' => $id]);
-        } catch (Exception $e) {}
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous supprimé.'];
+
+// ─────────────────────────────────────────
+//  Gestion des rendez-vous (CRUD complet)
+// ─────────────────────────────────────────
+
+/**
+ * Afficher le formulaire de création d'un rendez-vous
+ */
+public function showCreateRendezVous(): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        // Récupérer les patients et médecins
+        $db = Database::getInstance()->getConnection();
+        
+        // Récupérer tous les patients
+        $stmt = $db->query("SELECT id, nom, prenom, email FROM users WHERE role = 'patient' ORDER BY nom ASC");
+        $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Récupérer tous les médecins
+        $stmt = $db->query("
+            SELECT u.id, u.nom, u.prenom, u.email, m.specialite 
+            FROM users u 
+            LEFT JOIN medecins m ON u.id = m.user_id 
+            WHERE u.role = 'medecin' 
+            ORDER BY u.nom ASC
+        ");
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Récupérer les erreurs et anciennes données
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
+        $flash = $_SESSION['flash'] ?? null;
+        
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/rendezvous/form.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            // Vue de fallback
+            $this->renderRendezVousFormFallback($patients, $medecins, $errors, $old);
+        }
+    } catch (Exception $e) {
+        error_log('Erreur showCreateRendezVous - ' . $e->getMessage());
+        $this->setFlash('error', 'Erreur lors du chargement.');
         header('Location: index.php?page=rendez_vous_admin');
         exit;
     }
+}
+
+/**
+ * Créer un rendez-vous
+ */
+public function createRendezVous(): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?page=rendez_vous_admin&action=create');
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    
+    // Validation
+    if (empty($_POST['patient_id'])) {
+        $errors['patient_id'] = 'Veuillez sélectionner un patient.';
+    }
+    
+    if (empty($_POST['medecin_id'])) {
+        $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
+    }
+    
+    if (empty($_POST['date_rendezvous'])) {
+        $errors['date_rendezvous'] = 'Veuillez sélectionner une date.';
+    }
+    
+    if (empty($_POST['heure_rendezvous'])) {
+        $errors['heure_rendezvous'] = 'Veuillez sélectionner une heure.';
+    }
+    
+    // S'il y a des erreurs, retourner au formulaire
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=rendez_vous_admin&action=create');
+        exit;
+    }
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $patient_id = (int)$_POST['patient_id'];
+        $medecin_id = (int)$_POST['medecin_id'];
+        $date_rendezvous = $_POST['date_rendezvous'];
+        $heure_rendezvous = $_POST['heure_rendezvous'];
+        $motif = $_POST['motif'] ?? '';
+        $statut = $_POST['statut'] ?? 'en_attente';
+        
+        $sql = "INSERT INTO rendez_vous (patient_id, medecin_id, date_rendezvous, heure_rendezvous, motif, statut, created_at) 
+                VALUES (:patient_id, :medecin_id, :date_rendezvous, :heure_rendezvous, :motif, :statut, NOW())";
+        
+        $stmt = $db->prepare($sql);
+        $result = $stmt->execute([
+            ':patient_id' => $patient_id,
+            ':medecin_id' => $medecin_id,
+            ':date_rendezvous' => $date_rendezvous,
+            ':heure_rendezvous' => $heure_rendezvous,
+            ':motif' => $motif,
+            ':statut' => $statut
+        ]);
+        
+        if ($result) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous créé avec succès.'];
+            header('Location: index.php?page=rendez_vous_admin');
+            exit;
+        } else {
+            throw new Exception('Erreur lors de la création.');
+        }
+    } catch (Exception $e) {
+        error_log('Erreur createRendezVous - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=rendez_vous_admin&action=create');
+        exit;
+    }
+}
+
+/**
+ * Afficher le formulaire de modification d'un rendez-vous
+ */
+public function editRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        // Récupérer le rendez-vous
+        $stmt = $db->prepare("SELECT * FROM rendez_vous WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $rendezvous = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$rendezvous) {
+            throw new Exception('Rendez-vous non trouvé.');
+        }
+        
+        // Récupérer les patients et médecins
+        $stmt = $db->query("SELECT id, nom, prenom, email FROM users WHERE role = 'patient' ORDER BY nom ASC");
+        $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stmt = $db->query("
+            SELECT u.id, u.nom, u.prenom, u.email, m.specialite 
+            FROM users u 
+            LEFT JOIN medecins m ON u.id = m.user_id 
+            WHERE u.role = 'medecin' 
+            ORDER BY u.nom ASC
+        ");
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $old = $_SESSION['old'] ?? null;
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['old'], $_SESSION['flash']);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/rendezvous/form.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée";
+        }
+    } catch (Exception $e) {
+        error_log('Erreur editRendezVous - ' . $e->getMessage());
+        $this->setFlash('error', $e->getMessage());
+        header('Location: index.php?page=rendez_vous_admin');
+        exit;
+    }
+}
+
+/**
+ * Mettre à jour un rendez-vous
+ */
+public function updateRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
+        exit;
+    }
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $patient_id = (int)$_POST['patient_id'];
+        $medecin_id = (int)$_POST['medecin_id'];
+        $date_rendezvous = $_POST['date_rendezvous'];
+        $heure_rendezvous = $_POST['heure_rendezvous'];
+        $motif = $_POST['motif'] ?? '';
+        $statut = $_POST['statut'] ?? 'en_attente';
+        
+        $sql = "UPDATE rendez_vous SET 
+                    patient_id = :patient_id, 
+                    medecin_id = :medecin_id, 
+                    date_rendezvous = :date_rendezvous, 
+                    heure_rendezvous = :heure_rendezvous, 
+                    motif = :motif, 
+                    statut = :statut,
+                    updated_at = NOW()
+                WHERE id = :id";
+        
+        $stmt = $db->prepare($sql);
+        $result = $stmt->execute([
+            ':patient_id' => $patient_id,
+            ':medecin_id' => $medecin_id,
+            ':date_rendezvous' => $date_rendezvous,
+            ':heure_rendezvous' => $heure_rendezvous,
+            ':motif' => $motif,
+            ':statut' => $statut,
+            ':id' => $id
+        ]);
+        
+        if ($result) {
+            $this->setFlash('success', 'Rendez-vous mis à jour avec succès.');
+        } else {
+            throw new Exception('Erreur lors de la mise à jour.');
+        }
+        
+        header('Location: index.php?page=rendez_vous_admin');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur updateRendezVous - ' . $e->getMessage());
+        $this->setFlash('error', $e->getMessage());
+        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
+        exit;
+    }
+}
+
+/**
+ * Afficher les détails d'un rendez-vous
+ */
+public function showRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                       u_patient.email AS patient_email,
+                       u_patient.telephone AS patient_telephone,
+                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
+                       u_medecin.email AS medecin_email,
+                       m.specialite,
+                       m.cabinet_adresse
+                FROM rendez_vous rv
+                JOIN users u_patient ON rv.patient_id = u_patient.id
+                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                WHERE rv.id = :id";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $rendezvous = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$rendezvous) {
+            throw new Exception('Rendez-vous non trouvé.');
+        }
+        
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/rendezvous/show.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
+    } catch (Exception $e) {
+        error_log('Erreur showRendezVous - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        header('Location: index.php?page=rendez_vous_admin');
+        exit;
+    }
+}
+
+
+
+
+
+
+
+// ─────────────────────────────────────────
+//  Gestion des disponibilités
+// ─────────────────────────────────────────
+// ─────────────────────────────────────────
+//  Gestion des disponibilités (CRUD complet)
+// ─────────────────────────────────────────
+
+/**
+ * Afficher le formulaire de création d'une disponibilité
+ */
+public function createDisponibilite(): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?page=disponibilites_admin&action=create');
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    
+    if (empty($_POST['medecin_id'])) {
+        $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
+    }
+    
+    if (empty($_POST['jour_semaine'])) {
+        $errors['jour_semaine'] = 'Veuillez sélectionner un jour.';
+    }
+    
+    if (empty($_POST['heure_debut'])) {
+        $errors['heure_debut'] = 'Veuillez saisir une heure de début.';
+    }
+    
+    if (empty($_POST['heure_fin'])) {
+        $errors['heure_fin'] = 'Veuillez saisir une heure de fin.';
+    }
+    
+    if (!empty($_POST['heure_debut']) && !empty($_POST['heure_fin']) && $_POST['heure_debut'] >= $_POST['heure_fin']) {
+        $errors['heure_fin'] = 'L\'heure de fin doit être supérieure à l\'heure de début.';
+    }
+    
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=disponibilites_admin&action=create');
+        exit;
+    }
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $sql = "INSERT INTO disponibilites (medecin_id, jour_semaine, heure_debut, heure_fin, pause_debut, pause_fin, actif, created_at, updated_at) 
+                VALUES (:medecin_id, :jour_semaine, :heure_debut, :heure_fin, :pause_debut, :pause_fin, :actif, NOW(), NOW())";
+        
+        $stmt = $db->prepare($sql);
+        $result = $stmt->execute([
+            ':medecin_id' => (int)$_POST['medecin_id'],
+            ':jour_semaine' => $_POST['jour_semaine'],
+            ':heure_debut' => $_POST['heure_debut'],
+            ':heure_fin' => $_POST['heure_fin'],
+            ':pause_debut' => !empty($_POST['pause_debut']) ? $_POST['pause_debut'] : null,
+            ':pause_fin' => !empty($_POST['pause_fin']) ? $_POST['pause_fin'] : null,
+            ':actif' => isset($_POST['actif']) ? 1 : 0
+        ]);
+        
+        if ($result) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité créée avec succès.'];
+            header('Location: index.php?page=disponibilites_admin');
+            exit;
+        } else {
+            throw new Exception('Erreur lors de la création.');
+        }
+    } catch (Exception $e) {
+        error_log('Erreur createDisponibilite - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=disponibilites_admin&action=create');
+        exit;
+    }
+}
+
+// ─────────────────────────────────────────
+//  Gestion des disponibilités (CRUD complet)
+// ─────────────────────────────────────────
+
+/**
+ * Afficher le formulaire de création d'une disponibilité
+ */
+
+/**
+ * Créer une disponibilité
+ */
+
+/**
+ * Afficher le formulaire de modification d'une disponibilité
+ */
+
+
+/**
+ * Mettre à jour une disponibilité
+ */
+
+
+/**
+ * Supprimer une disponibilité
+ */
+
+/**
+ * Créer une disponibilité
+ */
+
+
+/**
+ * Afficher le formulaire de modification d'une disponibilité
+ */
+public function editDisponibilite(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("SELECT * FROM disponibilites WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $disponibilite = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$disponibilite) {
+            throw new Exception('Disponibilité non trouvée.');
+        }
+        
+        $stmt = $db->query("
+            SELECT u.id, u.nom, u.prenom, u.email, m.specialite 
+            FROM users u 
+            LEFT JOIN medecins m ON u.id = m.user_id 
+            WHERE u.role = 'medecin' 
+            ORDER BY u.nom ASC
+        ");
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
+        $flash = $_SESSION['flash'] ?? null;
+        
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/disponibilite/form.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
+    } catch (Exception $e) {
+        error_log('Erreur editDisponibilite - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        header('Location: index.php?page=disponibilites_admin');
+        exit;
+    }
+}
+
+/**
+ * Mettre à jour une disponibilité
+ */
+public function updateDisponibilite(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header("Location: index.php?page=disponibilites_admin&action=edit&id=$id");
+        exit;
+    }
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $sql = "UPDATE disponibilites SET 
+                    medecin_id = :medecin_id,
+                    jour_semaine = :jour_semaine,
+                    heure_debut = :heure_debut,
+                    heure_fin = :heure_fin,
+                    pause_debut = :pause_debut,
+                    pause_fin = :pause_fin,
+                    actif = :actif,
+                    updated_at = NOW()
+                WHERE id = :id";
+        
+        $stmt = $db->prepare($sql);
+        $result = $stmt->execute([
+            ':medecin_id' => (int)$_POST['medecin_id'],
+            ':jour_semaine' => $_POST['jour_semaine'],
+            ':heure_debut' => $_POST['heure_debut'],
+            ':heure_fin' => $_POST['heure_fin'],
+            ':pause_debut' => !empty($_POST['pause_debut']) ? $_POST['pause_debut'] : null,
+            ':pause_fin' => !empty($_POST['pause_fin']) ? $_POST['pause_fin'] : null,
+            ':actif' => isset($_POST['actif']) ? 1 : 0,
+            ':id' => $id
+        ]);
+        
+        if ($result) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité mise à jour avec succès.'];
+        } else {
+            throw new Exception('Erreur lors de la mise à jour.');
+        }
+        
+        header('Location: index.php?page=disponibilites_admin');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur updateDisponibilite - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        header("Location: index.php?page=disponibilites_admin&action=edit&id=$id");
+        exit;
+    }
+}
+
+/**
+ * Supprimer une disponibilité
+ */
+public function deleteDisponibilite(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("DELETE FROM disponibilites WHERE id = :id");
+        $result = $stmt->execute([':id' => $id]);
+        
+        if ($result) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité supprimée avec succès.'];
+        } else {
+            throw new Exception('Erreur lors de la suppression.');
+        }
+        
+        header('Location: index.php?page=disponibilites_admin');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur deleteDisponibilite - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        header('Location: index.php?page=disponibilites_admin');
+        exit;
+    }
+}
+/**
+ * Liste des disponibilités
+ */
+public function listDisponibilites(): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $sql = "SELECT d.*, 
+                       CONCAT(u.prenom, ' ', u.nom) AS medecin_nom,
+                       u.email AS medecin_email,
+                       m.specialite
+                FROM disponibilites d
+                JOIN users u ON d.medecin_id = u.id
+                LEFT JOIN medecins m ON d.medecin_id = m.user_id
+                ORDER BY FIELD(d.jour_semaine, 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'), d.heure_debut ASC";
+        
+        $stmt = $db->query($sql);
+        $disponibilites = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stmt = $db->query("SELECT u.id, u.nom, u.prenom, u.email, m.specialite FROM users u LEFT JOIN medecins m ON u.id = m.user_id WHERE u.role = 'medecin' ORDER BY u.nom ASC");
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stats = [
+            'total' => count($disponibilites),
+            'actives' => count(array_filter($disponibilites, fn($d) => $d['actif'] == 1)),
+            'inactives' => count(array_filter($disponibilites, fn($d) => $d['actif'] == 0)),
+        ];
+        
+        $viewPath = __DIR__ . '/../views/backoffice/disponibilite/list.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
+    } catch (Exception $e) {
+        error_log('Erreur listDisponibilites: ' . $e->getMessage());
+        $disponibilites = [];
+        $medecins = [];
+        $stats = ['total' => 0, 'actives' => 0, 'inactives' => 0];
+    }
+}
+
+public function showCreateDisponibilite(): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->query("
+            SELECT u.id, u.nom, u.prenom, u.email, m.specialite 
+            FROM users u 
+            LEFT JOIN medecins m ON u.id = m.user_id 
+            WHERE u.role = 'medecin' 
+            ORDER BY u.nom ASC
+        ");
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
+        $flash = $_SESSION['flash'] ?? null;
+        
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/disponibilite/form.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
+    } catch (Exception $e) {
+        error_log('Erreur showCreateDisponibilite - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors du chargement.'];
+        header('Location: index.php?page=disponibilites_admin');
+        exit;
+    }
+}
+
+
+
+/**
+ * Supprimer un rendez-vous
+ */
+public function deleteRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("DELETE FROM rendez_vous WHERE id = :id");
+        $result = $stmt->execute([':id' => $id]);
+        
+        if ($result) {
+            $this->setFlash('success', 'Rendez-vous supprimé avec succès.');
+        } else {
+            throw new Exception('Erreur lors de la suppression.');
+        }
+        
+        header('Location: index.php?page=rendez_vous_admin');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur deleteRendezVous - ' . $e->getMessage());
+        $this->setFlash('error', $e->getMessage());
+        header('Location: index.php?page=rendez_vous_admin');
+        exit;
+    }
+}
+
+/**
+ * Méthode utilitaire pour les messages flash
+ */
+private function setFlash(string $type, string $message): void {
+    $_SESSION['flash'] = ['type' => $type, 'message' => $message];
+}
+
+
+
 
     // ─────────────────────────────────────────
     //  Articles

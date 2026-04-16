@@ -85,33 +85,413 @@ class OrdonnanceController {
             exit;
         }
     }
+// ─────────────────────────────────────────
+//  Méthodes pour ADMIN
+// ─────────────────────────────────────────
 
+public function createAdmin(): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $csrfToken = $this->generateCsrfToken();
+        $patients = $this->patientModel->getAll();
+        $medecins = $this->medecinModel->getAllWithUsers();
+        $old = $_SESSION['old'] ?? null;
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['old'], $_SESSION['flash']);
+        
+        require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
+    } catch (Exception $e) {
+        error_log('Erreur createAdmin - ' . $e->getMessage());
+        $this->setFlash('error', 'Erreur lors du chargement.');
+        header('Location: index.php?page=ordonnances');
+        exit;
+    }
+}
+
+
+/**
+ * Créer une ordonnance depuis un rendez-vous
+ */
+/**
+ * Créer une ordonnance depuis un rendez-vous
+ */
+/**
+ * Créer une ordonnance depuis un rendez-vous
+ */
+public function storeFromRendezVous(): void {
+    $this->auth->requireRole('medecin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
+    }
+    
+    $rdv_id = (int)$_POST['rdv_id'];
+    $patient_id = (int)$_POST['patient_id'];
+    $medecin_id = (int)$_POST['medecin_id'];
+    $diagnostic = trim($_POST['diagnostic']);
+    $contenu = trim($_POST['contenu']);
+    $date_expiration = $_POST['date_validite'] ?? date('Y-m-d', strtotime('+1 year'));
+    
+    error_log("=== storeFromRendezVous ===");
+    error_log("rdv_id: " . $rdv_id);
+    error_log("patient_id: " . $patient_id);
+    error_log("medecin_id: " . $medecin_id);
+    
+    if (empty($diagnostic) || empty($contenu)) {
+        $_SESSION['error'] = 'Le diagnostic et la prescription sont obligatoires.';
+        header("Location: index.php?page=detail_rendez_vous&id=$rdv_id");
+        exit;
+    }
+    
+    // Générer un numéro d'ordonnance unique
+    $numero = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+    
+    $data = [
+        'numero_ordonnance' => $numero,
+        'patient_id' => $patient_id,
+        'medecin_id' => $medecin_id,
+        'rdv_id' => $rdv_id,  // ASSUREZ-VOUS QUE CECI EST PRÉSENT
+        'date_ordonnance' => date('Y-m-d'),
+        'date_expiration' => $date_expiration,
+        'diagnostic' => $diagnostic,
+        'contenu' => $contenu,
+        'status' => 'active'
+    ];
+    
+    error_log("Données à insérer: " . print_r($data, true));
+    
+    $ordonnanceId = $this->ordonnanceModel->create($data);
+    
+    error_log("Résultat insertion - ID: " . ($ordonnanceId ? $ordonnanceId : 'NULL'));
+    
+    if ($ordonnanceId) {
+        // Vérifier que l'ordonnance a bien été créée avec le rdv_id
+        $check = $this->ordonnanceModel->getById($ordonnanceId);
+        error_log("Ordonnance créée - rdv_id: " . ($check['rdv_id'] ?? 'NULL'));
+        
+        $_SESSION['success'] = 'Ordonnance créée avec succès.';
+    } else {
+        $_SESSION['error'] = 'Erreur lors de la création de l\'ordonnance.';
+    }
+    
+    header("Location: index.php?page=detail_rendez_vous&id=$rdv_id");
+    exit;
+}
+
+/**
+ * Modifier une ordonnance depuis un rendez-vous
+ */
+public function updateFromRendezVous(): void {
+    $this->auth->requireRole('medecin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
+    }
+    
+    $ordonnance_id = (int)$_POST['ordonnance_id'];
+    $rdv_id = (int)$_POST['rdv_id'];
+    $diagnostic = trim($_POST['diagnostic']);
+    $contenu = trim($_POST['contenu']);
+    $date_validite = $_POST['date_validite'] ?? date('Y-m-d', strtotime('+1 year'));
+    
+    if (empty($diagnostic) || empty($contenu)) {
+        $_SESSION['error'] = 'Le diagnostic et la prescription sont obligatoires.';
+        header("Location: index.php?page=detail_rendez_vous&id=$rdv_id");
+        exit;
+    }
+    
+    $result = $this->ordonnanceModel->update($ordonnance_id, [
+        'diagnostic' => $diagnostic,
+        'contenu' => $contenu,
+        'date_validite' => $date_validite
+    ]);
+    
+    if ($result) {
+        $_SESSION['success'] = 'Ordonnance modifiée avec succès.';
+    } else {
+        $_SESSION['error'] = 'Erreur lors de la modification.';
+    }
+    
+    header("Location: index.php?page=detail_rendez_vous&id=$rdv_id");
+    exit;
+}
+
+/**
+ * Supprimer une ordonnance depuis un rendez-vous
+ */
+public function deleteFromRendezVous(int $ordonnanceId, int $rdvId): void {
+    $this->auth->requireRole('medecin');
+    
+    $result = $this->ordonnanceModel->delete($ordonnanceId);
+    
+    if ($result) {
+        $_SESSION['success'] = 'Ordonnance supprimée avec succès.';
+    } else {
+        $_SESSION['error'] = 'Erreur lors de la suppression.';
+    }
+    
+    header("Location: index.php?page=detail_rendez_vous&id=$rdvId");
+    exit;
+}
+
+/**
+ * API - Récupérer une ordonnance
+ */
+public function apiGet(int $id): void {
+    header('Content-Type: application/json');
+    
+    $ordonnance = $this->ordonnanceModel->getById($id);
+    
+    if ($ordonnance) {
+        echo json_encode(['success' => true, 'ordonnance' => $ordonnance]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Ordonnance non trouvée']);
+    }
+    exit;
+}
+
+
+
+
+public function storeAdmin(): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?page=ordonnances&action=create');
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    
+    // Validation
+    if (empty($_POST['patient_id'])) {
+        $errors['patient_id'] = 'Veuillez sélectionner un patient.';
+    }
+    
+    if (empty($_POST['medecin_id'])) {
+        $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
+    }
+    
+    if (empty($_POST['diagnostic'])) {
+        $errors['diagnostic'] = 'Le diagnostic est obligatoire.';
+    } elseif (strlen(trim($_POST['diagnostic'])) < 5) {
+        $errors['diagnostic'] = 'Le diagnostic doit contenir au moins 5 caractères.';
+    }
+    
+    if (empty($_POST['contenu'])) {
+        $errors['contenu'] = 'Le contenu / médicaments est obligatoire.';
+    }
+    
+    // S'il y a des erreurs, retourner au formulaire
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=ordonnances&action=create');
+        exit;
+    }
+    
+    try {
+        $data = [
+            'patient_id' => (int)$_POST['patient_id'],
+            'medecin_id' => (int)$_POST['medecin_id'],
+            'date_ordonnance' => $_POST['date_ordonnance'] ?? date('Y-m-d'),
+            'date_expiration' => $_POST['date_expiration'] ?? null,
+            'diagnostic' => trim($_POST['diagnostic']),
+            'contenu' => trim($_POST['contenu']),
+            'status' => $_POST['status'] ?? 'active'
+        ];
+        
+        $ordonnanceId = $this->ordonnanceModel->create($data);
+        
+        if ($ordonnanceId) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Ordonnance créée avec succès.'];
+            unset($_SESSION['errors'], $_SESSION['old']);
+            header('Location: index.php?page=ordonnances');
+            exit;
+        } else {
+            throw new Exception('Erreur lors de la création.');
+        }
+    } catch (Exception $e) {
+        error_log('Erreur storeAdmin - ' . $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
+        header('Location: index.php?page=ordonnances&action=create');
+        exit;
+    }
+}
+
+public function editAdmin(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $ordonnance = $this->ordonnanceModel->getById($id);
+        if (!$ordonnance) {
+            $this->setFlash('error', 'Ordonnance non trouvée.');
+            header('Location: index.php?page=ordonnances');
+            exit;
+        }
+        
+        $csrfToken = $this->generateCsrfToken();
+        $patients = $this->patientModel->getAll();
+        $medecins = $this->medecinModel->getAllWithUsers();
+        $old = $_SESSION['old'] ?? null;
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['old'], $_SESSION['flash']);
+        
+        require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
+    } catch (Exception $e) {
+        error_log('Erreur editAdmin - ' . $e->getMessage());
+        $this->setFlash('error', 'Erreur lors du chargement.');
+        header('Location: index.php?page=ordonnances');
+        exit;
+    }
+}
+
+public function updateAdmin(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header("Location: index.php?page=ordonnances&action=edit&id=$id");
+        exit;
+    }
+    
+    try {
+        $data = [
+            'diagnostic' => trim($_POST['diagnostic'] ?? ''),
+            'contenu' => trim($_POST['contenu'] ?? ''),
+            'date_expiration' => $_POST['date_expiration'] ?? null,
+            'status' => $_POST['status'] ?? 'active'
+        ];
+        
+        $result = $this->ordonnanceModel->update($id, $data);
+        
+        if ($result) {
+            $this->setFlash('success', 'Ordonnance mise à jour avec succès.');
+        } else {
+            throw new Exception('Erreur lors de la mise à jour.');
+        }
+        
+        header('Location: index.php?page=ordonnances');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur updateAdmin - ' . $e->getMessage());
+        $this->setFlash('error', $e->getMessage());
+        header("Location: index.php?page=ordonnances&action=edit&id=$id");
+        exit;
+    }
+}
+
+public function deleteAdmin(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $result = $this->ordonnanceModel->delete($id);
+        
+        if ($result) {
+            $this->setFlash('success', 'Ordonnance supprimée avec succès.');
+        } else {
+            throw new Exception('Erreur lors de la suppression.');
+        }
+        
+        header('Location: index.php?page=ordonnances');
+        exit;
+    } catch (Exception $e) {
+        error_log('Erreur deleteAdmin - ' . $e->getMessage());
+        $this->setFlash('error', $e->getMessage());
+        header('Location: index.php?page=ordonnances');
+        exit;
+    }
+}
+
+public function showAdmin(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $ordonnance = $this->ordonnanceModel->getById($id);
+        if (!$ordonnance) {
+            $this->setFlash('error', 'Ordonnance non trouvée.');
+            header('Location: index.php?page=ordonnances');
+            exit;
+        }
+        
+        $medicaments = $this->ordonnanceModel->getMedicaments($id);
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+        
+        require_once __DIR__ . '/../views/backoffice/ordonnance/show.php';
+    } catch (Exception $e) {
+        error_log('Erreur showAdmin - ' . $e->getMessage());
+        $this->setFlash('error', 'Erreur lors du chargement.');
+        header('Location: index.php?page=ordonnances');
+        exit;
+    }
+}
     // ─────────────────────────────────────────
     //  Liste des ordonnances (admin)
     // ─────────────────────────────────────────
-    public function indexAdmin(): void {
-        $this->auth->requireRole('admin');
+public function indexAdmin(): void {
+    $this->auth->requireRole('admin');
 
-        try {
-            $filter = $_GET['filter'] ?? 'all';
-            $medecinId = $_GET['medecin'] ?? null;
-            $patientId = $_GET['patient'] ?? null;
+    try {
+        $filter = $_GET['filter'] ?? 'all';
+        $medecinId = $_GET['medecin'] ?? null;
+        $patientId = $_GET['patient'] ?? null;
+        $search = $_GET['search'] ?? '';
 
-            $ordonnances = $this->ordonnanceModel->getAll($filter, $medecinId, $patientId);
-
-            $medecins = $this->medecinModel->getAllWithUsers();
-            $patients = $this->patientModel->getAll();
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/ordonnance_list_admin.php';
-        } catch (Exception $e) {
-            error_log('Erreur OrdonnanceController::indexAdmin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: /admin/dashboard');
-            exit;
+        // Récupérer les ordonnances
+        if (!empty($search)) {
+            $ordonnances = $this->ordonnanceModel->search($search);
+        } else {
+            $ordonnances = $this->ordonnanceModel->getAll();
         }
+
+        // Récupérer les médecins et patients pour les filtres
+        $medecins = $this->medecinModel->getAllWithUsers();
+        $patients = $this->patientModel->getAll();
+        
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        // Utiliser le bon chemin de la vue
+        $viewPath = __DIR__ . '/../views/backoffice/ordonnance/list.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            // Afficher une erreur claire si le fichier n'existe pas
+            echo "<div style='background: #f8d7da; color: #721c24; padding: 15px; margin: 20px; border-radius: 5px; border: 1px solid #f5c6cb;'>";
+            echo "<strong>Erreur :</strong> Fichier de vue non trouvé.<br>";
+            echo "<strong>Chemin recherché :</strong> " . $viewPath . "<br>";
+            echo "<strong>Dossier actuel :</strong> " . __DIR__ . "<br>";
+            echo "<strong>Solution :</strong> Créez le fichier à l'emplacement indiqué ou vérifiez le chemin.";
+            echo "</div>";
+            
+            // Afficher les données en fallback
+            echo "<h2>Liste des ordonnances</h2>";
+            echo "<table class='table table-bordered'>";
+            echo "<thead><tr><th>ID</th><th>Patient</th><th>Médecin</th><th>Date</th></tr></thead>";
+            echo "<tbody>";
+            foreach ($ordonnances as $ordo) {
+                echo "<tr>";
+                echo "<td>" . ($ordo['id'] ?? '') . "</td>";
+                echo "<td>" . htmlspecialchars($ordo['patient_nom'] ?? '') . "</td>";
+                echo "<td>" . htmlspecialchars($ordo['medecin_nom'] ?? '') . "</td>";
+                echo "<td>" . ($ordo['date_creation'] ?? '') . "</td>";
+                echo "</tr>";
+            }
+            echo "</tbody></table>";
+        }
+        
+    } catch (Exception $e) {
+        error_log('Erreur OrdonnanceController::indexAdmin - ' . $e->getMessage());
+        $this->setFlash('error', 'Erreur lors du chargement : ' . $e->getMessage());
+        header('Location: index.php?page=dashboard');
+        exit;
     }
+}
 
     // ─────────────────────────────────────────
     //  Créer une ordonnance (médecin)
@@ -502,31 +882,7 @@ class OrdonnanceController {
     // ─────────────────────────────────────────
     //  Supprimer une ordonnance (admin)
     // ─────────────────────────────────────────
-    public function deleteAdmin(int $id): void {
-        $this->auth->requireRole('admin');
 
-        try {
-            $ordonnance = $this->ordonnanceModel->getById($id);
-
-            if (!$ordonnance) {
-                http_response_code(404);
-                die('Ordonnance introuvable.');
-            }
-
-            $this->ordonnanceModel->delete($id);
-
-            $this->logAction($_SESSION['user_id'], 'Suppression ordonnance', "Ordonnance #$id supprimée");
-
-            $this->setFlash('success', 'Ordonnance supprimée.');
-            header('Location: /admin/ordonnances');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur deleteAdmin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la suppression.');
-            header('Location: /admin/ordonnances');
-            exit;
-        }
-    }
 
     // ─────────────────────────────────────────
     //  API - Historique patient

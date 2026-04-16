@@ -12,18 +12,26 @@ class Disponibilite {
     // ─────────────────────────────────────────
     //  CRUD de base
     // ─────────────────────────────────────────
-    public function create(array $data): ?int {
-        try {
-            $sql = "INSERT INTO disponibilites (user_id, jour_semaine, heure_debut, heure_fin, type, repetition, date_debut, date_fin, notes, created_at, updated_at)
-                    VALUES (:user_id, :jour_semaine, :heure_debut, :heure_fin, :type, :repetition, :date_debut, :date_fin, :notes, NOW(), NOW())";
-
-            $result = $this->db->execute($sql, $data);
-            return $result ? $this->db->lastInsertId() : null;
-        } catch (Exception $e) {
-            error_log('Erreur Disponibilite::create - ' . $e->getMessage());
-            return null;
-        }
+public function create(array $data): ?int {
+    try {
+        $sql = "INSERT INTO disponibilites (medecin_id, jour_semaine, heure_debut, heure_fin, actif, created_at, updated_at) 
+                VALUES (:medecin_id, :jour_semaine, :heure_debut, :heure_fin, :actif, NOW(), NOW())";
+        
+        $params = [
+            ':medecin_id' => $data['medecin_id'],
+            ':jour_semaine' => $data['jour_semaine'],
+            ':heure_debut' => $data['heure_debut'],
+            ':heure_fin' => $data['heure_fin'],
+            ':actif' => $data['actif'] ?? 1
+        ];
+        
+        $result = $this->db->execute($sql, $params);
+        return $result ? $this->db->lastInsertId() : null;
+    } catch (Exception $e) {
+        error_log('Erreur Disponibilite::create - ' . $e->getMessage());
+        return null;
     }
+}
 
     public function getById(int $id): ?array {
         try {
@@ -787,7 +795,24 @@ class Disponibilite {
             return ['events' => []];
         }
     }
-
+    public function getByMedecin(int $medecinId): array {
+        try {
+            $sql = "SELECT d.*, 
+                           CONCAT(u.prenom, ' ', u.nom) AS medecin_nom,
+                           u.email AS medecin_email,
+                           m.specialite
+                    FROM disponibilites d
+                    JOIN users u ON d.medecin_id = u.id
+                    LEFT JOIN medecins m ON d.medecin_id = m.user_id
+                    WHERE d.medecin_id = :medecin_id AND d.actif = 1
+                    ORDER BY FIELD(d.jour_semaine, 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'), d.heure_debut ASC";
+            
+            return $this->db->query($sql, ['medecin_id' => $medecinId]);
+        } catch (Exception $e) {
+            error_log('Erreur Disponibilite::getByMedecin - ' . $e->getMessage());
+            return [];
+        }
+    }
     public function generateReport(int $userId, string $dateDebut, string $dateFin): array {
         try {
             $unavailableHours = $this->getUnavailableHours($userId, $dateDebut, $dateFin);

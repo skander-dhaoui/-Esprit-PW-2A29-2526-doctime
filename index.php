@@ -115,15 +115,17 @@ if ($page === 'face_login') {
 }
 
 if ($page === 'register_face') {
-    header('Content-Type: application/json');
+    // Si c'est une requête POST (envoi de l'image)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        header('Content-Type: application/json');
         if (empty($_SESSION['user_id'])) {
             echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter d\'abord']);
             exit;
         }
         $auth->registerFace();
     } else {
-        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+        // Si c'est une requête GET, afficher la page d'enregistrement
+        $front->renderRegisterFace();
     }
     exit;
 }
@@ -401,30 +403,33 @@ case 'admin_article_create':
 
     // ─── Profil utilisateur ────────────────
     case 'profil':
-    case 'mon_profil':
-    case 'modifier_profil':
         requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $actionPost = $_POST['action'] ?? '';
-            if ($actionPost === 'change_password') {
-                $userCtrl->changePassword();
-            } else {
-                $userCtrl->updateProfil();
-            }
-        } elseif (isset($_GET['action']) && $_GET['action'] === 'update_avatar') {
-            $userCtrl->updateAvatar();
-        } elseif (isset($_GET['action']) && $_GET['action'] === 'delete_avatar') {
-            $userCtrl->deleteAvatar();
-        } else {
-            $userCtrl->showProfil();
-        }
+        $userCtrl->showProfil();
+        break;
+
+    case 'mon_profil':
+        requireLogin();
+        $front->monProfil();
         break;
 
     case 'mes_notifications':
         requireLogin();
         $front->mesNotifications();
         break;
-
+case 'modifier_profil':
+    requireLogin();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $actionPost = $_POST['action'] ?? '';
+        if ($actionPost === 'change_password') {
+            $userCtrl->changePassword();
+        } else {
+            $userCtrl->updateProfil();
+        }
+    } else {
+        // Utiliser FrontController au lieu de UserController
+        $front->modifierProfil();
+    }
+    break;
     // ─── Rendez-vous ───────────────────────
     case 'prendre_rendez_vous':
         patientOnly();
@@ -579,60 +584,260 @@ case 'articles_admin':
         $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateSettings() : $adminCtrl->settings();
         break;
 
-    // ─── Ordonnances ───────────────────────
-    case 'ordonnance':
-    case 'ordonnances':
-        requireLogin();
-        if ($ordonnanceCtrl) {
+// ─── Ordonnances ───────────────────────
+case 'ordonnance':
+case 'ordonnances':
+    requireLogin();
+    if ($ordonnanceCtrl) {
+        if ($action === 'create') {
+            // Création d'une ordonnance
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                if ($userRole === 'medecin') {
+                    $ordonnanceCtrl->storeMedecin();
+                } else {
+                    $ordonnanceCtrl->storeAdmin();
+                }
+            } else {
+                if ($userRole === 'medecin') {
+                    $ordonnanceCtrl->createMedecin();
+                } else {
+                    $ordonnanceCtrl->createAdmin();
+                }
+            }
+        } elseif ($action === 'edit' && $id) {
+            // Modification d'une ordonnance
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                if ($userRole === 'medecin') {
+                    $ordonnanceCtrl->updateMedecin($id);
+                } else {
+                    $ordonnanceCtrl->updateAdmin($id);
+                }
+            } else {
+                if ($userRole === 'medecin') {
+                    $ordonnanceCtrl->editMedecin($id);
+                } else {
+                    $ordonnanceCtrl->editAdmin($id);
+                }
+            }
+        } elseif ($action === 'delete' && $id) {
+            // Suppression d'une ordonnance
+            $ordonnanceCtrl->deleteAdmin($id);
+        } elseif ($action === 'show' && $id) {
+            // Affichage d'une ordonnance
+            if ($userRole === 'patient') {
+                $ordonnanceCtrl->showPatient($id);
+            } elseif ($userRole === 'medecin') {
+                $ordonnanceCtrl->showMedecin($id);
+            } else {
+                $ordonnanceCtrl->showAdmin($id);
+            }
+        } elseif ($action === 'pdf' && $id) {
+            // Téléchargement PDF
+            $ordonnanceCtrl->downloadPatient($id);
+        } else {
+            // Liste des ordonnances
             if ($userRole === 'patient') {
                 $ordonnanceCtrl->indexPatient();
             } elseif ($userRole === 'medecin') {
-                $action === 'create' ? $ordonnanceCtrl->createMedecin() : $ordonnanceCtrl->indexMedecin();
-            } elseif ($userRole === 'admin') {
+                $ordonnanceCtrl->indexMedecin();
+            } else {
                 $ordonnanceCtrl->indexAdmin();
             }
-        } else {
-            $front->page404();
         }
-        break;
+    } else {
+        $front->page404();
+    }
+    break;
+
+
+   case 'admin_rendezvous':
+    adminOnly();
+    if ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $adminCtrl->createRendezVous();
+        } else {
+            $adminCtrl->showCreateRendezVous();
+        }
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $adminCtrl->updateRendezVous($id);
+        } else {
+            $adminCtrl->editRendezVous($id);
+        }
+    } elseif ($action === 'delete' && $id) {
+        $adminCtrl->deleteRendezVous($id);
+    } elseif ($action === 'show' && $id) {
+        $adminCtrl->showRendezVous($id);
+    } else {
+        $adminCtrl->listRendezVous();
+    }
+    break;
+// ─── Disponibilités Front Office ───────────────────
+case 'patient_disponibilites':
+    patientOnly();
+    $front->patientDisponibilites();
+    break;
+
+case 'medecin_disponibilites':
+    medecinOnly();
+    if ($action === 'store') {
+        $front->medecinStoreDisponibilite();
+    } elseif ($action === 'toggle' && $id) {
+        $front->medecinToggleDisponibilite($id);
+    } elseif ($action === 'delete' && $id) {
+        $front->medecinDeleteDisponibilite($id);
+    } else {
+        $front->medecinDisponibilites();
+    }
+    break;
+case 'disponibilites_admin':
+    adminOnly();
+    if ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $adminCtrl->createDisponibilite();
+        } else {
+            $adminCtrl->showCreateDisponibilite();
+        }
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $adminCtrl->updateDisponibilite($id);
+        } else {
+            $adminCtrl->editDisponibilite($id);
+        }
+    } elseif ($action === 'delete' && $id) {
+        $adminCtrl->deleteDisponibilite($id);
+    } else {
+        $adminCtrl->listDisponibilites();
+    }
+    break;
 
     // ─── Disponibilités ────────────────────
     case 'disponibilite':
-    case 'disponibilites':
-        requireLogin();
-        if ($disponibiliteCtrl) {
-            if ($userRole === 'medecin') {
-                $action === 'create' ? $disponibiliteCtrl->createMedecin() : $disponibiliteCtrl->indexMedecin();
-            } elseif ($userRole === 'admin') {
-                $disponibiliteCtrl->indexAdmin();
-            }
+case 'disponibilites':
+    requireLogin();
+    if ($action === 'store') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $disponibiliteCtrl->storeMedecin();
         } else {
-            $front->page404();
+            $disponibiliteCtrl->createMedecin();
         }
-        break;
+    } elseif ($action === 'toggle' && $id) {
+        $disponibiliteCtrl->toggle($id);
+    } elseif ($action === 'delete' && $id) {
+        $disponibiliteCtrl->delete($id);
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $disponibiliteCtrl->updateMedecin($id);
+        } else {
+            $disponibiliteCtrl->editMedecin($id);
+        }
+    } else {
+        if ($userRole === 'medecin') {
+            $disponibiliteCtrl->indexMedecin();
+        } elseif ($userRole === 'admin') {
+            $disponibiliteCtrl->indexAdmin();
+        } else {
+            $front->page403();
+        }
+    }
+    break;
+case 'detail_rendez_vous':
+    requireLogin();
+    if ($userRole === 'medecin') {
+        $medecinCtrl->showRendezVous($id);
+    } elseif ($userRole === 'patient') {
+        $patientCtrl->showRendezVous($id);
+    } else {
+        $front->page403();
+    }
+    break;
+
+
+    // ─── Ordonnances depuis rendez-vous ───────────────────
+case 'creer_ordonnance_rdv':
+    medecinOnly();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $ordonnanceCtrl->storeFromRendezVous();
+    }
+    break;
+
+case 'modifier_ordonnance_rdv':
+    medecinOnly();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $ordonnanceCtrl->updateFromRendezVous();
+    }
+    break;
+
+case 'supprimer_ordonnance_rdv':
+    medecinOnly();
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    $rdv_id = isset($_GET['rdv_id']) ? (int)$_GET['rdv_id'] : 0;
+    $ordonnanceCtrl->deleteFromRendezVous($id, $rdv_id);
+    break;
+
+case 'api_ordonnance':
+    requireLogin();
+    if ($action === 'get' && $id) {
+        $ordonnanceCtrl->apiGet($id);
+    }
+    break;
+
+case 'modifier_rendez_vous':
+    patientOnly();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $patientCtrl->updateRendezVous();
+    }
+    break;
+
+case 'supprimer_rendez_vous':
+    patientOnly();
+    $patientCtrl->deleteRendezVous($id);
+    break;
+
+    case 'detail_rendez_vous':
+    requireLogin();
+    if ($userRole === 'medecin') {
+        $medecinCtrl->showRendezVous($id);
+    } elseif ($userRole === 'patient') {
+        $patientCtrl->showRendezVous($id);
+    } else {
+        $front->page403();
+    }
+    break;
 
     // ─── API AJAX ──────────────────────────
-    case 'api':
-        requireLogin();
-        header('Content-Type: application/json');
-        switch ($action) {
-            case 'get_disponibilites':
-                $rendezVousCtrl
-                    ? $rendezVousCtrl->getDisponibilitesJson($id)
-                    : http_response_code(501);
-                break;
-            case 'check_email':
-                $auth->checkEmail();
-                break;
-            case 'stats':
-                adminOnly();
-                $adminCtrl->apiStats();
-                break;
-            default:
-                http_response_code(404);
-                echo json_encode(['error' => 'Endpoint introuvable']);
-        }
-        break;
+// ─── API AJAX ──────────────────────────
+// ─── API AJAX ──────────────────────────
+// ─── API AJAX ──────────────────────────
+case 'api':
+    requireLogin();
+    header('Content-Type: application/json');
+    
+    // Récupérer l'action depuis $_GET ou $_POST
+    $apiAction = $action;
+    if (empty($apiAction) && isset($_POST['action'])) {
+        $apiAction = $_POST['action'];
+    }
+    
+    switch ($apiAction) {
+        case 'get_disponibilites':
+            $rendezVousCtrl ? $rendezVousCtrl->getDisponibilitesJson($id) : http_response_code(501);
+            break;
+        case 'check_email':
+            $auth->checkEmail();
+            break;
+        case 'stats':
+            adminOnly();
+            $adminCtrl->apiStats();
+            break;
+        case 'delete_face':
+            $auth->deleteFace();
+            break;
+        default:
+            http_response_code(404);
+            echo json_encode(['error' => 'Endpoint introuvable']);
+    }
+    break;
 
     // ─── 404 ───────────────────────────────
     default:

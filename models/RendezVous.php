@@ -4,9 +4,37 @@ require_once __DIR__ . '/../config/database.php';
 class RendezVous {
 
     private Database $db;
+    private ?array $columnsCache = null;
+    private ?array $notesColumnsCache = null;
 
     public function __construct() {
         $this->db = Database::getInstance();
+    }
+
+    private function getColumns(): array {
+        if (is_array($this->columnsCache)) return $this->columnsCache;
+        try {
+            $conn = $this->db->getConnection();
+            $stmt = $conn->query("SHOW COLUMNS FROM rendez_vous");
+            $cols = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            $this->columnsCache = array_map(static fn($r) => (string)($r['Field'] ?? ''), $cols);
+        } catch (Exception $e) {
+            $this->columnsCache = [];
+        }
+        return $this->columnsCache;
+    }
+
+    private function getNotesColumns(): array {
+        if (is_array($this->notesColumnsCache)) return $this->notesColumnsCache;
+        try {
+            $conn = $this->db->getConnection();
+            $stmt = $conn->query("SHOW COLUMNS FROM rendez_vous_notes");
+            $cols = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            $this->notesColumnsCache = array_map(static fn($r) => (string)($r['Field'] ?? ''), $cols);
+        } catch (Exception $e) {
+            $this->notesColumnsCache = [];
+        }
+        return $this->notesColumnsCache;
     }
 
     // ─────────────────────────────────────────
@@ -24,7 +52,109 @@ class RendezVous {
             return null;
         }
     }
-
+/**
+ * Récupère les rendez-vous d'un médecin
+ */
+/**
+ * Récupère les rendez-vous d'un médecin
+ */
+public function getByMedecin(int $medecinId, string $statut = null, string $date = null): array {
+    try {
+        $conn = $this->db->getConnection(); // Récupérer la connexion PDO
+        
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                       u_patient.email AS patient_email,
+                       u_patient.telephone AS patient_telephone,
+                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
+                       m.specialite
+                FROM rendez_vous rv
+                JOIN users u_patient ON rv.patient_id = u_patient.id
+                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                WHERE rv.medecin_id = :medecin_id";
+        
+        $params = [':medecin_id' => $medecinId];
+        
+        if (!empty($statut)) {
+            $sql .= " AND rv.statut = :statut";
+            $params[':statut'] = $statut;
+        }
+        
+        if (!empty($date)) {
+            $sql .= " AND DATE(rv.date_rendezvous) = :date";
+            $params[':date'] = $date;
+        }
+        
+        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
+        
+        $stmt = $conn->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Erreur RendezVous::getByMedecin - ' . $e->getMessage());
+        return [];
+    }
+}
+/**
+ * Mettre à jour le statut d'un rendez-vous
+ */
+public function updateStatut(int $id, string $statut): bool {
+    try {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("UPDATE rendez_vous SET statut = :statut, updated_at = NOW() WHERE id = :id");
+        return $stmt->execute([':statut' => $statut, ':id' => $id]);
+    } catch (Exception $e) {
+        error_log('Erreur RendezVous::updateStatut - ' . $e->getMessage());
+        return false;
+    }
+}
+/**
+ * Récupère les rendez-vous d'un patient
+ */
+public function getByPatient(int $patientId, string $statut = null, string $date = null): array {
+    try {
+        $conn = $this->db->getConnection();
+        
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
+                       u_medecin.email AS medecin_email,
+                       m.specialite
+                FROM rendez_vous rv
+                JOIN users u_patient ON rv.patient_id = u_patient.id
+                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                WHERE rv.patient_id = :patient_id";
+        
+        $params = [':patient_id' => $patientId];
+        
+        if (!empty($statut)) {
+            $sql .= " AND rv.statut = :statut";
+            $params[':statut'] = $statut;
+        }
+        
+        if (!empty($date)) {
+            $sql .= " AND DATE(rv.date_rendezvous) = :date";
+            $params[':date'] = $date;
+        }
+        
+        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
+        
+        $stmt = $conn->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Erreur RendezVous::getByPatient - ' . $e->getMessage());
+        return [];
+    }
+}
     public function getById(int $id): ?array {
         try {
             $sql = "SELECT rv.*, 
@@ -635,6 +765,121 @@ class RendezVous {
         } catch (Exception $e) {
             error_log('Erreur RendezVous::countToday - ' . $e->getMessage());
             return 0;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    //  Compat profil (FrontController->monProfil)
+    // ─────────────────────────────────────────
+
+    public function countByPatient(int $patientId): int {
+        try {
+            $cols = $this->getColumns();
+            $conn = $this->db->getConnection();
+
+            $idFields = [];
+            if (in_array('patient_id', $cols, true)) $idFields[] = 'patient_id';
+            if (in_array('client_id', $cols, true))  $idFields[] = 'client_id';
+            if (in_array('user_id', $cols, true))    $idFields[] = 'user_id';
+
+            if (empty($idFields)) return 0;
+
+            $whereParts = array_map(static fn($f) => "rv.$f = :pid", $idFields);
+            $sql = "SELECT COUNT(*) AS c FROM rendez_vous rv WHERE (" . implode(' OR ', $whereParts) . ")";
+
+            // Si une colonne de statut existe, on ignore les annulés
+            if (in_array('statut', $cols, true)) {
+                $sql .= " AND rv.statut != 'annulé'";
+            }
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([':pid' => $patientId]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            error_log('Erreur RendezVous::countByPatient - ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function countFutureByPatient(int $patientId): int {
+        try {
+            $cols = $this->getColumns();
+            $conn = $this->db->getConnection();
+
+            $idFields = [];
+            if (in_array('patient_id', $cols, true)) $idFields[] = 'patient_id';
+            if (in_array('client_id', $cols, true))  $idFields[] = 'client_id';
+            if (in_array('user_id', $cols, true))    $idFields[] = 'user_id';
+
+            if (empty($idFields)) return 0;
+
+            // Date/heure selon schéma
+            $dateExpr = null;
+            if (in_array('date_debut', $cols, true)) {
+                $dateExpr = "rv.date_debut";
+            } elseif (in_array('date_rendezvous', $cols, true) && in_array('heure_rendezvous', $cols, true)) {
+                $dateExpr = "STR_TO_DATE(CONCAT(rv.date_rendezvous, ' ', rv.heure_rendezvous), '%Y-%m-%d %H:%i:%s')";
+            } elseif (in_array('date_rendezvous', $cols, true)) {
+                $dateExpr = "rv.date_rendezvous";
+            }
+
+            if (!$dateExpr) return 0;
+
+            $whereParts = array_map(static fn($f) => "rv.$f = :pid", $idFields);
+            $sql = "SELECT COUNT(*) AS c
+                    FROM rendez_vous rv
+                    WHERE (" . implode(' OR ', $whereParts) . ")
+                      AND $dateExpr > NOW()";
+
+            if (in_array('statut', $cols, true)) {
+                $sql .= " AND rv.statut IN ('prévu', 'confirmé')";
+            }
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([':pid' => $patientId]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            error_log('Erreur RendezVous::countFutureByPatient - ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function getAverageNoteByPatient(int $patientId): float {
+        try {
+            $rvCols = $this->getColumns();
+            $notesCols = $this->getNotesColumns();
+
+            // Si pas de table/colonne note, on renvoie 0
+            $noteCol = null;
+            foreach (['note', 'rating', 'score'] as $candidate) {
+                if (in_array($candidate, $notesCols, true)) {
+                    $noteCol = $candidate;
+                    break;
+                }
+            }
+            if (!$noteCol) return 0.0;
+
+            $conn = $this->db->getConnection();
+
+            $idField = null;
+            if (in_array('patient_id', $rvCols, true)) $idField = 'patient_id';
+            elseif (in_array('client_id', $rvCols, true)) $idField = 'client_id';
+            elseif (in_array('user_id', $rvCols, true)) $idField = 'user_id';
+
+            if (!$idField) return 0.0;
+
+            $sql = "SELECT AVG(rn.$noteCol) AS avg_note
+                    FROM rendez_vous_notes rn
+                    JOIN rendez_vous rv ON rv.id = rn.rendez_vous_id
+                    WHERE rv.$idField = :pid";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([':pid' => $patientId]);
+            return (float)($stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            // Pas bloquant pour le profil
+            error_log('Erreur RendezVous::getAverageNoteByPatient - ' . $e->getMessage());
+            return 0.0;
         }
     }
 

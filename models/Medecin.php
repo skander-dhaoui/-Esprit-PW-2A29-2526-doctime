@@ -49,20 +49,8 @@ public function findByUserId(int $userId): array|false {
         }
     }
 
-    public function getAllWithUsers(): array {
-        try {
-            $stmt = $this->db->query(
-                "SELECT m.*, u.nom, u.prenom, u.email, u.telephone, u.statut
-                 FROM medecins m
-                 JOIN users u ON m.user_id = u.id
-                 ORDER BY u.nom ASC"
-            );
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getAllWithUsers - ' . $e->getMessage());
-            return [];
-        }
-    }
+
+    
 
     public function update(int $userId, array $data): bool {
         try {
@@ -350,4 +338,183 @@ public function findByUserId(int $userId): array|false {
             return [];
         }
     }
+
+
+// ─────────────────────────────────────────
+//  Récupération des médecins avec leurs utilisateurs (pour l'affichage)
+// ─────────────────────────────────────────
+
+/**
+ * Récupère tous les médecins avec leurs informations utilisateur
+ * Utilisé dans la page publique listeMedecins()
+ */
+public function getAllMedecinsWithUsers(): array {
+    try {
+        $stmt = $this->db->prepare(
+            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut,
+                    m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
+             FROM users u
+             INNER JOIN medecins m ON u.id = m.user_id
+             WHERE u.role = 'medecin' AND u.statut = 'actif'
+             ORDER BY u.nom ASC"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Erreur Medecin::getAllMedecinsWithUsers - ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Alias pour getAllMedecinsWithUsers() pour compatibilité avec FrontController
+ */
+public function getAllWithUsers(): array {
+    try {
+        $stmt = $this->db->prepare(
+            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut,
+                    COALESCE(m.specialite, 'Généraliste') as specialite,
+                    m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
+             FROM users u
+             LEFT JOIN medecins m ON u.id = m.user_id
+             WHERE u.role = 'medecin' AND u.statut = 'actif'
+             ORDER BY u.nom ASC"
+        );
+        $stmt->execute();
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Debug - loguer le nombre de médecins trouvés
+        error_log("Nombre de médecins trouvés: " . count($result));
+        
+        return $result;
+    } catch (Exception $e) {
+        error_log('Erreur Medecin::getAllWithUsers - ' . $e->getMessage());
+        return [];
+    }
+}
+
+// ─────────────────────────────────────────
+//  Rendez-vous avec détails patient/médecin
+// ─────────────────────────────────────────
+
+/**
+ * Récupère les rendez-vous d'un médecin avec les infos patient
+ */
+public function getAppointmentsWithPatients(int $medecinId, ?string $statut = null, ?string $date = null): array {
+    try {
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                       u_patient.email AS patient_email,
+                       u_patient.telephone AS patient_telephone,
+                       u_patient.adresse AS patient_adresse
+                FROM rendez_vous rv
+                JOIN users u_patient ON rv.patient_id = u_patient.id
+                WHERE rv.medecin_id = :medecin_id";
+        
+        $params = [':medecin_id' => $medecinId];
+        
+        if (!empty($statut)) {
+            $sql .= " AND rv.statut = :statut";
+            $params[':statut'] = $statut;
+        }
+        
+        if (!empty($date)) {
+            $sql .= " AND DATE(rv.date_rendezvous) = :date";
+            $params[':date'] = $date;
+        }
+        
+        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Erreur Medecin::getAppointmentsWithPatients - ' . $e->getMessage());
+        return [];
+    }
+}
+
+// ─────────────────────────────────────────
+//  Rendez-vous d'un patient avec le médecin
+// ─────────────────────────────────────────
+
+/**
+ * Récupère les rendez-vous d'un patient avec les infos médecin
+ */
+public function getPatientAppointmentsWithMedecin(int $patientId, ?string $statut = null, ?string $date = null): array {
+    try {
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
+                       u_medecin.email AS medecin_email,
+                       m.specialite
+                FROM rendez_vous rv
+                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                WHERE rv.patient_id = :patient_id";
+        
+        $params = [':patient_id' => $patientId];
+        
+        if (!empty($statut)) {
+            $sql .= " AND rv.statut = :statut";
+            $params[':statut'] = $statut;
+        }
+        
+        if (!empty($date)) {
+            $sql .= " AND DATE(rv.date_rendezvous) = :date";
+            $params[':date'] = $date;
+        }
+        
+        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log('Erreur Medecin::getPatientAppointmentsWithMedecin - ' . $e->getMessage());
+        return [];
+    }
+}
+
+// ─────────────────────────────────────────
+//  Détail d'un rendez-vous avec toutes les infos
+// ─────────────────────────────────────────
+
+/**
+ * Récupère les détails complets d'un rendez-vous
+ */
+public function getRendezVousDetail(int $id): ?array {
+    try {
+        $sql = "SELECT rv.*, 
+                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                       u_patient.email AS patient_email,
+                       u_patient.telephone AS patient_telephone,
+                       u_patient.adresse AS patient_adresse,
+                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
+                       u_medecin.email AS medecin_email,
+                       m.specialite,
+                       m.cabinet_adresse
+                FROM rendez_vous rv
+                JOIN users u_patient ON rv.patient_id = u_patient.id
+                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                WHERE rv.id = :id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    } catch (Exception $e) {
+        error_log('Erreur Medecin::getRendezVousDetail - ' . $e->getMessage());
+        return null;
+    }
+}
+
+
+
 }

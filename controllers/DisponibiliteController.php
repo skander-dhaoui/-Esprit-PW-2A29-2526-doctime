@@ -32,7 +32,27 @@ class DisponibiliteController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/disponibilite_list_medecin.php';
+            // Chemin corrigé vers la vue médecin
+            $viewPath = __DIR__ . '/../views/frontoffice/medecin/mes_disponibilites.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                // Fallback simple
+                echo "<div class='container mt-4'>";
+                echo "<h2>Mes disponibilités</h2>";
+                echo "<table class='table table-bordered'>";
+                echo "<thead><tr><th>Jour</th><th>Heure début</th><th>Heure fin</th><th>Statut</th><th>Actions</th></tr></thead><tbody>";
+                foreach ($disponibilites as $d) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($d['jour_semaine']) . "</td>";
+                    echo "<td>" . $d['heure_debut'] . "</td>";
+                    echo "<td>" . $d['heure_fin'] . "</td>";
+                    echo "<td>" . ($d['actif'] ? 'Actif' : 'Inactif') . "</td>";
+                    echo "<td><a href='index.php?page=disponibilites&action=delete&id=" . $d['id'] . "' class='btn btn-sm btn-danger' onclick='return confirm(\"Supprimer ?\")'>Supprimer</a></td>";
+                    echo "</tr>";
+                }
+                echo "</tbody></table></div>";
+            }
         } catch (Exception $e) {
             error_log('Erreur DisponibiliteController::indexMedecin - ' . $e->getMessage());
             $_SESSION['error'] = 'Erreur lors du chargement des disponibilités.';
@@ -61,11 +81,17 @@ class DisponibiliteController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/disponibilite_list_admin.php';
+            // Chemin corrigé vers la vue admin
+            $viewPath = __DIR__ . '/../views/backoffice/disponibilite/list.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                echo "Vue non trouvée: " . $viewPath;
+            }
         } catch (Exception $e) {
             error_log('Erreur DisponibiliteController::indexAdmin - ' . $e->getMessage());
             $_SESSION['error'] = 'Erreur lors du chargement.';
-            header('Location: index.php?page=accueil');
+            header('Location: index.php?page=dashboard');
             exit;
         }
     }
@@ -82,11 +108,25 @@ class DisponibiliteController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/disponibilite_form_medecin.php';
+            // Chemin corrigé vers la vue formulaire médecin
+            $viewPath = __DIR__ . '/../views/frontoffice/medecin/disponibilite_form.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                // Fallback simple
+                echo "<div class='container mt-4'>";
+                echo "<h2>Ajouter une disponibilité</h2>";
+                echo "<form method='POST'>";
+                echo "<select name='jour_semaine'><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select>";
+                echo "<input type='time' name='heure_debut'>";
+                echo "<input type='time' name='heure_fin'>";
+                echo "<button type='submit'>Ajouter</button>";
+                echo "</form></div>";
+            }
         } catch (Exception $e) {
             error_log('Erreur DisponibiliteController::createMedecin - ' . $e->getMessage());
             $_SESSION['error'] = 'Erreur lors du chargement du formulaire.';
-            header('Location: index.php?page=accueil');
+            header('Location: index.php?page=disponibilites');
             exit;
         }
     }
@@ -104,12 +144,11 @@ class DisponibiliteController {
 
         try {
             $medecinId = (int)$_SESSION['user_id'];
-            $dateDebut = $_POST['date_debut'] ?? '';
-            $dateFin = $_POST['date_fin'] ?? '';
-            $heureDebut = $_POST['heure_debut'] ?? '';
-            $heureFin = $_POST['heure_fin'] ?? '';
+            $jour_semaine = $_POST['jour_semaine'] ?? '';
+            $heure_debut = $_POST['heure_debut'] ?? '';
+            $heure_fin = $_POST['heure_fin'] ?? '';
 
-            if (empty($dateDebut) || empty($dateFin) || empty($heureDebut) || empty($heureFin)) {
+            if (empty($jour_semaine) || empty($heure_debut) || empty($heure_fin)) {
                 $_SESSION['error'] = 'Tous les champs sont obligatoires.';
                 $_SESSION['old'] = $_POST;
                 header('Location: index.php?page=disponibilites&action=create');
@@ -118,10 +157,10 @@ class DisponibiliteController {
 
             $disponibiliteId = $this->disponibiliteModel->create([
                 'medecin_id' => $medecinId,
-                'date_debut' => $dateDebut,
-                'date_fin' => $dateFin,
-                'heure_debut' => $heureDebut,
-                'heure_fin' => $heureFin,
+                'jour_semaine' => $jour_semaine,
+                'heure_debut' => $heure_debut,
+                'heure_fin' => $heure_fin,
+                'actif' => 1
             ]);
 
             if (!$disponibiliteId) {
@@ -157,7 +196,12 @@ class DisponibiliteController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/disponibilite_form_medecin_edit.php';
+            $viewPath = __DIR__ . '/../views/frontoffice/medecin/disponibilite_edit.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                echo "Vue non trouvée: " . $viewPath;
+            }
         } catch (Exception $e) {
             error_log('Erreur editMedecin - ' . $e->getMessage());
             $_SESSION['error'] = 'Erreur lors du chargement.';
@@ -173,27 +217,27 @@ class DisponibiliteController {
         $this->auth->requireRole('medecin');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: index.php?page=disponibilites&id=$id&action=edit");
+            header("Location: index.php?page=disponibilites&action=edit&id=$id");
             exit;
         }
 
         try {
-            $dateDebut = $_POST['date_debut'] ?? '';
-            $dateFin = $_POST['date_fin'] ?? '';
-            $heureDebut = $_POST['heure_debut'] ?? '';
-            $heureFin = $_POST['heure_fin'] ?? '';
+            $jour_semaine = $_POST['jour_semaine'] ?? '';
+            $heure_debut = $_POST['heure_debut'] ?? '';
+            $heure_fin = $_POST['heure_fin'] ?? '';
+            $actif = isset($_POST['actif']) ? 1 : 0;
 
-            if (empty($dateDebut) || empty($dateFin) || empty($heureDebut) || empty($heureFin)) {
+            if (empty($jour_semaine) || empty($heure_debut) || empty($heure_fin)) {
                 $_SESSION['error'] = 'Tous les champs sont obligatoires.';
-                header("Location: index.php?page=disponibilites&id=$id&action=edit");
+                header("Location: index.php?page=disponibilites&action=edit&id=$id");
                 exit;
             }
 
             $this->disponibiliteModel->update($id, [
-                'date_debut' => $dateDebut,
-                'date_fin' => $dateFin,
-                'heure_debut' => $heureDebut,
-                'heure_fin' => $heureFin,
+                'jour_semaine' => $jour_semaine,
+                'heure_debut' => $heure_debut,
+                'heure_fin' => $heure_fin,
+                'actif' => $actif
             ]);
 
             $_SESSION['success'] = 'Disponibilité mise à jour.';
@@ -202,7 +246,7 @@ class DisponibiliteController {
         } catch (Exception $e) {
             error_log('Erreur updateMedecin - ' . $e->getMessage());
             $_SESSION['error'] = 'Erreur lors de la mise à jour.';
-            header("Location: index.php?page=disponibilites&id=$id&action=edit");
+            header("Location: index.php?page=disponibilites&action=edit&id=$id");
             exit;
         }
     }
@@ -227,6 +271,31 @@ class DisponibiliteController {
     }
 
     // ─────────────────────────────────────────
+    //  Activer/Désactiver une disponibilité
+    // ─────────────────────────────────────────
+    public function toggle(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        try {
+            $dispo = $this->disponibiliteModel->getById($id);
+            if ($dispo) {
+                $newStatus = $dispo['actif'] ? 0 : 1;
+                $this->disponibiliteModel->update($id, ['actif' => $newStatus]);
+                $_SESSION['success'] = 'Statut mis à jour.';
+            } else {
+                $_SESSION['error'] = 'Disponibilité non trouvée.';
+            }
+            header('Location: index.php?page=disponibilites');
+            exit;
+        } catch (Exception $e) {
+            error_log('Erreur toggle - ' . $e->getMessage());
+            $_SESSION['error'] = 'Erreur lors de la modification.';
+            header('Location: index.php?page=disponibilites');
+            exit;
+        }
+    }
+
+    // ─────────────────────────────────────────
     //  Helpers privés
     // ─────────────────────────────────────────
     private function generateCsrfToken(): string {
@@ -241,5 +310,3 @@ class DisponibiliteController {
     }
 }
 ?>
-
-

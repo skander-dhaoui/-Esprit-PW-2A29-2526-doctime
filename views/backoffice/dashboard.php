@@ -197,7 +197,6 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Nom complet</th>
                             <th>Email</th>
                             <th>Rôle</th>
@@ -210,7 +209,6 @@
                         <?php if (!empty($recentUsers)): ?>
                             <?php foreach ($recentUsers as $u): ?>
                             <tr>
-                                <td><?= $u['id'] ?></td>
                                 <td><?= htmlspecialchars($u['prenom'] . ' ' . $u['nom']) ?></td>
                                 <td><?= htmlspecialchars($u['email']) ?></td>
                                 <td>
@@ -249,7 +247,7 @@
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     Aucun utilisateur récent
                                 </td>
                             </tr>

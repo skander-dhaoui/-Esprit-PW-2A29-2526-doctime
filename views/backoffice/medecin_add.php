@@ -89,12 +89,11 @@ $current_page = 'medecins_admin';
         <div class="table-responsive">
             <table id="medecinsTable" class="table table-hover align-middle">
                 <thead>
-                    <tr><th>ID</th><th>Nom complet</th><th>Email</th><th>Spécialité</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr>
+                    <tr><th>Nom complet</th><th>Email</th><th>Spécialité</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ($medecins as $m): ?>
                 <tr>
-                    <td><?= $m['id'] ?></td>
                     <td><strong>Dr. <?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></strong></td>
                     <td><?= htmlspecialchars($m['email']) ?></td>
                     <td><?= htmlspecialchars($m['specialite'] ?? '—') ?></td>
