@@ -33,49 +33,28 @@ public function create(array $data): ?int {
     }
 }
 
-    public function getById(int $id): ?array {
-        try {
-            $sql = "SELECT d.*, u.nom, u.prenom, u.email FROM disponibilites d
-                    LEFT JOIN users u ON d.user_id = u.id
-                    WHERE d.id = :id";
-
-            $result = $this->db->query($sql, ['id' => $id]);
-            return $result ? $result[0] : null;
-        } catch (Exception $e) {
-            error_log('Erreur Disponibilite::getById - ' . $e->getMessage());
-            return null;
-        }
+public function getById(int $id): ?array {
+    try {
+        $sql = "SELECT * FROM disponibilites WHERE id = :id";
+        $result = $this->db->query($sql, ['id' => $id]);
+        return ($result && count($result) > 0) ? $result[0] : null;
+    } catch (Exception $e) {
+        error_log('Erreur Disponibilite::getById - ' . $e->getMessage());
+        return null;
     }
+}
 
-    public function update(int $id, array $data): bool {
-        try {
-            $fields = [];
-            $values = ['id' => $id];
-
-            foreach ($data as $key => $value) {
-                $fields[] = "$key = :$key";
-                $values[$key] = $value;
-            }
-
-            $fields[] = "updated_at = NOW()";
-
-            $sql = "UPDATE disponibilites SET " . implode(', ', $fields) . " WHERE id = :id";
-            return $this->db->execute($sql, $values);
-        } catch (Exception $e) {
-            error_log('Erreur Disponibilite::update - ' . $e->getMessage());
-            return false;
-        }
+public function delete(int $id): bool {
+    try {
+        $sql = "DELETE FROM disponibilites WHERE id = :id";
+        return $this->db->execute($sql, ['id' => $id]);
+    } catch (Exception $e) {
+        error_log('Erreur Disponibilite::delete - ' . $e->getMessage());
+        return false;
     }
+}
 
-    public function delete(int $id): bool {
-        try {
-            $sql = "DELETE FROM disponibilites WHERE id = :id";
-            return $this->db->execute($sql, ['id' => $id]);
-        } catch (Exception $e) {
-            error_log('Erreur Disponibilite::delete - ' . $e->getMessage());
-            return false;
-        }
-    }
+
 
     // ─────────────────────────────────────────
     //  Récupération avec filtres
@@ -864,6 +843,33 @@ public function create(array $data): ?int {
         } catch (Exception $e) {
             error_log('Erreur Disponibilite::clearUnavailability - ' . $e->getMessage());
             return false;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOINTURES - Relation Disponibilite ↔ RendezVous
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Récupère les rendez-vous pour une disponibilité donnée (INNER JOIN)
+     * Pattern: getRendezVousByDisponibilite($disponibiliteId)
+     * 
+     * @param int $disponibiliteId ID de la disponibilité
+     * @return array Liste des rendez-vous liés à cette disponibilité
+     */
+    public function getRendezVousByDisponibilite(int $disponibiliteId): array {
+        try {
+            $sql = "SELECT d.*, rv.id as rv_id, rv.titre, rv.description, rv.date_debut as rv_date_debut, 
+                           rv.date_fin as rv_date_fin, rv.statut, rv.patient_id, rv.medecin_id
+                    FROM disponibilites d
+                    INNER JOIN rendez_vous rv ON rv.disponibilite_id = d.id
+                    WHERE d.id = :disponibilite_id
+                    ORDER BY rv.date_debut DESC";
+            
+            return $this->db->query($sql, ['disponibilite_id' => $disponibiliteId]);
+        } catch (Exception $e) {
+            error_log('Erreur Disponibilite::getRendezVousByDisponibilite - ' . $e->getMessage());
+            return [];
         }
     }
 }

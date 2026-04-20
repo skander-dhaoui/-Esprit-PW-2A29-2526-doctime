@@ -75,6 +75,7 @@ class AdminController {
 
     public function showCreateUser(): void {
         $this->auth->requireRole('admin');
+        $errors = [];
         $viewPath = __DIR__ . '/../views/backoffice/user_add.php';
         if (!file_exists($viewPath)) {
             $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
@@ -90,11 +91,39 @@ class AdminController {
         }
 
         $data = $this->extractUserFormData();
-
-        if ($this->userModel->findByEmail($data['email'])) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-            header('Location: index.php?page=users&action=create');
-            exit;
+        $errors = [];
+        
+        // Validation
+        if (empty($data['nom'])) {
+            $errors['nom'] = 'Le nom est obligatoire.';
+        }
+        if (empty($data['prenom'])) {
+            $errors['prenom'] = 'Le prénom est obligatoire.';
+        }
+        if (empty($data['email'])) {
+            $errors['email'] = 'L\'email est obligatoire.';
+        } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide.';
+        } elseif ($this->userModel->findByEmail($data['email'])) {
+            $errors['email'] = 'Cet email est déjà utilisé.';
+        }
+        if (empty($_POST['password'])) {
+            $errors['password'] = 'Le mot de passe est obligatoire.';
+        } elseif (strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        }
+        if (empty($data['role'])) {
+            $errors['role'] = 'Le rôle est obligatoire.';
+        }
+        
+        // Si erreurs, retourner à la vue
+        if (!empty($errors)) {
+            $viewPath = __DIR__ . '/../views/backoffice/user_add.php';
+            if (!file_exists($viewPath)) {
+                $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
+            }
+            file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+            return;
         }
 
         $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -123,6 +152,7 @@ class AdminController {
         $user   = $this->userModel->findById($id);
         if (!$user) { $this->notFound(); }
         $extras = $this->userModel->getExtras($id, $user['role']);
+        $errors = [];
 
         $viewPath = __DIR__ . '/../views/backoffice/user_edit.php';
         if (!file_exists($viewPath)) {
@@ -142,12 +172,38 @@ class AdminController {
         if (!$user) { $this->notFound(); }
 
         $data = $this->extractUserFormData(false);
-
-        $existing = $this->userModel->findByEmail($data['email']);
-        if ($existing && (int)$existing['id'] !== $id) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-            header("Location: index.php?page=users&action=edit&id=$id");
-            exit;
+        $errors = [];
+        
+        // Validation
+        if (empty($data['nom'])) {
+            $errors['nom'] = 'Le nom est obligatoire.';
+        }
+        if (empty($data['prenom'])) {
+            $errors['prenom'] = 'Le prénom est obligatoire.';
+        }
+        if (empty($data['email'])) {
+            $errors['email'] = 'L\'email est obligatoire.';
+        } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide.';
+        } else {
+            $existing = $this->userModel->findByEmail($data['email']);
+            if ($existing && (int)$existing['id'] !== $id) {
+                $errors['email'] = 'Cet email est déjà utilisé.';
+            }
+        }
+        if (!empty($_POST['password']) && strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        }
+        
+        // Si erreurs, retourner à la vue
+        if (!empty($errors)) {
+            $extras = $this->userModel->getExtras($id, $user['role']);
+            $viewPath = __DIR__ . '/../views/backoffice/user_edit.php';
+            if (!file_exists($viewPath)) {
+                $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
+            }
+            file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+            return;
         }
 
         if (!empty($_POST['password'])) {
@@ -243,6 +299,7 @@ class AdminController {
 
     public function showAddPatient(): void {
         $this->auth->requireRole('admin');
+        $errors = [];
         $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
         if (file_exists($viewPath)) {
             require_once $viewPath;
@@ -259,29 +316,63 @@ class AdminController {
             exit;
         }
         
-        try {
-            // Vérifier si l'email existe déjà
-            if ($this->userModel->findByEmail($_POST['email'])) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-                header('Location: index.php?page=patients&action=add');
-                exit;
+        $errors = [];
+        
+        // Validation des données
+        $nom = trim($_POST['nom'] ?? '');
+        $prenom = trim($_POST['prenom'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $telephone = trim($_POST['telephone'] ?? '');
+        $adresse = trim($_POST['adresse'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $groupe_sanguin = $_POST['groupe_sanguin'] ?? '';
+        
+        if (empty($nom)) {
+            $errors['nom'] = 'Le nom est obligatoire.';
+        }
+        if (empty($prenom)) {
+            $errors['prenom'] = 'Le prénom est obligatoire.';
+        }
+        if (empty($email)) {
+            $errors['email'] = 'L\'email est obligatoire.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide.';
+        } elseif ($this->userModel->findByEmail($email)) {
+            $errors['email'] = 'Cet email est déjà utilisé.';
+        }
+        if (empty($password)) {
+            $errors['password'] = 'Le mot de passe est obligatoire.';
+        } elseif (strlen($password) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        }
+        
+        // Si erreurs, retourner à la vue
+        if (!empty($errors)) {
+            $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                echo "Vue non trouvée: " . $viewPath;
             }
-            
+            return;
+        }
+        
+        try {
             // Créer l'utilisateur
             $userId = $this->userModel->create([
-                'nom' => trim($_POST['nom']),
-                'prenom' => trim($_POST['prenom']),
-                'email' => trim($_POST['email']),
-                'telephone' => trim($_POST['telephone'] ?? ''),
-                'adresse' => trim($_POST['adresse'] ?? ''),
-                'password' => password_hash($_POST['password'], PASSWORD_DEFAULT),
+                'nom' => $nom,
+                'prenom' => $prenom,
+                'email' => $email,
+                'telephone' => $telephone,
+                'adresse' => $adresse,
+                'password' => password_hash($password, PASSWORD_DEFAULT),
                 'role' => 'patient',
                 'statut' => 'actif',
             ]);
             
             // Ajouter les infos patient
             $this->userModel->upsertPatient($userId, [
-                'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
+                'groupe_sanguin' => $groupe_sanguin ?? null,
             ]);
             
             $this->logAction('Ajout patient', "Patient #$userId ajouté");
@@ -290,9 +381,13 @@ class AdminController {
             exit;
         } catch (Exception $e) {
             error_log('Erreur addPatient: ' . $e->getMessage());
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de l\'ajout: ' . $e->getMessage()];
-            header('Location: index.php?page=patients&action=add');
-            exit;
+            $errors['enregistrement'] = 'Erreur lors de l\'ajout: ' . htmlspecialchars($e->getMessage());
+            $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                echo "Vue non trouvée: " . $viewPath;
+            }
         }
     }
 
@@ -334,6 +429,8 @@ public function editPatient(int $id): void {
         'groupe_sanguin' => $patientInfo['groupe_sanguin'] ?? '',
     ];
     
+    $errors = [];
+    
     $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
     if (file_exists($viewPath)) {
         require_once $viewPath;
@@ -356,40 +453,115 @@ public function updatePatient(int $id): void {
         $this->notFound(); 
     }
     
-    // Mettre à jour l'utilisateur
-    $userData = [
-        'nom' => trim($_POST['nom'] ?? ''),
-        'prenom' => trim($_POST['prenom'] ?? ''),
-        'email' => trim($_POST['email'] ?? ''),
-        'telephone' => trim($_POST['telephone'] ?? ''),
-        'adresse' => trim($_POST['adresse'] ?? ''),
-        'statut' => $_POST['statut'] ?? 'actif',
-    ];
+    $errors = [];
     
-    // Vérifier si l'email n'est pas déjà utilisé par un autre utilisateur
-    $existing = $this->userModel->findByEmail($userData['email']);
-    if ($existing && (int)$existing['id'] !== $id) {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-        header("Location: index.php?page=patients&action=edit&id=$id");
+    // Validation des données
+    $nom = trim($_POST['nom'] ?? '');
+    $prenom = trim($_POST['prenom'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $telephone = trim($_POST['telephone'] ?? '');
+    $adresse = trim($_POST['adresse'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $statut = $_POST['statut'] ?? 'actif';
+    $groupe_sanguin = $_POST['groupe_sanguin'] ?? '';
+    
+    if (empty($nom)) {
+        $errors['nom'] = 'Le nom est obligatoire.';
+    }
+    if (empty($prenom)) {
+        $errors['prenom'] = 'Le prénom est obligatoire.';
+    }
+    if (empty($email)) {
+        $errors['email'] = 'L\'email est obligatoire.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'L\'email n\'est pas valide.';
+    } else {
+        $existing = $this->userModel->findByEmail($email);
+        if ($existing && (int)$existing['id'] !== $id) {
+            $errors['email'] = 'Cet email est déjà utilisé.';
+        }
+    }
+    if (!empty($password) && strlen($password) < 6) {
+        $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+    }
+    
+    // Si erreurs, retourner à la vue
+    if (!empty($errors)) {
+        // Récupérer les infos patient pour la vue
+        $patientInfo = $this->patientModel->findByUserId($id);
+        $patient = [
+            'id' => $user['id'],
+            'nom' => $user['nom'] ?? '',
+            'prenom' => $user['prenom'] ?? '',
+            'email' => $user['email'] ?? '',
+            'telephone' => $user['telephone'] ?? '',
+            'adresse' => $user['adresse'] ?? '',
+            'statut' => $user['statut'] ?? 'actif',
+            'created_at' => $user['created_at'] ?? date('Y-m-d H:i:s'),
+            'groupe_sanguin' => $patientInfo['groupe_sanguin'] ?? '',
+        ];
+        
+        $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
+        return;
+    }
+    
+    try {
+        // Mettre à jour l'utilisateur
+        $userData = [
+            'nom' => $nom,
+            'prenom' => $prenom,
+            'email' => $email,
+            'telephone' => $telephone,
+            'adresse' => $adresse,
+            'statut' => $statut,
+        ];
+        
+        // Mettre à jour le mot de passe si fourni
+        if (!empty($password)) {
+            $userData['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+        
+        $this->userModel->update($id, $userData);
+        
+        // Mettre à jour les infos patient
+        $this->patientModel->update($id, [
+            'groupe_sanguin' => $groupe_sanguin ?? null,
+        ]);
+        
+        $this->logAction('Modification patient', "Patient #$id modifié");
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Patient mis à jour avec succès.'];
+        header('Location: index.php?page=patients');
         exit;
+    } catch (Exception $e) {
+        error_log('Erreur updatePatient: ' . $e->getMessage());
+        $errors['enregistrement'] = 'Erreur lors de la mise à jour: ' . htmlspecialchars($e->getMessage());
+        
+        // Récupérer les infos patient pour la vue
+        $patientInfo = $this->patientModel->findByUserId($id);
+        $patient = [
+            'id' => $user['id'],
+            'nom' => $user['nom'] ?? '',
+            'prenom' => $user['prenom'] ?? '',
+            'email' => $user['email'] ?? '',
+            'telephone' => $user['telephone'] ?? '',
+            'adresse' => $user['adresse'] ?? '',
+            'statut' => $user['statut'] ?? 'actif',
+            'created_at' => $user['created_at'] ?? date('Y-m-d H:i:s'),
+            'groupe_sanguin' => $patientInfo['groupe_sanguin'] ?? '',
+        ];
+        
+        $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
+        if (file_exists($viewPath)) {
+            require_once $viewPath;
+        } else {
+            echo "Vue non trouvée: " . $viewPath;
+        }
     }
-    
-    // Mettre à jour le mot de passe si fourni
-    if (!empty($_POST['password'])) {
-        $userData['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    }
-    
-    $this->userModel->update($id, $userData);
-    
-    // Mettre à jour les infos patient
-    $this->patientModel->update($id, [
-        'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
-    ]);
-    
-    $this->logAction('Modification patient', "Patient #$id modifié");
-    $_SESSION['flash'] = ['type' => 'success', 'message' => 'Patient mis à jour avec succès.'];
-    header('Location: index.php?page=patients');
-    exit;
 }
 
     public function deletePatient(int $id): void {
@@ -552,6 +724,7 @@ public function editMedecin(int $id): void {
     
     // Passer la variable à la vue
     $medecin = $medecinData;
+    $errors = [];
     
     $viewPath = __DIR__ . '/../views/backoffice/medecin_edit.php';
     if (file_exists($viewPath)) {
@@ -578,12 +751,57 @@ public function editMedecin(int $id): void {
             'statut' => $_POST['statut'] ?? 'actif',
         ];
         
-        // Vérifier que l'email n'est pas déjà utilisé par un autre utilisateur
-        $existing = $this->userModel->findByEmail($userData['email']);
-        if ($existing && (int)$existing['id'] !== $id) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-            header("Location: index.php?page=medecins_admin&action=edit&id=$id");
-            exit;
+        $errors = [];
+        
+        // Validation
+        if (empty($userData['nom'])) {
+            $errors['nom'] = 'Le nom est obligatoire.';
+        }
+        if (empty($userData['prenom'])) {
+            $errors['prenom'] = 'Le prénom est obligatoire.';
+        }
+        if (empty($userData['email'])) {
+            $errors['email'] = 'L\'email est obligatoire.';
+        } elseif (!filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide.';
+        } else {
+            $existing = $this->userModel->findByEmail($userData['email']);
+            if ($existing && (int)$existing['id'] !== $id) {
+                $errors['email'] = 'Cet email est déjà utilisé.';
+            }
+        }
+        if (empty($_POST['specialite'])) {
+            $errors['specialite'] = 'La spécialité est obligatoire.';
+        }
+        if (!empty($_POST['password']) && strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        }
+        
+        // Si erreurs, retourner à la vue
+        if (!empty($errors)) {
+            $user = $this->userModel->findById($id);
+            $medecin = $this->medecinModel->findByUserId($id);
+            
+            if ($medecin && is_array($medecin)) {
+                $medecinData = array_merge($user, $medecin);
+            } else {
+                $medecinData = $user;
+                $medecinData['specialite'] = '';
+                $medecinData['numero_ordre'] = '';
+                $medecinData['annee_experience'] = '';
+                $medecinData['consultation_prix'] = '';
+                $medecinData['cabinet_adresse'] = '';
+            }
+            
+            $medecin = $medecinData;
+            
+            $viewPath = __DIR__ . '/../views/backoffice/medecin_edit.php';
+            if (file_exists($viewPath)) {
+                require_once $viewPath;
+            } else {
+                echo "Vue non trouvée: " . $viewPath;
+            }
+            return;
         }
         
         if (!empty($_POST['password'])) {
@@ -772,7 +990,7 @@ public function showCreateRendezVous(): void {
     } catch (Exception $e) {
         error_log('Erreur showCreateRendezVous - ' . $e->getMessage());
         $this->setFlash('error', 'Erreur lors du chargement.');
-        header('Location: index.php?page=rendez_vous_admin');
+        header('Location: index.php?page=admin_rendezvous');
         exit;
     }
 }
@@ -784,7 +1002,7 @@ public function createRendezVous(): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header('Location: index.php?page=rendez_vous_admin&action=create');
+        header('Location: index.php?page=admin_rendezvous&action=create');
         exit;
     }
     
@@ -812,7 +1030,7 @@ public function createRendezVous(): void {
     if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
         $_SESSION['old'] = $old;
-        header('Location: index.php?page=rendez_vous_admin&action=create');
+        header('Location: index.php?page=admin_rendezvous&action=create');
         exit;
     }
     
@@ -850,7 +1068,7 @@ public function createRendezVous(): void {
         error_log('Erreur createRendezVous - ' . $e->getMessage());
         $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
         $_SESSION['old'] = $old;
-        header('Location: index.php?page=rendez_vous_admin&action=create');
+        header('Location: index.php?page=admin_rendezvous&action=create');
         exit;
     }
 }
@@ -886,9 +1104,14 @@ public function editRendezVous(int $id): void {
         ");
         $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        $errors = $_SESSION['errors'] ?? [];
         $old = $_SESSION['old'] ?? null;
         $flash = $_SESSION['flash'] ?? null;
-        unset($_SESSION['old'], $_SESSION['flash']);
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        if (!is_array($old)) {
+            $old = $rendezvous;
+        }
         
         $viewPath = __DIR__ . '/../views/backoffice/rendezvous/form.php';
         if (file_exists($viewPath)) {
@@ -911,7 +1134,33 @@ public function updateRendezVous(int $id): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
+        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    
+    if (empty($_POST['patient_id'])) {
+        $errors['patient_id'] = 'Veuillez sélectionner un patient.';
+    }
+    
+    if (empty($_POST['medecin_id'])) {
+        $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
+    }
+    
+    if (empty($_POST['date_rendezvous'])) {
+        $errors['date_rendezvous'] = 'Veuillez sélectionner une date.';
+    }
+    
+    if (empty($_POST['heure_rendezvous'])) {
+        $errors['heure_rendezvous'] = 'Veuillez sélectionner une heure.';
+    }
+    
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
+        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
         exit;
     }
     
@@ -956,8 +1205,9 @@ public function updateRendezVous(int $id): void {
         exit;
     } catch (Exception $e) {
         error_log('Erreur updateRendezVous - ' . $e->getMessage());
-        $this->setFlash('error', $e->getMessage());
-        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
+        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
         exit;
     }
 }
@@ -1036,6 +1286,7 @@ public function createDisponibilite(): void {
     
     $errors = [];
     $old = $_POST;
+    $old['actif'] = isset($_POST['actif']) ? 1 : 0;
     
     if (empty($_POST['medecin_id'])) {
         $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
@@ -1155,10 +1406,14 @@ public function editDisponibilite(int $id): void {
         $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $errors = $_SESSION['errors'] ?? [];
-        $old = $_SESSION['old'] ?? [];
+        $old = $_SESSION['old'] ?? null;
         $flash = $_SESSION['flash'] ?? null;
         
         unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        if (!is_array($old)) {
+            $old = $disponibilite;
+        }
         
         $viewPath = __DIR__ . '/../views/backoffice/disponibilite/form.php';
         if (file_exists($viewPath)) {
@@ -1181,6 +1436,37 @@ public function updateDisponibilite(int $id): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header("Location: index.php?page=disponibilites_admin&action=edit&id=$id");
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    $old['actif'] = isset($_POST['actif']) ? 1 : 0;
+    
+    if (empty($_POST['medecin_id'])) {
+        $errors['medecin_id'] = 'Veuillez sélectionner un médecin.';
+    }
+    
+    if (empty($_POST['jour_semaine'])) {
+        $errors['jour_semaine'] = 'Veuillez sélectionner un jour.';
+    }
+    
+    if (empty($_POST['heure_debut'])) {
+        $errors['heure_debut'] = 'Veuillez saisir une heure de début.';
+    }
+    
+    if (empty($_POST['heure_fin'])) {
+        $errors['heure_fin'] = 'Veuillez saisir une heure de fin.';
+    }
+    
+    if (!empty($_POST['heure_debut']) && !empty($_POST['heure_fin']) && $_POST['heure_debut'] >= $_POST['heure_fin']) {
+        $errors['heure_fin'] = 'L\'heure de fin doit être supérieure à l\'heure de début.';
+    }
+    
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
         header("Location: index.php?page=disponibilites_admin&action=edit&id=$id");
         exit;
     }
@@ -1222,6 +1508,7 @@ public function updateDisponibilite(int $id): void {
     } catch (Exception $e) {
         error_log('Erreur updateDisponibilite - ' . $e->getMessage());
         $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
         header("Location: index.php?page=disponibilites_admin&action=edit&id=$id");
         exit;
     }
@@ -1464,305 +1751,5 @@ private function setFlash(string $type, string $message): void {
         }
         header('Location: index.php?page=articles_admin');
         exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  Événements
-    // ─────────────────────────────────────────
-    public function listEvents(): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/events_list.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function showCreateEvent(): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/event_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function createEvent(): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement créé.'];
-        header('Location: index.php?page=evenements_admin');
-        exit;
-    }
-
-    public function editEvent(int $id): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/event_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function updateEvent(int $id): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement mis à jour.'];
-        header('Location: index.php?page=evenements_admin');
-        exit;
-    }
-
-    public function deleteEvent(int $id): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement supprimé.'];
-        header('Location: index.php?page=evenements_admin');
-        exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  Produits
-    // ─────────────────────────────────────────
-    public function listProduits(): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/produits_list.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function showCreateProduit(): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/produit_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function createProduit(): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Produit créé.'];
-        header('Location: index.php?page=produits_admin');
-        exit;
-    }
-
-    public function editProduit(int $id): void {
-        $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/produit_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function updateProduit(int $id): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Produit mis à jour.'];
-        header('Location: index.php?page=produits_admin');
-        exit;
-    }
-
-    public function deleteProduit(int $id): void {
-        $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Produit supprimé.'];
-        header('Location: index.php?page=produits_admin');
-        exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  Logs
-    // ─────────────────────────────────────────
-    public function logs(): void {
-        $this->auth->requireRole('admin');
-        $logs     = $this->getLogs();
-        $viewPath = __DIR__ . '/../views/backoffice/logs.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function exportLogs(): void {
-        $this->auth->requireRole('admin');
-        $logs = $this->getLogs();
-
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="logs_' . date('Y-m-d') . '.csv"');
-
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['ID', 'Utilisateur', 'Rôle', 'Action', 'Description', 'IP', 'Date']);
-
-        foreach ($logs as $log) {
-            fputcsv($out, [
-                $log['id'],
-                ($log['prenom'] ?? '') . ' ' . ($log['nom'] ?? 'Système'),
-                $log['role']        ?? '-',
-                $log['action'],
-                $log['description'],
-                $log['ip_address'],
-                $log['created_at'],
-            ]);
-        }
-
-        fclose($out);
-        exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  API JSON
-    // ─────────────────────────────────────────
-    public function apiStats(): void {
-        $this->auth->requireRole('admin');
-
-        header('Content-Type: application/json');
-        echo json_encode([
-            'inscriptions' => $this->userModel->getMonthlyRegistrations(),
-            'repartition'  => $this->userModel->getRepartitionByRole(),
-            'specialites'  => $this->medecinModel->getTopSpecialities(),
-            'rdv'          => $this->medecinModel->getMonthlyAppointments(),
-        ]);
-        exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  Paramètres
-    // ─────────────────────────────────────────
-    public function settings(): void {
-        $this->auth->requireRole('admin');
-        $settings = $this->adminModel->getAllSettings();
-        $viewPath = __DIR__ . '/../views/backoffice/settings.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-    }
-
-    public function updateSettings(): void {
-        $this->auth->requireRole('admin');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: index.php?page=settings');
-            exit;
-        }
-
-        $this->adminModel->setSetting('site_name',     trim($_POST['site_name']     ?? 'DocTime'));
-        $this->adminModel->setSetting('contact_email', trim($_POST['contact_email'] ?? ''));
-        $this->adminModel->setSetting('maintenance',   isset($_POST['maintenance']) ? '1' : '0');
-
-        $this->logAction('Paramètres', 'Paramètres mis à jour par admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Paramètres enregistrés.'];
-        header('Location: index.php?page=settings');
-        exit;
-    }
-
-    // ─────────────────────────────────────────
-    //  Helpers privés
-    // ─────────────────────────────────────────
-    private function getLogs(): array {
-        try {
-            return $this->adminModel->getLogs(200);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    private function logAction(string $action, string $description): void {
-        try {
-            $this->adminModel->addLog(
-                (int)($_SESSION['user_id'] ?? 0),
-                $action,
-                $description
-            );
-        } catch (Exception $e) {}
-    }
-
-    private function extractUserFormData(bool $withPassword = true): array {
-        $data = [
-            'nom'            => trim($_POST['nom']            ?? ''),
-            'prenom'         => trim($_POST['prenom']         ?? ''),
-            'email'          => trim($_POST['email']          ?? ''),
-            'telephone'      => trim($_POST['telephone']      ?? ''),
-            'adresse'        => trim($_POST['adresse']        ?? ''),
-            'date_naissance' => $_POST['date_naissance']      ?? null,
-            'role'           => $_POST['role']                ?? 'patient',
-            'statut'         => $_POST['statut']              ?? 'actif',
-        ];
-
-        if ($withPassword && !empty($_POST['password'])) {
-            $data['password'] = $_POST['password'];
-        }
-
-        return $data;
-    }
-
-    private function renderMedecinsTable(array $medecins): void {
-        ?>
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <title>Gestion des médecins - Valorys</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-        <body>
-            <div class="container mt-4">
-                <h2>Gestion des médecins</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr><th>ID</th><th>Nom</th><th>Email</th><th>Spécialité</th><th>Statut</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($medecins as $m): ?>
-                        <tr>
-                            <td><?= $m['id'] ?></td>
-                            <td><?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></td>
-                            <td><?= htmlspecialchars($m['email']) ?></td>
-                            <td><?= htmlspecialchars($m['specialite'] ?? '-') ?></td>
-                            <td><?= $m['statut'] ?></td>
-                            <td>
-                                <a href="index.php?page=medecins_admin&action=edit&id=<?= $m['id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
-                                <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')">Supprimer</a>
-                             </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </body>
-        </html>
-        <?php
-    }
-
-    private function renderPatientsTable(array $patients): void {
-        ?>
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <title>Gestion des patients - Valorys</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-        <body>
-            <div class="container mt-4">
-                <h2>Gestion des patients</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr><th>ID</th><th>Nom</th><th>Email</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($patients as $p): ?>
-                        <tr>
-                            <td><?= $p['id'] ?></td>
-                            <td><?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?></td>
-                            <td><?= htmlspecialchars($p['email']) ?></td>
-                            <td><?= htmlspecialchars($p['telephone'] ?? '-') ?></td>
-                            <td><?= $p['statut'] ?></td>
-                            <td>
-                                <a href="index.php?page=patients&action=edit&id=<?= $p['id'] ?>" class="btn btn-sm btn-warning">Modifier</a>
-                                <a href="index.php?page=patients&action=delete&id=<?= $p['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')">Supprimer</a>
-                             </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </body>
-        </html>
-        <?php
-    }
-
-    private function notFound(): void {
-        http_response_code(404);
-        die('Ressource introuvable.');
-    }
-
-    private function renderFallback(string $title, array $stats, array $users): void {
-        echo "<h2>$title</h2>";
-        echo "<p>Total users: {$stats['total_users']} | Médecins: {$stats['total_medecins']} | Patients: {$stats['total_patients']}</p>";
-    }
-
-    private function renderUsersTable(array $users): void {
-        echo '<table border="1"><tr><th>ID</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th></tr>';
-        foreach ($users as $u) {
-            echo "<tr><td>{$u['id']}</td><td>{$u['prenom']} {$u['nom']}</td><td>{$u['email']}</td><td>{$u['role']}</td><td>{$u['statut']}</td></tr>";
-        }
-        echo '</table>';
     }
 }

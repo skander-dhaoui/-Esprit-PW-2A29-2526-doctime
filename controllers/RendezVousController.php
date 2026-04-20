@@ -591,6 +591,3 @@ class RendezVousController {
     }
 }
 ?>
-
-
-

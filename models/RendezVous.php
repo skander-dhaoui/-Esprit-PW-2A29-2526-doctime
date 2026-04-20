@@ -1328,5 +1328,36 @@ public function getByPatient(int $patientId, string $statut = null, string $date
             return null;
         }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOINTURES - Relation RendezVous ↔ Ordonnance
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Récupère les ordonnances pour un rendez-vous donné (INNER JOIN)
+     * Pattern: getOrdonnancesByRendezVous($rendezvousId)
+     * 
+     * @param int $rendezvousId ID du rendez-vous
+     * @return array Liste des ordonnances liées à ce rendez-vous
+     */
+    public function getOrdonnancesByRendezVous(int $rendezvousId): array {
+        try {
+            $sql = "SELECT rv.*, o.id as ord_id, o.numero_ordonnance, o.date_ordonnance, 
+                           o.date_expiration, o.contenu, o.diagnostic, o.status,
+                           CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
+                           CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom
+                    FROM rendez_vous rv
+                    INNER JOIN ordonnances o ON o.rdv_id = rv.id
+                    LEFT JOIN users u_patient ON rv.patient_id = u_patient.id
+                    LEFT JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                    WHERE rv.id = :rendezvous_id
+                    ORDER BY o.date_ordonnance DESC";
+            
+            return $this->db->query($sql, ['rendezvous_id' => $rendezvousId]);
+        } catch (Exception $e) {
+            error_log('Erreur RendezVous::getOrdonnancesByRendezVous - ' . $e->getMessage());
+            return [];
+        }
+    }
 }
 ?>

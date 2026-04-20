@@ -170,9 +170,14 @@ class AuthController {
     //  Inscription
     // ─────────────────────────────────────────
     public function showRegister(): void {
-        $error = $_SESSION['error'] ?? null;
-        $old   = $_SESSION['old']   ?? null;
-        unset($_SESSION['error'], $_SESSION['old']);
+        $errors = $_SESSION['errors'] ?? [];
+        $error  = $_SESSION['error']  ?? null;
+        $old    = $_SESSION['old']    ?? null;
+        unset($_SESSION['errors'], $_SESSION['error'], $_SESSION['old']);
+
+        if ($error !== null && $error !== '' && empty($errors)) {
+            $errors['__form'] = is_string($error) ? $error : '';
+        }
 
         $viewPath = __DIR__ . '/../views/frontoffice/register.php';
         $viewPathHtml = __DIR__ . '/../views/frontoffice/register.html';
@@ -182,104 +187,149 @@ class AuthController {
         } elseif (file_exists($viewPathHtml)) {
             require_once $viewPathHtml;
         } else {
-            $this->renderRegisterFallback($error, $old);
+            $fallbackMsg = !empty($errors) ? implode(' ', $errors) : null;
+            $this->renderRegisterFallback($fallbackMsg, $old);
         }
     }
 
-    public function register(): void {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+public function register(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
+        exit;
+    }
+
+    $nom             = trim($_POST['nom']               ?? '');
+    $prenom          = trim($_POST['prenom']            ?? '');
+    $email           = trim($_POST['email']             ?? '');
+    $telephone       = trim($_POST['telephone']         ?? '');
+    $password        = trim($_POST['password']          ?? '');
+    $passwordConfirm = trim($_POST['password_confirm'] ?? '');
+    $role            = $_POST['role']                  ?? 'patient';
+
+    $specialite     = trim($_POST['specialite']      ?? '');
+    $numeroOrdre    = trim($_POST['numero_ordre']    ?? '');
+
+    $errors = [];
+
+    if ($nom === '') {
+        $errors['nom'] = 'Le nom est requis.';
+    }
+    if ($prenom === '') {
+        $errors['prenom'] = 'Le prénom est requis.';
+    }
+    if ($email === '') {
+        $errors['email'] = 'L\'email est requis.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Adresse email invalide.';
+    }
+    if ($telephone === '') {
+        $errors['telephone'] = 'Le téléphone est requis.';
+    }
+    if ($password === '') {
+        $errors['password'] = 'Le mot de passe est requis.';
+    } elseif (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        $errors['password'] = 'Au moins 8 caractères, une majuscule et un chiffre.';
+    }
+    if ($passwordConfirm === '') {
+        $errors['password_confirm'] = 'Veuillez confirmer le mot de passe.';
+    } elseif ($password !== '' && $password !== $passwordConfirm) {
+        $errors['password_confirm'] = 'Les mots de passe ne correspondent pas.';
+    }
+
+    if (!in_array($role, ['patient', 'medecin'], true)) {
+        $role = 'patient';
+    }
+    if ($role === 'medecin') {
+        if ($specialite === '') {
+            $errors['specialite'] = 'Veuillez sélectionner une spécialité.';
+        }
+        if ($numeroOrdre === '') {
+            $errors['numero_ordre'] = 'Le numéro d\'ordre est requis.';
+        }
+    }
+
+    if (empty($_POST['terms'])) {
+        $errors['terms'] = "Vous devez accepter les conditions d'utilisation.";
+    }
+
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old']    = $_POST;
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
+        exit;
+    }
+
+    try {
+        if ($this->userModel->findByEmail($email)) {
+            $_SESSION['errors'] = ['email' => 'Cet email est déjà utilisé.'];
+            $_SESSION['old']    = $_POST;
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
             exit;
         }
 
-        $nom      = trim($_POST['nom']      ?? '');
-        $prenom   = trim($_POST['prenom']   ?? '');
-        $email    = trim($_POST['email']    ?? '');
-        $password = trim($_POST['password'] ?? '');
-        $role     = $_POST['role']          ?? 'patient';
+        $statut = ($role === 'medecin') ? 'en_attente' : 'actif';
 
-        $errors = [];
+        $userId = $this->userModel->create([
+            'nom'       => $nom,
+            'prenom'    => $prenom,
+            'email'     => $email,
+            'telephone' => $telephone,
+            'password'  => password_hash($password, PASSWORD_DEFAULT),
+            'role'      => $role,
+            'statut'    => $statut,
+        ]);
 
-        if (empty($nom))      $errors[] = "Le nom est requis.";
-        if (empty($prenom))   $errors[] = "Le prénom est requis.";
-        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))
-            $errors[] = "Email invalide.";
-        if (strlen($password) < 6)
-            $errors[] = "Mot de passe : 6 caractères minimum.";
-        if (!in_array($role, ['patient', 'medecin']))
-            $role = 'patient';
-
-        if (!empty($errors)) {
-            $_SESSION['error'] = implode('<br>', $errors);
-            $_SESSION['old']   = $_POST;
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
-            exit;
+        if (!$userId) {
+            throw new Exception("Erreur lors de la création du compte.");
         }
 
-        try {
-            if ($this->userModel->findByEmail($email)) {
-                $_SESSION['error'] = "Cet email est déjà utilisé.";
-                $_SESSION['old']   = $_POST;
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
-                exit;
-            }
-
-            $statut = ($role === 'medecin') ? 'en_attente' : 'actif';
-
-            $userId = $this->userModel->create([
-                'nom'      => $nom,
-                'prenom'   => $prenom,
-                'email'    => $email,
-                'password' => password_hash($password, PASSWORD_DEFAULT),
-                'role'     => $role,
-                'statut'   => $statut,
+        if ($role === 'medecin') {
+            $this->userModel->createMedecin([
+                'user_id'         => $userId,
+                'specialite'      => $specialite,
+                'numero_ordre'    => $numeroOrdre,
+                'adresse_cabinet' => trim($_POST['adresse_cabinet'] ?? ''),
             ]);
-
-            if (!$userId) {
-                throw new Exception("Erreur lors de la création du compte.");
-            }
-
-            // Envoyer email de bienvenue
-            $welcomeBody = "
-                <h1>Bienvenue sur DocTime !</h1>
-                <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
-                <p>Votre compte a été créé avec succès sur DocTime.</p>
-                <p>Vous pouvez dès maintenant :</p>
-                <ul>
-                    <li>Prendre des rendez-vous en ligne</li>
-                    <li>Consulter vos ordonnances</li>
-                    <li>Discuter avec vos médecins</li>
-                </ul>
-                <p style='margin-top: 30px;'>
-                    <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
-                </p>
-                <hr>
-                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
-            ";
-            
-            MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
-
-            if ($role === 'medecin') {
-                $_SESSION['success'] = "Compte créé. En attente de validation par un administrateur.";
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
-            } else {
-                $_SESSION['user_id']    = $userId;
-                $_SESSION['user_role']  = $role;
-                $_SESSION['user_name']  = $nom . ' ' . $prenom;
-                $_SESSION['user_email'] = $email;
-                $_SESSION['success']    = "Compte créé avec succès !";
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=accueil');
-            }
-            exit;
-
-        } catch (Exception $e) {
-            error_log('Erreur register: ' . $e->getMessage());
-            $_SESSION['error'] = "Erreur serveur : " . $e->getMessage();
-            $_SESSION['old']   = $_POST;
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
-            exit;
         }
+
+        // Envoyer email de bienvenue
+        $welcomeBody = "
+            <h1>Bienvenue sur DocTime !</h1>
+            <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
+            <p>Votre compte a été créé avec succès sur DocTime.</p>
+            <p>Vous pouvez dès maintenant :</p>
+            <ul>
+                <li>Prendre des rendez-vous en ligne</li>
+                <li>Consulter vos ordonnances</li>
+                <li>Discuter avec vos médecins</li>
+            </ul>
+            <p style='margin-top: 30px;'>
+                <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
+            </p>
+            <hr>
+            <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+        ";
+        
+        MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
+
+        // ✅ CORRECTION : TOUJOURS REDIRIGER VERS LA PAGE DE CONNEXION
+        if ($role === 'medecin') {
+            $_SESSION['success'] = "Compte médecin créé avec succès. En attente de validation par un administrateur. Vous recevrez un email de confirmation.";
+        } else {
+            $_SESSION['success'] = "Compte créé avec succès ! Vous pouvez maintenant vous connecter.";
+        }
+        
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+
+    } catch (Exception $e) {
+        error_log('Erreur register: ' . $e->getMessage());
+        $_SESSION['errors'] = ['__form' => 'Erreur serveur. Veuillez réessayer.'];
+        $_SESSION['old']     = $_POST;
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
+        exit;
     }
+}
 
     // ─────────────────────────────────────────
     //  Mot de passe oublié (avec envoi d'email)

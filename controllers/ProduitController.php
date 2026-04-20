@@ -423,6 +423,3 @@ class ProduitController {
     }
 }
 ?>
-
-
-

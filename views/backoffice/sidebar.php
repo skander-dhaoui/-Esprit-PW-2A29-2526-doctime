@@ -36,6 +36,12 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-day"></i> Événements
         </a>
+        <a href="index.php?page=participations" class="<?= $current_page === 'participations' ? 'active' : '' ?>">
+            <i class="fas fa-handshake"></i> Participations
+        </a>
+        <a href="index.php?page=sponsors" class="<?= $current_page === 'sponsors' ? 'active' : '' ?>">
+            <i class="fas fa-hand-holding-usd"></i> Sponsors
+        </a>
         <div class="nav-divider"></div>
         <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
             <i class="fas fa-chart-line"></i> Statistiques

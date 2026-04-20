@@ -4,7 +4,7 @@ require_once __DIR__ . '/../models/Commande.php';
 require_once __DIR__ . '/../models/CommandeLigne.php';
 require_once __DIR__ . '/../models/Produit.php';
 require_once __DIR__ . '/../models/Client.php';
-require_once __DIR__ . '/../config/database.php'';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
 class CommandeController {
@@ -875,6 +875,3 @@ HTML,
     }
 }
 ?>
-
-
-

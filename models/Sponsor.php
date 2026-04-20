@@ -1,7 +1,6 @@
 <?php
-<?php
 
-require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/../config/database.php';
 
 class Sponsor {
 
@@ -16,8 +15,8 @@ class Sponsor {
     // ─────────────────────────────────────────
     public function create(array $data): ?int {
         try {
-            $sql = "INSERT INTO sponsors (nom, email, telephone, secteur, budget, description, logo, site_web, statut, date_debut, date_fin, contact_nom, contact_prenom, contact_email, contact_telephone, notes, created_at, updated_at)
-                    VALUES (:nom, :email, :telephone, :secteur, :budget, :description, :logo, :site_web, :statut, :date_debut, :date_fin, :contact_nom, :contact_prenom, :contact_email, :contact_telephone, :notes, NOW(), NOW())";
+            $sql = "INSERT INTO sponsors (nom, niveau, email, telephone, secteur, budget, description, logo, site_web, statut, date_debut, date_fin, contact_nom, contact_prenom, contact_email, contact_telephone, notes, created_at, updated_at)
+                    VALUES (:nom, :niveau, :email, :telephone, :secteur, :budget, :description, :logo, :site_web, :statut, :date_debut, :date_fin, :contact_nom, :contact_prenom, :contact_email, :contact_telephone, :notes, NOW(), NOW())";
 
             $result = $this->db->execute($sql, $data);
             return $result ? $this->db->lastInsertId() : null;
@@ -29,17 +28,7 @@ class Sponsor {
 
     public function getById(int $id): ?array {
         try {
-            $sql = "SELECT s.*, 
-                           COUNT(DISTINCT p.id) as nb_produits,
-                           COUNT(DISTINCT ev.id) as nb_evenements,
-                           COUNT(DISTINCT c.id) as nb_campagnes
-                    FROM sponsors s
-                    LEFT JOIN sponsor_produits p ON s.id = p.sponsor_id
-                    LEFT JOIN sponsor_evenements ev ON s.id = ev.sponsor_id
-                    LEFT JOIN sponsor_campagnes c ON s.id = c.sponsor_id
-                    WHERE s.id = :id
-                    GROUP BY s.id";
-
+            $sql = "SELECT * FROM sponsors WHERE id = :id";
             $result = $this->db->query($sql, ['id' => $id]);
             return $result ? $result[0] : null;
         } catch (Exception $e) {
@@ -97,17 +86,8 @@ class Sponsor {
                 $where .= " AND s.secteur = :secteur";
             }
 
-            $sql = "SELECT s.*, 
-                           COUNT(DISTINCT p.id) as nb_produits,
-                           COUNT(DISTINCT ev.id) as nb_evenements,
-                           COUNT(DISTINCT c.id) as nb_campagnes,
-                           SUM(c.budget) as budget_total_campagnes
-                    FROM sponsors s
-                    LEFT JOIN sponsor_produits p ON s.id = p.sponsor_id
-                    LEFT JOIN sponsor_evenements ev ON s.id = ev.sponsor_id
-                    LEFT JOIN sponsor_campagnes c ON s.id = c.sponsor_id
+            $sql = "SELECT s.* FROM sponsors s
                     $where
-                    GROUP BY s.id
                     ORDER BY s.created_at DESC
                     LIMIT :offset, :limit";
 

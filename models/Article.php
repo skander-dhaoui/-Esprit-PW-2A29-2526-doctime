@@ -211,11 +211,11 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
              FROM articles a
              LEFT JOIN users u ON u.id = a.auteur_id
              LEFT JOIN reply r ON r.id_article = a.id
-             WHERE a.titre LIKE :kw OR a.contenu LIKE :kw
+             WHERE a.titre LIKE :kw1 OR a.contenu LIKE :kw2
              GROUP BY a.id
              ORDER BY a.created_at DESC"
         );
-        $stmt->execute([':kw' => $kw]);
+        $stmt->execute([':kw1' => $kw, ':kw2' => $kw]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -283,6 +283,97 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
         );
         $stmt->execute([':date' => $date]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOINTURES - Relation Articles ↔ Replies
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Récupère toutes les replies d'un article (INNER JOIN)
+     * Pattern: getRepliesByArticle($articleId)
+     * 
+     * @param int $articleId ID de l'article
+     * @return array Liste des replies jointes avec données utilisateur
+     */
+    public function getRepliesByArticle(int $articleId): array {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT r.id_reply, r.contenu_text, r.emoji, r.photo, r.auteur, r.type_reply, r.date_reply,
+                        r.user_id, r.image_url, r.text_content,
+                        u.id AS user_id_db, u.nom AS user_nom, u.prenom AS user_prenom, u.email AS user_email,
+                        a.id AS article_id, a.titre AS article_titre
+                 FROM reply r
+                 INNER JOIN articles a ON r.id_article = a.id
+                 LEFT JOIN users u ON r.user_id = u.id
+                 WHERE r.id_article = :article_id
+                 ORDER BY r.date_reply DESC"
+            );
+            $stmt->execute([':article_id' => $articleId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur Article::getRepliesByArticle - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Récupère tous les articles avec le nombre de replies (LEFT JOIN)
+     * Pattern: getArticlesWithReplyCount()
+     * Utilisé pour afficher le formulaire de sélection
+     * 
+     * @return array Liste des articles avec comptage des replies
+     */
+    public function getArticlesWithReplyCount(): array {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT a.id, a.titre, a.slug,
+                        COUNT(r.id_reply) AS nombre_replies
+                 FROM articles a
+                 LEFT JOIN reply r ON a.id = r.id_article
+                 GROUP BY a.id, a.titre, a.slug
+                 ORDER BY a.titre ASC"
+            );
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur Article::getArticlesWithReplyCount - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Récupère un article avec toutes ses replies (JOINTURE complète)
+     * Pattern: getArticleWithReplies($id)
+     * 
+     * @param int $id ID de l'article
+     * @return array Données article + tableau replies
+     */
+    public function getArticleWithReplies(int $id): array {
+        try {
+            // Récupérer l'article
+            $stmt = $this->db->prepare(
+                "SELECT a.id, a.titre, a.slug, a.contenu, a.resume, a.image, 
+                        a.auteur_id, a.categorie, a.tags, a.status, a.vues, a.likes, 
+                        a.created_at, a.updated_at,
+                        u.nom AS auteur_nom, u.prenom AS auteur_prenom
+                 FROM articles a
+                 LEFT JOIN users u ON a.auteur_id = u.id
+                 WHERE a.id = :id"
+            );
+            $stmt->execute([':id' => $id]);
+            $article = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$article) return [];
+            
+            // Récupérer les replies de cet article
+            $article['replies'] = $this->getRepliesByArticle($id);
+            
+            return $article;
+        } catch (Exception $e) {
+            error_log('Erreur Article::getArticleWithReplies - ' . $e->getMessage());
+            return [];
+        }
     }
 
     // ─────────────────────────────────────────

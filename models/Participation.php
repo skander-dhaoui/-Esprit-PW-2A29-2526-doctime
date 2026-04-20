@@ -1,7 +1,6 @@
 <?php
-<?php
 
-require_once __DIR__ . '/../config/database.php'';
+require_once __DIR__ . '/../config/database.php';
 
 class Participation {
 
@@ -16,11 +15,29 @@ class Participation {
     // ─────────────────────────────────────────
     public function create(array $data): ?int {
         try {
-            $sql = "INSERT INTO participations (evenement_id, client_id, user_id, statut, nombre_places, prix_total, date_inscription, notes, created_at, updated_at)
-                    VALUES (:evenement_id, :client_id, :user_id, :statut, :nombre_places, :prix_total, :date_inscription, :notes, NOW(), NOW())";
+            $sql = "INSERT INTO participations (event_id, user_id, statut, code_qr)
+                    VALUES (:event_id, :user_id, :statut, :code_qr)";
 
-            $result = $this->db->execute($sql, $data);
-            return $result ? $this->db->lastInsertId() : null;
+            // Transformer les clés sans : en clés avec :
+            $params = [
+                ':event_id' => $data['evenement_id'] ?? $data['event_id'] ?? null,
+                ':user_id' => $data['user_id'] ?? null,
+                ':statut' => $data['statut'] ?? 'inscrit',
+                ':code_qr' => $data['code_qr'] ?? null
+            ];
+
+            error_log('Participation::create - SQL: ' . $sql);
+            error_log('Participation::create - Params: ' . json_encode($params));
+
+            $result = $this->db->execute($sql, $params);
+            error_log('Participation::create - Execute result: ' . ($result ? 'true' : 'false'));
+            
+            if ($result) {
+                $lastId = $this->db->lastInsertId();
+                error_log('Participation::create - Last Insert ID: ' . $lastId);
+                return $lastId;
+            }
+            return null;
         } catch (Exception $e) {
             error_log('Erreur Participation::create - ' . $e->getMessage());
             return null;
@@ -30,12 +47,10 @@ class Participation {
     public function getById(int $id): ?array {
         try {
             $sql = "SELECT p.*, 
-                           e.titre as evenement_titre, e.date_debut as evenement_date, e.prix_unitaire,
-                           c.nom as client_nom, c.prenom as client_prenom, c.email as client_email, c.telephone as client_telephone,
+                           e.titre as evenement_titre,
                            u.nom as user_nom, u.prenom as user_prenom, u.email as user_email
                     FROM participations p
-                    LEFT JOIN evenements e ON p.evenement_id = e.id
-                    LEFT JOIN clients c ON p.client_id = c.id
+                    LEFT JOIN events e ON p.event_id = e.id
                     LEFT JOIN users u ON p.user_id = u.id
                     WHERE p.id = :id";
 
@@ -56,8 +71,6 @@ class Participation {
                 $fields[] = "$key = :$key";
                 $values[$key] = $value;
             }
-
-            $fields[] = "updated_at = NOW()";
 
             $sql = "UPDATE participations SET " . implode(', ', $fields) . " WHERE id = :id";
             return $this->db->execute($sql, $values);
@@ -89,7 +102,7 @@ class Participation {
             }
 
             if (!empty($search)) {
-                $where .= " AND (c.nom LIKE :search OR c.prenom LIKE :search OR e.titre LIKE :search)";
+                $where .= " AND (u.nom LIKE :search OR u.prenom LIKE :search OR e.titre LIKE :search)";
             }
 
             if ($userId > 0) {
@@ -98,14 +111,12 @@ class Participation {
 
             $sql = "SELECT p.*, 
                            e.titre as evenement_titre, e.date_debut as evenement_date,
-                           c.nom as client_nom, c.prenom as client_prenom, c.email as client_email,
-                           u.nom as user_nom, u.prenom as user_prenom
+                           u.nom as user_nom, u.prenom as user_prenom, u.email as user_email, u.telephone as user_telephone
                     FROM participations p
-                    LEFT JOIN evenements e ON p.evenement_id = e.id
-                    LEFT JOIN clients c ON p.client_id = c.id
+                    LEFT JOIN events e ON p.event_id = e.id
                     LEFT JOIN users u ON p.user_id = u.id
                     $where
-                    ORDER BY p.created_at DESC
+                    ORDER BY p.date_inscription DESC
                     LIMIT :offset, :limit";
 
             $params = ['offset' => $offset, 'limit' => $limit];
@@ -168,17 +179,15 @@ class Participation {
 
     public function getByEvenement(int $evenementId, int $offset = 0, int $limit = 50, string $filter = 'tous'): array {
         try {
-            $where = "WHERE p.evenement_id = :evenement_id";
+            $where = "WHERE p.event_id = :evenement_id";
 
             if ($filter !== 'tous') {
                 $where .= " AND p.statut = :statut";
             }
 
             $sql = "SELECT p.*, 
-                           c.nom as client_nom, c.prenom as client_prenom, c.email as client_email, c.telephone as client_telephone,
                            u.nom as user_nom, u.prenom as user_prenom
                     FROM participations p
-                    LEFT JOIN clients c ON p.client_id = c.id
                     LEFT JOIN users u ON p.user_id = u.id
                     $where
                     ORDER BY p.date_inscription DESC
@@ -445,7 +454,7 @@ class Participation {
     // ─────────────────────────────────────────
     public function countByEvenement(int $evenementId, string $filter = 'tous'): int {
         try {
-            $where = "WHERE p.evenement_id = :evenement_id";
+            $where = "WHERE p.event_id = :evenement_id";
 
             if ($filter !== 'tous') {
                 $where .= " AND p.statut = :statut";

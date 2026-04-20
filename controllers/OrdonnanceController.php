@@ -96,9 +96,10 @@ public function createAdmin(): void {
         $csrfToken = $this->generateCsrfToken();
         $patients = $this->patientModel->getAll();
         $medecins = $this->medecinModel->getAllWithUsers();
-        $old = $_SESSION['old'] ?? null;
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
         $flash = $_SESSION['flash'] ?? null;
-        unset($_SESSION['old'], $_SESSION['flash']);
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
         
         require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
     } catch (Exception $e) {
@@ -338,9 +339,14 @@ public function editAdmin(int $id): void {
         $csrfToken = $this->generateCsrfToken();
         $patients = $this->patientModel->getAll();
         $medecins = $this->medecinModel->getAllWithUsers();
-        $old = $_SESSION['old'] ?? null;
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
         $flash = $_SESSION['flash'] ?? null;
-        unset($_SESSION['old'], $_SESSION['flash']);
+        unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
+        
+        if (empty($old) && isset($ordonnance)) {
+            $old = $ordonnance;
+        }
         
         require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
     } catch (Exception $e) {
@@ -355,6 +361,27 @@ public function updateAdmin(int $id): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header("Location: index.php?page=ordonnances&action=edit&id=$id");
+        exit;
+    }
+    
+    $errors = [];
+    $old = $_POST;
+    
+    $diag = trim($_POST['diagnostic'] ?? '');
+    if ($diag === '') {
+        $errors['diagnostic'] = 'Le diagnostic est obligatoire.';
+    } elseif (strlen($diag) < 5) {
+        $errors['diagnostic'] = 'Le diagnostic doit contenir au moins 5 caractères.';
+    }
+    
+    if (empty(trim($_POST['contenu'] ?? ''))) {
+        $errors['contenu'] = 'Le contenu / médicaments est obligatoire.';
+    }
+    
+    if (!empty($errors)) {
+        $_SESSION['errors'] = $errors;
+        $_SESSION['old'] = $old;
         header("Location: index.php?page=ordonnances&action=edit&id=$id");
         exit;
     }
@@ -379,7 +406,8 @@ public function updateAdmin(int $id): void {
         exit;
     } catch (Exception $e) {
         error_log('Erreur updateAdmin - ' . $e->getMessage());
-        $this->setFlash('error', $e->getMessage());
+        $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
+        $_SESSION['old'] = $old;
         header("Location: index.php?page=ordonnances&action=edit&id=$id");
         exit;
     }
@@ -1097,6 +1125,3 @@ HTML;
     }
 }
 ?>
-
-
-

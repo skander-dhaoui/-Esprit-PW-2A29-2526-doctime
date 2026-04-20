@@ -682,5 +682,3 @@ private function renderRendezVousDetailFallback(array $rdv): void {
         exit;
     }
 }
-
-

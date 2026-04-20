@@ -24,7 +24,7 @@ require_once __DIR__ . '/models/Reply.php';
 
 // Modèles optionnels
 $optionalModels = [
-    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance',
+    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance', 'Participation', 'Sponsor',
 ];
 foreach ($optionalModels as $model) {
     $path = __DIR__ . "/models/{$model}.php";
@@ -46,7 +46,7 @@ require_once __DIR__ . '/controllers/ReplyController.php';
 // Contrôleurs optionnels
 $optionalControllers = [
     'RendezVousController', 'EventController',
-    'ProduitController', 'OrdonnanceController', 'DisponibiliteController',
+    'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController',
 ];
 foreach ($optionalControllers as $ctrl) {
     $path = __DIR__ . "/controllers/{$ctrl}.php";
@@ -543,18 +543,71 @@ case 'articles_admin':
     }
     break;
 
-    case 'evenements_admin':
-        adminOnly();
-        if ($action === 'create') {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createEvent() : $adminCtrl->showCreateEvent();
-        } elseif ($action === 'edit' && $id) {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateEvent($id) : $adminCtrl->editEvent($id);
-        } elseif ($action === 'delete' && $id) {
-            $adminCtrl->deleteEvent($id);
+case 'evenements_admin':
+    adminOnly();
+    $eventCtrl = class_exists('EventController') ? new EventController() : null;
+    if (!$eventCtrl) { $front->page404(); break; }
+
+    if ($action === 'create') {
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $eventCtrl->store() : $eventCtrl->create();
+    } elseif ($action === 'edit' && $id) {
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $eventCtrl->update($id) : $eventCtrl->edit($id);
+    } elseif ($action === 'delete' && $id) {
+        $eventCtrl->delete($id);
+    } elseif ($action === 'show' && $id) {
+        $eventCtrl->showAdmin($id);
+    } else {
+        $eventCtrl->listAdmin();  // ← méthode qui charge backoffice/evenements/list.php
+    }
+    break;
+
+case 'participations':
+    adminOnly();
+    $partCtrl = class_exists('ParticipationController') ? new ParticipationController() : null;
+    if (!$partCtrl) { $front->page404(); break; }
+
+    if ($action === 'delete' && $id) {
+        $partCtrl->delete($id);
+    } elseif ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $partCtrl->store(); // We will add store() method
         } else {
-            $adminCtrl->listEvents();
+            $partCtrl->create(); // We will add create() method
         }
-        break;
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $partCtrl->update($id);
+        } else {
+            $partCtrl->edit($id);
+        }
+    } else {
+        $partCtrl->indexAdmin();
+    }
+    break;
+
+case 'sponsors':
+    adminOnly();
+    $sponsorCtrl = class_exists('SponsorController') ? new SponsorController() : null;
+    if (!$sponsorCtrl) { $front->page404(); break; }
+
+    if ($action === 'delete' && $id) {
+        $sponsorCtrl->delete($id);
+    } elseif ($action === 'create') {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $sponsorCtrl->store(); 
+        } else {
+            $sponsorCtrl->create();
+        }
+    } elseif ($action === 'edit' && $id) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $sponsorCtrl->update($id);
+        } else {
+            $sponsorCtrl->edit($id);
+        }
+    } else {
+        $sponsorCtrl->index();
+    }
+    break;
 
     case 'produits_admin':
         adminOnly();

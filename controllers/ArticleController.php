@@ -154,6 +154,59 @@ class ArticleController {
         echo json_encode(['success' => true, 'message' => 'Article supprimé avec succès']);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    //  JOINTURES - Relation Articles ↔ Replies
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Affiche les replies d'un article spécifique (JOINTURE INNER JOIN)
+     * Pattern : afficherReplies($idArticle)
+     * 
+     * @param int $idArticle ID de l'article
+     * @return array Liste des replies avec données utilisateur
+     */
+    public function afficherReplies(int $idArticle): array {
+        // Valider l'ID d'article
+        if ($idArticle <= 0) {
+            error_log("ArticleController::afficherReplies - ID article invalide: $idArticle");
+            return [];
+        }
+
+        // Récupérer les replies via JOINTURE
+        $replies = $this->articleModel->getRepliesByArticle($idArticle);
+        
+        return $replies;
+    }
+
+    /**
+     * Affiche tous les articles avec le nombre de replies
+     * Utilisé pour le formulaire de sélection (LEFT JOIN)
+     * 
+     * @return array Liste des articles avec comptage
+     */
+    public function afficherArticles(): array {
+        try {
+            return $this->articleModel->getArticlesWithReplyCount();
+        } catch (Exception $e) {
+            error_log('ArticleController::afficherArticles - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Affiche un article spécifique avec toutes ses replies
+     * 
+     * @param int $id ID de l'article
+     * @return array|null Données article avec replies ou null
+     */
+    public function afficherArticleComplet(int $id): ?array {
+        if ($id <= 0) {
+            return null;
+        }
+        $article = $this->articleModel->getArticleWithReplies($id);
+        return !empty($article) ? $article : null;
+    }
+
     // ─────────────────────────────────────────
     //  Helper : normalise les clés de l'article
     //  pour que le JS reçoive toujours les mêmes noms
