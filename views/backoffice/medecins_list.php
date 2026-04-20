@@ -1,13 +1,6 @@
 <?php
-// views/backoffice/medecins_list.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
-
-$page_title = 'Gestion des médecins';
+// Vue déprécée - voir layout.php et medecins_list_content.php
 ?>
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -349,7 +342,7 @@ $page_title = 'Gestion des médecins';
     <div class="content-card">
         <div class="card-title-row">
             <h5><i class="fas fa-list"></i> Liste des médecins (<?= count($medecins) ?>)</h5>
-            <a href="index.php?page=users&action=create" class="btn btn-success btn-sm">
+            <a href="index.php?page=medecins_admin&action=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Ajouter un médecin
             </a>
         </div>

@@ -13,10 +13,27 @@ class Categorie {
 
     public function create(array $data): ?int {
         try {
-            $sql = "INSERT INTO categories (nom, slug, description, image, parent_id, statut, created_at, updated_at)
-                    VALUES (:nom, :slug, :description, :image, :parent_id, :statut, NOW(), NOW())";
-            $result = $this->db->execute($sql, $data);
-            return $result ? $this->db->lastInsertId() : null;
+            $sql = "INSERT INTO categories (nom, slug, description, image, parent_id)
+                    VALUES (:nom, :slug, :description, :image, :parent_id)";
+
+            $stmt = $this->db->getConnection()->prepare($sql);
+            $stmt->bindValue(':nom',         $data['nom']         ?? '');
+            $stmt->bindValue(':slug',        $data['slug']        ?? '');
+            $stmt->bindValue(':description', $data['description'] ?? '');
+            $stmt->bindValue(':image',       $data['image']       ?? '');
+
+            if (!empty($data['parent_id'])) {
+                $stmt->bindValue(':parent_id', (int)$data['parent_id'], PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue(':parent_id', null, PDO::PARAM_NULL);
+            }
+
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Categorie::create PDO error: ' . implode(' | ', $stmt->errorInfo()));
+                return null;
+            }
+            return (int)$this->db->getConnection()->lastInsertId();
         } catch (Exception $e) {
             error_log('Erreur Categorie::create - ' . $e->getMessage());
             return null;
@@ -76,17 +93,33 @@ class Categorie {
                         slug        = :slug,
                         description = :description,
                         image       = :image,
-                        parent_id   = :parent_id,
-                        statut      = :statut,
-                        updated_at  = NOW()
+                        parent_id   = :parent_id
                     WHERE id = :id";
-            $data['id'] = $id;
-            return $this->db->execute($sql, $data);
+
+            $stmt = $this->db->getConnection()->prepare($sql);
+            $stmt->bindValue(':id',          $id,                   PDO::PARAM_INT);
+            $stmt->bindValue(':nom',         $data['nom']         ?? '');
+            $stmt->bindValue(':slug',        $data['slug']        ?? '');
+            $stmt->bindValue(':description', $data['description'] ?? '');
+            $stmt->bindValue(':image',       $data['image']       ?? '');
+
+            if (!empty($data['parent_id'])) {
+                $stmt->bindValue(':parent_id', (int)$data['parent_id'], PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue(':parent_id', null, PDO::PARAM_NULL);
+            }
+
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Categorie::update PDO error: ' . implode(' | ', $stmt->errorInfo()));
+            }
+            return $result;
         } catch (Exception $e) {
             error_log('Erreur Categorie::update - ' . $e->getMessage());
             return false;
         }
     }
+
 
     public function delete(int $id): bool {
         try {

@@ -351,6 +351,66 @@ class EventController {
         }
     }
 
+    public function advanced(): void {
+        $this->auth->requireRole(['admin', 'medecin']);
+        try {
+            require_once __DIR__ . '/../models/EventAvance.php';
+            $eventAvance = new EventAvance();
+
+            // Recherche avancée
+            $filtres = [
+                'q'              => trim($_GET['q'] ?? ''),
+                'statut'         => $_GET['statut'] ?? '',
+                'date_debut_min' => $_GET['date_debut_min'] ?? '',
+                'date_debut_max' => $_GET['date_debut_max'] ?? '',
+                'prix_min'       => $_GET['prix_min'] ?? '',
+                'prix_max'       => $_GET['prix_max'] ?? '',
+                'avec_places'    => !empty($_GET['avec_places']),
+                'sponsor_id'     => $_GET['sponsor_id'] ?? '',
+                'tri'            => $_GET['tri'] ?? 'date_debut',
+                'ordre'          => $_GET['ordre'] ?? 'DESC',
+            ];
+            $hasSearch = !empty($filtres['q']) || !empty($filtres['statut'])
+                      || !empty($filtres['date_debut_min']) || !empty($filtres['date_debut_max'])
+                      || !empty($filtres['prix_min']) || !empty($filtres['prix_max'])
+                      || $filtres['avec_places'] || !empty($filtres['sponsor_id']);
+
+            $searchResults = $hasSearch ? $eventAvance->recherche($filtres) : [];
+
+            // Données du tableau de bord
+            $vueEnsemble = $eventAvance->getVueEnsemble();
+            $sponsors     = $eventAvance->getSponsors();
+            $statuts      = $eventAvance->getStatuts();
+
+            // Stats classiques
+            $topEvents               = $this->eventModel->getTopEventsByParticipants(5);
+            $revenueEvents           = $this->eventModel->getRevenueEvents();
+            $specialtiesDistribution = $this->eventModel->getSpecialtyDistribution();
+
+            // Export CSV
+            if (isset($_GET['export']) && $_GET['export'] === 'csv' && !empty($_GET['event_id'])) {
+                $exportStatut = $_GET['export_statut'] ?? '';
+                $rows = $eventAvance->getParticipantsForExport((int)$_GET['event_id'], $exportStatut);
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename=participants_event_' . $_GET['event_id'] . '.csv');
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Nom', 'Prénom', 'Email', 'Statut', 'Date inscription', 'Événement', 'Lieu']);
+                foreach ($rows as $r) {
+                    fputcsv($out, [$r['nom'], $r['prenom'], $r['email'], $r['statut'], $r['date_inscription'], $r['evenement_titre'], $r['lieu']]);
+                }
+                fclose($out);
+                exit;
+            }
+
+            require __DIR__ . '/../views/backoffice/evenements/advanced.php';
+        } catch (Exception $e) {
+            error_log('Erreur EventController::advanced - ' . $e->getMessage());
+            $this->setFlash('error', 'Erreur lors du chargement des statistiques avancées.');
+            header('Location: index.php?page=evenements_admin');
+            exit;
+        }
+    }
+
     // ─── Helpers prives ───────────────────────────────────────
 
     private function validateEvent(array $data): array {

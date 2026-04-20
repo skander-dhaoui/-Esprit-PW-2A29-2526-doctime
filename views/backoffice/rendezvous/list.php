@@ -47,6 +47,86 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         .badge-annule { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .btn-action { padding: 5px 10px; margin: 2px; border-radius: 5px; }
         .chart-container { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        /* Vue Avancée Styles */
+        .view-toggle { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
+        .view-toggle .btn-toggle { padding: 8px 16px; border-radius: 8px; border: 2px solid #ddd; background: white; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .view-toggle .btn-toggle.active { background: #4CAF50; color: white; border-color: #4CAF50; }
+        .view-toggle .btn-toggle:hover { border-color: #4CAF50; }
+        
+        #tableView { display: block; }
+        #cardView { display: none; padding: 0; }
+        
+        .rdv-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .rdv-card { 
+            background: white; border-radius: 12px; padding: 20px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+            border-left: 4px solid #4CAF50; 
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+            overflow: visible;
+        }
+        .rdv-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); transform: translateY(-3px); }
+        
+        .rdv-card-header { 
+            display: flex; justify-content: space-between; align-items: flex-start; 
+            margin-bottom: 15px; padding-bottom: 12px; 
+            border-bottom: 1px solid #f0f0f0;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .rdv-card-title { font-weight: 700; color: #1e2a3e; font-size: 14px; line-height: 1.4; }
+        .rdv-card-status { 
+            padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .rdv-card-info { 
+            margin-bottom: 12px; display: flex; 
+            align-items: flex-start; gap: 10px;
+            flex-wrap: wrap;
+        }
+        .rdv-card-icon { 
+            width: 20px; min-width: 20px; text-align: center; color: #4CAF50; font-size: 16px;
+        }
+        .rdv-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .rdv-card-text { 
+            font-size: 13px; color: #333; 
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.3;
+        }
+        .rdv-card-label { 
+            font-size: 11px; color: #999; font-weight: 600; 
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        .rdv-card-actions { 
+            display: flex; gap: 8px; margin-top: auto; padding-top: 12px; 
+            border-top: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+        .rdv-card-actions a { 
+            flex: 1; min-width: 70px; text-align: center; padding: 8px; 
+            border-radius: 6px; font-size: 12px; text-decoration: none; 
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .rdv-card-actions .btn-view { background: #e3f2fd; color: #1565c0; }
+        .rdv-card-actions .btn-view:hover { background: #1565c0; color: white; }
+        .rdv-card-actions .btn-edit { background: #fff3e0; color: #f57c00; }
+        .rdv-card-actions .btn-edit:hover { background: #f57c00; color: white; }
+        .rdv-card-actions .btn-delete { background: #fce4ec; color: #c2185b; }
+        .rdv-card-actions .btn-delete:hover { background: #c2185b; color: white; }
+        
         @media (max-width: 992px) {
             .sidebar { width: 80px; }
             .sidebar-header .logo-img { width: 50px; }
@@ -153,11 +233,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     </div>
 
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2><i class="fas fa-calendar-check me-2"></i>Gestion des rendez-vous</h2>
-        <a href="index.php?page=admin_rendezvous&action=create" class="btn btn-success">
-            <i class="fas fa-plus me-2"></i>Nouveau rendez-vous
-        </a>
+        <div>
+            <a href="index.php?page=rendez_vous_admin&action=advanced" class="btn btn-info" title="Vue avancée avec statistiques">
+                <i class="fas fa-chart-bar me-2"></i>Vue avancée
+            </a>
+            <a href="index.php?page=rendez_vous_admin&action=create" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Nouveau rendez-vous
+            </a>
+        </div>
     </div>
 
     <!-- Statistiques -->
@@ -219,8 +304,18 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         </div>
     </div>
 
-    <!-- Tableau -->
-    <div class="card">
+    <!-- Bouton Toggle Vue -->
+    <div class="view-toggle">
+        <button class="btn-toggle active" onclick="switchView('table')">
+            <i class="fas fa-table me-2"></i>Vue Tableau
+        </button>
+        <button class="btn-toggle" onclick="switchView('card')">
+            <i class="fas fa-th-large me-2"></i>Vue Avancée
+        </button>
+    </div>
+
+    <!-- Vue Tableau -->
+    <div id="tableView">
         <div class="card-body">
             <div class="table-responsive">
                 <table id="rdvTable" class="table table-hover">
@@ -259,7 +354,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                                     <span class="badge <?= $badgeClass ?> px-3 py-2"><?= $rdv['statut'] ?></span>
                                  </div>
                                 <td>
-                                    <a href="index.php?page=admin_rendezvous&action=show&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-info" title="Voir"><i class="fas fa-eye"></i></a>
+                                    <a href="index.php?page=admin_rendezvous&action=view&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-info" title="Voir détails"><i class="fas fa-eye"></i></a>
                                     <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
                                     <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer ce rendez-vous ?')"><i class="fas fa-trash"></i></a>
                                  </div>
@@ -273,20 +368,130 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- Vue Avancée (Cartes) -->
+    <div id="cardView">
+        <div class="rdv-cards-grid">
+        <?php if (!empty($rdvs)): ?>
+            <?php foreach ($rdvs as $rdv): ?>
+            <div class="rdv-card">
+                <div class="rdv-card-header">
+                    <div>
+                        <div class="rdv-card-label">RDV #<?= $rdv['id'] ?></div>
+                        <div class="rdv-card-title">Patient</div>
+                        <div class="rdv-card-text"><?= htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']) ?></div>
+                    </div>
+                    <?php
+                    $badgeClass = match($rdv['statut']) {
+                        'confirmé' => 'badge-confirme',
+                        'en_attente' => 'badge-attente',
+                        'terminé' => 'badge-termine',
+                        'annulé' => 'badge-annule',
+                        default => 'badge-secondary'
+                    };
+                    ?>
+                    <span class="rdv-card-status <?= $badgeClass ?>"><?= $rdv['statut'] ?></span>
+                </div>
+                
+                <div class="rdv-card-info">
+                    <div class="rdv-card-icon"><i class="fas fa-user-md"></i></div>
+                    <div class="rdv-card-content">
+                        <div class="rdv-card-label">Médecin</div>
+                        <div class="rdv-card-text">Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></div>
+                    </div>
+                </div>
+                
+                <div class="rdv-card-info">
+                    <div class="rdv-card-icon"><i class="fas fa-stethoscope"></i></div>
+                    <div class="rdv-card-content">
+                        <div class="rdv-card-label">Spécialité</div>
+                        <div class="rdv-card-text"><?= htmlspecialchars($rdv['specialite'] ?? '-') ?></div>
+                    </div>
+                </div>
+                
+                <div class="rdv-card-info">
+                    <div class="rdv-card-icon"><i class="fas fa-calendar"></i></div>
+                    <div class="rdv-card-content">
+                        <div class="rdv-card-label">Date & Heure</div>
+                        <div class="rdv-card-text"><?= date('d/m/Y', strtotime($rdv['date_rendezvous'])) ?> à <?= $rdv['heure_rendezvous'] ?></div>
+                    </div>
+                </div>
+                
+                <div class="rdv-card-info">
+                    <div class="rdv-card-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="rdv-card-content">
+                        <div class="rdv-card-label">Motif</div>
+                        <div class="rdv-card-text"><?= htmlspecialchars(substr($rdv['motif'] ?? '', 0, 80)) ?><?= strlen($rdv['motif'] ?? '') > 80 ? '...' : '' ?></div>
+                    </div>
+                </div>
+                
+                <div class="rdv-card-actions">
+                    <a href="index.php?page=admin_rendezvous&action=view&id=<?= $rdv['id'] ?>" class="btn-view" title="Voir détails">
+                        <i class="fas fa-eye me-1"></i><span>Voir</span>
+                    </a>
+                    <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn-edit" title="Modifier">
+                        <i class="fas fa-edit me-1"></i><span>Éditer</span>
+                    </a>
+                    <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $rdv['id'] ?>" class="btn-delete" onclick="return confirm('Supprimer ce rendez-vous ?')" title="Supprimer">
+                        <i class="fas fa-trash me-1"></i><span>Supprimer</span>
+                    </a>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">
+                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                <p>Aucun rendez-vous trouvé</p>
+            </div>
+        <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
 <script>
-$(document).ready(function() {
-    $('#rdvTable').DataTable({
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
-        pageLength: 10,
-        order: [[3, 'desc']],
-        searching: false,
-        paging: true
-    });
+// === VUE TOGGLE ===
+function switchView(view) {
+    const tableView = document.getElementById('tableView');
+    const cardView = document.getElementById('cardView');
+    const buttons = document.querySelectorAll('.view-toggle .btn-toggle');
+    
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (view === 'table') {
+        tableView.style.display = 'block';
+        cardView.style.display = 'none';
+        event.target.closest('.btn-toggle').classList.add('active');
+        localStorage.setItem('rdvViewMode', 'table');
+    } else {
+        tableView.style.display = 'none';
+        cardView.style.display = 'block';
+        event.target.closest('.btn-toggle').classList.add('active');
+        localStorage.setItem('rdvViewMode', 'card');
+    }
+}
+
+// === CHARGER VUE SAUVEGARDÉE ===
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('rdvViewMode') || 'table';
+    if (savedView === 'card') {
+        switchView('card');
+    }
+    
+    // DataTable initialization
+    if (document.getElementById('rdvTable')) {
+        $('#rdvTable').DataTable({
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
+            pageLength: 10,
+            order: [[3, 'desc']],
+            searching: false,
+            paging: true
+        });
+    }
 });
 </script>
 </body>

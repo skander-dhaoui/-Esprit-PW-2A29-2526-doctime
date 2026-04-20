@@ -30,6 +30,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=produits_admin" class="<?= $current_page === 'produits_admin' ? 'active' : '' ?>">
             <i class="fas fa-box"></i> Produits
         </a>
+        <a href="index.php?page=categories_admin" class="<?= $current_page === 'categories_admin' ? 'active' : '' ?>">
+            <i class="fas fa-tags"></i> Catégories
+        </a>
         <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
             <i class="fas fa-blog"></i> Blog
         </a>
@@ -45,6 +48,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <div class="nav-divider"></div>
         <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
             <i class="fas fa-chart-line"></i> Statistiques
+        </a>
+        <a href="index.php?page=evenements_admin&action=advanced" class="<?= ($current_page === 'evenements_admin' && ($_GET['action'] ?? '') === 'advanced') ? 'active' : '' ?>">
+            <i class="fas fa-chart-bar"></i> Événements Avancé
         </a>
         <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
             <i class="fas fa-history"></i> Historique

@@ -221,6 +221,31 @@ class Produit {
      * 
      * @return array Liste des catégories avec comptage
      */
+    /**
+     * Recherche rapide de produits par nom/description (pour l'API JSON)
+     */
+    public function search(string $query, int $limit = 10): array {
+        try {
+            $sql = "SELECT p.id, p.nom, p.slug, p.prix, p.stock, p.image, p.status,
+                           c.nom AS categorie_nom
+                    FROM produits p
+                    LEFT JOIN categories c ON p.categorie_id = c.id
+                    WHERE p.status = 'actif'
+                      AND (p.nom LIKE :q OR p.description LIKE :q OR p.slug LIKE :q)
+                    ORDER BY p.nom ASC
+                    LIMIT :limit";
+            $stmt = $this->db->getConnection()->prepare($sql);
+            $stmt->bindValue(':q', '%' . $query . '%');
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::search - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+
     public function getAllCategories(): array {
         try {
             $sql = "SELECT c.id, c.nom, c.slug,

@@ -2,7 +2,6 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-ob_start();
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
@@ -24,7 +23,7 @@ require_once __DIR__ . '/models/Reply.php';
 
 // Modèles optionnels
 $optionalModels = [
-    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance', 'Participation', 'Sponsor',
+    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance', 'Participation', 'Sponsor', 'Categorie',
 ];
 foreach ($optionalModels as $model) {
     $path = __DIR__ . "/models/{$model}.php";
@@ -46,7 +45,7 @@ require_once __DIR__ . '/controllers/ReplyController.php';
 // Contrôleurs optionnels
 $optionalControllers = [
     'RendezVousController', 'EventController',
-    'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController',
+    'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController', 'CategorieController',
 ];
 foreach ($optionalControllers as $ctrl) {
     $path = __DIR__ . "/controllers/{$ctrl}.php";
@@ -519,27 +518,57 @@ case 'modifier_profil':
 
     case 'rendez_vous_admin':
         adminOnly();
-        $action === 'delete' && $id ? $adminCtrl->deleteRendezVous($id) : $adminCtrl->listRendezVous();
+        if ($action === 'create') {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $adminCtrl->createRendezVous();
+            } else {
+                $adminCtrl->showCreateRendezVous();
+            }
+        } elseif ($action === 'view' && $id) {
+            $adminCtrl->viewRendezVous($id);
+        } elseif ($action === 'add_comment' && $id) {
+            $_SERVER['REQUEST_METHOD'] === 'POST'
+                ? $adminCtrl->addCommentRendezVous($id)
+                : header('Location: index.php?page=rendez_vous_admin&action=view&id=' . $id);
+        } elseif ($action === 'edit' && $id) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $adminCtrl->updateRendezVous($id);
+            } else {
+                $adminCtrl->editRendezVous($id);
+            }
+        } elseif ($action === 'delete' && $id) {
+            $adminCtrl->deleteRendezVous($id);
+        } elseif ($action === 'show' && $id) {
+            $adminCtrl->showRendezVous($id);
+        } elseif ($action === 'advanced') {
+            $adminCtrl->advancedRendezVous();
+        } else {
+            $adminCtrl->listRendezVous();
+        }
         break;
 
 case 'articles_admin':
-    requireLogin();
+    adminOnly();
     if ($action === 'create') {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $front->adminArticleCreate();
-        } else {
-            $front->adminArticleCreate();
-        }
+        $_SERVER['REQUEST_METHOD'] === 'POST'
+            ? $adminCtrl->createArticle()
+            : $adminCtrl->showCreateArticle();
+    } elseif ($action === 'view' && $id) {
+        $adminCtrl->viewArticle($id);
+    } elseif ($action === 'add_comment' && $id) {
+        $_SERVER['REQUEST_METHOD'] === 'POST'
+            ? $adminCtrl->addComment($id)
+            : header('Location: index.php?page=articles_admin&action=view&id=' . $id);
     } elseif ($action === 'edit' && $id) {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $front->adminArticleEdit($id);
-        } else {
-            $front->adminArticleEdit($id);
-        }
+        $_SERVER['REQUEST_METHOD'] === 'POST'
+            ? $adminCtrl->updateArticle($id)
+            : $adminCtrl->editArticle($id);
     } elseif ($action === 'delete' && $id) {
-        $front->adminArticleDelete($id);
+        $adminCtrl->deleteArticle($id);
+    } elseif ($action === 'advanced') {
+        $adminCtrl->advancedArticles();
     } else {
-        header('Location: index.php?page=blog_public');
+        $adminCtrl->listArticles();
     }
     break;
 
@@ -556,6 +585,8 @@ case 'evenements_admin':
         $eventCtrl->delete($id);
     } elseif ($action === 'show' && $id) {
         $eventCtrl->showAdmin($id);
+    } elseif ($action === 'advanced') {
+        $eventCtrl->advanced();
     } else {
         $eventCtrl->listAdmin();  // ← méthode qui charge backoffice/evenements/list.php
     }
@@ -611,14 +642,33 @@ case 'sponsors':
 
     case 'produits_admin':
         adminOnly();
+        $produitCtrl = class_exists('ProduitController') ? new ProduitController() : null;
+        if (!$produitCtrl) { $front->page404(); break; }
+
         if ($action === 'create') {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createProduit() : $adminCtrl->showCreateProduit();
+            $produitCtrl->create();
         } elseif ($action === 'edit' && $id) {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateProduit($id) : $adminCtrl->editProduit($id);
+            $produitCtrl->edit($id);
         } elseif ($action === 'delete' && $id) {
-            $adminCtrl->deleteProduit($id);
+            $produitCtrl->delete($id);
         } else {
-            $adminCtrl->listProduits();
+            $produitCtrl->manage();
+        }
+        break;
+
+    case 'categories_admin':
+        adminOnly();
+        $catCtrl = class_exists('CategorieController') ? new CategorieController() : null;
+        if (!$catCtrl) { $front->page404(); break; }
+
+        if ($action === 'create') {
+            $catCtrl->create();
+        } elseif ($action === 'edit' && $id) {
+            $catCtrl->edit($id);
+        } elseif ($action === 'delete' && $id) {
+            $catCtrl->delete($id);
+        } else {
+            $catCtrl->index();
         }
         break;
 
@@ -703,28 +753,6 @@ case 'ordonnances':
     break;
 
 
-   case 'admin_rendezvous':
-    adminOnly();
-    if ($action === 'create') {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $adminCtrl->createRendezVous();
-        } else {
-            $adminCtrl->showCreateRendezVous();
-        }
-    } elseif ($action === 'edit' && $id) {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $adminCtrl->updateRendezVous($id);
-        } else {
-            $adminCtrl->editRendezVous($id);
-        }
-    } elseif ($action === 'delete' && $id) {
-        $adminCtrl->deleteRendezVous($id);
-    } elseif ($action === 'show' && $id) {
-        $adminCtrl->showRendezVous($id);
-    } else {
-        $adminCtrl->listRendezVous();
-    }
-    break;
 // ─── Disponibilités Front Office ───────────────────
 case 'patient_disponibilites':
     patientOnly();

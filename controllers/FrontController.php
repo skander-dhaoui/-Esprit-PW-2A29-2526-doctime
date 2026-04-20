@@ -160,89 +160,66 @@ class FrontController {
                 throw new Exception("La classe Article n'existe pas");
             }
             $articleModel = new Article();
-            $articles = $articleModel->getAll();
+            $keyword = $_GET['keyword'] ?? '';
+            $categorie = $_GET['categorie'] ?? '';
+            $date_min = $_GET['date_min'] ?? '';
+            $tag = $_GET['tag'] ?? '';
+            $isSearch = ($keyword !== '' || $categorie !== '' || $date_min !== '' || $tag !== '');
+
+            if ($isSearch && method_exists($articleModel, 'advancedSearch')) {
+                $articles = $articleModel->advancedSearch([
+                    'keyword' => $keyword,
+                    'categorie' => $categorie,
+                    'date_min' => $date_min,
+                    'tag' => $tag
+                ]);
+            } else {
+                $articles = $articleModel->getAll();
+            }
+
+            $searchForm = '
+            <div style="background:#f8f9fa; border-radius:8px; padding:20px; margin-bottom:20px; border:1px solid #ddd;">
+                <h4 style="margin-top:0; margin-bottom:15px; cursor:pointer; color:#2A7FAA; display:flex; justify-content:space-between;" onclick="var f=document.getElementById(\'advanced-search-form\'); f.style.display=(f.style.display===\'none\'?\'block\':\'none\');">
+                    <span><i class="fas fa-search"></i> Recherche Avancée</span>
+                    <i class="fas fa-chevron-down" style="font-size:16px;"></i>
+                </h4>
+                <div id="advanced-search-form" style="display:' . ($isSearch ? 'block' : 'none') . ';">
+                    <form method="GET" action="index.php">
+                        <input type="hidden" name="page" value="blog_public">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Mot clé</label>
+                                <input type="text" name="keyword" value="' . htmlspecialchars($keyword) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Rechercher dans le titre ou le contenu...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Catégorie</label>
+                                <input type="text" name="categorie" value="' . htmlspecialchars($categorie) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Ex: Santé, Sport...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Tag</label>
+                                <input type="text" name="tag" value="' . htmlspecialchars($tag) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Ex: nutrition...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Date (à partir de)</label>
+                                <input type="date" name="date_min" value="' . htmlspecialchars($date_min) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                            </div>
+                            <div style="width:100%; display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                                <a href="index.php?page=blog_public" style="background:#6c757d; color:white; text-decoration:none; padding:10px 20px; border-radius:5px;"><i class="fas fa-times"></i> Réinitialiser</a>
+                                <button type="submit" style="background:#2A7FAA; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;"><i class="fas fa-search"></i> Filtrer les articles</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>';
             $isLoggedIn = isset($_SESSION['user_id']);
             $userId = $_SESSION['user_id'] ?? null;
             $userRole = $_SESSION['user_role'] ?? '';
             $isAdmin = ($userRole === 'admin');
 
+            // Les admins sont redirigés vers la page de gestion des articles
             if ($isAdmin) {
-                $totalArticles = count($articles);
-                $totalVues = array_sum(array_column($articles, 'vues'));
-                $totalComments = array_sum(array_column($articles, 'nb_replies'));
-                $statsHtml = '
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total articles</h6><h2 class="mb-0">' . $totalArticles . '</h2></div>
-                                    <i class="fas fa-newspaper fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total vues</h6><h2 class="mb-0">' . $totalVues . '</h2></div>
-                                    <i class="fas fa-eye fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-info text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total commentaires</h6><h2 class="mb-0">' . $totalComments . '</h2></div>
-                                    <i class="fas fa-comments fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>';
-                $addButton = '
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Liste des articles</h4>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Nouvel article
-                    </a>
-                </div>';
-                if (empty($articles)) {
-                    $content = '<div class="alert alert-info">Aucun article disponible pour le moment.</div>';
-                } else {
-                    $content = '
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr><th>ID</th><th>Titre</th><th>Auteur</th><th>Date</th><th>Vues</th><th>Commentaires</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody>';
-                    foreach ($articles as $article) {
-                        $content .= '
-                        <tr>
-                            <td>' . $article['id'] . '</td>
-                            <td><strong>' . htmlspecialchars(substr($article['titre'], 0, 50)) . (strlen($article['titre']) > 50 ? '...' : '') . '</strong></td>
-                            <td>' . htmlspecialchars($article['auteur_name'] ?? 'Valorys') . '</td>
-                            <td>' . date('d/m/Y H:i', strtotime($article['created_at'])) . '</td>
-                            <td><span class="badge bg-info">' . ($article['vues'] ?? 0) . '</span></td>
-                            <td><span class="badge bg-secondary">' . ($article['nb_replies'] ?? 0) . '</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="index.php?page=detail_article_public&id=' . $article['id'] . '" class="btn btn-sm btn-info btn-action" title="Voir"><i class="fas fa-eye"></i></a>
-                                    <a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" class="btn btn-sm btn-warning btn-action" title="Modifier"><i class="fas fa-edit"></i></a>
-                                    <button type="button" class="btn btn-sm btn-danger btn-action" title="Supprimer" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>';
-                    }
-                    $content .= '</tbody></table></div>';
-                }
-                $fullContent = $statsHtml . $addButton . $content . $this->getDeleteScript();
-                $this->renderAdminLayout('Gestion des articles', $fullContent, 'articles');
-                return;
+                header('Location: index.php?page=articles_admin');
+                exit;
             }
 
             $addButton = '';
@@ -302,9 +279,9 @@ class FrontController {
                     <i class="fas fa-info-circle"></i>
                     <a href="index.php?page=login" style="color:#1976d2;">Connectez-vous</a> pour créer, modifier ou supprimer vos propres articles.
                 </div>';
-                $fullContent = $infoMessage . $addButton . $content . $this->getDeleteScript();
+                $fullContent = $infoMessage . $searchForm . $addButton . $content . $this->getDeleteScript();
             } else {
-                $fullContent = $addButton . $content . $this->getDeleteScript();
+                $fullContent = $searchForm . $addButton . $content . $this->getDeleteScript();
             }
             $this->renderPublicView('Blog Valorys', $fullContent);
 
@@ -536,10 +513,11 @@ class FrontController {
         $userId     = $_SESSION['user_id'] ?? null;
         $userRole   = $_SESSION['user_role'] ?? '';
         $isAdmin    = ($userRole === 'admin');
+        
+        // Les admins sont redirigés vers la page de détail admin
         if ($isAdmin) {
-            $content = $this->getAdminArticleDetailHTML($article, $replies, $id);
-            $this->renderAdminLayout('Détail de l\'article - Administration', $content, 'articles');
-            return;
+            header('Location: index.php?page=articles_admin&action=show&id=' . $id);
+            exit;
         }
         $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']);
         $articleButtons = $isAuthor ? '
@@ -1001,12 +979,11 @@ JS;
             }
         }
         if ($isAdmin) {
-            $content = $this->getAdminArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
-            $this->renderAdminLayout('Créer un article', $content, 'articles');
-        } else {
-            $content = $this->getUserArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
-            $this->renderPublicView('Créer un article', $content);
+            header('Location: index.php?page=articles_admin&action=create');
+            exit;
         }
+        $content = $this->getUserArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
+        $this->renderPublicView('Créer un article', $content);
     }
 
     public function adminArticleEdit($id): void {
@@ -1048,12 +1025,11 @@ JS;
             }
         }
         if ($isAdmin) {
-            $content = $this->getAdminArticleFormHTML('Modifier l\'article', 'admin_article_edit&id=' . $id, $article, $errors);
-            $this->renderAdminLayout('Modifier un article', $content, 'articles');
-        } else {
-            $content = $this->getUserArticleFormHTML('Modifier mon article', 'admin_article_edit&id=' . $id, $article, $errors);
-            $this->renderPublicView('Modifier mon article', $content);
+            header('Location: index.php?page=articles_admin&action=edit&id=' . $id);
+            exit;
         }
+        $content = $this->getUserArticleFormHTML('Modifier mon article', 'admin_article_edit&id=' . $id, $article, $errors);
+        $this->renderPublicView('Modifier mon article', $content);
     }
 
     public function adminArticleDelete($id): void {

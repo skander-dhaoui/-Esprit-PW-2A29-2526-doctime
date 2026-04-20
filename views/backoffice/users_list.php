@@ -1,19 +1,6 @@
 <?php
-// views/backoffice/users_list.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
-
-// Vérification que $users existe
-if (!isset($users)) {
-    die("ERREUR: La variable \$users n'est pas définie");
-}
-
-$page_title = 'Gestion des utilisateurs';
-$current_page = 'users';
+// Vue déprécée - voir layout.php et users_list_content.php
 ?>
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">

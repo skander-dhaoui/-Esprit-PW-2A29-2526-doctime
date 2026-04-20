@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+<?php
+// Vue déprécée - voir layout.php
+?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">

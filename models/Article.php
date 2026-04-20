@@ -31,14 +31,21 @@ class Article {
             }
         }
 
+        $categorie = is_array($titreOrData) ? ($titreOrData['categorie'] ?? null) : null;
+        $status    = is_array($titreOrData) ? ($titreOrData['status']    ?? 'brouillon') : 'brouillon';
+        $tags      = is_array($titreOrData) ? ($titreOrData['tags']      ?? null) : null;
+
         $stmt = $this->db->prepare(
-            "INSERT INTO articles (titre, contenu, auteur_id, created_at) 
-             VALUES (:titre, :contenu, :auteur_id, NOW())"
+            "INSERT INTO articles (titre, contenu, auteur_id, categorie, status, tags, created_at)
+             VALUES (:titre, :contenu, :auteur_id, :categorie, :status, :tags, NOW())"
         );
         $stmt->execute([
             ':titre'     => $titre,
             ':contenu'   => $contenu,
             ':auteur_id' => $auteur_id,
+            ':categorie' => $categorie,
+            ':status'    => $status,
+            ':tags'      => $tags,
         ]);
         return (int)$this->db->lastInsertId();
     }
@@ -217,6 +224,102 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
         );
         $stmt->execute([':kw1' => $kw, ':kw2' => $kw]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function advancedSearch(array $criteria): array {
+        $sql = "SELECT a.*, u.nom as auteur_name, u.prenom as auteur_prenom, COUNT(r.id_reply) AS nb_replies
+                FROM articles a
+                LEFT JOIN users u ON u.id = a.auteur_id
+                LEFT JOIN reply r ON r.id_article = a.id
+                WHERE 1=1";
+        $params = [];
+
+        if (!empty($criteria['keyword'])) {
+            $sql .= " AND (a.titre LIKE :kw1 OR a.contenu LIKE :kw2 OR a.tags LIKE :kw3)";
+            $kw = '%' . $criteria['keyword'] . '%';
+            $params[':kw1'] = $kw; $params[':kw2'] = $kw; $params[':kw3'] = $kw;
+        }
+        if (!empty($criteria['categorie'])) {
+            $sql .= " AND a.categorie = :categorie";
+            $params[':categorie'] = $criteria['categorie'];
+        }
+        if (!empty($criteria['status'])) {
+            $sql .= " AND a.status = :status";
+            $params[':status'] = $criteria['status'];
+        }
+        if (!empty($criteria['auteur_id'])) {
+            $sql .= " AND a.auteur_id = :auteur_id";
+            $params[':auteur_id'] = (int)$criteria['auteur_id'];
+        }
+        if (!empty($criteria['date_min'])) {
+            $sql .= " AND DATE(a.created_at) >= :date_min";
+            $params[':date_min'] = $criteria['date_min'];
+        }
+        if (!empty($criteria['date_max'])) {
+            $sql .= " AND DATE(a.created_at) <= :date_max";
+            $params[':date_max'] = $criteria['date_max'];
+        }
+        if (!empty($criteria['tag'])) {
+            $sql .= " AND a.tags LIKE :tag";
+            $params[':tag'] = '%' . $criteria['tag'] . '%';
+        }
+        if (!empty($criteria['vues_min'])) {
+            $sql .= " AND a.vues >= :vues_min";
+            $params[':vues_min'] = (int)$criteria['vues_min'];
+        }
+
+        $sql .= " GROUP BY a.id";
+
+        $tri = in_array($criteria['tri'] ?? '', ['created_at','titre','vues','likes']) ? $criteria['tri'] : 'created_at';
+        $ordre = ($criteria['ordre'] ?? 'DESC') === 'ASC' ? 'ASC' : 'DESC';
+        $sql .= " ORDER BY a.$tri $ordre";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ─────────────────────────────────────────
+    //  Stats avancées
+    // ─────────────────────────────────────────
+
+    public function getCategories(): array {
+        return $this->db->query("SELECT DISTINCT categorie FROM articles WHERE categorie IS NOT NULL AND categorie != '' ORDER BY categorie")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getAuteurs(): array {
+        return $this->db->query("SELECT DISTINCT u.id, CONCAT(u.prenom, ' ', u.nom) as nom_complet FROM articles a JOIN users u ON a.auteur_id = u.id ORDER BY nom_complet")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getStatusDistribution(): array {
+        return $this->db->query("SELECT status, COUNT(*) as total FROM articles GROUP BY status ORDER BY total DESC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getCategoryDistribution(): array {
+        return $this->db->query("SELECT COALESCE(categorie, 'Sans catégorie') as categorie, COUNT(*) as total FROM articles GROUP BY categorie ORDER BY total DESC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTopByViews(int $limit = 5): array {
+        $stmt = $this->db->prepare("SELECT a.id, a.titre, a.vues, a.likes, a.status, u.nom as auteur_name FROM articles a LEFT JOIN users u ON a.auteur_id = u.id ORDER BY a.vues DESC LIMIT :lim");
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTopByComments(int $limit = 5): array {
+        return $this->db->query("SELECT a.id, a.titre, a.vues, a.status, COUNT(r.id_reply) as nb_replies, u.nom as auteur_name FROM articles a LEFT JOIN reply r ON r.id_article = a.id LEFT JOIN users u ON a.auteur_id = u.id GROUP BY a.id ORDER BY nb_replies DESC LIMIT $limit")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getMonthlyTrend(int $months = 6): array {
+        return $this->db->query("SELECT DATE_FORMAT(created_at, '%Y-%m') as mois, COUNT(*) as total FROM articles WHERE created_at >= DATE_SUB(NOW(), INTERVAL $months MONTH) GROUP BY mois ORDER BY mois ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTotalViews(): int {
+        return (int)$this->db->query("SELECT COALESCE(SUM(vues), 0) FROM articles")->fetchColumn();
+    }
+
+    public function getTotalLikes(): int {
+        return (int)$this->db->query("SELECT COALESCE(SUM(likes), 0) FROM articles")->fetchColumn();
     }
 
     public function getByCategorie(string $categorie): array {

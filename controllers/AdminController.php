@@ -68,19 +68,18 @@ class AdminController {
     // ─────────────────────────────────────────
     public function listUsers(): void {
         $this->auth->requireRole('admin');
-        $users    = $this->userModel->getAll();
-        $viewPath = __DIR__ . '/../views/backoffice/users_list.php';
-        file_exists($viewPath) ? require_once $viewPath : $this->renderUsersTable($users);
+        $users = $this->userModel->getAll();
+        $page_title = 'Gestion des utilisateurs';
+        $current_page = 'users';
+        require __DIR__ . '/../views/backoffice/users_list.php';
     }
 
     public function showCreateUser(): void {
         $this->auth->requireRole('admin');
         $errors = [];
-        $viewPath = __DIR__ . '/../views/backoffice/user_add.php';
-        if (!file_exists($viewPath)) {
-            $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
-        }
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        $page_title = 'Ajouter un utilisateur';
+        $current_page = 'users';
+        require __DIR__ . '/../views/backoffice/user_add.php';
     }
 
     public function createUser(): void {
@@ -118,11 +117,9 @@ class AdminController {
         
         // Si erreurs, retourner à la vue
         if (!empty($errors)) {
-            $viewPath = __DIR__ . '/../views/backoffice/user_add.php';
-            if (!file_exists($viewPath)) {
-                $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
-            }
-            file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+            $page_title = 'Ajouter un utilisateur';
+            $current_page = 'users';
+            require __DIR__ . '/../views/backoffice/user_add.php';
             return;
         }
 
@@ -248,11 +245,63 @@ class AdminController {
             exit;
         }
 
-        $this->userModel->delete($id);
-        $this->logAction('Suppression utilisateur', "Utilisateur #$id supprimé");
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur supprimé.'];
+        try {
+            $db = Database::getInstance()->getConnection();
+            // Supprimer TOUTES les données liées (contraintes FK vers users)
+            $fkRefs = [
+                ['replies', 'user_id'],
+                ['reply', 'user_id'],
+                ['reclamations', 'patient_id'],
+                ['avis', 'patient_id'],
+                ['avis', 'medecin_id'],
+                ['commandes', 'user_id'],
+                ['participations', 'user_id'],
+                ['ordonnances', 'patient_id'],
+                ['ordonnances', 'medecin_id'],
+                ['rendez_vous', 'patient_id'],
+                ['rendez_vous', 'medecin_id'],
+                ['disponibilites', 'medecin_id'],
+                ['articles', 'auteur_id'],
+                ['patients', 'user_id'],
+                ['medecins', 'user_id'],
+            ];
+            foreach ($fkRefs as [$table, $col]) {
+                try { $db->prepare("DELETE FROM `$table` WHERE `$col` = ?")->execute([$id]); } catch (Exception $ignore) {}
+            }
+            // Nettoyer aussi patients.medecin_traitant_id (SET NULL)
+            try { $db->prepare("UPDATE patients SET medecin_traitant_id = NULL WHERE medecin_traitant_id = ?")->execute([$id]); } catch (Exception $ignore) {}
+
+            $this->userModel->delete($id);
+            $this->logAction('Suppression utilisateur', "Utilisateur #$id supprimé");
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur supprimé avec toutes ses données associées.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()];
+        }
+        
         header('Location: index.php?page=users');
         exit;
+    }
+
+    // ─────────────────────────────────────────
+    //  Helper : extraire + assainir données utilisateur POST
+    // ─────────────────────────────────────────
+    private function extractUserFormData(bool $requirePassword = true): array {
+        $data = [
+            'nom'            => trim($_POST['nom']            ?? ''),
+            'prenom'         => trim($_POST['prenom']         ?? ''),
+            'email'          => trim($_POST['email']          ?? ''),
+            'telephone'      => trim($_POST['telephone']      ?? ''),
+            'adresse'        => trim($_POST['adresse']        ?? ''),
+            'date_naissance' => !empty($_POST['date_naissance']) ? $_POST['date_naissance'] : null,
+            'role'           => $_POST['role']   ?? 'patient',
+            'statut'         => $_POST['statut'] ?? 'actif',
+        ];
+
+        if ($requirePassword && !empty($_POST['password'])) {
+            $data['password'] = $_POST['password'];
+        }
+
+        return $data;
     }
 
     public function toggleStatus(int $id): void {
@@ -271,8 +320,6 @@ class AdminController {
     //  Gestion des patients (admin)
     // ─────────────────────────────────────────
     public function listPatients(): void {
-        $this->auth->requireRole('admin');
-        
         try {
             $db = Database::getInstance()->getConnection();
             $stmt = $db->query("
@@ -289,23 +336,17 @@ class AdminController {
             $patients = [];
         }
         
-        $viewPath = __DIR__ . '/../views/backoffice/patients_list.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            $this->renderPatientsTable($patients);
-        }
+        $page_title = 'Gestion des patients';
+        $current_page = 'patients';
+        require __DIR__ . '/../views/backoffice/patients_list.php';
     }
 
     public function showAddPatient(): void {
         $this->auth->requireRole('admin');
         $errors = [];
-        $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            echo "Vue non trouvée: " . $viewPath;
-        }
+        $page_title = 'Ajouter un patient';
+        $current_page = 'patients';
+        require __DIR__ . '/../views/backoffice/patient_add.php';
     }
 
     public function addPatient(): void {
@@ -348,12 +389,9 @@ class AdminController {
         
         // Si erreurs, retourner à la vue
         if (!empty($errors)) {
-            $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
-            if (file_exists($viewPath)) {
-                require_once $viewPath;
-            } else {
-                echo "Vue non trouvée: " . $viewPath;
-            }
+            $page_title = 'Ajouter un patient';
+            $current_page = 'patients';
+            require __DIR__ . '/../views/backoffice/patient_add.php';
             return;
         }
         
@@ -566,9 +604,26 @@ public function updatePatient(int $id): void {
 
     public function deletePatient(int $id): void {
         $this->auth->requireRole('admin');
-        $this->userModel->delete($id);
-        $this->logAction('Suppression patient', "Patient #$id supprimé");
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Patient supprimé.'];
+        
+        try {
+            $db = Database::getInstance()->getConnection();
+            $fkRefs = [
+                ['replies', 'user_id'], ['reply', 'user_id'],
+                ['reclamations', 'patient_id'], ['avis', 'patient_id'],
+                ['commandes', 'user_id'], ['participations', 'user_id'],
+                ['ordonnances', 'patient_id'], ['rendez_vous', 'patient_id'],
+                ['articles', 'auteur_id'], ['patients', 'user_id'],
+            ];
+            foreach ($fkRefs as [$table, $col]) {
+                try { $db->prepare("DELETE FROM `$table` WHERE `$col` = ?")->execute([$id]); } catch (Exception $ignore) {}
+            }
+            $this->userModel->delete($id);
+            $this->logAction('Suppression patient', "Patient #$id supprimé");
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Patient supprimé avec ses données associées.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()];
+        }
+        
         header('Location: index.php?page=patients');
         exit;
     }
@@ -577,13 +632,12 @@ public function updatePatient(int $id): void {
     //  Gestion des médecins
     // ─────────────────────────────────────────
     public function listMedecins(): void {
-        $this->auth->requireRole('admin');
-        
         try {
             $db = Database::getInstance()->getConnection();
             $stmt = $db->query("
                 SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.statut, u.created_at,
-                       m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
+                       m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse,
+                       m.statut_validation
                 FROM users u
                 LEFT JOIN medecins m ON u.id = m.user_id
                 WHERE u.role = 'medecin'
@@ -595,22 +649,17 @@ public function updatePatient(int $id): void {
             $medecins = [];
         }
         
-        $viewPath = __DIR__ . '/../views/backoffice/medecins_list.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            $this->renderMedecinsTable($medecins);
-        }
+        $page_title = 'Gestion des médecins';
+        $current_page = 'medecins_admin';
+        require __DIR__ . '/../views/backoffice/medecins_list.php';
     }
 
     public function showAddMedecin(): void {
         $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/medecin_add.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            echo "Vue non trouvée: " . $viewPath;
-        }
+        $errors = [];
+        $page_title = 'Ajouter un médecin';
+        $current_page = 'medecins_admin';
+        require __DIR__ . '/../views/backoffice/medecin_add.php';
     }
 
     public function addMedecin(): void {
@@ -825,9 +874,28 @@ public function editMedecin(int $id): void {
 
     public function deleteMedecin(int $id): void {
         $this->auth->requireRole('admin');
-        $this->userModel->delete($id);
-        $this->logAction('Suppression médecin', "Médecin #$id supprimé");
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Médecin supprimé.'];
+        
+        try {
+            $db = Database::getInstance()->getConnection();
+            $fkRefs = [
+                ['replies', 'user_id'], ['reply', 'user_id'],
+                ['avis', 'medecin_id'], ['commandes', 'user_id'],
+                ['participations', 'user_id'], ['ordonnances', 'medecin_id'],
+                ['rendez_vous', 'medecin_id'], ['disponibilites', 'medecin_id'],
+                ['articles', 'auteur_id'], ['medecins', 'user_id'],
+            ];
+            foreach ($fkRefs as [$table, $col]) {
+                try { $db->prepare("DELETE FROM `$table` WHERE `$col` = ?")->execute([$id]); } catch (Exception $ignore) {}
+            }
+            // Nettoyer patients.medecin_traitant_id
+            try { $db->prepare("UPDATE patients SET medecin_traitant_id = NULL WHERE medecin_traitant_id = ?")->execute([$id]); } catch (Exception $ignore) {}
+            $this->userModel->delete($id);
+            $this->logAction('Suppression médecin', "Médecin #$id supprimé");
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Médecin supprimé avec ses données associées.'];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la suppression: ' . $e->getMessage()];
+        }
+        
         header('Location: index.php?page=medecins_admin');
         exit;
     }
@@ -942,6 +1010,103 @@ public function listRendezVous(): void {
         echo "Vue non trouvée: " . $viewPath;
         echo "<pre>Liste des rendez-vous: " . print_r($rdvs, true) . "</pre>";
     }
+}
+
+public function viewRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        // Get RDV with all details
+        $stmt = $db->prepare("
+            SELECT rv.*,
+                   u_patient.prenom AS patient_prenom, u_patient.nom AS patient_nom, 
+                   u_patient.email AS patient_email, u_patient.telephone AS patient_telephone,
+                   u_medecin.prenom AS medecin_prenom, u_medecin.nom AS medecin_nom,
+                   u_medecin.email AS medecin_email,
+                   m.specialite
+            FROM rendez_vous rv
+            JOIN users u_patient ON rv.patient_id = u_patient.id
+            JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+            LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+            WHERE rv.id = ?
+        ");
+        $stmt->execute([$id]);
+        $rdv = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$rdv) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=admin_rendezvous');
+            exit;
+        }
+        
+        // Get comments
+        $commentsStmt = $db->prepare("
+            SELECT ec.*, u.nom, u.prenom, 
+                   CONCAT(u.prenom, ' ', u.nom) as user_name
+            FROM event_comments ec 
+            LEFT JOIN users u ON ec.user_id = u.id 
+            WHERE ec.event_id = ? AND ec.status = 'approuvé'
+            ORDER BY ec.created_at DESC
+        ");
+        $commentsStmt->execute([$id]);
+        $comments = $commentsStmt->fetchAll(PDO::FETCH_ASSOC);
+        $commentCount = count($comments);
+        
+        $viewPath = __DIR__ . '/../views/backoffice/rendezvous_detail.php';
+        file_exists($viewPath) ? require_once $viewPath : http_response_code(404);
+    } catch (Exception $e) {
+        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
+        header('Location: index.php?page=admin_rendezvous');
+        exit;
+    }
+}
+
+public function addCommentRendezVous(int $id): void {
+    $this->auth->requireRole('admin');
+    
+    try {
+        $db = Database::getInstance()->getConnection();
+        
+        // Verify RDV exists
+        $rdvStmt = $db->prepare("SELECT id FROM rendez_vous WHERE id = ?");
+        $rdvStmt->execute([$id]);
+        if (!$rdvStmt->fetch()) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header("Location: index.php?page=admin_rendezvous&action=view&id={$id}");
+            exit;
+        }
+        
+        // Get comment
+        $comment = trim($_POST['comment'] ?? '');
+        
+        if (empty($comment) || strlen($comment) < 3) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le commentaire doit faire au moins 3 caractères.'];
+            header("Location: index.php?page=admin_rendezvous&action=view&id={$id}");
+            exit;
+        }
+        
+        // Insert comment
+        $insertStmt = $db->prepare("
+            INSERT INTO event_comments (event_id, user_id, comment, status) 
+            VALUES (?, ?, ?, 'approuvé')
+        ");
+        $insertStmt->execute([
+            $id,
+            $_SESSION['user_id'] ?? 1,
+            $comment
+        ]);
+        
+        $this->logAction('Ajout commentaire RDV', "Commentaire ajouté sur le RDV #$id");
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Commentaire ajouté avec succès !'];
+        
+    } catch (Exception $e) {
+        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
+    }
+    
+    header("Location: index.php?page=admin_rendezvous&action=view&id={$id}");
+    exit;
 }
 
 
@@ -1657,20 +1822,305 @@ private function setFlash(string $type, string $message): void {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
 }
 
-
-
+/**
+ * Enregistrer une action dans les logs
+ */
+private function logAction(string $action, string $description): void {
+    try {
+        $this->adminModel->addLog(
+            (int)($_SESSION['user_id'] ?? 0),
+            $action,
+            $description
+        );
+    } catch (Exception $e) {
+        error_log('Erreur logAction: ' . $e->getMessage());
+    }
+}
 
     // ─────────────────────────────────────────
     //  Articles
     // ─────────────────────────────────────────
-    public function listArticles(): void {
+    /**
+     * Afficher une page du backoffice avec le layout
+     */
+    private function renderAdminPage(string $pageTitle, string $contentFile, string $currentPage = '', array $data = []): void {
         $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/articles_list.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        
+        // Extraire les données pour les rendre accessibles à la vue
+        extract($data, EXTR_OVERWRITE);
+        
+        require __DIR__ . '/../views/backoffice/layout.php';
+    }
+
+    public function listArticles(): void {
+        require_once __DIR__ . '/../models/Article.php';
+        
+        try {
+            // Récupérer tous les articles avec les infos de l'auteur
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("
+                SELECT a.id, a.titre, a.contenu, a.status, a.vues, a.created_at, 
+                       a.auteur_id, u.nom, u.prenom
+                FROM articles a
+                LEFT JOIN users u ON a.auteur_id = u.id
+                ORDER BY a.created_at DESC
+            ");
+            $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur listArticles: ' . $e->getMessage());
+            $articles = [];
+        }
+        
+        $page_title = 'Gestion des Articles';
+        $current_page = 'articles_admin';
+        require __DIR__ . '/../views/backoffice/articles_list.php';
+    }
+
+    public function advancedArticles(): void {
+        $this->auth->requireRole('admin');
+        require_once __DIR__ . '/../models/Article.php';
+        $articleModel = new Article();
+
+        $filtres = [
+            'keyword'    => trim($_GET['keyword'] ?? ''),
+            'categorie'  => $_GET['categorie'] ?? '',
+            'status'     => $_GET['status'] ?? '',
+            'auteur_id'  => $_GET['auteur_id'] ?? '',
+            'date_min'   => $_GET['date_min'] ?? '',
+            'date_max'   => $_GET['date_max'] ?? '',
+            'tag'        => trim($_GET['tag'] ?? ''),
+            'vues_min'   => $_GET['vues_min'] ?? '',
+            'tri'        => $_GET['tri'] ?? 'created_at',
+            'ordre'      => $_GET['ordre'] ?? 'DESC',
+        ];
+        $hasSearch = !empty($filtres['keyword']) || !empty($filtres['categorie'])
+                  || !empty($filtres['status']) || !empty($filtres['auteur_id'])
+                  || !empty($filtres['date_min']) || !empty($filtres['date_max'])
+                  || !empty($filtres['tag']) || !empty($filtres['vues_min']);
+
+        $searchResults = $hasSearch ? $articleModel->advancedSearch($filtres) : [];
+
+        // Stats
+        $categories       = $articleModel->getCategories();
+        $auteurs           = $articleModel->getAuteurs();
+        $statusDistrib     = $articleModel->getStatusDistribution();
+        $categoryDistrib   = $articleModel->getCategoryDistribution();
+        $topByViews        = $articleModel->getTopByViews(5);
+        $topByComments     = $articleModel->getTopByComments(5);
+        $monthlyTrend      = $articleModel->getMonthlyTrend(6);
+        $totalArticles     = $articleModel->countAll();
+        $totalViews        = $articleModel->getTotalViews();
+        $totalLikes        = $articleModel->getTotalLikes();
+        $thisMonth         = $articleModel->countThisMonth();
+
+        $page_title   = 'Articles — Vue avancée';
+        $current_page = 'articles_admin';
+        require __DIR__ . '/../views/backoffice/articles_advanced.php';
+    }
+
+    public function advancedRendezVous(): void {
+        $this->auth->requireRole('admin');
+        $db = Database::getInstance()->getConnection();
+
+        $filtres = [
+            'keyword'      => trim($_GET['keyword'] ?? ''),
+            'medecin_id'   => $_GET['medecin_id'] ?? '',
+            'patient_id'   => $_GET['patient_id'] ?? '',
+            'statut'       => $_GET['statut'] ?? '',
+            'date_min'     => $_GET['date_min'] ?? '',
+            'date_max'     => $_GET['date_max'] ?? '',
+            'tri'          => $_GET['tri'] ?? 'date_rendezvous',
+            'ordre'        => $_GET['ordre'] ?? 'DESC',
+        ];
+
+        $hasSearch = !empty($filtres['keyword']) || !empty($filtres['medecin_id']) 
+                  || !empty($filtres['patient_id']) || !empty($filtres['statut'])
+                  || !empty($filtres['date_min']) || !empty($filtres['date_max']);
+
+        $searchResults = [];
+        if ($hasSearch) {
+            $query = "SELECT rv.*, u_p.nom as patient_nom, u_p.prenom as patient_prenom, 
+                      u_m.nom as medecin_nom, u_m.prenom as medecin_prenom, m.specialite
+                      FROM rendez_vous rv
+                      JOIN users u_p ON rv.patient_id = u_p.id
+                      JOIN users u_m ON rv.medecin_id = u_m.id
+                      LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                      WHERE 1=1";
+            
+            $params = [];
+            if (!empty($filtres['keyword'])) {
+                $query .= " AND (u_p.nom LIKE ? OR u_p.prenom LIKE ? OR u_m.nom LIKE ? OR u_m.prenom LIKE ? OR rv.motif LIKE ?)";
+                $keyword = '%' . $filtres['keyword'] . '%';
+                $params = array_merge($params, [$keyword, $keyword, $keyword, $keyword, $keyword]);
+            }
+            if (!empty($filtres['medecin_id'])) {
+                $query .= " AND rv.medecin_id = ?";
+                $params[] = $filtres['medecin_id'];
+            }
+            if (!empty($filtres['patient_id'])) {
+                $query .= " AND rv.patient_id = ?";
+                $params[] = $filtres['patient_id'];
+            }
+            if (!empty($filtres['statut'])) {
+                $query .= " AND rv.statut = ?";
+                $params[] = $filtres['statut'];
+            }
+            if (!empty($filtres['date_min'])) {
+                $query .= " AND DATE(rv.date_rendezvous) >= ?";
+                $params[] = $filtres['date_min'];
+            }
+            if (!empty($filtres['date_max'])) {
+                $query .= " AND DATE(rv.date_rendezvous) <= ?";
+                $params[] = $filtres['date_max'];
+            }
+
+            $query .= " ORDER BY rv." . $filtres['tri'] . " " . $filtres['ordre'];
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute($params);
+            $searchResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Stats
+        $stmt = $db->prepare("SELECT COUNT(*) as total FROM rendez_vous");
+        $stmt->execute();
+        $totalRDV = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        $stmt = $db->prepare("SELECT statut, COUNT(*) as count FROM rendez_vous GROUP BY statut");
+        $stmt->execute();
+        $statutDistrib = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("SELECT rv.medecin_id, u.nom, u.prenom, COUNT(*) as count FROM rendez_vous rv JOIN users u ON rv.medecin_id = u.id GROUP BY rv.medecin_id ORDER BY count DESC LIMIT 5");
+        $stmt->execute();
+        $topMedecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("SELECT DATE(date_rendezvous) as date, COUNT(*) as count FROM rendez_vous GROUP BY DATE(date_rendezvous) ORDER BY date DESC LIMIT 6");
+        $stmt->execute();
+        $recentRDV = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("SELECT COUNT(*) as confirmees FROM rendez_vous WHERE statut = 'confirmé'");
+        $stmt->execute();
+        $confirmedRDV = (int)$stmt->fetch(PDO::FETCH_ASSOC)['confirmees'];
+
+        $stmt = $db->prepare("SELECT COUNT(*) as terminees FROM rendez_vous WHERE statut = 'terminé'");
+        $stmt->execute();
+        $finishedRDV = (int)$stmt->fetch(PDO::FETCH_ASSOC)['terminees'];
+
+        // Get distinct medecins et patients
+        $stmt = $db->prepare("SELECT DISTINCT u.id, u.nom, u.prenom FROM rendez_vous rv JOIN users u ON rv.medecin_id = u.id ORDER BY u.nom");
+        $stmt->execute();
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("SELECT DISTINCT u.id, u.nom, u.prenom FROM rendez_vous rv JOIN users u ON rv.patient_id = u.id ORDER BY u.nom");
+        $stmt->execute();
+        $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $page_title   = 'Rendez-vous — Vue avancée';
+        $current_page = 'rendez_vous_admin';
+        require __DIR__ . '/../views/backoffice/rendezvous/advanced.php';
+    }
+
+    public function viewArticle(int $id): void {
+        $this->auth->requireRole('admin');
+        require_once __DIR__ . '/../models/Article.php';
+        
+        try {
+            $articleModel = new Article();
+            $db = Database::getInstance()->getConnection();
+            
+            // Get article with author info
+            $stmt = $db->prepare("
+                SELECT a.*, u.nom, u.prenom 
+                FROM articles a 
+                LEFT JOIN users u ON a.auteur_id = u.id 
+                WHERE a.id = ?
+            ");
+            $stmt->execute([$id]);
+            $article = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$article) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Article introuvable.'];
+                header('Location: index.php?page=articles_admin');
+                exit;
+            }
+            
+            // Increment view count
+            $updateStmt = $db->prepare("UPDATE articles SET vues = vues + 1 WHERE id = ?");
+            $updateStmt->execute([$id]);
+            
+            // Get approved comments
+            $commentsStmt = $db->prepare("
+                SELECT r.id, r.replay, r.status, r.created_at, u.nom, u.prenom, 
+                       CONCAT(u.prenom, ' ', u.nom) as user_name
+                FROM replies r 
+                LEFT JOIN users u ON r.user_id = u.id 
+                WHERE r.article_id = ? AND r.status = 'approuvé'
+                ORDER BY r.created_at DESC
+            ");
+            $commentsStmt->execute([$id]);
+            $comments = $commentsStmt->fetchAll(PDO::FETCH_ASSOC);
+            $commentCount = count($comments);
+            
+            $viewPath = __DIR__ . '/../views/backoffice/article_detail.php';
+            file_exists($viewPath) ? require_once $viewPath : http_response_code(404);
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
+            header('Location: index.php?page=articles_admin');
+            exit;
+        }
+    }
+
+    public function addComment(int $id): void {
+        $this->auth->requireRole('admin');
+        
+        try {
+            $db = Database::getInstance()->getConnection();
+            
+            // Verify article exists
+            $articleStmt = $db->prepare("SELECT id FROM articles WHERE id = ?");
+            $articleStmt->execute([$id]);
+            if (!$articleStmt->fetch()) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Article introuvable.'];
+                header("Location: index.php?page=articles_admin&action=view&id={$id}");
+                exit;
+            }
+            
+            // Get comment text
+            $comment = trim($_POST['comment'] ?? '');
+            
+            if (empty($comment) || strlen($comment) < 3) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le commentaire doit faire au moins 3 caractères.'];
+                header("Location: index.php?page=articles_admin&action=view&id={$id}");
+                exit;
+            }
+            
+            // Insert comment (en_attente by default for moderation)
+            $insertStmt = $db->prepare("
+                INSERT INTO replies (article_id, user_id, replay, status) 
+                VALUES (?, ?, ?, 'approuvé')
+            ");
+            $insertStmt->execute([
+                $id,
+                $_SESSION['user_id'] ?? 1,
+                $comment
+            ]);
+            
+            $this->logAction('Ajout commentaire', "Commentaire ajouté sur l'article #$id");
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Commentaire ajouté avec succès !'];
+            
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
+        }
+        
+        header("Location: index.php?page=articles_admin&action=view&id={$id}");
+        exit;
     }
 
     public function showCreateArticle(): void {
         $this->auth->requireRole('admin');
+        $isEdit  = false;
+        $title   = 'Créer un article';
+        $article = null;
         $viewPath = __DIR__ . '/../views/backoffice/article_form.php';
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
@@ -1679,23 +2129,29 @@ private function setFlash(string $type, string $message): void {
         $this->auth->requireRole('admin');
         require_once __DIR__ . '/../models/Article.php';
         
-        $titre = trim($_POST['titre'] ?? '');
-        $contenu = trim($_POST['contenu'] ?? '');
+        $titre     = trim($_POST['titre']     ?? '');
+        $contenu   = trim($_POST['contenu']   ?? '');
         $categorie = trim($_POST['categorie'] ?? '');
-        
-        if(empty($titre) || empty($contenu)) {
-            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Titre et contenu obligatoires.'];
+        $status    = $_POST['status']         ?? 'brouillon';
+        $tags      = trim($_POST['tags']      ?? '');
+
+        if (empty($titre) || empty($contenu)) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le titre et le contenu sont obligatoires.'];
         } else {
             try {
                 $articleModel = new Article();
                 $newId = $articleModel->create([
-                    'titre' => $titre,
-                    'contenu' => $contenu,
-                    'auteur_id' => $_SESSION['user_id'] ?? 1
+                    'titre'     => $titre,
+                    'contenu'   => $contenu,
+                    'categorie' => $categorie ?: null,
+                    'status'    => $status,
+                    'tags'      => $tags ?: null,
+                    'auteur_id' => $_SESSION['user_id'] ?? 1,
                 ]);
+                $this->logAction('Création article', "Article #$newId créé - {$titre}");
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article créé avec succès.'];
-            } catch(Exception $e) {
-                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
             }
         }
         header('Location: index.php?page=articles_admin');
@@ -1704,6 +2160,17 @@ private function setFlash(string $type, string $message): void {
 
     public function editArticle(int $id): void {
         $this->auth->requireRole('admin');
+        require_once __DIR__ . '/../models/Article.php';
+
+        $articleModel = new Article();
+        $article = $articleModel->getById($id);
+        if (!$article) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Article introuvable.'];
+            header('Location: index.php?page=articles_admin');
+            exit;
+        }
+        $isEdit = true;
+        $title  = 'Modifier l\'article';
         $viewPath = __DIR__ . '/../views/backoffice/article_form.php';
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
@@ -1712,22 +2179,36 @@ private function setFlash(string $type, string $message): void {
         $this->auth->requireRole('admin');
         require_once __DIR__ . '/../models/Article.php';
         
-        $titre = trim($_POST['titre'] ?? '');
-        $contenu = trim($_POST['contenu'] ?? '');
-        
-        if(empty($titre) || empty($contenu)) {
-            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Titre et contenu obligatoires.'];
+        $titre     = trim($_POST['titre']     ?? '');
+        $contenu   = trim($_POST['contenu']   ?? '');
+        $categorie = trim($_POST['categorie'] ?? '');
+        $status    = $_POST['status']         ?? 'brouillon';
+        $tags      = trim($_POST['tags']      ?? '');
+
+        if (empty($titre) || empty($contenu)) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le titre et le contenu sont obligatoires.'];
         } else {
             try {
                 $articleModel = new Article();
-                $result = $articleModel->update($id, $titre, $contenu, $_SESSION['user_id']);
-                if($result) {
+                // updateFull() persists categorie, status, tags — unlike basic update()
+                $result = $articleModel->updateFull(
+                    $id,
+                    $titre,
+                    $contenu,
+                    $_SESSION['user_id'] ?? null,
+                    null,               // image: non géré ici
+                    $categorie ?: null,
+                    $tags      ?: null,
+                    $status
+                );
+                if ($result) {
+                    $this->logAction('Modification article', "Article #$id modifié - {$titre}");
                     $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article mis à jour avec succès.'];
                 } else {
-                    $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur lors de la mise à jour.'];
+                    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Aucune modification enregistrée.'];
                 }
-            } catch(Exception $e) {
-                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
             }
         }
         header('Location: index.php?page=articles_admin');
@@ -1742,14 +2223,16 @@ private function setFlash(string $type, string $message): void {
             $articleModel = new Article();
             $result = $articleModel->delete($id);
             if($result) {
+                $this->logAction('Suppression article', "Article #$id supprimé");
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article supprimé avec succès.'];
             } else {
-                $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur lors de la suppression.'];
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Impossible de supprimer cet article.'];
             }
-        } catch(Exception $e) {
-            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
+        } catch (Exception $e) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur: ' . $e->getMessage()];
         }
         header('Location: index.php?page=articles_admin');
         exit;
     }
 }
+?>

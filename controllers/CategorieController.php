@@ -1,9 +1,5 @@
 <?php
-/**
- * CategorieController.php
- * Contrôleur pour gérer les catégories et les jointures avec les produits
- * Respecte le pattern MVC et les principes de POO
- */
+// controllers/CategorieController.php
 
 require_once __DIR__ . '/../models/Categorie.php';
 require_once __DIR__ . '/../models/Produit.php';
@@ -12,49 +8,180 @@ require_once __DIR__ . '/../config/database.php';
 class CategorieController {
 
     private Categorie $categorieModel;
-    private Produit $produitModel;
+    private Produit   $produitModel;
 
-    /**
-     * Constructeur - Initialise les modèles
-     */
     public function __construct() {
         $this->categorieModel = new Categorie();
-        $this->produitModel = new Produit();
+        $this->produitModel   = new Produit();
     }
 
-    /**
-     * Affiche les produits d'une catégorie spécifique (JOINTURE)
-     * Pattern : afficherProduits($idCategorie)
-     * 
-     * @param int $idCategorie ID de la catégorie
-     * @return array Liste des produits avec données jointes
-     */
-    public function afficherProduits(int $idCategorie): array {
-        // Valider l'ID de catégorie
-        if ($idCategorie <= 0) {
-            error_log("CategorieController::afficherProduits - ID catégorie invalide: $idCategorie");
-            return [];
+    // ─────────────────────────────────────────
+    //  ADMIN — liste
+    // ─────────────────────────────────────────
+    public function index(): void {
+        $this->adminOnly();
+
+        $search     = $_GET['search'] ?? '';
+        $categories = $this->categorieModel->getAll($search);
+        $stats      = $this->categorieModel->getStats();
+        $flash      = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/backoffice/categorie_manage.php';
+    }
+
+    // ─────────────────────────────────────────
+    //  ADMIN — créer
+    // ─────────────────────────────────────────
+    public function create(): void {
+        $this->adminOnly();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!$this->verifyCsrf($_POST['csrf_token'] ?? '')) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur de sécurité.'];
+                header('Location: index.php?page=categories_admin&action=create');
+                exit;
+            }
+
+            $nom      = trim($_POST['nom'] ?? '');
+            $slug     = $this->makeSlug($nom);
+            $desc     = trim($_POST['description'] ?? '');
+            $image    = trim($_POST['image'] ?? '');
+            $parentId = (int)($_POST['parent_id'] ?? 0) ?: null;
+            $statut   = in_array($_POST['statut'] ?? '', ['actif','inactif']) ? $_POST['statut'] : 'actif';
+
+            $errors = $this->validate($nom, $slug);
+
+            if (!empty($errors)) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+                $_SESSION['old']   = $_POST;
+                header('Location: index.php?page=categories_admin&action=create');
+                exit;
+            }
+
+            $data = [
+                'nom'         => htmlspecialchars($nom, ENT_QUOTES, 'UTF-8'),
+                'slug'        => $slug,
+                'description' => htmlspecialchars($desc, ENT_QUOTES, 'UTF-8'),
+                'image'       => $image,
+                'parent_id'   => $parentId,
+            ];
+
+            $id = $this->categorieModel->create($data);
+            if ($id) {
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie créée avec succès.'];
+                header('Location: index.php?page=categories_admin');
+            } else {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la création.'];
+                header('Location: index.php?page=categories_admin&action=create');
+            }
+            exit;
         }
 
-        // Vérifier que la catégorie existe
-        $categorie = $this->categorieModel->getById($idCategorie);
+        $isEdit     = false;
+        $categorie  = [];
+        $csrfToken  = $this->makeCsrf();
+        $categories = $this->categorieModel->getActives();
+        $old        = $_SESSION['old'] ?? [];
+        $flash      = $_SESSION['flash'] ?? null;
+        unset($_SESSION['old'], $_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/backoffice/categorie_form.php';
+    }
+
+    // ─────────────────────────────────────────
+    //  ADMIN — éditer
+    // ─────────────────────────────────────────
+    public function edit(int $id): void {
+        $this->adminOnly();
+
+        $categorie = $this->categorieModel->getById($id);
         if (!$categorie) {
-            error_log("CategorieController::afficherProduits - Catégorie non trouvée: $idCategorie");
-            return [];
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Catégorie introuvable.'];
+            header('Location: index.php?page=categories_admin');
+            exit;
         }
 
-        // Récupérer les produits via JOINTURE
-        $produits = $this->produitModel->getProduitsByCategorie($idCategorie);
-        
-        return $produits;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!$this->verifyCsrf($_POST['csrf_token'] ?? '')) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur de sécurité.'];
+                header("Location: index.php?page=categories_admin&action=edit&id=$id");
+                exit;
+            }
+
+            $nom      = trim($_POST['nom'] ?? '');
+            $slug     = $this->makeSlug($nom);
+            $desc     = trim($_POST['description'] ?? '');
+            $image    = trim($_POST['image'] ?? '');
+            $parentId = (int)($_POST['parent_id'] ?? 0) ?: null;
+            $statut   = in_array($_POST['statut'] ?? '', ['actif','inactif']) ? $_POST['statut'] : 'actif';
+
+            if ($parentId === $id) $parentId = null; // pas d'auto-parent
+
+            $errors = $this->validate($nom, $slug, $id);
+
+            if (!empty($errors)) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+                $_SESSION['old']   = $_POST;
+                header("Location: index.php?page=categories_admin&action=edit&id=$id");
+                exit;
+            }
+
+            $data = [
+                'nom'         => htmlspecialchars($nom, ENT_QUOTES, 'UTF-8'),
+                'slug'        => $slug,
+                'description' => htmlspecialchars($desc, ENT_QUOTES, 'UTF-8'),
+                'image'       => $image,
+                'parent_id'   => $parentId,
+            ];
+
+            if ($this->categorieModel->update($id, $data)) {
+                $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie mise à jour.'];
+            } else {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la mise à jour.'];
+            }
+            header("Location: index.php?page=categories_admin&action=edit&id=$id");
+            exit;
+        }
+
+        $isEdit     = true;
+        $csrfToken  = $this->makeCsrf();
+        $categories = array_filter(
+            $this->categorieModel->getActives(),
+            fn($c) => (int)$c['id'] !== $id   // exclure la catégorie elle-même
+        );
+        $old   = $_SESSION['old'] ?? [];
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['old'], $_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/backoffice/categorie_form.php';
     }
 
-    /**
-     * Affiche toutes les catégories avec le nombre de produits
-     * Utilisé pour le formulaire de sélection
-     * 
-     * @return array Liste des catégories
-     */
+    // ─────────────────────────────────────────
+    //  ADMIN — supprimer
+    // ─────────────────────────────────────────
+    public function delete(int $id): void {
+        $this->adminOnly();
+
+        if ($this->categorieModel->delete($id)) {
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie supprimée.'];
+        } else {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Impossible de supprimer : des produits sont liés à cette catégorie.'];
+        }
+        header('Location: index.php?page=categories_admin');
+        exit;
+    }
+
+    // ─────────────────────────────────────────
+    //  Méthodes de service (existantes)
+    // ─────────────────────────────────────────
+    public function afficherProduits(int $idCategorie): array {
+        if ($idCategorie <= 0) return [];
+        $categorie = $this->categorieModel->getById($idCategorie);
+        if (!$categorie) return [];
+        return $this->produitModel->getProduitsByCategorie($idCategorie);
+    }
+
     public function afficherCategories(): array {
         try {
             return $this->produitModel->getAllCategories();
@@ -64,114 +191,48 @@ class CategorieController {
         }
     }
 
-    /**
-     * Affiche une catégorie spécifique avec ses détails
-     * 
-     * @param int $id ID de la catégorie
-     * @return array|null Données de la catégorie ou null
-     */
     public function afficherCategorie(int $id): ?array {
-        if ($id <= 0) {
-            return null;
-        }
-        return $this->categorieModel->getById($id);
+        return $id > 0 ? $this->categorieModel->getById($id) : null;
     }
 
-    /**
-     * Crée une nouvelle catégorie
-     * Validation serveur (pas de HTML5)
-     * 
-     * @param array $data Données du formulaire
-     * @return int|null ID de la catégorie créée ou null
-     */
-    public function creerCategorie(array $data): ?int {
-        // Validation serveur stricte
-        $errors = $this->validerCategorie($data);
-        if (!empty($errors)) {
-            error_log('CategorieController::creerCategorie - Erreurs: ' . implode(', ', $errors));
-            return null;
-        }
-
-        return $this->categorieModel->create($data);
-    }
-
-    /**
-     * Met à jour une catégorie
-     * 
-     * @param int $id ID de la catégorie
-     * @param array $data Nouvelles données
-     * @return bool Succès ou non
-     */
-    public function mettreAJourCategorie(int $id, array $data): bool {
-        if ($id <= 0) {
-            return false;
-        }
-
-        $errors = $this->validerCategorie($data);
-        if (!empty($errors)) {
-            return false;
-        }
-
-        return $this->categorieModel->update($id, $data);
-    }
-
-    /**
-     * Supprime une catégorie
-     * 
-     * @param int $id ID de la catégorie
-     * @return bool Succès ou non
-     */
-    public function supprimerCategorie(int $id): bool {
-        if ($id <= 0) {
-            return false;
-        }
-        return $this->categorieModel->delete($id);
-    }
-
-    /**
-     * VALIDATION SERVEUR (pas de HTML5)
-     * Valide les données d'une catégorie
-     * 
-     * @param array $data Données à valider
-     * @return array Tableau des erreurs
-     */
-    private function validerCategorie(array $data): array {
+    // ─────────────────────────────────────────
+    //  Helpers privés
+    // ─────────────────────────────────────────
+    private function validate(string $nom, string $slug, int $excludeId = 0): array {
         $errors = [];
-
-        // Validation du nom
-        if (empty($data['nom']) || !is_string($data['nom'])) {
-            $errors[] = 'Le nom de la catégorie est obligatoire.';
-        } elseif (strlen(trim($data['nom'])) < 2) {
+        if (empty($nom) || strlen($nom) < 2)
             $errors[] = 'Le nom doit contenir au moins 2 caractères.';
-        } elseif (strlen(trim($data['nom'])) > 100) {
-            $errors[] = 'Le nom ne doit pas dépasser 100 caractères.';
-        }
-
-        // Validation du slug
-        if (!empty($data['slug'])) {
-            if (!preg_match('/^[a-z0-9-]+$/', $data['slug'])) {
-                $errors[] = 'Le slug doit contenir uniquement des lettres minuscules, chiffres et tirets.';
-            }
-        }
-
-        // Validation de la description
-        if (!empty($data['description'])) {
-            if (strlen($data['description']) > 500) {
-                $errors[] = 'La description ne doit pas dépasser 500 caractères.';
-            }
-        }
-
-        // Validation du parent_id si fourni
-        if (!empty($data['parent_id'])) {
-            $parentId = (int)$data['parent_id'];
-            if ($parentId <= 0) {
-                $errors[] = 'ID parent invalide.';
-            } elseif ($parentId === ($data['id'] ?? null)) {
-                $errors[] = 'Une catégorie ne peut pas être sa propre parente.';
-            }
-        }
-
+        if (strlen($nom) > 100)
+            $errors[] = 'Le nom ne peut pas dépasser 100 caractères.';
+        if ($this->categorieModel->slugExists($slug, $excludeId))
+            $errors[] = "Une catégorie avec ce nom (slug: «$slug») existe déjà.";
         return $errors;
+    }
+
+    private function makeSlug(string $text): string {
+        $text = strtolower(trim($text));
+        $map  = ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ù'=>'u','û'=>'u',
+                  'î'=>'i','ï'=>'i','ô'=>'o','œ'=>'oe','æ'=>'ae','ç'=>'c'];
+        $text = strtr($text, $map);
+        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+        return trim($text, '-');
+    }
+
+    private function makeCsrf(): string {
+        if (empty($_SESSION['csrf_token']))
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        return $_SESSION['csrf_token'];
+    }
+
+    private function verifyCsrf(string $token): bool {
+        return !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    }
+
+    private function adminOnly(): void {
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            header('Location: index.php?page=login');
+            exit;
+        }
     }
 }
 ?>

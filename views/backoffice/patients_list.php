@@ -8,7 +8,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 $page_title = 'Gestion des patients';
 $current_page = 'patients';
 ?>
-<!DOCTYPE html>
+<?php
+// Vue déprécée - voir layout.php et patients_list_content.php
+?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">

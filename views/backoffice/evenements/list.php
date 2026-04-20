@@ -519,8 +519,11 @@
         <div class="toolbar-right">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Recherche avancée…">
+                <input type="text" id="searchInput" placeholder="Recherche rapide…">
             </div>
+            <a href="index.php?page=evenements_admin&action=advanced" class="btn btn-outline">
+                <i class="fas fa-chart-bar"></i> Vue avancée
+            </a>
             <a href="index.php?page=evenements_admin&action=create" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Nouvel événement
             </a>

@@ -263,6 +263,37 @@ class Event {
         );
     }
 
+    public function getTopEventsByParticipants(int $limit = 5): array {
+        $sql = "SELECT e.id, e.titre, e.type AS specialite, e.capacite_max,
+                (SELECT COUNT(*) FROM participations WHERE event_id = e.id) AS inscrits
+                FROM events e
+                ORDER BY inscrits DESC
+                LIMIT :lim";
+        $sql = str_replace(':lim', $limit, $sql);
+        return $this->db->query($sql);
+    }
+
+    public function getRevenueEvents(): array {
+        return $this->db->query("
+            SELECT e.titre, e.prix, 
+                   (SELECT COUNT(*) FROM participations WHERE event_id = e.id AND statut = 'confirmé') AS confirmes
+            FROM events e
+            WHERE e.prix > 0 AND (SELECT COUNT(*) FROM participations WHERE event_id = e.id AND statut = 'confirmé') > 0
+            ORDER BY (confirmes * e.prix) DESC
+            LIMIT 10
+        ");
+    }
+
+    public function getSpecialtyDistribution(): array {
+        return $this->db->query("
+            SELECT type AS specialite, COUNT(*) AS count
+            FROM events
+            WHERE type IS NOT NULL AND type != ''
+            GROUP BY type
+            ORDER BY count DESC
+        ");
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  SPONSORS
     // ═══════════════════════════════════════════════════════════
