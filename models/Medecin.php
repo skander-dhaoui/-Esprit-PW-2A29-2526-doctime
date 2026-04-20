@@ -17,11 +17,13 @@ class Medecin {
 public function findByUserId(int $userId): array|false {
     try {
         $stmt = $this->db->prepare(
-            "SELECT m.*, u.nom, u.prenom, u.email, u.telephone,
-                    u.adresse, u.date_naissance, u.statut, u.created_at
-             FROM medecins m
-             JOIN users u ON m.user_id = u.id
-             WHERE m.user_id = :uid
+            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone,
+                    u.adresse, u.date_naissance, u.statut, u.created_at,
+                    m.id as medecin_id, COALESCE(m.specialite, 'Généraliste') as specialite, 
+                    m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
+             FROM users u
+             LEFT JOIN medecins m ON u.id = m.user_id
+             WHERE u.id = :uid AND u.role = 'medecin'
              LIMIT 1"
         );
         $stmt->execute([':uid' => $userId]);

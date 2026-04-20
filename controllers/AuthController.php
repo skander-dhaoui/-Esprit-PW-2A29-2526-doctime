@@ -488,13 +488,16 @@ public function faceLogin(): void {
     header('Content-Type: application/json');
     
     $imageData = $_POST['face_image'] ?? '';
+    $role = $_POST['role'] ?? 'patient';
+    $email = $_POST['email'] ?? '';
+    
     if (empty($imageData)) {
         echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
         exit;
     }
     
     // Vérifier l'utilisateur par reconnaissance faciale
-    $user = $this->faceModel->findUserByFace($imageData);
+    $user = $this->faceModel->findUserByFace($imageData, $role, $email);
     
     if (!$user) {
         echo json_encode(['success' => false, 'message' => 'Visage non reconnu. Veuillez utiliser email/mot de passe.']);
@@ -566,7 +569,19 @@ public function registerFace(): void {
         exit;
     }
     
+    // Essayer de lire depuis $_POST (si form-data)
     $imageData = $_POST['face_image'] ?? '';
+    
+    // Si vide, lire le flux d'entrée (JSON payload)
+    if (empty($imageData)) {
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
+        if (is_array($data)) {
+            // Supporte "image" ou "face_image"
+            $imageData = $data['image'] ?? $data['face_image'] ?? '';
+        }
+    }
+    
     if (empty($imageData)) {
         echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
         exit;

@@ -366,10 +366,16 @@ case 'admin_article_create':
     break;
 
     case 'admin_article_edit':
-    requireLogin();
-    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-    $front->adminArticleEdit($id);
-    break;
+        requireLogin();
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $front->adminArticleEdit($id);
+        break;
+
+    case 'admin_article_delete':
+        requireLogin();
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $front->adminArticleDelete($id);
+        break;
     
     // ─── Authentification ──────────────────
     case 'login':
@@ -409,34 +415,26 @@ case 'admin_article_create':
         break;
 
     // ─── Profil utilisateur ────────────────
-    case 'profil':
-        requireLogin();
-        $userCtrl->showProfil();
-        break;
-
-    case 'mon_profil':
-        requireLogin();
-        $front->monProfil();
-        break;
-
     case 'mes_notifications':
         requireLogin();
         $front->mesNotifications();
         break;
-case 'modifier_profil':
-    requireLogin();
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $actionPost = $_POST['action'] ?? '';
-        if ($actionPost === 'change_password') {
-            $userCtrl->changePassword();
+
+    case 'profil':
+    case 'mon_profil':
+    case 'modifier_profil':
+        requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $actionPost = $_POST['action'] ?? '';
+            if ($actionPost === 'change_password') {
+                $userCtrl->changePassword();
+            } else {
+                $userCtrl->updateProfil();
+            }
         } else {
-            $userCtrl->updateProfil();
+            $userCtrl->showProfil();
         }
-    } else {
-        // Utiliser FrontController au lieu de UserController
-        $front->modifierProfil();
-    }
-    break;
+        break;
     // ─── Rendez-vous ───────────────────────
     case 'prendre_rendez_vous':
         patientOnly();

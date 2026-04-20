@@ -55,21 +55,25 @@ class FaceRecognition {
     /**
      * Vérifier si l'utilisateur existe et récupérer ses infos
      */
-    public function findUserByFace($imageData): array|false {
+    public function findUserByFace($imageData, string $role = 'patient', string $email = ''): array|false {
         // Sauvegarder l'image temporairement
         $tempFile = __DIR__ . '/../uploads/temp_face_' . time() . '.jpg';
         $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
         $imageData = str_replace(' ', '+', $imageData);
         file_put_contents($tempFile, base64_decode($imageData));
         
-        // Récupérer tous les utilisateurs qui ont une photo de visage
-        $stmt = $this->db->prepare("SELECT id, nom, prenom, email, role, statut, face_photo FROM users WHERE face_photo IS NOT NULL AND statut = 'actif'");
-        $stmt->execute();
+        // Récupérer les utilisateurs
+        if (empty($email)) {
+            return false;
+        }
+        
+        $stmt = $this->db->prepare("SELECT id, nom, prenom, email, role, statut, face_photo FROM users WHERE face_photo IS NOT NULL AND statut = 'actif' AND email = :email AND role = :role");
+        $stmt->execute([':email' => $email, ':role' => $role]);
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Pour l'instant, version simplifiée : 
-        // En production, utilisez une API de reconnaissance faciale (Face++, Microsoft, etc.)
-        // Ici on simule la reconnaissance en prenant le premier utilisateur trouvé
+        // En production, utilisez une API de reconnaissance faciale (Face++, etc.)
+        // Ici on simule la reconnaissance en prenant le premier utilisateur trouvé de CE ROLE
         if (!empty($users)) {
             return $users[0];
         }

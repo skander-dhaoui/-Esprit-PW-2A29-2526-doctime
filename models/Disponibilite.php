@@ -14,14 +14,16 @@ class Disponibilite {
     // ─────────────────────────────────────────
 public function create(array $data): ?int {
     try {
-        $sql = "INSERT INTO disponibilites (medecin_id, jour_semaine, heure_debut, heure_fin, actif, created_at, updated_at) 
-                VALUES (:medecin_id, :jour_semaine, :heure_debut, :heure_fin, :actif, NOW(), NOW())";
+        $sql = "INSERT INTO disponibilites (medecin_id, jour_semaine, heure_debut, heure_fin, pause_debut, pause_fin, actif, created_at, updated_at) 
+                VALUES (:medecin_id, :jour_semaine, :heure_debut, :heure_fin, :pause_debut, :pause_fin, :actif, NOW(), NOW())";
         
         $params = [
             ':medecin_id' => $data['medecin_id'],
             ':jour_semaine' => $data['jour_semaine'],
             ':heure_debut' => $data['heure_debut'],
             ':heure_fin' => $data['heure_fin'],
+            ':pause_debut' => $data['pause_debut'] ?? null,
+            ':pause_fin' => $data['pause_fin'] ?? null,
             ':actif' => $data['actif'] ?? 1
         ];
         
@@ -54,8 +56,26 @@ public function delete(int $id): bool {
     }
 }
 
-
-
+public function update(int $id, array $data): bool {
+    try {
+        $setParts = [];
+        $params = ['id' => $id];
+        foreach ($data as $key => $value) {
+            $setParts[] = "$key = :$key";
+            $params[$key] = $value;
+        }
+        
+        if (empty($setParts)) {
+            return false;
+        }
+        
+        $sql = "UPDATE disponibilites SET " . implode(', ', $setParts) . ", updated_at = NOW() WHERE id = :id";
+        return $this->db->execute($sql, $params);
+    } catch (Exception $e) {
+        error_log('Erreur Disponibilite::update - ' . $e->getMessage());
+        return false;
+    }
+}
     // ─────────────────────────────────────────
     //  Récupération avec filtres
     // ─────────────────────────────────────────
@@ -774,8 +794,15 @@ public function delete(int $id): bool {
             return ['events' => []];
         }
     }
-    public function getByMedecin(int $medecinId): array {
+    public function getByMedecin(int $medecinId, string $filter = 'all'): array {
         try {
+            $filterCondition = "";
+            if ($filter === 'actif' || $filter === true) {
+                $filterCondition = " AND d.actif = 1";
+            } elseif ($filter === 'inactif') {
+                $filterCondition = " AND d.actif = 0";
+            }
+            
             $sql = "SELECT d.*, 
                            CONCAT(u.prenom, ' ', u.nom) AS medecin_nom,
                            u.email AS medecin_email,
@@ -783,7 +810,7 @@ public function delete(int $id): bool {
                     FROM disponibilites d
                     JOIN users u ON d.medecin_id = u.id
                     LEFT JOIN medecins m ON d.medecin_id = m.user_id
-                    WHERE d.medecin_id = :medecin_id AND d.actif = 1
+                    WHERE d.medecin_id = :medecin_id" . $filterCondition . "
                     ORDER BY FIELD(d.jour_semaine, 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'), d.heure_debut ASC";
             
             return $this->db->query($sql, ['medecin_id' => $medecinId]);

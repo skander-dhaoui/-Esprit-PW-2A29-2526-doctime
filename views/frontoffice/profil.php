@@ -885,7 +885,7 @@
             
             document.getElementById('faceStatus').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Envoi...</div>';
             
-            fetch('index.php?page=profil', {
+            fetch('index.php?page=register_face', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: imageData, action: 'register_face' })
@@ -893,6 +893,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Sauvegarde locale pour simuler la reconnaissance faciale sans saisie d'email
+                    localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
+                    localStorage.setItem('valorys_face_role', '<?= htmlspecialchars($userRole ?? $_SESSION['user_role'] ?? 'patient') ?>');
+                    
                     document.getElementById('faceStatus').innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
                     stopFaceCamera();
                     setTimeout(() => {
@@ -917,6 +921,8 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        localStorage.removeItem('valorys_face_email');
+                        localStorage.removeItem('valorys_face_role');
                         location.reload();
                     } else {
                         showToast(data.message || 'Erreur lors de la suppression', 'error');

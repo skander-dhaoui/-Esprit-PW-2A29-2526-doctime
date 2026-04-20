@@ -28,8 +28,9 @@ unset($_SESSION['errors'], $_SESSION['old']);
         .badge-inactif { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .field-error { font-size: 12px; margin-top: 5px; color: #dc3545; font-weight: normal; }
         .field-error i { margin-right: 5px; }
-        .form-control.error, .form-select.error { border-color: #dc3545 !important; }
-        .error-container { min-height: 32px; }
+        .form-control.is-invalid, .form-select.is-invalid { border-color: #dc3545 !important; }
+        .error-container { min-height: auto; margin-top: 6px; }
+        .error-container .alert { margin-bottom: 0; padding: 8px 12px; font-size: 13px; }
         .btn-toggle { background: #ffc107; color: #000; border: none; padding: 5px 12px; border-radius: 5px; font-size: 12px; }
         .btn-delete { background: #dc3545; color: #fff; border: none; padding: 5px 12px; border-radius: 5px; font-size: 12px; }
         footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
@@ -46,9 +47,9 @@ unset($_SESSION['errors'], $_SESSION['old']);
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecin_rendezvous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendez_vous">Mes RDV</a></li>
                 <li class="nav-item"><a class="nav-link active" href="index.php?page=disponibilites">Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecin_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=ordonnances">Ordonnances</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
             </ul>
@@ -104,7 +105,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
                                 <i class="fas <?= $dispo['actif'] ? 'fa-ban' : 'fa-check' ?> me-1"></i>
                                 <?= $dispo['actif'] ? 'Désactiver' : 'Activer' ?>
                             </a>
-                            <a href="index.php?page=disponibilites&action=delete&id=<?= $dispo['id'] ?>" class="btn-delete" onclick="return confirm('Supprimer ce créneau ?')">
+                            <a href="index.php?page=disponibilites&action=delete&id=<?= $dispo['id'] ?>" class="btn-delete" onclick="confirmDelete(event, this.href)">
                                 <i class="fas fa-trash me-1"></i>Supprimer
                             </a>
                         </div>
@@ -125,11 +126,12 @@ unset($_SESSION['errors'], $_SESSION['old']);
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="index.php?page=disponibilites&action=store">
+                <input type="hidden" name="actif" value="1">
                 <div class="modal-body">
                     <!-- Jour -->
                     <div class="mb-3">
-                        <label class="form-label">Jour <span class="text-danger">*</span></label>
-                        <select name="jour_semaine" id="jour_semaine" class="form-select <?= isset($errors['jour_semaine']) ? 'error' : '' ?>">
+                        <label class="form-label"><i class="fas fa-calendar me-2"></i>Jour <span class="text-danger">*</span></label>
+                        <select name="jour_semaine" id="jour_semaine" class="form-select <?= isset($errors['jour_semaine']) ? 'is-invalid' : '' ?>">
                             <option value="">Sélectionner un jour</option>
                             <option value="Lundi" <?= (isset($old['jour_semaine']) && $old['jour_semaine'] == 'Lundi') ? 'selected' : '' ?>>Lundi</option>
                             <option value="Mardi" <?= (isset($old['jour_semaine']) && $old['jour_semaine'] == 'Mardi') ? 'selected' : '' ?>>Mardi</option>
@@ -141,7 +143,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
                         </select>
                         <div class="error-container" id="jour_semaine-error">
                             <?php if (isset($errors['jour_semaine'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['jour_semaine']) ?></div>
+                                <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i><?= htmlspecialchars($errors['jour_semaine']) ?></div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -149,24 +151,24 @@ unset($_SESSION['errors'], $_SESSION['old']);
                     <div class="row">
                         <!-- Heure début -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Heure début <span class="text-danger">*</span></label>
-                            <input type="time" name="heure_debut" id="heure_debut" class="form-control <?= isset($errors['heure_debut']) ? 'error' : '' ?>" 
+                            <label class="form-label"><i class="fas fa-clock me-2"></i>Heure début <span class="text-danger">*</span></label>
+                            <input type="time" name="heure_debut" id="heure_debut" class="form-control <?= isset($errors['heure_debut']) ? 'is-invalid' : '' ?>" 
                                    value="<?= htmlspecialchars($old['heure_debut'] ?? '09:00') ?>">
                             <div class="error-container" id="heure_debut-error">
                                 <?php if (isset($errors['heure_debut'])): ?>
-                                    <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['heure_debut']) ?></div>
+                                    <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i><?= htmlspecialchars($errors['heure_debut']) ?></div>
                                 <?php endif; ?>
                             </div>
                         </div>
 
                         <!-- Heure fin -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Heure fin <span class="text-danger">*</span></label>
-                            <input type="time" name="heure_fin" id="heure_fin" class="form-control <?= isset($errors['heure_fin']) ? 'error' : '' ?>" 
+                            <label class="form-label"><i class="fas fa-clock me-2"></i>Heure fin <span class="text-danger">*</span></label>
+                            <input type="time" name="heure_fin" id="heure_fin" class="form-control <?= isset($errors['heure_fin']) ? 'is-invalid' : '' ?>" 
                                    value="<?= htmlspecialchars($old['heure_fin'] ?? '17:00') ?>">
                             <div class="error-container" id="heure_fin-error">
                                 <?php if (isset($errors['heure_fin'])): ?>
-                                    <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['heure_fin']) ?></div>
+                                    <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i><?= htmlspecialchars($errors['heure_fin']) ?></div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -174,7 +176,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Ajouter</button>
                 </div>
             </form>
         </div>
@@ -190,21 +192,118 @@ unset($_SESSION['errors'], $_SESSION['old']);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Validation du formulaire de disponibilité
+const disponibiliteForm = document.querySelector('#addDispoModal form');
+const joursemaine = document.getElementById('jour_semaine');
+const heureDebut = document.getElementById('heure_debut');
+const heureFin = document.getElementById('heure_fin');
+
+function validateForm() {
+    let isValid = true;
+    const errors = {};
+
+    // Nettoyer tous les messages d'erreur précédents
+    document.querySelectorAll('.error-container').forEach(container => {
+        container.innerHTML = '';
+    });
+
+    // Valider jour
+    if (!joursemaine.value) {
+        isValid = false;
+        errors['jour_semaine'] = 'Veuillez sélectionner un jour';
+    }
+
+    // Valider heure début
+    if (!heureDebut.value) {
+        isValid = false;
+        errors['heure_debut'] = 'L\'heure de début est obligatoire';
+    }
+
+    // Valider heure fin
+    if (!heureFin.value) {
+        isValid = false;
+        errors['heure_fin'] = 'L\'heure de fin est obligatoire';
+    }
+
+    // Valider que heure_fin > heure_debut
+    if (heureDebut.value && heureFin.value && heureFin.value <= heureDebut.value) {
+        isValid = false;
+        errors['heure_fin'] = 'L\'heure de fin doit être après l\'heure de début';
+    }
+
+    // Afficher les erreurs dans la modale
+    if (!isValid) {
+        Object.keys(errors).forEach(fieldName => {
+            const errorContainer = document.getElementById(fieldName + '-error');
+            if (errorContainer) {
+                const errorHTML = `<div class="alert alert-danger py-2 mb-0"><i class="fas fa-times-circle me-2"></i>${errors[fieldName]}</div>`;
+                errorContainer.innerHTML = errorHTML;
+            }
+
+            // Ajouter la classe d'erreur au champ
+            const field = document.getElementById(fieldName);
+            if (field) {
+                field.classList.add('is-invalid');
+            }
+        });
+    }
+
+    return isValid;
+}
+
+// Intercepter la soumission du formulaire
+if (disponibiliteForm) {
+    disponibiliteForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (validateForm()) {
+            // Validation réussie, soumettre le formulaire
+            this.submit();
+        }
+        // Si la validation échoue, le formulaire reste ouvert avec les erreurs affichées
+    });
+}
+
 // Nettoyer les erreurs quand l'utilisateur corrige
 document.querySelectorAll('#jour_semaine, #heure_debut, #heure_fin').forEach(field => {
     if (field) {
         field.addEventListener('change', function() {
-            this.classList.remove('error');
+            this.classList.remove('is-invalid');
             const errorContainer = document.getElementById(this.id + '-error');
-            if (errorContainer) errorContainer.innerHTML = '';
+            if (errorContainer) {
+                errorContainer.innerHTML = '';
+            }
         });
         field.addEventListener('input', function() {
-            this.classList.remove('error');
+            this.classList.remove('is-invalid');
             const errorContainer = document.getElementById(this.id + '-error');
-            if (errorContainer) errorContainer.innerHTML = '';
+            if (errorContainer) {
+                errorContainer.innerHTML = '';
+            }
         });
     }
 });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmDelete(event, url) {
+    event.preventDefault();
+    Swal.fire({
+        title: 'Supprimer ce créneau ?',
+        text: "Cette action est irréversible.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash me-2"></i>Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        borderRadius: '12px'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = url;
+        }
+    });
+}
 </script>
 </body>
 </html>

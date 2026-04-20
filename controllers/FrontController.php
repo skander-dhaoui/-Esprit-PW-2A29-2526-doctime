@@ -71,39 +71,155 @@ class FrontController {
         $medecins = $medecinModel->getAllWithUsers();
 
         if (empty($medecins)) {
-            $content = '<div class="alert alert-info">Aucun médecin disponible pour le moment.</div>';
+            $content = '<div class="alert alert-info py-5 text-center shadow-sm" style="border-radius: 15px;"><i class="fas fa-user-md fa-4x text-muted mb-3"></i><br><h4 class="text-muted">Aucun médecin disponible pour le moment.</h4></div>';
         } else {
             $content = '
-            <div class="table-responsive">
-                <table class="table table-striped table-hover" id="medecinsTable">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom complet</th>
-                            <th>Email</th>
-                            <th>Spécialité</th>
-                            <th>Téléphone</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>';
+            <style>
+                .medecin-grid { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; padding: 20px 0; }
+                .medecin-card {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                    width: 320px;
+                    overflow: hidden;
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    position: relative;
+                }
+                .medecin-card:hover {
+                    transform: translateY(-10px);
+                    box-shadow: 0 15px 40px rgba(42, 127, 170, 0.2);
+                }
+                .medecin-avatar-wrapper {
+                    background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                    height: 120px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-end;
+                    position: relative;
+                }
+                .medecin-avatar {
+                    width: 90px;
+                    height: 90px;
+                    background: white;
+                    border-radius: 50%;
+                    border: 4px solid white;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 2.5rem;
+                    color: #2A7FAA;
+                    margin-bottom: -45px;
+                    font-weight: bold;
+                }
+                .medecin-info {
+                    padding: 60px 25px 30px;
+                    text-align: center;
+                }
+                .medecin-name {
+                    font-size: 1.3rem;
+                    font-weight: 800;
+                    color: #2c3e50;
+                    margin-bottom: 8px;
+                }
+                .medecin-specialty {
+                    background: #e3f2fd;
+                    color: #1976d2;
+                    padding: 6px 15px;
+                    border-radius: 20px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    display: inline-block;
+                    margin-bottom: 20px;
+                }
+                .medecin-contact {
+                    color: #6c757d;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                    margin-bottom: 25px;
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 12px;
+                }
+                .medecin-contact div {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                }
+                .medecin-contact div:last-child {
+                    margin-bottom: 0;
+                }
+                .medecin-contact i {
+                    width: 25px;
+                    color: #4CAF50;
+                    font-size: 1rem;
+                }
+                .btn-view-profile {
+                    background: linear-gradient(135deg, #2A7FAA, #175476);
+                    color: white;
+                    border: none;
+                    border-radius: 25px;
+                    padding: 12px 25px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    font-size: 0.85rem;
+                    letter-spacing: 1px;
+                    transition: all 0.3s;
+                    text-decoration: none;
+                    display: inline-block;
+                    width: 100%;
+                }
+                .btn-view-profile:hover {
+                    background: linear-gradient(135deg, #175476, #0d3851);
+                    color: white;
+                    box-shadow: 0 5px 15px rgba(42, 127, 170, 0.4);
+                }
+                .page-header {
+                    text-align: center;
+                    margin-bottom: 3rem;
+                }
+                .page-header h2 {
+                    color: #2c3e50;
+                    font-weight: 800;
+                    font-size: 2.5rem;
+                }
+                .page-header p {
+                    color: #6c757d;
+                    font-size: 1.2rem;
+                }
+            </style>
+            <div class="page-header">
+                <h2><i class="fas fa-user-md text-primary me-3"></i>Nos Médecins Spécialistes</h2>
+                <p>Découvrez notre équipe de professionnels de santé à votre écoute</p>
+            </div>
+            <div class="medecin-grid">';
+            
             foreach ($medecins as $medecin) {
                 $userId = $medecin['user_id'] ?? $medecin['id'] ?? 0;
+                $initialKey = strtoupper(substr($medecin['prenom'], 0, 1) . substr($medecin['nom'], 0, 1));
+                
                 $content .= '
-                    <tr>
-                        <td>' . htmlspecialchars($userId) . '</td>
-                        <td>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</td>
-                        <td>' . htmlspecialchars($medecin['email']) . '</td>
-                        <td>' . htmlspecialchars($medecin['specialite']) . '</td>
-                        <td>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</td>
-                        <td>
-                            <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn btn-sm btn-primary">
-                                <i class="fas fa-eye"></i> Voir
-                            </a>
-                        </td>
-                    </tr>';
+                <div class="medecin-card">
+                    <div class="medecin-avatar-wrapper">
+                        <div class="medecin-avatar">
+                            ' . htmlspecialchars($initialKey) . '
+                        </div>
+                    </div>
+                    <div class="medecin-info">
+                        <h3 class="medecin-name">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
+                        <div class="medecin-specialty">' . htmlspecialchars($medecin['specialite']) . '</div>
+                        <div class="medecin-contact text-start">
+                            <div><i class="fas fa-envelope"></i> ' . htmlspecialchars($medecin['email']) . '</div>
+                            <div><i class="fas fa-phone-alt"></i> ' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</div>
+                        </div>
+                        <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn-view-profile">
+                            <i class="fas fa-user-circle me-2"></i> Voir le profil
+                        </a>
+                    </div>
+                </div>';
             }
-            $content .= '</tbody></table></div>';
+            $content .= '</div>';
         }
         $this->renderTemporaryView('Nos Médecins', $content);
     }
@@ -118,35 +234,191 @@ class FrontController {
             return;
         }
 
+        $avatarText = strtoupper(substr($medecin['prenom'] ?? 'M', 0, 1) . substr($medecin['nom'] ?? 'D', 0, 1));
+        $specialite = htmlspecialchars($medecin['specialite'] ?? 'Généraliste');
+
+        $userRole = $_SESSION['user_role'] ?? '';
+        $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
+
         $content = '
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
+        <style>
+            .doctor-profile-header {
+                background: linear-gradient(135deg, rgba(42, 127, 170, 0.1), rgba(76, 175, 80, 0.05));
+                border-radius: 20px;
+                padding: 40px;
+                margin-bottom: 30px;
+                display: flex;
+                align-items: center;
+                gap: 30px;
+                position: relative;
+                overflow: hidden;
+            }
+            .doctor-profile-avatar {
+                width: 120px;
+                height: 120px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-size: 48px;
+                font-weight: 700;
+                box-shadow: 0 10px 20px rgba(42, 127, 170, 0.2);
+                border: 4px solid #fff;
+                flex-shrink: 0;
+            }
+            .doctor-profile-info h2 {
+                color: #0f2b3d;
+                font-weight: 700;
+                margin-bottom: 5px;
+                font-size: 32px;
+            }
+            .doctor-profile-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 6px 15px;
+                background: rgba(42, 127, 170, 0.1);
+                color: #2A7FAA;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 600;
+                margin-bottom: 15px;
+            }
+            .doctor-details-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .detail-card {
+                background: #fff;
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+                border: 1px solid rgba(0,0,0,0.03);
+                display: flex;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .detail-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                background: rgba(76, 175, 80, 0.1);
+                color: #4CAF50;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+            .detail-content h4 {
+                font-size: 12px;
+                text-transform: uppercase;
+                color: #6c757d;
+                font-weight: 700;
+                margin-bottom: 4px;
+                letter-spacing: 0.5px;
+            }
+            .detail-content p {
+                font-size: 15px;
+                color: #2c3e50;
+                font-weight: 500;
+                margin: 0;
+            }
+            .action-buttons {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-top: 30px;
+            }
+            .btn-appointment {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: #fff;
+                padding: 12px 30px;
+                border-radius: 50px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.3s;
+                border: none;
+                box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .btn-appointment:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+                color: #fff;
+            }
+            .btn-back-profile {
+                background: #fff;
+                color: #6c757d;
+                padding: 12px 30px;
+                border-radius: 50px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.3s;
+                border: 2px solid #e9ecef;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .btn-back-profile:hover {
+                background: #f8f9fa;
+                border-color: #dee2e6;
+                color: #495057;
+            }
+        </style>
+        
+        <div class="container mt-5 mb-5">
+            <div class="doctor-profile-header">
+                <div class="doctor-profile-avatar">' . $avatarText . '</div>
+                <div class="doctor-profile-info">
+                    <div class="doctor-profile-badge"><i class="fas fa-certificate me-2"></i> Professionnel de santé vérifié</div>
+                    <h2>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h2>
+                    <p class="text-muted mb-0"><i class="fas fa-stethoscope me-1"></i> ' . $specialite . '</p>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-stethoscope"></i> Spécialité:</strong> ' . htmlspecialchars($medecin['specialite']) . '</p>
-                            <p><strong><i class="fas fa-envelope"></i> Email:</strong> ' . htmlspecialchars($medecin['email']) . '</p>
-                            <p><strong><i class="fas fa-phone"></i> Téléphone:</strong> ' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-map-marker-alt"></i> Adresse cabinet:</strong> ' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Non renseignée') . '</p>
-                            <p><strong><i class="fas fa-euro-sign"></i> Tarif:</strong> ' . ($medecin['consultation_prix'] ?? '50') . ' €</p>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="text-center">
-                        <a href="index.php?page=prendre_rendez_vous&id=' . $id . '" class="btn btn-success btn-lg">
-                            <i class="fas fa-calendar-check"></i> Prendre rendez-vous
-                        </a>
-                        <a href="index.php?page=medecins" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-arrow-left"></i> Retour à la liste
-                        </a>
+            </div>
+            
+            <div class="doctor-details-grid">
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(42, 127, 170, 0.1);color:#2A7FAA"><i class="fas fa-envelope"></i></div>
+                    <div class="detail-content">
+                        <h4>Email</h4>
+                        <p>' . htmlspecialchars($medecin['email']) . '</p>
                     </div>
                 </div>
-            </div>';
-        $this->renderTemporaryView('Détail du médecin', $content);
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(76, 175, 80, 0.1);color:#4CAF50"><i class="fas fa-phone"></i></div>
+                    <div class="detail-content">
+                        <h4>Téléphone</h4>
+                        <p>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(255, 152, 0, 0.1);color:#FF9800"><i class="fas fa-map-marker-alt"></i></div>
+                    <div class="detail-content">
+                        <h4>Cabinet</h4>
+                        <p>' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Lieu non spécifié') . '</p>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(156, 39, 176, 0.1);color:#9C27B0"><i class="fas fa-euro-sign"></i></div>
+                    <div class="detail-content">
+                        <h4>Tarif consultation</h4>
+                        <p>' . ($medecin['consultation_prix'] ?? 'Sur devis') . ($medecin['consultation_prix'] ? ' €' : '') . '</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <a href="index.php?page=medecins" class="btn-back-profile"><i class="fas fa-arrow-left"></i> Retour à la liste</a>
+                ' . ($showAppointmentBtn ? '<a href="index.php?page=prendre_rendez_vous&id=' . $id . '" class="btn-appointment"><i class="fas fa-calendar-check"></i> Prendre rendez-vous</a>' : '') . '
+            </div>
+        </div>';
+        $this->renderPublicView('Détail du médecin', $content);
     }
 
     // =============================================
@@ -227,7 +499,7 @@ class FrontController {
                 $addButton = '
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2><i class="fas fa-newspaper"></i> Nos articles</h2>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
+                    <a href="index.php?page=admin_article_create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
                         <i class="fas fa-plus"></i> Nouvel article
                     </a>
                 </div>';
@@ -250,7 +522,7 @@ class FrontController {
                     if ($canEdit || $canDelete) {
                         $crudButtons = '
                         <div style="position:absolute;top:15px;right:15px;display:flex;gap:8px;z-index:100;">
-                            ' . ($canEdit ? '<a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
+                            ' . ($canEdit ? '<a href="index.php?page=admin_article_edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
                             ' . ($canDelete ? '<button type="button" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
                         </div>';
                     }
@@ -522,7 +794,7 @@ class FrontController {
         $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']);
         $articleButtons = $isAuthor ? '
         <div class="mb-3 d-flex gap-2">
-            <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
+            <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
             <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer mon article</button>
             <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm ms-auto"><i class="fas fa-arrow-left"></i> Retour au blog</a>
         </div>'
@@ -724,7 +996,7 @@ JS;
         <div class="row"><div class="col-md-12">
             <div class="mb-3">
                 <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Retour</a>
-                <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
+                <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
                 <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer</button>
             </div>
             <div class="article-header">
@@ -931,7 +1203,7 @@ JS;
         }
         function closeDeleteModal() { document.getElementById("deleteModal").classList.remove("show"); currentDeleteId = null; }
         document.getElementById("confirmDeleteBtn").onclick = function() {
-            if (currentDeleteId) window.location.href = "index.php?page=articles_admin&action=delete&id=" + currentDeleteId;
+            if (currentDeleteId) window.location.href = "index.php?page=admin_article_delete&id=" + currentDeleteId;
             closeDeleteModal();
         };
         document.getElementById("deleteModal").onclick = function(e) { if (e.target === this) closeDeleteModal(); };
@@ -1157,18 +1429,19 @@ JS;
         $contenuValue = $isEdit ? htmlspecialchars($article['contenu'] ?? '') : htmlspecialchars($oldData['contenu'] ?? '');
         $imageValue   = $isEdit ? htmlspecialchars($article['image']   ?? '') : '';
         $buttonText   = $isEdit ? 'Mettre à jour' : 'Publier';
+        
         $html = '
         <div style="background:white;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
             <h3 style="margin-bottom:25px;color:#2A7FAA;">' . htmlspecialchars($title) . '</h3>
             ' . (isset($errors['general']) ? '<div style="background:#ffe6e6;border-left:4px solid #dc3545;padding:12px;border-radius:8px;margin-bottom:20px;color:#dc3545;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['general']) . '</div>' : '') . '
-            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data">
+            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data" id="frontArticleForm">
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Titre <span style="color:red;">*</span></label>
                     <input type="text" name="titre" value="' . $titreValue . '" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['titre']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:15px;">
                     ' . (isset($errors['titre']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['titre']) . '</div>' : '') . '
                 </div>
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image (optionnel)</label>
+                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image de couverture (optionnel)</label>
                     ' . ($imageValue ? '<div style="margin-bottom:10px;"><img src="' . $imageValue . '" style="max-width:200px;border-radius:8px;"></div>' : '') . '
                     <input type="file" name="article_image" accept="image/*" style="width:100%;padding:8px;border:1px solid ' . (isset($errors['image']) ? '#dc3545' : '#ddd') . ';border-radius:8px;">
                     <small style="color:#999;">Formats acceptés : JPG, PNG, GIF. Max 2 Mo.</small>
@@ -1177,23 +1450,164 @@ JS;
                 </div>
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Contenu <span style="color:red;">*</span></label>
-                    <textarea name="contenu" rows="12" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:14px;resize:vertical;">' . $contenuValue . '</textarea>
-                    <small style="color:#999;">Vous pouvez utiliser du HTML pour formater votre contenu.</small>
+                    
+                    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+                        <button type="button" id="emojiBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
+                            <i class="fas fa-smile me-1"></i>Emoji
+                        </button>
+                        <button type="button" id="imgBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
+                            <i class="fas fa-image me-1"></i>Image (dans le texte)
+                        </button>
+                        <input type="file" id="imgUpload" accept="image/*" style="display:none">
+                        <small class="text-muted" style="flex-basis:100%">Cliquez sur les boutons pour ajouter du contenu enrichi au texte</small>
+                    </div>
+                    
+                    <!-- Emoji Picker -->
+                    <div id="emojiPicker" style="display:none;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;max-height:300px;overflow-y:auto">
+                        <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px"></div>
+                    </div>
+                    
+                    <!-- Image Preview -->
+                    <div id="imgPreview" style="display:none;margin-bottom:12px">
+                        <img id="imgPreviewImg" src="" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #dee2e6">
+                        <button type="button" id="removeImg" class="btn btn-sm btn-danger mt-2" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;">
+                            <i class="fas fa-trash me-1"></i>Supprimer
+                        </button>
+                    </div>
+
+                    <!-- Quill Editor -->
+                    <div id="editor-container" style="background:white;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;min-height:300px"></div>
+                    <input type="hidden" id="contenu" name="contenu" value="' . $contenuValue . '">
+                    <small style="color:#999;display:block;margin-top:8px;">✨ Texte • 🖼️ Images • 😊 Emoji • 📝 Formatage riche</small>
+
                     ' . (isset($errors['contenu']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['contenu']) . '</div>' : '') . '
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:20px;">
                     <a href="index.php?page=blog_public" style="background:#6c757d;color:white;padding:10px 25px;border-radius:8px;text-decoration:none;"><i class="fas fa-arrow-left"></i> Annuler</a>
-                    <button type="submit" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
+                    <button type="submit" id="submitBtn" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
                 </div>
             </form>
         </div>';
-        $html .= <<<'JS'
+        
+        $html .= <<<JS
+        <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+        <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+        <style>
+            /* Quill overrides */
+            .ql-toolbar.ql-snow { border: 1px solid #ddd; border-top-left-radius: 8px; border-top-right-radius: 8px; background: #fafafa; }
+            .ql-container.ql-snow { border: 1px solid #ddd; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 15px; font-family: inherit; }
+        </style>
         <script>
-        document.querySelectorAll("input[type=text], textarea").forEach(function(field) {
-            field.addEventListener("input", function() {
-                this.style.borderColor = "#ddd";
-                var err = this.parentElement.querySelector("[style*=dc3545]");
-                if (err) err.style.display = "none";
+        document.addEventListener('DOMContentLoaded', function() {
+            // === INITIALIZE QUILL EDITOR ===
+            const quill = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: 'Rédigez votre article ici...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'header': 1 }, { 'header': 2 }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // Load existing content
+            const existingContent = document.getElementById('contenu').value;
+            if (existingContent) {
+                try {
+                    quill.setContents(JSON.parse(existingContent), 'api');
+                } catch(e) {
+                    quill.root.innerHTML = existingContent;
+                }
+            }
+
+            // Update hidden field on change
+            quill.on('text-change', function() {
+                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
+            });
+
+            // === EMOJI PICKER ===
+            const emojis = ['😀', '😂', '🤣', '😃', '😄', '😁', '😆', '😅', '🤭', '😉', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤎', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '👍', '👎', '👋', '👊', '✊', '🤚', '🖐️', '✋', '💪', '🦾', '🦿', '🦴', '👀', '👁️'];
+
+            const emojiBtn = document.getElementById('emojiBtn');
+            const emojiPicker = document.getElementById('emojiPicker');
+            const emojiGrid = document.getElementById('emojiGrid');
+
+            emojis.forEach(emoji => {
+                const span = document.createElement('span');
+                span.textContent = emoji;
+                span.style.cursor = 'pointer';
+                span.style.fontSize = '24px';
+                span.style.padding = '8px';
+                span.style.borderRadius = '4px';
+                span.style.transition = 'all 0.2s';
+                span.onmouseover = () => span.style.background = '#e0e0e0';
+                span.onmouseout = () => span.style.background = 'transparent';
+                span.onclick = () => {
+                    quill.insertText(quill.getSelection()?.index || quill.getLength(), emoji);
+                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + emoji.length);
+                };
+                emojiGrid.appendChild(span);
+            });
+
+            emojiBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'grid' : 'none';
+            });
+
+            // === IMAGE IN TEXT ===
+            const imgBtn = document.getElementById('imgBtn');
+            const imgUpload = document.getElementById('imgUpload');
+            const imgPreview = document.getElementById('imgPreview');
+            const imgPreviewImg = document.getElementById('imgPreviewImg');
+            const removeImg = document.getElementById('removeImg');
+
+            imgBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                imgUpload.click();
+            });
+
+            imgUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('L\'image doit faire moins de 5MB');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const imageDataUrl = event.target.result;
+                    const index = quill.getSelection()?.index || quill.getLength();
+                    quill.insertEmbed(index, 'image', imageDataUrl);
+                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + 1);
+                    imgPreviewImg.src = imageDataUrl;
+                    imgPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            removeImg.addEventListener('click', (e) => {
+                e.preventDefault();
+                imgPreview.style.display = 'none';
+                imgPreviewImg.src = '';
+                imgUpload.value = '';
+            });
+
+            // === FORM VALIDATION & SUBMISSION ===
+            document.getElementById('frontArticleForm').addEventListener('submit', function(e) {
+                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
+            });
+
+            document.querySelectorAll('input[type=text], textarea').forEach(function(field) {
+                field.addEventListener('input', function() {
+                    this.style.borderColor = '#ddd';
+                    var err = this.parentElement.querySelector('[style*=dc3545]');
+                    if (err) err.style.display = 'none';
+                });
             });
         });
         </script>
@@ -2179,80 +2593,233 @@ JS;
 
         $faceButtons = $hasFaceId
             ? '
-            <div class="alert alert-success"><i class="fas fa-check-circle me-2"></i> Vous avez déjà enregistré votre visage.</div>
-            <button type="button" class="btn btn-warning btn-lg" onclick="updateFaceId()"><i class="fas fa-sync-alt me-2"></i>Mettre à jour mon visage</button>
-            <button type="button" class="btn btn-danger btn-lg ms-2" onclick="deleteFaceId()"><i class="fas fa-trash me-2"></i>Supprimer mon visage</button>'
-            : '<button type="button" class="btn btn-success btn-lg" onclick="registerFaceId()"><i class="fas fa-camera me-2"></i>Enregistrer mon visage</button>';
+            <div class="custom-alert custom-alert-success mb-4"><i class="fas fa-check-circle fs-4"></i> Reconnaissance faciale configurée avec succès.</div>
+            <div class="d-flex gap-3 justify-content-center">
+                <button type="button" class="custom-btn custom-btn-warning" onclick="updateFaceId()"><i class="fas fa-sync-alt"></i> Mettre à jour</button>
+                <button type="button" class="custom-btn custom-btn-danger" onclick="deleteFaceId()"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>'
+            : '<button type="button" class="custom-btn custom-btn-success" onclick="registerFaceId()"><i class="fas fa-camera"></i> Activer Face ID</button>';
 
         $content = '
-        <div class="row g-4">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-edit text-primary me-2"></i>Modifier mes informations</h5></div>
-                    <div class="card-body">
+        <style>
+            .profile-card {
+                background: white;
+                border-radius: 20px;
+                padding: 35px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                border: 1px solid rgba(0,0,0,0.02);
+                margin-bottom: 25px;
+                transition: transform 0.3s;
+            }
+            .profile-card:hover {
+                transform: translateY(-5px);
+            }
+            .profile-h5 {
+                color: #2c3e50;
+                font-weight: 700;
+                font-size: 1.4rem;
+                margin-bottom: 25px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .profile-h5 i {
+                background: rgba(42, 127, 170, 0.1);
+                color: #2A7FAA;
+                padding: 12px;
+                border-radius: 12px;
+                font-size: 1.2rem;
+            }
+            .custom-input {
+                background: #f8f9fa;
+                border: 2px solid transparent;
+                border-radius: 12px;
+                padding: 14px 20px;
+                font-size: 1rem;
+                font-weight: 500;
+                color: #2c3e50;
+                transition: all 0.3s;
+                width: 100%;
+            }
+            .custom-input:focus {
+                background: white;
+                border-color: #2A7FAA;
+                box-shadow: 0 0 0 4px rgba(42, 127, 170, 0.1);
+                outline: none;
+            }
+            .custom-label {
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 8px;
+                display: block;
+            }
+            .custom-btn {
+                padding: 12px 25px;
+                border-radius: 12px;
+                font-weight: 600;
+                transition: all 0.3s;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border: none;
+                cursor: pointer;
+            }
+            .custom-btn-primary {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: white;
+                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
+            }
+            .custom-btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(76,175,80,0.3);
+                color: white;
+            }
+            .custom-btn-secondary {
+                background: #f8f9fa;
+                color: #6c757d;
+                border: 2px solid #e9ecef;
+            }
+            .custom-btn-secondary:hover {
+                background: #e9ecef;
+                color: #495057;
+            }
+            .custom-btn-warning {
+                background: linear-gradient(135deg, #FF9800, #F57C00);
+                color: white;
+                box-shadow: 0 4px 15px rgba(255,152,0,0.2);
+            }
+            .custom-btn-danger {
+                background: linear-gradient(135deg, #dc3545, #c82333);
+                color: white;
+                box-shadow: 0 4px 15px rgba(220,53,69,0.2);
+            }
+            .custom-btn-success {
+                background: linear-gradient(135deg, #4CAF50, #43a047);
+                color: white;
+                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
+            }
+            .custom-alert {
+                border-radius: 12px;
+                padding: 15px 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-weight: 500;
+            }
+            .custom-alert-info {
+                background: rgba(42, 127, 170, 0.1);
+                color: #1a5676;
+            }
+            .custom-alert-success {
+                background: rgba(76, 175, 80, 0.1);
+                color: #2e7d32;
+            }
+            .face-id-box {
+                background: #f8f9fa;
+                border-radius: 16px;
+                padding: 40px;
+                text-align: center;
+                border: 2px dashed #e0e0e0;
+            }
+            .face-icon-large {
+                font-size: 4rem;
+                color: #2A7FAA;
+                margin-bottom: 20px;
+                opacity: 0.8;
+            }
+            .requirement-valid { color: #4CAF50; font-weight: 500; }
+            .requirement-invalid { color: #dc3545; font-weight: 500; }
+            .field-error { color: #dc3545; font-size: 13px; margin-top: 6px; font-weight: 500; }
+        </style>
+
+        <div class="container mt-5 mb-5">
+            <div class="row g-4 justify-content-center">
+                <div class="col-lg-8">
+                    
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-user-edit"></i> Informations personnelles</div>
                         <form method="POST" id="profileForm">
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-user text-primary me-2"></i>Nom complet</label><input type="text" class="form-control form-control-lg" name="nom" value="' . $userName . '" required></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-envelope text-primary me-2"></i>Adresse email</label><input type="email" class="form-control form-control-lg" name="email" value="' . $userEmail . '" required></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-phone text-primary me-2"></i>Numéro de téléphone</label><input type="tel" class="form-control form-control-lg" name="telephone" value="' . $userTelephone . '"></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-lock text-primary me-2"></i>Mot de passe (optionnel)</label><input type="password" class="form-control form-control-lg" name="password" placeholder="Laisser vide pour ne pas changer"><small class="text-muted">Minimum 6 caractères</small></div>
-                            <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Conseil:</strong> Mettez à jour vos informations pour une meilleure expérience.</div>
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="index.php?page=mon_profil" class="btn btn-secondary btn-lg"><i class="fas fa-arrow-left me-2"></i>Annuler</a>
-                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer les modifications</button>
+                            <div class="row g-3">
+                                <div class="col-md-12 mb-3">
+                                    <label class="custom-label">Nom complet</label>
+                                    <input type="text" class="custom-input" name="nom" value="' . $userName . '" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Adresse email</label>
+                                    <input type="email" class="custom-input" name="email" value="' . $userEmail . '" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Numéro de téléphone</label>
+                                    <input type="tel" class="custom-input" name="telephone" value="' . $userTelephone . '">
+                                </div>
+                            </div>
+                            
+                            <div class="custom-alert custom-alert-info mt-4 mb-4">
+                                <i class="fas fa-info-circle fs-4"></i>
+                                Mettez à jour vos informations pour garantir un bon suivi avec vos patients et confrères.
+                            </div>
+                            
+                            <div class="d-flex justify-content-end gap-3 mt-2">
+                                <a href="index.php?page=mon_profil" class="custom-btn custom-btn-secondary"><i class="fas fa-times"></i> Annuler</a>
+                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-save"></i> Enregistrer les informations</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row g-4 mt-3">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-key text-primary me-2"></i>Changer le mot de passe</h5></div>
-                    <div class="card-body">
+
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-shield-alt"></i> Sécurité & Mot de passe</div>
                         <form method="POST" id="passwordForm">
                             <input type="hidden" name="action" value="change_password">
-                            <div class="mb-4"><label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label><input type="password" class="form-control form-control-lg" name="current_password" required><div id="currentPassword-error"></div></div>
+                            
                             <div class="mb-4">
-                                <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
-                                <input type="password" id="newPassword" name="new_password" class="form-control form-control-lg" required>
-                                <div class="mt-2">
-                                    <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
-                                    <span id="reqUpper"  class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
-                                    <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins un chiffre</span>
-                                </div>
-                                <div id="newPassword-error"></div>
+                                <label class="custom-label">Mot de passe actuel <span class="text-danger">*</span></label>
+                                <input type="password" class="custom-input" name="current_password" required>
+                                <div id="currentPassword-error" class="field-error"></div>
                             </div>
-                            <div class="mb-4"><label class="form-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label><input type="password" id="confirmPassword" name="confirm_password" class="form-control form-control-lg" required><div id="confirmPassword-error"></div></div>
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button type="button" class="btn btn-secondary btn-lg" onclick="cancelPassword()">Annuler</button>
-                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer le nouveau mot de passe</button>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Nouveau mot de passe <span class="text-danger">*</span></label>
+                                    <input type="password" id="newPassword" name="new_password" class="custom-input" required>
+                                    <div class="mt-3 p-3 bg-light rounded-3">
+                                        <div id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-2"></i>Au moins 8 caractères</div>
+                                        <div id="reqUpper" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins une majuscule</div>
+                                        <div id="reqNumber" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins un chiffre</div>
+                                    </div>
+                                    <div id="newPassword-error" class="field-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label>
+                                    <input type="password" id="confirmPassword" name="confirm_password" class="custom-input" required>
+                                    <div id="confirmPassword-error" class="field-error"></div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-3 mt-4">
+                                <button type="button" class="custom-btn custom-btn-secondary" onclick="cancelPassword()">Effacer</button>
+                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-key"></i> Modifier le mot de passe</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row g-4 mt-3">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-face-smile text-primary me-2"></i>Reconnaissance faciale (Face ID)</h5></div>
-                    <div class="card-body">
-                        <div class="text-center mb-3">
-                            <i class="fas fa-camera fa-3x text-primary mb-2"></i>
-                            <p class="mb-3">Activez la reconnaissance faciale pour vous connecter plus facilement.</p>
-                            ' . $faceButtons . '
+
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-face-viewfinder"></i> Connexion Faciale (Face ID)</div>
+                        <div class="face-id-box">
+                            <i class="fas fa-camera face-icon-large"></i>
+                            <h4 class="mb-3" style="color: #2c3e50; font-weight: 700;">Reconnaissance Biométrique</h4>
+                            <p class="text-muted mb-4" style="font-size: 1.1rem; max-width: 500px; margin: 0 auto;">Connectez-vous instantanément et en toute sécurité à l\'aide de la reconnaissance faciale, sans avoir à taper votre mot de passe.</p>
+                            
+                            <div class="mt-4">
+                                ' . $faceButtons . '
+                            </div>
+                            <div id="faceIdStatus" class="mt-4 fw-semibold text-primary"></div>
                         </div>
-                        <div id="faceIdStatus" class="text-center mt-3"></div>
                     </div>
+
                 </div>
             </div>
-        </div>
-        <style>
-            .requirement-valid   { color:#28a745; }
-            .requirement-invalid { color:#dc3545; }
-            .field-error { color:#dc3545;font-size:12px;margin-top:5px; }
-        </style>';
+        </div>';
 
         // Tout le JavaScript en NOWDOC pour éviter tout problème d'échappement
         $content .= <<<JS
@@ -2877,6 +3444,8 @@ public function monProfil(): void {
         if (empty($disponibilites)) {
             $html .= '<div class="col-12"><div class="alert alert-info text-center py-4">Aucune disponibilité pour le moment.</div></div>';
         } else {
+            $userRole = $_SESSION['user_role'] ?? '';
+            $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
             foreach ($disponibilites as $dispo) {
                 $html .= '
                 <div class="col-md-6 col-lg-4 mb-4">
@@ -2886,10 +3455,11 @@ public function monProfil(): void {
                             <p class="card-text text-muted">' . htmlspecialchars($dispo['specialite'] ?? 'Généraliste') . '</p>
                             <hr>
                             <p><i class="fas fa-calendar me-2 text-success"></i> ' . htmlspecialchars($dispo['jour_semaine']) . '</p>
-                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>
+                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>' . 
+                            ($showAppointmentBtn ? '
                             <a href="index.php?page=prendre_rendez_vous&id=' . $dispo['medecin_id'] . '" class="btn btn-primary btn-sm w-100">
                                 <i class="fas fa-calendar-check me-2"></i>Prendre rendez-vous
-                            </a>
+                            </a>' : '') . '
                         </div>
                     </div>
                 </div>';

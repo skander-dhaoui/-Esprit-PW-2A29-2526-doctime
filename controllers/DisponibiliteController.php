@@ -104,28 +104,31 @@ class DisponibiliteController {
 
         try {
             $csrfToken = $this->generateCsrfToken();
-            $old = $_SESSION['old'] ?? null;
+            $old = $_SESSION['old'] ?? [];
+            $errors = $_SESSION['errors'] ?? [];
             $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
+            
+            // Clear session data after retrieving
+            unset($_SESSION['old'], $_SESSION['flash'], $_SESSION['errors']);
 
-            // Chemin corrigé vers la vue formulaire médecin
+            // Chemin vers la vue formulaire médecin
             $viewPath = __DIR__ . '/../views/frontoffice/medecin/disponibilite_form.php';
             if (file_exists($viewPath)) {
                 require_once $viewPath;
             } else {
-                // Fallback simple
+                // Fallback simple si la vue n'existe pas
                 echo "<div class='container mt-4'>";
                 echo "<h2>Ajouter une disponibilité</h2>";
                 echo "<form method='POST'>";
-                echo "<select name='jour_semaine'><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select>";
-                echo "<input type='time' name='heure_debut'>";
-                echo "<input type='time' name='heure_fin'>";
+                echo "<select name='jour_semaine' required><option>-- Jour --</option><option>Lundi</option><option>Mardi</option><option>Mercredi</option><option>Jeudi</option><option>Vendredi</option><option>Samedi</option><option>Dimanche</option></select>";
+                echo "<input type='time' name='heure_debut' required>";
+                echo "<input type='time' name='heure_fin' required>";
                 echo "<button type='submit'>Ajouter</button>";
                 echo "</form></div>";
             }
         } catch (Exception $e) {
             error_log('Erreur DisponibiliteController::createMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors du chargement du formulaire.';
+            $_SESSION['flash'] = ['error' => 'Erreur lors du chargement du formulaire.'];
             header('Location: index.php?page=disponibilites');
             exit;
         }
@@ -144,35 +147,83 @@ class DisponibiliteController {
 
         try {
             $medecinId = (int)$_SESSION['user_id'];
-            $jour_semaine = $_POST['jour_semaine'] ?? '';
-            $heure_debut = $_POST['heure_debut'] ?? '';
-            $heure_fin = $_POST['heure_fin'] ?? '';
+            $jour_semaine = trim($_POST['jour_semaine'] ?? '');
+            $heure_debut = trim($_POST['heure_debut'] ?? '');
+            $heure_fin = trim($_POST['heure_fin'] ?? '');
+            $pause_debut = trim($_POST['pause_debut'] ?? '');
+            $pause_fin = trim($_POST['pause_fin'] ?? '');
+            $actif = isset($_POST['actif']) ? 1 : 0;
 
-            if (empty($jour_semaine) || empty($heure_debut) || empty($heure_fin)) {
-                $_SESSION['error'] = 'Tous les champs sont obligatoires.';
+            // Validation
+            $errors = [];
+
+            if (empty($jour_semaine)) {
+                $errors['jour_semaine'] = 'Veuillez sélectionner un jour';
+            }
+
+            if (empty($heure_debut)) {
+                $errors['heure_debut'] = 'L\'heure de début est obligatoire';
+            }
+
+            if (empty($heure_fin)) {
+                $errors['heure_fin'] = 'L\'heure de fin est obligatoire';
+            }
+
+            // Vérifier que heure_fin > heure_debut
+            if (!empty($heure_debut) && !empty($heure_fin)) {
+                if ($heure_fin <= $heure_debut) {
+                    $errors['heure_fin'] = 'L\'heure de fin doit être après l\'heure de début';
+                }
+            }
+
+            // Vérifier les pauses
+            if (!empty($pause_debut) || !empty($pause_fin)) {
+                if (empty($pause_debut)) {
+                    $errors['pause_debut'] = 'L\'heure de début de pause est obligatoire';
+                }
+                if (empty($pause_fin)) {
+                    $errors['pause_fin'] = 'L\'heure de fin de pause est obligatoire';
+                }
+                if (!empty($pause_debut) && !empty($pause_fin) && $pause_fin <= $pause_debut) {
+                    $errors['pause_fin'] = 'L\'heure de fin de pause doit être après l\'heure de début';
+                }
+            }
+
+            // S'il y a des erreurs, retourner au formulaire
+            if (!empty($errors)) {
+                $_SESSION['flash'] = ['error' => 'Veuillez corriger les erreurs ci-dessous'];
+                $_SESSION['errors'] = $errors;
                 $_SESSION['old'] = $_POST;
                 header('Location: index.php?page=disponibilites&action=create');
                 exit;
             }
 
-            $disponibiliteId = $this->disponibiliteModel->create([
+            $data = [
                 'medecin_id' => $medecinId,
                 'jour_semaine' => $jour_semaine,
                 'heure_debut' => $heure_debut,
                 'heure_fin' => $heure_fin,
-                'actif' => 1
-            ]);
+                'actif' => $actif
+            ];
+
+            if (!empty($pause_debut) && !empty($pause_fin)) {
+                $data['pause_debut'] = $pause_debut;
+                $data['pause_fin'] = $pause_fin;
+            }
+
+            $disponibiliteId = $this->disponibiliteModel->create($data);
 
             if (!$disponibiliteId) {
                 throw new Exception('Erreur lors de la création.');
             }
 
-            $_SESSION['success'] = 'Disponibilité créée avec succès.';
+            $_SESSION['flash'] = ['success' => 'Créneau créé avec succès !'];
             header('Location: index.php?page=disponibilites');
             exit;
         } catch (Exception $e) {
             error_log('Erreur storeMedecin - ' . $e->getMessage());
-            $_SESSION['error'] = 'Erreur lors de l\'enregistrement.';
+            $_SESSION['flash'] = ['error' => 'Erreur lors de l\'enregistrement du créneau.'];
+            $_SESSION['old'] = $_POST;
             header('Location: index.php?page=disponibilites&action=create');
             exit;
         }

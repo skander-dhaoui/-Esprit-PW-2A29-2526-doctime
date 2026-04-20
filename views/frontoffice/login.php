@@ -226,7 +226,7 @@
             d.style.display = 'block';
         }
 
-        // ── CAMÉRA AVEC RECONNAISSANCE FACIALE ─────────────────
+        // 📹 CAMÉRA AVEC RECONNAISSANCE FACIALE 📹
         let stream = null;
         
         function openCameraModal() {
@@ -268,10 +268,19 @@
             }
             
             try {
+                // Pour la démo, on simule l'identification via un token local
+                const savedRole = localStorage.getItem('valorys_face_role') || 'patient';
+                const savedEmail = localStorage.getItem('valorys_face_email') || '';
+                
+                const payload = new URLSearchParams();
+                payload.append('face_image', imageData);
+                payload.append('role', savedRole);
+                payload.append('email', savedEmail);
+
                 const response = await fetch('index.php?page=face_login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'face_image=' + encodeURIComponent(imageData)
+                    body: payload.toString()
                 });
                 
                 const result = await response.json();
