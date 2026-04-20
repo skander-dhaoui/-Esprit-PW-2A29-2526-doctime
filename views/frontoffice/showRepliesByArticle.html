@@ -1,0 +1,223 @@
+<?php
+/**
+ * showRepliesByArticle.html
+ * Vue HTML pour afficher le formulaire de recherche et les résultats
+ * Affiche les replies d'un article via JOINTURE
+ */
+
+// Récupérer les données du contrôleur
+$data = include(__DIR__ . '/searchRepliesByArticle.php');
+
+$articles = $data['articles'] ?? [];
+$replies = $data['replies'] ?? [];
+$selectedArticleId = $data['selectedArticleId'] ?? null;
+$selectedArticleTitle = $data['selectedArticleTitle'] ?? '';
+$error = $data['error'] ?? null;
+$warning = $data['warning'] ?? null;
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche de Commentaires par Article - Jointure</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 30px 0;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .results-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .reply-item {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .reply-author {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .reply-date {
+            font-size: 0.85rem;
+            color: #999;
+            margin-bottom: 10px;
+        }
+        .reply-content {
+            color: #333;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="mb-5">
+            <h1><i class="fas fa-comments"></i> Recherche de Commentaires par Article</h1>
+            <p class="subtitle">Sélectionnez un article pour afficher ses commentaires (Jointure INNER JOIN)</p>
+        </div>
+
+        <!-- Formulaire de recherche -->
+        <div class="form-card">
+            <h4 class="mb-4">Sélectionner un article</h4>
+            
+            <?php if ($error): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label for="article" class="form-label fw-bold">Article :</label>
+                        <select name="article" id="article" class="form-select form-select-lg" required>
+                            <option value="">-- Choisir un article --</option>
+                            <?php if (!empty($articles)): ?>
+                                <?php foreach ($articles as $art): ?>
+                                    <option value="<?= htmlspecialchars($art['id']) ?>" 
+                                        <?= ($selectedArticleId === (int)$art['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($art['titre']) ?> 
+                                        (<?= $art['nombre_replies'] ?> commentaire<?= $art['nombre_replies'] > 1 ? 's' : '' ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" name="search" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Résultats -->
+        <?php if ($selectedArticleId !== null): ?>
+            <div class="results-section">
+                <h3 class="mb-4">
+                    <i class="fas fa-list"></i> Commentaires de l'article : 
+                    <span style="color: #007bff;"><?= htmlspecialchars($selectedArticleTitle) ?></span>
+                </h3>
+
+                <?php if ($warning): ?>
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> <?= htmlspecialchars($warning) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($replies)): ?>
+                    <div class="replies-list">
+                        <?php foreach ($replies as $reply): ?>
+                            <div class="reply-item">
+                                <div class="reply-author">
+                                    <i class="fas fa-user-circle"></i> 
+                                    <?= htmlspecialchars(
+                                        $reply['auteur'] ?? ($reply['user_nom'] ?? 'Anonyme')
+                                    ) ?>
+                                </div>
+                                <div class="reply-date">
+                                    <?= date('d/m/Y H:i', strtotime($reply['date_reply'])) ?>
+                                </div>
+                                
+                                <?php if ($reply['type_reply'] === 'text' && ($reply['contenu_text'] || $reply['text_content'])): ?>
+                                    <div class="reply-content">
+                                        <?= nl2br(htmlspecialchars($reply['contenu_text'] ?? $reply['text_content'])) ?>
+                                    </div>
+                                <?php elseif ($reply['type_reply'] === 'photo'): ?>
+                                    <div class="reply-content">
+                                        <?php if ($reply['image_url'] && strpos($reply['image_url'], 'base64') === false): ?>
+                                            <img src="<?= htmlspecialchars($reply['image_url']) ?>" 
+                                                 style="max-width: 100%; border-radius: 8px; margin: 10px 0;"
+                                                 onerror="this.style.display='none'">
+                                        <?php elseif ($reply['photo']): ?>
+                                            <img src="<?= htmlspecialchars($reply['photo']) ?>" 
+                                                 style="max-width: 100%; border-radius: 8px; margin: 10px 0;"
+                                                 onerror="this.style.display='none'">
+                                        <?php elseif ($reply['image_url'] && strpos($reply['image_url'], 'base64') !== false): ?>
+                                            <img src="<?= $reply['image_url'] ?>" 
+                                                 style="max-width: 100%; border-radius: 8px; margin: 10px 0; max-height: 300px;"
+                                                 alt="Image">
+                                        <?php endif; ?>
+                                        <?php if ($reply['contenu_text'] || $reply['text_content']): ?>
+                                            <p><?= nl2br(htmlspecialchars($reply['contenu_text'] ?? $reply['text_content'])) ?></p>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="reply-content">
+                                        <?= nl2br(htmlspecialchars($reply['contenu_text'] ?? $reply['text_content'] ?? '(Contenu vide)')) ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php if ($reply['emoji']): ?>
+                                    <span style="font-size: 1.8rem; margin-top: 8px; display: inline-block;">
+                                        <?= htmlspecialchars($reply['emoji']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-muted">
+                            <strong><?= count($replies) ?></strong> commentaire<?= count($replies) > 1 ? 's' : '' ?> 
+                            trouvé<?= count($replies) > 1 ? 's' : '' ?> pour cet article
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-info">
+                        <i class="fas fa-inbox"></i> Aucun commentaire trouvé pour cet article.
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Info technique -->
+        <div class="mt-5 p-4" style="background: #f0f7ff; border-left: 4px solid #007bff; border-radius: 5px;">
+            <h5><i class="fas fa-database"></i> Information Technique</h5>
+            <p style="margin: 0; color: #555;">
+                <strong>Jointures SQL utilisées:</strong><br>
+                <code>SELECT r.* FROM reply r INNER JOIN articles a ON r.id_article = a.id WHERE r.id_article = ? ORDER BY r.date_reply DESC</code><br>
+                <code>SELECT a.*, COUNT(r.id_reply) FROM articles a LEFT JOIN reply r ON a.id = r.id_article GROUP BY a.id</code>
+            </p>
+            <p style="margin: 10px 0 0 0; color: #555;">
+                Cette page démontre une jointure INNER JOIN et LEFT JOIN entre les tables 'articles' et 'reply'
+                avec validation serveur (pas de HTML5) et architecture MVC stricte.<br>
+                <strong>Colonnes reply:</strong> id_reply, id_article, contenu_text, emoji, photo, auteur, type_reply, date_reply, user_id, image_url, text_content
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

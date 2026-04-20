@@ -1,0 +1,212 @@
+<?php
+/**
+ * showProduitsByCategorie.php
+ * Vue HTML pour afficher le formulaire de recherche et les résultats
+ * Affiche les produits d'une catégorie via JOINTURE
+ */
+
+// Récupérer les données du contrôleur
+require_once __DIR__ . '/searchProduitsByCategorie.php';
+$data = include(__DIR__ . '/searchProduitsByCategorie.php');
+
+$categories = $data['categories'] ?? [];
+$produits = $data['produits'] ?? [];
+$selectedCategoryId = $data['selectedCategoryId'] ?? null;
+$selectedCategoryName = $data['selectedCategoryName'] ?? '';
+$error = $data['error'] ?? null;
+$warning = $data['warning'] ?? null;
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche de Produits par Catégorie - Jointure</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 30px 0;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        .form-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .results-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .product-item {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-info h5 {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .product-info p {
+            margin: 3px 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .product-stock {
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-left: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="mb-5">
+            <h1><i class="fas fa-boxes"></i> Recherche de Produits par Catégorie</h1>
+            <p class="subtitle">Sélectionnez une catégorie pour afficher les produits correspondants (Jointure INNER JOIN)</p>
+        </div>
+
+        <!-- Formulaire de recherche -->
+        <div class="form-card">
+            <h4 class="mb-4">Sélectionner une catégorie</h4>
+            
+            <?php if ($error): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label for="categorie" class="form-label fw-bold">Catégorie :</label>
+                        <select name="categorie" id="categorie" class="form-select form-select-lg" required>
+                            <option value="">-- Choisir une catégorie --</option>
+                            <?php if (!empty($categories)): ?>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= htmlspecialchars($cat['id']) ?>" 
+                                        <?= ($selectedCategoryId === (int)$cat['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cat['nom']) ?> 
+                                        (<?= $cat['nombre_produits'] ?> produit<?= $cat['nombre_produits'] > 1 ? 's' : '' ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" name="search" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Résultats -->
+        <?php if ($selectedCategoryId !== null): ?>
+            <div class="results-section">
+                <h3 class="mb-4">
+                    <i class="fas fa-list"></i> Produits de la catégorie : 
+                    <span style="color: #007bff;"><?= htmlspecialchars($selectedCategoryName) ?></span>
+                </h3>
+
+                <?php if ($warning): ?>
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> <?= htmlspecialchars($warning) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($produits)): ?>
+                    <div class="products-list">
+                        <?php foreach ($produits as $produit): ?>
+                            <div class="product-item">
+                                <div class="product-info" style="flex: 1;">
+                                    <h5><?= htmlspecialchars($produit['nom']) ?></h5>
+                                    <p><strong>Slug:</strong> <?= htmlspecialchars($produit['slug']) ?></p>
+                                    <p><strong>Description:</strong> <?= htmlspecialchars(substr($produit['description'], 0, 80)) ?>...</p>
+                                    <div class="product-stock">
+                                        <span class="badge bg-info">Stock: <?= $produit['stock'] ?> unités</span>
+                                        <?php if ($produit['prescription']): ?>
+                                            <span class="badge bg-warning">Conseil Expert</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="product-price">
+                                    <?= number_format($produit['prix'], 2, ',', ' ') ?> TND
+                                </div>
+                                <?php if ($produit['image']): ?>
+                                    <img src="<?= htmlspecialchars($produit['image']) ?>" 
+                                         alt="<?= htmlspecialchars($produit['nom']) ?>" 
+                                         class="product-image"
+                                         onerror="this.style.display='none'">
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="mt-4">
+                        <p class="text-muted">
+                            <strong><?= count($produits) ?></strong> produit<?= count($produits) > 1 ? 's' : '' ?> 
+                            trouvé<?= count($produits) > 1 ? 's' : '' ?> dans cette catégorie
+                        </p>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-info">
+                        <i class="fas fa-inbox"></i> Aucun produit trouvé pour cette catégorie.
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Info technique -->
+        <div class="mt-5 p-4" style="background: #f0f7ff; border-left: 4px solid #007bff; border-radius: 5px;">
+            <h5><i class="fas fa-database"></i> Information Technique</h5>
+            <p style="margin: 0; color: #555;">
+                <strong>Jointure SQL utilisée:</strong><br>
+                <code>SELECT p.* FROM produits p INNER JOIN categories c ON p.categorie_id = c.id WHERE c.id = ?</code>
+            </p>
+            <p style="margin: 10px 0 0 0; color: #555;">
+                Cette page démontre une jointure INNER JOIN entre les tables 'produits' et 'categories'
+                avec validation serveur (pas de HTML5) et architecture MVC stricte.
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
