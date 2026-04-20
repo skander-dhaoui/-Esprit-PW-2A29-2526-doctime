@@ -1205,8 +1205,655 @@ JS;
     // ÉVÉNEMENTS / CONTACT / À PROPOS
     // =============================================
 
-    public function listeEvenements(): void { $this->renderTemporaryView('Événements', '<p>Page des événements en construction...</p>'); }
-    public function detailEvenement($id): void { $this->renderTemporaryView('Détail de l\'événement', '<p>Événement ID: ' . htmlspecialchars($id) . '</p>'); }
+    public function listeEvenements(): void {
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $events = $eventModel->getAll();
+        $upcomingEvents = $eventModel->getUpcoming();
+        $featuredEvents = $eventModel->getFeatured();
+        
+        $isLoggedIn = isset($_SESSION['user_id']);
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .event-header {
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+                color: white; padding: 60px 0; text-align: center; margin-bottom: 40px;
+            }
+            .event-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .event-header .lead { font-size: 1.2rem; opacity: 0.9; }
+            .event-card {
+                background: white; border-radius: 16px; padding: 0;
+                margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+                transition: transform 0.3s; overflow: hidden; position: relative;
+            }
+            .event-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+            .event-image { height: 200px; background-size: cover; background-position: center; background-color: #e9ecef; }
+            .event-status-badge {
+                position: absolute; top: 10px; left: 10px; background: #4CAF50;
+                color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            }
+            .event-body { padding: 20px; }
+            .event-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+            .event-title a { color: #1a2035; text-decoration: none; }
+            .event-title a:hover { color: #2A7FAA; }
+            .event-meta { font-size: 13px; color: #6c757d; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+            .event-meta i { color: #2A7FAA; width: 16px; }
+            .event-excerpt { color: #555; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+            .event-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee; }
+            .event-price { font-size: 18px; font-weight: bold; color: #2A7FAA; }
+            .event-price .tnf { font-size: 12px; color: #6c757d; }
+            .btn-register {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: white; border: none; border-radius: 25px;
+                padding: 8px 20px; font-size: 13px; text-decoration: none; display: inline-block;
+                transition: opacity 0.3s;
+            }
+            .btn-register:hover { opacity: 0.9; color: white; }
+            .no-events { text-align: center; padding: 40px 20px; color: #6c757d; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- EN-TÊTE -->
+        <div class="event-header">
+            <div class="container">
+                <h1><i class="fas fa-calendar-alt me-3"></i>Événements médicaux</h1>
+                <p class="lead">Conférences, ateliers et rencontres médicales</p>
+            </div>
+        </div>
+
+        <!-- SPONSORS SHOWCASE -->
+        <div style="background: white; padding: 30px 0; border-bottom: 1px solid #e0e0e0;">
+            <div class="container">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                    <div>
+                        <h5 style="color: #2A7FAA; font-weight: 700; margin-bottom: 5px;"><i class="fas fa-handshake me-2"></i>Nos Sponsors</h5>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Partenaires qui soutiennent nos événements</p>
+                    </div>
+                    <a href="index.php?page=sponsors" class="btn btn-primary" style="background: linear-gradient(135deg, #2A7FAA, #4CAF50); border: none; border-radius: 25px; padding: 10px 25px; font-weight: 600; text-decoration: none;">
+                        <i class="fas fa-arrow-right me-2"></i>Voir tous les sponsors
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENU -->
+        <div class="container mb-5">
+            <div class="row" id="eventsList">';
+
+        if (empty($upcomingEvents)) {
+            $content .= '<div class="col-12"><div class="no-events"><i class="fas fa-calendar-check fa-3x mb-3"></i><p>Aucun événement disponible pour le moment.</p></div></div>';
+        } else {
+            foreach ($upcomingEvents as $event) {
+                $dateDebut = date('d/m/Y', strtotime($event['date_debut']));
+                $dateFin = date('d/m/Y', strtotime($event['date_fin']));
+                $prix = $event['prix'] ?? 0;
+                $prixText = $prix > 0 ? $prix . ' DT' : 'GRATUIT';
+                $lieu = $event['lieu'] ?? 'À déterminer';
+                $description = htmlspecialchars(substr($event['description'] ?? '', 0, 150)) . '...';
+                $image = htmlspecialchars($event['image'] ?? 'https://via.placeholder.com/400x200?text=Event');
+                
+                $content .= '
+                <div class="col-md-6 col-lg-4 event-item">
+                    <div class="event-card">
+                        <div class="event-status-badge">Planifié</div>
+                        <div class="event-image" style="background-image: url(\'' . $image . '\')"></div>
+                        <div class="event-body">
+                            <h3 class="event-title">
+                                <a href="index.php?page=detail_evenement&slug=' . htmlspecialchars($event['slug']) . '">
+                                    ' . htmlspecialchars($event['titre']) . '
+                                </a>
+                            </h3>
+                            <div class="event-meta">
+                                <i class="fas fa-calendar"></i>
+                                <span>' . $dateDebut . ' - ' . $dateFin . '</span>
+                            </div>
+                            <div class="event-meta">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>' . $lieu . '</span>
+                            </div>
+                            <p class="event-excerpt">' . $description . '</p>
+                            ' . (!empty($event['sponsor_nom']) ? '<div class="event-meta"><i class="fas fa-handshake"></i><span>Sponsor: ' . htmlspecialchars($event['sponsor_nom']) . '</span></div>' : '') . '
+                            <div class="event-footer">
+                                <div class="event-price">' . $prixText . '</div>
+                                <a href="index.php?page=detail_evenement&slug=' . htmlspecialchars($event['slug']) . '" class="btn-register">
+                                    <i class="fas fa-info-circle"></i> Plus de détails
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>';
+            }
+        }
+
+        $content .= '
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        ';
+
+        $this->renderPublicView('Événements', $content);
+    }
+    
+    public function detailEvenement($id = null): void {
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        
+        // Get slug from URL parameter
+        $slug = isset($_GET['slug']) ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
+        
+        // Try to fetch event by slug first, then by ID
+        $event = null;
+        if ($slug) {
+            $event = $eventModel->getBySlug($slug);
+        } elseif ($id) {
+            $event = $eventModel->getById($id);
+        }
+        
+        if (!$event) {
+            $this->page404();
+            return;
+        }
+        
+        $isLoggedIn = isset($_SESSION['user_id']);
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        // Format dates
+        $dateDebut = date('d/m/Y H:i', strtotime($event['date_debut']));
+        $dateFin = date('d/m/Y H:i', strtotime($event['date_fin']));
+        $dateDebutFull = date('d F Y', strtotime($event['date_debut']));
+        
+        // Format pricing
+        $prix = $event['prix'] ?? 0;
+        $prixText = $prix > 0 ? number_format($prix, 2, ',', ' ') . ' DT' : 'GRATUIT';
+        
+        // Get sponsor info
+        $sponsor = $event['sponsor_nom'] ?? null;
+        
+        // Participants
+        $participants = $event['nb_participants'] ?? 0;
+        $capacite = $event['capacite_max'] ?? 0;
+        $placesDisponibles = $capacite > 0 ? max(0, $capacite - $participants) : '∞';
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .event-hero { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white; padding: 40px 0; margin-bottom: 30px; }
+            .event-hero h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .event-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 30px; }
+            .event-header-section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+            .event-meta-row { display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 20px; }
+            .event-meta-item { display: flex; align-items: center; gap: 10px; }
+            .event-meta-item i { color: #2A7FAA; font-size: 20px; width: 30px; text-align: center; }
+            .event-meta-item span { font-size: 16px; color: #333; }
+            .event-meta-label { color: #6c757d; font-size: 13px; }
+            .event-price-section { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white; border-radius: 12px; padding: 25px; text-align: center; }
+            .event-price { font-size: 36px; font-weight: bold; margin-bottom: 10px; }
+            .register-btn { background: white; color: #2A7FAA; border: none; border-radius: 25px; padding: 12px 35px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-top: 15px; }
+            .register-btn:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+            .event-description { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); line-height: 1.8; color: #333; }
+            .event-description h3 { color: #2A7FAA; margin-bottom: 15px; font-size: 1.5rem; }
+            .info-card { background: #f8f9fa; border-left: 4px solid #2A7FAA; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .info-card h4 { color: #2A7FAA; margin-bottom: 10px; }
+            .back-btn { display: inline-block; margin-bottom: 20px; }
+            .back-btn a { color: #2A7FAA; text-decoration: none; font-weight: 600; transition: all 0.3s; }
+            .back-btn a:hover { color: #4CAF50; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- NAVBAR -->
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a class="navbar-brand" href="index.php?page=accueil">
+                    <i class="fas fa-stethoscope me-2"></i>Valorys
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=sponsors">Sponsors</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                        ' . ($isLoggedIn ? '
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                        ' : '
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
+                        ') . '
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- HERO SECTION -->
+        <div class="event-hero">
+            <div class="container">
+                <div class="back-btn">
+                    <a href="index.php?page=evenements"><i class="fas fa-arrow-left me-2"></i>Retour aux événements</a>
+                </div>
+                <h1><i class="fas fa-calendar-alt me-3"></i>' . htmlspecialchars($event['titre']) . '</h1>
+                <p class="lead">' . date('d F Y', strtotime($event['date_debut'])) . '</p>
+            </div>
+        </div>
+
+        <!-- CONTENU PRINCIPAL -->
+        <div class="container mb-5">
+            <div class="row">
+                <div class="col-lg-8">
+                    ' . (!empty($event['image']) ? '<img src="' . htmlspecialchars($event['image']) . '" alt="' . htmlspecialchars($event['titre']) . '" class="event-image">' : '') . '
+
+                    <!-- Description -->
+                    <div class="event-description">
+                        <h3><i class="fas fa-file-alt me-2"></i>Description</h3>
+                        ' . nl2br(htmlspecialchars($event['description'] ?? 'Aucune description disponible.')) . '
+                    </div>
+
+                    <!-- Détails -->
+                    <div class="event-header-section">
+                        <h3 class="mb-4"><i class="fas fa-info-circle me-2"></i>Détails de l\'événement</h3>
+                        
+                        <div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <div>
+                                    <div class="event-meta-label">Date de début</div>
+                                    <span>' . $dateDebut . '</span>
+                                </div>
+                            </div>
+                            <div class="event-meta-item">
+                                <i class="fas fa-calendar-check"></i>
+                                <div>
+                                    <div class="event-meta-label">Date de fin</div>
+                                    <span>' . $dateFin . '</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div>
+                                    <div class="event-meta-label">Lieu</div>
+                                    <span>' . htmlspecialchars($event['lieu'] ?? 'À déterminer') . '</span>
+                                </div>
+                            </div>
+                            <div class="event-meta-item">
+                                <i class="fas fa-location-dot"></i>
+                                <div>
+                                    <div class="event-meta-label">Adresse</div>
+                                    <span>' . htmlspecialchars($event['adresse'] ?? 'Non renseignée') . '</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ' . ($sponsor ? '<div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-handshake"></i>
+                                <div>
+                                    <div class="event-meta-label">Sponsor</div>
+                                    <span>' . htmlspecialchars($sponsor) . '</span>
+                                </div>
+                            </div>
+                        </div>' : '') . '
+                    </div>
+
+                    <!-- Places disponibles -->
+                    <div class="info-card">
+                        <h4><i class="fas fa-chair me-2"></i>Capacité & Inscription</h4>
+                        <p><strong>Capacité maximale:</strong> ' . ($capacite > 0 ? $capacite . ' personnes' : 'Illimitée') . '</p>
+                        <p><strong>Participants actuels:</strong> ' . $participants . '</p>
+                        <p><strong>Places disponibles:</strong> ' . ($placesDisponibles === '∞' ? 'Illimitées' : $placesDisponibles) . '</p>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR -->
+                <div class="col-lg-4">
+                    <!-- Prix & Inscription -->
+                    <div class="event-price-section">
+                        <div>Tarif</div>
+                        <div class="event-price">' . $prixText . '</div>
+                        <button class="register-btn">
+                            <i class="fas fa-check-circle me-2"></i>' . ($isLoggedIn ? 'S\'inscrire' : 'Se connecter pour s\'inscrire') . '
+                        </button>
+                    </div>
+
+                    <!-- Informations supplémentaires -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                        <h4 class="mb-3"><i class="fas fa-star me-2"></i>À propos de cet événement</h4>
+                        
+                        <div class="info-card" style="border-left-color: #4CAF50;">
+                            <p><strong>Status:</strong> <span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">' . ucfirst($event['status'] ?? 'à venir') . '</span></p>
+                        </div>
+
+                        <div class="info-card" style="border-left-color: #2A7FAA;">
+                            <p><small><i class="fas fa-question-circle me-2"></i>Vous avez une question sur cet événement? <a href="index.php?page=contact" style="color: #2A7FAA; font-weight: 600;">Contactez-nous</a></small></p>
+                        </div>
+                    </div>
+
+                    <!-- Partage social -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                        <h4 class="mb-3"><i class="fas fa-share-alt me-2"></i>Partager</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="https://www.facebook.com/sharer/sharer.php?u=' . urlencode($_SERVER['REQUEST_URI']) . '" target="_blank" class="btn btn-sm btn-primary" style="flex: 1; text-align: center;">
+                                <i class="fab fa-facebook"></i> Facebook
+                            </a>
+                            <a href="https://twitter.com/intent/tweet?url=' . urlencode($_SERVER['REQUEST_URI']) . '&text=' . urlencode($event['titre']) . '" target="_blank" class="btn btn-sm btn-info" style="flex: 1; text-align: center;">
+                                <i class="fab fa-twitter"></i> Twitter
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            const eventId = ' . (int)$event['id'] . ';
+            const isLoggedIn = ' . ($isLoggedIn ? 'true' : 'false') . ';
+            
+            document.querySelector(".register-btn").addEventListener("click", function() {
+                if (isLoggedIn) {
+                    registerForEvent(eventId);
+                } else {
+                    window.location.href = "index.php?page=login";
+                }
+            });
+            
+            function registerForEvent(eventId) {
+                const btn = document.querySelector(".register-btn");
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = \'<i class="fas fa-spinner fa-spin me-2"></i>Inscription en cours...\';
+                
+                fetch("index.php?page=event_register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: "event_id=" + eventId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.innerHTML = \'<i class="fas fa-check-circle me-2"></i>Inscription confirmée!\';
+                        btn.style.background = "#4CAF50";
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        alert("Erreur: " + (data.message || "Impossible de s\'inscrire"));
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                })
+                .catch(err => {
+                    console.error("Erreur:", err);
+                    alert("Erreur de connexion. Veuillez réessayer.");
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                });
+            }
+        </script>
+        ';
+
+        $this->renderPublicView(htmlspecialchars($event['titre']), $content);
+    }
+    
+    public function registerEventAction(): void {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter.']);
+            exit;
+        }
+        
+        $eventId = isset($_POST['event_id']) ? (int)$_POST['event_id'] : null;
+        $userId = $_SESSION['user_id'];
+        
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'ID d\'événement invalide.']);
+            exit;
+        }
+        
+        require_once __DIR__ . '/../models/Event.php';
+        require_once __DIR__ . '/../models/Participation.php';
+        
+        $eventModel = new Event();
+        $participationModel = new Participation();
+        
+        // Check if event exists
+        $event = $eventModel->getById($eventId);
+        if (!$event) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
+            exit;
+        }
+        
+        // Check if user is already registered
+        $alreadyRegistered = $participationModel->checkUserEvent($userId, $eventId);
+        if ($alreadyRegistered) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Vous êtes déjà inscrit à cet événement.']);
+            exit;
+        }
+        
+        // Register user
+        $result = $participationModel->create([
+            'event_id' => $eventId,
+            'user_id' => $userId,
+            'statut' => 'inscrit'
+        ]);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Inscription confirmée!',
+                'participation_id' => $result
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'inscription.']);
+        }
+        exit;
+    }
+    
+    public function listSponsors(): void {
+        require_once __DIR__ . '/../models/Sponsor.php';
+        $sponsorModel = new Sponsor();
+        $sponsors = $sponsorModel->getAll(0, 100, 'actif');
+        
+        // Map niveau enum values to French display names
+        $levelMap = [
+            'platinium' => 'Platine',
+            'gold' => 'Or',
+            'silver' => 'Argent',
+            'bronze' => 'Bronze'
+        ];
+        
+        // Group by niveau (level) using mapped names
+        $sponsorsByLevel = [];
+        foreach ($sponsors as $sponsor) {
+            $levelKey = $levelMap[$sponsor['niveau']] ?? 'autre';
+            if (!isset($sponsorsByLevel[$levelKey])) {
+                $sponsorsByLevel[$levelKey] = [];
+            }
+            $sponsorsByLevel[$levelKey][] = $sponsor;
+        }
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .sponsors-header {
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+                color: white; padding: 60px 0; text-align: center; margin-bottom: 40px;
+            }
+            .sponsors-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .sponsors-header .lead { font-size: 1.1rem; opacity: 0.9; }
+            .sponsor-card {
+                background: white; border-radius: 12px; padding: 30px 20px;
+                margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                transition: transform 0.3s, box-shadow 0.3s;
+                display: flex; flex-direction: column; align-items: center; text-align: center;
+            }
+            .sponsor-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+            .sponsor-icon {
+                width: 80px; height: 80px; background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                color: white; font-size: 40px; flex-shrink: 0; margin-bottom: 15px;
+            }
+            .sponsor-info { width: 100%; }
+            .sponsor-name { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 10px; }
+            .sponsor-level {
+                display: inline-block; padding: 5px 14px; border-radius: 20px;
+                font-size: 12px; font-weight: bold; margin-bottom: 12px;
+            }
+            .level-platine { background: #e0d4f7; color: #6f4e8f; }
+            .level-or { background: #ffd700; color: #8b7500; }
+            .level-argent { background: #e8e8e8; color: #5a5a5a; }
+            .level-bronze { background: #f0a875; color: #7a4d2f; }
+            .sponsor-contact { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+            .sponsor-contact a { color: #2A7FAA; text-decoration: none; transition: color 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+            .sponsor-contact a:hover { color: #4CAF50; }
+            .section-title {
+                font-size: 1.8rem; font-weight: 700; color: #333;
+                margin-top: 40px; margin-bottom: 30px; padding-bottom: 15px;
+                border-bottom: 3px solid #2A7FAA;
+            }
+            .row { margin-bottom: 30px; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- HEADER -->
+        <div class="sponsors-header">
+            <div class="container">
+                <h1><i class="fas fa-handshake me-3"></i>Nos Sponsors</h1>
+                <p class="lead">Partenaires qui soutiennent les événements médicaux</p>
+            </div>
+        </div>
+
+        <!-- SPONSORS LIST -->
+        <div class="container mb-5">';
+
+        // Platinum sponsors
+        if (!empty($sponsorsByLevel['Platine'])) {
+            $content .= '<div class="section-title"><i class="fas fa-crown me-2" style="color: #e0d4f7;"></i>Sponsors Platine</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Platine'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-platine');
+            }
+            $content .= '</div>';
+        }
+
+        // Gold sponsors
+        if (!empty($sponsorsByLevel['Or'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #ffd700;"></i>Sponsors Or</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Or'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-or');
+            }
+            $content .= '</div>';
+        }
+
+        // Silver sponsors
+        if (!empty($sponsorsByLevel['Argent'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #a9a9a9;"></i>Sponsors Argent</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Argent'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-argent');
+            }
+            $content .= '</div>';
+        }
+
+        // Bronze sponsors
+        if (!empty($sponsorsByLevel['Bronze'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #cd7f32;"></i>Sponsors Bronze</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Bronze'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-bronze');
+            }
+            $content .= '</div>';
+        }
+
+        // Other sponsors
+        if (!empty($sponsorsByLevel['autre']) || (count($sponsorsByLevel) === 1 && !empty($sponsorsByLevel['autre']))) {
+            $content .= '<div class="section-title"><i class="fas fa-building me-2"></i>Autres Partenaires</div>
+            <div class="row">';
+            $otherSponsors = $sponsorsByLevel['autre'] ?? [];
+            foreach ($otherSponsors as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-autre');
+            }
+            $content .= '</div>';
+        }
+
+        if (empty($sponsors)) {
+            $content .= '<div class="alert alert-info text-center" style="padding: 40px;">
+                <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
+                <p>Aucun sponsor disponible pour le moment.</p>
+            </div>';
+        }
+
+        $content .= '
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        ';
+
+        $this->renderPublicView('Nos Sponsors', $content);
+    }
+    
+    private function getSponsorCard($sponsor, $levelClass): string {
+        $logo = $sponsor['logo'] ?? 'https://via.placeholder.com/80?text=' . htmlspecialchars(substr($sponsor['nom'], 0, 2));
+        $email = $sponsor['email'] ?? null;
+        $phone = $sponsor['telephone'] ?? null;
+        $website = $sponsor['site_web'] ?? null;
+        $niveau = $sponsor['niveau'] ?? 'Partenaire';
+        
+        return '
+        <div class="col-md-6 col-lg-4">
+            <div class="sponsor-card">
+                <div class="sponsor-icon" style="background: url(\'' . htmlspecialchars($logo) . '\') center/contain no-repeat, linear-gradient(135deg, #2A7FAA, #4CAF50);"><i class="fas fa-building"></i></div>
+                <div class="sponsor-info">
+                    <div class="sponsor-name">' . htmlspecialchars($sponsor['nom']) . '</div>
+                    <div class="sponsor-level ' . $levelClass . '">' . ucfirst($niveau) . '</div>
+                    <div class="sponsor-contact">
+                        ' . ($email ? '<a href="mailto:' . htmlspecialchars($email) . '" title="Email"><i class="fas fa-envelope"></i>' . htmlspecialchars($email) . '</a>' : '') . '
+                        ' . ($phone ? '<a href="tel:' . htmlspecialchars($phone) . '" title="Téléphone"><i class="fas fa-phone"></i>' . htmlspecialchars($phone) . '</a>' : '') . '
+                        ' . ($website ? '<a href="' . htmlspecialchars($website) . '" target="_blank" title="Site web"><i class="fas fa-link"></i></a>' : '') . '
+                    </div>
+                </div>
+            </div>
+        </div>';
+    }
+    
     public function contact(): void {
         $this->renderTemporaryView('Contact', '
             <form method="POST">
@@ -2111,6 +2758,7 @@ public function monProfil(): void {
                         <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=sponsors"><i class="fas fa-handshake me-1"></i>Sponsors</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
                     </ul>
                     <ul class="navbar-nav ms-auto">' . $rightLinks . '</ul>

@@ -90,7 +90,7 @@ $disponibiliteCtrl = class_exists('DisponibiliteController') ? new Disponibilite
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
     'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
-    'evenements', 'detail_evenement', 'contact', 'about',
+    'evenements', 'detail_evenement', 'event_register', 'sponsors', 'contact', 'about',
 ];
 
 $guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login'];
@@ -343,6 +343,14 @@ switch ($page) {
 
     case 'detail_evenement':
         $front->detailEvenement($id);
+        break;
+
+    case 'event_register':
+        $front->registerEventAction();
+        break;
+
+    case 'sponsors':
+        $front->listSponsors();
         break;
 
     case 'contact':

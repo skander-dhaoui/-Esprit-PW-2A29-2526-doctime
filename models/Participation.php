@@ -90,6 +90,17 @@ class Participation {
         }
     }
 
+    public function checkUserEvent(int $userId, int $eventId): ?array {
+        try {
+            $sql = "SELECT * FROM participations WHERE user_id = :user_id AND event_id = :event_id LIMIT 1";
+            $result = $this->db->query($sql, [':user_id' => $userId, ':event_id' => $eventId]);
+            return $result ? $result[0] : null;
+        } catch (Exception $e) {
+            error_log('Erreur Participation::checkUserEvent - ' . $e->getMessage());
+            return null;
+        }
+    }
+
     // ─────────────────────────────────────────
     //  Récupération avec filtres
     // ─────────────────────────────────────────
