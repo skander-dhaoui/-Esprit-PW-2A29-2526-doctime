@@ -345,8 +345,21 @@
         let stream = null;
 
         function openCameraModal() {
+            const savedEmail = localStorage.getItem('valorys_face_email') || '';
+
+            if (!savedEmail) {
+                // Aucun profil Face ID enregistré sur ce navigateur
+                showError(
+                    'Aucun visage enregistré sur cet appareil. ' +
+                    'Connectez-vous d\'abord avec email/mot de passe, puis enregistrez votre visage dans votre profil.'
+                );
+                return;
+            }
+
             document.getElementById('cameraModal').classList.add('open');
-            document.getElementById('cameraMessage').innerHTML = '';
+            // Afficher quel compte est lié à ce navigateur
+            document.getElementById('cameraMessage').innerHTML =
+                `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${savedEmail}</strong></span>`;
             startCamera();
         }
 
