@@ -105,6 +105,21 @@
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
+            <?php
+            // Afficher $_SESSION['errors'] (tableau — format utilisé par AuthController::login())
+            if (!empty($_SESSION['errors']) && is_array($_SESSION['errors'])):
+                foreach ($_SESSION['errors'] as $errKey => $errMsg):
+            ?>
+                <div class="alert-session alert-session-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars((string)$errMsg) ?>
+                </div>
+            <?php
+                endforeach;
+                unset($_SESSION['errors']);
+            endif;
+            ?>
+
             <button type="button" class="btn-camera" onclick="openCameraModal()">
                 <i class="fas fa-camera me-2"></i> Connexion avec reconnaissance faciale
             </button>
@@ -123,6 +138,7 @@
 
             <form id="loginForm" method="POST" action="index.php?page=login" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="patient">
+                <input type="hidden" name="captcha_response" id="captchaResponse" value="">
 
                 <!-- Email -->
                 <div class="mb-3">
@@ -210,19 +226,40 @@
 
     <script>
         // ── CAPTCHA ──────────────────────────────────────────────────────────
-        let currentCaptcha = "";
-
-        function generateCaptcha() {
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
-            let c = "";
-            for (let i = 0; i < 6; i++) c += chars.charAt(Math.floor(Math.random() * chars.length));
-            currentCaptcha = c;
-            document.getElementById("captchaCode").innerText = c;
-            // Reset captcha field error on regeneration
-            clearFieldError('captchaInput', 'captchaError');
+        let currentCaptcha = "<?= htmlspecialchars($_SESSION['captcha_code'] ?? '', ENT_QUOTES, 'UTF-8') ?>";
+        
+        // Si pas de captcha en session, le charger du serveur
+        if (!currentCaptcha || currentCaptcha === '') {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.captcha) {
+                        currentCaptcha = data.captcha;
+                        document.getElementById("captchaCode").innerText = currentCaptcha;
+                    } else {
+                        console.error('Erreur captcha:', data.error);
+                    }
+                })
+                .catch(err => console.error('Erreur AJAX captcha:', err));
+        } else {
+            // Afficher le captcha initial depuis la session serveur
+            document.getElementById("captchaCode").innerText = currentCaptcha;
         }
 
-        generateCaptcha();
+        function generateCaptcha() {
+            // Au clic sur rafraîchir, on demande un nouveau captcha côté serveur via AJAX
+            fetch('index.php?action=generate_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.captcha) {
+                        currentCaptcha = data.captcha;
+                        document.getElementById("captchaCode").innerText = currentCaptcha;
+                        document.getElementById("captchaInput").value = '';
+                        clearFieldError('captchaInput', 'captchaError');
+                    }
+                })
+                .catch(err => console.error('Erreur rafraîchissement captcha:', err));
+        }
 
         // ── RÔLE ─────────────────────────────────────────────────────────────
         document.querySelectorAll('.role-option').forEach(option => {
@@ -336,6 +373,9 @@
                 e.preventDefault();
                 return false;
             }
+            // Envoyer ce que l'utilisateur a tapé (en majuscules) comme captcha_response
+            const captchaInput = document.getElementById('captchaInput').value.toUpperCase().trim();
+            document.getElementById('captchaResponse').value = captchaInput;
             // Désactiver le bouton pour éviter la double soumission
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
@@ -365,20 +405,36 @@
             }
         }
 
-        function openCameraModal() {
-            const savedEmail = localStorage.getItem('valorys_face_email') || '';
+        function getFaceLoginContext() {
+            const typedEmail = (document.getElementById('email')?.value || '').trim();
+            const savedEmail = (localStorage.getItem('valorys_face_email') || '').trim();
+            const savedRole = (localStorage.getItem('valorys_face_role') || '').trim();
+            const roleInput = document.getElementById('selectedRole');
+            const selectedRole = roleInput ? roleInput.value : 'patient';
+            const resolvedEmail = typedEmail || savedEmail;
+            const resolvedRole = (resolvedEmail && savedEmail && resolvedEmail.toLowerCase() === savedEmail.toLowerCase() && savedRole)
+                ? savedRole
+                : selectedRole;
 
-            if (!savedEmail) {
+            return {
+                email: resolvedEmail,
+                role: resolvedRole || savedRole || 'patient'
+            };
+        }
+
+        function openCameraModal() {
+            const context = getFaceLoginContext();
+
+            if (!context.email) {
                 showError(
-                    'Aucun visage enregistré sur cet appareil. ' +
-                    'Connectez-vous d\'abord avec email/mot de passe, puis enregistrez votre visage dans votre profil.'
+                    'Saisissez d\'abord votre email ou utilisez l\'appareil sur lequel vous avez enregistré votre visage.'
                 );
                 return;
             }
 
             document.getElementById('cameraModal').classList.add('open');
             document.getElementById('cameraMessage').innerHTML =
-                `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${savedEmail}</strong></span>`;
+                `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${context.email}</strong></span>`;
             startCamera();
 
             // Précharger les modèles en arrière-plan
@@ -407,8 +463,14 @@
             const ctx     = canvas.getContext('2d');
             const msgDiv  = document.getElementById('cameraMessage');
 
-            const savedEmail = localStorage.getItem('valorys_face_email') || '';
-            const savedRole  = localStorage.getItem('valorys_face_role')  || 'patient';
+            const contextData = getFaceLoginContext();
+            const savedEmail = contextData.email;
+            const savedRole  = contextData.role;
+
+            if (!savedEmail) {
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Email introuvable. Saisissez votre email puis réessayez.</span>';
+                return;
+            }
 
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -480,7 +542,7 @@
             msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Visage reconnu (confiance: ${Math.round((1-distance)*100)}%) !</span>`;
 
             const imageData = canvas.toDataURL('image/jpeg');
-            const payload = new URLSearchParams();
+            const payload = new FormData();
             payload.append('face_image', imageData);
             payload.append('role', savedRole);
             payload.append('email', savedEmail);
@@ -488,12 +550,22 @@
             try {
                 const response = await fetch('index.php?page=face_login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: payload.toString()
+                    body: payload
                 });
-                const result = await response.json();
+                const rawText = await response.text();
+                let result = null;
+
+                try {
+                    result = JSON.parse(rawText);
+                } catch (e) {
+                    console.error('Réponse non JSON face_login:', rawText);
+                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur du serveur facial. Vérifiez l\'endpoint face_login.</span>';
+                    return;
+                }
 
                 if (result.success) {
+                    localStorage.setItem('valorys_face_email', savedEmail);
+                    localStorage.setItem('valorys_face_role', savedRole);
                     msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>${result.message}</span>`;
                     setTimeout(() => { closeCameraModal(); window.location.href = result.redirect; }, 1500);
                 } else {

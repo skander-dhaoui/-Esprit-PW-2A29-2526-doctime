@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/Patient.php';
@@ -28,15 +29,37 @@ class AdminController {
     public function dashboard(): void {
         $this->auth->requireRole('admin');
 
+        $db = Database::getInstance()->getConnection();
+
+        // Récupérer les statistiques
+        $totalUsersStmt = $db->prepare("SELECT COUNT(*) as count FROM users");
+        $totalUsersStmt->execute();
+        $totalUsers = $totalUsersStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+        $medecinStmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'medecin'");
+        $medecinStmt->execute();
+        $totalMedecins = $medecinStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+        $patientStmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'patient'");
+        $patientStmt->execute();
+        $totalPatients = $patientStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+        $validationStmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE statut = 'en_attente'");
+        $validationStmt->execute();
+        $enValidation = $validationStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
         $stats = [
-            'total_users'     => $this->userModel->count(),
-            'total_medecins'  => $this->userModel->countByRole('medecin'),
-            'total_patients'  => $this->userModel->countByRole('patient'),
-            'en_validation'   => $this->userModel->countByStatus('en_attente'),
+            'total_users'     => $totalUsers,
+            'total_medecins'  => $totalMedecins,
+            'total_patients'  => $totalPatients,
+            'en_validation'   => $enValidation,
         ];
 
-        $recentUsers = $this->userModel->getRecent(5);
-        $users       = $recentUsers;
+        // Récupérer les utilisateurs récents
+        $recentStmt = $db->prepare("SELECT id, nom, prenom, email, role, statut, created_at FROM users ORDER BY created_at DESC LIMIT 5");
+        $recentStmt->execute();
+        $recentUsers = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
+        $users = $recentUsers;
 
         $viewPath = __DIR__ . '/../views/backoffice/dashboard.php';
         if (file_exists($viewPath)) {
@@ -53,10 +76,10 @@ class AdminController {
         $this->auth->requireRole('admin');
 
         $statsData = [
-            'inscriptions_par_mois' => $this->userModel->getMonthlyRegistrations(),
-            'repartition_roles'     => $this->userModel->getRepartitionByRole(),
-            'top_specialites'       => $this->medecinModel->getTopSpecialities(),
-            'rdv_par_mois'          => $this->medecinModel->getMonthlyAppointments(),
+            'inscriptions_par_mois' => $this->getMonthlyRegistrations(),
+            'repartition_roles'     => $this->getRepartitionByRole(),
+            'top_specialites'       => $this->getTopSpecialities(),
+            'rdv_par_mois'          => $this->getMonthlyAppointments(),
         ];
 
         $viewPath = __DIR__ . '/../views/backoffice/stats.php';
@@ -68,7 +91,20 @@ class AdminController {
     // ─────────────────────────────────────────
     public function listUsers(): void {
         $this->auth->requireRole('admin');
-        $users = $this->userModel->getAll();
+        $filters = $this->getBackofficeListFilters(
+            [
+                'created_at' => 'u.created_at',
+                'nom' => 'u.nom',
+                'email' => 'u.email',
+                'role' => 'u.role',
+                'statut' => 'u.statut',
+            ],
+            'created_at',
+            'desc'
+        );
+        $result = $this->getFilteredUsers($filters);
+        $users = $result['items'];
+        $pagination = $result['pagination'];
         $page_title = 'Gestion des utilisateurs';
         $current_page = 'users';
         require __DIR__ . '/../views/backoffice/users_list.php';
@@ -103,7 +139,7 @@ class AdminController {
             $errors['email'] = 'L\'email est obligatoire.';
         } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'L\'email n\'est pas valide.';
-        } elseif ($this->userModel->findByEmail($data['email'])) {
+        } elseif ($this->findUserByEmail($data['email'])) {
             $errors['email'] = 'Cet email est déjà utilisé.';
         }
         if (empty($_POST['password'])) {
@@ -124,12 +160,12 @@ class AdminController {
         }
 
         $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        $userId = $this->userModel->create($data);
+        $userId = $this->createUserRecord($data);
 
         if ($data['role'] === 'patient') {
-            $this->userModel->upsertPatient($userId, ['groupe_sanguin' => $_POST['groupe_sanguin'] ?? null]);
+            $this->upsertPatientExtra($userId, ['groupe_sanguin' => $_POST['groupe_sanguin'] ?? null]);
         } elseif ($data['role'] === 'medecin') {
-            $this->userModel->upsertMedecin($userId, [
+            $this->upsertMedecinExtra($userId, [
                 'specialite'      => $_POST['specialite']      ?? '',
                 'numero_ordre'    => $_POST['numero_ordre']    ?? '',
                 'tarif'           => $_POST['tarif']           ?? 0,
@@ -146,9 +182,9 @@ class AdminController {
 
     public function editUser(int $id): void {
         $this->auth->requireRole('admin');
-        $user   = $this->userModel->findById($id);
+        $user   = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
-        $extras = $this->userModel->getExtras($id, $user['role']);
+        $extras = $this->getUserExtras($id, $user['role']);
         $errors = [];
 
         $viewPath = __DIR__ . '/../views/backoffice/user_edit.php';
@@ -165,7 +201,7 @@ class AdminController {
             exit;
         }
 
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
         $data = $this->extractUserFormData(false);
@@ -183,7 +219,7 @@ class AdminController {
         } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'L\'email n\'est pas valide.';
         } else {
-            $existing = $this->userModel->findByEmail($data['email']);
+            $existing = $this->findUserByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 $errors['email'] = 'Cet email est déjà utilisé.';
             }
@@ -194,7 +230,7 @@ class AdminController {
         
         // Si erreurs, retourner à la vue
         if (!empty($errors)) {
-            $extras = $this->userModel->getExtras($id, $user['role']);
+            $extras = $this->getUserExtras($id, $user['role']);
             $viewPath = __DIR__ . '/../views/backoffice/user_edit.php';
             if (!file_exists($viewPath)) {
                 $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
@@ -207,12 +243,12 @@ class AdminController {
             $data['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
         }
 
-        $this->userModel->update($id, $data);
+        $this->updateUserRecord($id, $data);
 
         if ($data['role'] === 'patient') {
-            $this->userModel->upsertPatient($id, ['groupe_sanguin' => $_POST['groupe_sanguin'] ?? null]);
+            $this->upsertPatientExtra($id, ['groupe_sanguin' => $_POST['groupe_sanguin'] ?? null]);
         } elseif ($data['role'] === 'medecin') {
-            $this->userModel->upsertMedecin($id, [
+            $this->upsertMedecinExtra($id, [
                 'specialite'      => $_POST['specialite']      ?? '',
                 'numero_ordre'    => $_POST['numero_ordre']    ?? '',
                 'tarif'           => $_POST['tarif']           ?? 0,
@@ -229,9 +265,9 @@ class AdminController {
 
     public function showUser(int $id): void {
         $this->auth->requireRole('admin');
-        $user   = $this->userModel->findById($id);
+        $user   = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
-        $extras = $this->userModel->getExtras($id, $user['role']);
+        $extras = $this->getUserExtras($id, $user['role']);
         $viewPath = __DIR__ . '/../views/backoffice/user_show.php';
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
@@ -271,7 +307,7 @@ class AdminController {
             // Nettoyer aussi patients.medecin_traitant_id (SET NULL)
             try { $db->prepare("UPDATE patients SET medecin_traitant_id = NULL WHERE medecin_traitant_id = ?")->execute([$id]); } catch (Exception $ignore) {}
 
-            $this->userModel->delete($id);
+            $this->deleteUserRecord($id);
             $this->logAction('Suppression utilisateur', "Utilisateur #$id supprimé");
             $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur supprimé avec toutes ses données associées.'];
         } catch (Exception $e) {
@@ -306,11 +342,11 @@ class AdminController {
 
     public function toggleStatus(int $id): void {
         $this->auth->requireRole('admin');
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
         $newStatus = ($user['statut'] === 'actif') ? 'inactif' : 'actif';
-        $this->userModel->update($id, ['statut' => $newStatus]);
+        $this->updateUserRecord($id, ['statut' => $newStatus]);
         $this->logAction('Changement statut', "Utilisateur #$id -> $newStatus");
         header('Location: index.php?page=users');
         exit;
@@ -321,19 +357,26 @@ class AdminController {
     // ─────────────────────────────────────────
     public function listPatients(): void {
         try {
-            $db = Database::getInstance()->getConnection();
-            $stmt = $db->query("
-                SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut, u.created_at,
-                       p.groupe_sanguin
-                FROM users u
-                LEFT JOIN patients p ON u.id = p.user_id
-                WHERE u.role = 'patient'
-                ORDER BY u.created_at DESC
-            ");
-            $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $filters = $this->getBackofficeListFilters(
+                [
+                    'created_at' => 'u.created_at',
+                    'nom' => 'u.nom',
+                    'email' => 'u.email',
+                    'telephone' => 'u.telephone',
+                    'groupe_sanguin' => 'p.groupe_sanguin',
+                    'statut' => 'u.statut',
+                ],
+                'created_at',
+                'desc'
+            );
+            $result = $this->getFilteredPatients($filters);
+            $patients = $result['items'];
+            $pagination = $result['pagination'];
         } catch (Exception $e) {
             error_log('Erreur listPatients: ' . $e->getMessage());
             $patients = [];
+            $pagination = $this->buildPaginationData(0, 1, 10);
+            $filters = $this->getBackofficeListFilters([], 'created_at', 'desc');
         }
         
         $page_title = 'Gestion des patients';
@@ -378,7 +421,7 @@ class AdminController {
             $errors['email'] = 'L\'email est obligatoire.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'L\'email n\'est pas valide.';
-        } elseif ($this->userModel->findByEmail($email)) {
+        } elseif ($this->findUserByEmail($email)) {
             $errors['email'] = 'Cet email est déjà utilisé.';
         }
         if (empty($password)) {
@@ -397,7 +440,7 @@ class AdminController {
         
         try {
             // Créer l'utilisateur
-            $userId = $this->userModel->create([
+            $userId = $this->createUserRecord([
                 'nom' => $nom,
                 'prenom' => $prenom,
                 'email' => $email,
@@ -409,7 +452,7 @@ class AdminController {
             ]);
             
             // Ajouter les infos patient
-            $this->userModel->upsertPatient($userId, [
+            $this->upsertPatientExtra($userId, [
                 'groupe_sanguin' => $groupe_sanguin ?? null,
             ]);
             
@@ -431,9 +474,9 @@ class AdminController {
 
     public function showPatient(int $id): void {
         $this->auth->requireRole('admin');
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
-        $patient = $this->patientModel->findByUserId($id);
+        $patient = $this->findPatientByUserId($id);
         $viewPath = __DIR__ . '/../views/backoffice/patient_show.php';
         if (file_exists($viewPath)) {
             require_once $viewPath;
@@ -446,13 +489,13 @@ public function editPatient(int $id): void {
     $this->auth->requireRole('admin');
     
     // Récupérer l'utilisateur
-    $user = $this->userModel->findById($id);
+    $user = $this->findUserById($id);
     if (!$user) { 
         $this->notFound(); 
     }
     
     // Récupérer les infos patient
-    $patientInfo = $this->patientModel->findByUserId($id);
+    $patientInfo = $this->findPatientByUserId($id);
     
     // Fusionner les données
     $patient = [
@@ -486,7 +529,7 @@ public function updatePatient(int $id): void {
     }
     
     // Vérifier si l'utilisateur existe
-    $user = $this->userModel->findById($id);
+    $user = $this->findUserById($id);
     if (!$user) { 
         $this->notFound(); 
     }
@@ -514,7 +557,7 @@ public function updatePatient(int $id): void {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'L\'email n\'est pas valide.';
     } else {
-        $existing = $this->userModel->findByEmail($email);
+        $existing = $this->findUserByEmail($email);
         if ($existing && (int)$existing['id'] !== $id) {
             $errors['email'] = 'Cet email est déjà utilisé.';
         }
@@ -526,7 +569,7 @@ public function updatePatient(int $id): void {
     // Si erreurs, retourner à la vue
     if (!empty($errors)) {
         // Récupérer les infos patient pour la vue
-        $patientInfo = $this->patientModel->findByUserId($id);
+        $patientInfo = $this->findPatientByUserId($id);
         $patient = [
             'id' => $user['id'],
             'nom' => $user['nom'] ?? '',
@@ -564,10 +607,10 @@ public function updatePatient(int $id): void {
             $userData['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
         
-        $this->userModel->update($id, $userData);
+        $this->updateUserRecord($id, $userData);
         
         // Mettre à jour les infos patient
-        $this->patientModel->update($id, [
+        $this->updatePatientRecord($id, [
             'groupe_sanguin' => $groupe_sanguin ?? null,
         ]);
         
@@ -580,7 +623,7 @@ public function updatePatient(int $id): void {
         $errors['enregistrement'] = 'Erreur lors de la mise à jour: ' . htmlspecialchars($e->getMessage());
         
         // Récupérer les infos patient pour la vue
-        $patientInfo = $this->patientModel->findByUserId($id);
+        $patientInfo = $this->findPatientByUserId($id);
         $patient = [
             'id' => $user['id'],
             'nom' => $user['nom'] ?? '',
@@ -617,7 +660,7 @@ public function updatePatient(int $id): void {
             foreach ($fkRefs as [$table, $col]) {
                 try { $db->prepare("DELETE FROM `$table` WHERE `$col` = ?")->execute([$id]); } catch (Exception $ignore) {}
             }
-            $this->userModel->delete($id);
+            $this->deleteUserRecord($id);
             $this->logAction('Suppression patient', "Patient #$id supprimé");
             $_SESSION['flash'] = ['type' => 'success', 'message' => 'Patient supprimé avec ses données associées.'];
         } catch (Exception $e) {
@@ -633,20 +676,27 @@ public function updatePatient(int $id): void {
     // ─────────────────────────────────────────
     public function listMedecins(): void {
         try {
-            $db = Database::getInstance()->getConnection();
-            $stmt = $db->query("
-                SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.statut, u.created_at,
-                       m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse,
-                       m.statut_validation
-                FROM users u
-                LEFT JOIN medecins m ON u.id = m.user_id
-                WHERE u.role = 'medecin'
-                ORDER BY u.created_at DESC
-            ");
-            $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $filters = $this->getBackofficeListFilters(
+                [
+                    'created_at' => 'u.created_at',
+                    'nom' => 'u.nom',
+                    'email' => 'u.email',
+                    'telephone' => 'u.telephone',
+                    'specialite' => 'm.specialite',
+                    'consultation_prix' => 'm.consultation_prix',
+                    'statut' => 'u.statut',
+                ],
+                'created_at',
+                'desc'
+            );
+            $result = $this->getFilteredMedecins($filters);
+            $medecins = $result['items'];
+            $pagination = $result['pagination'];
         } catch (Exception $e) {
             error_log('Erreur listMedecins: ' . $e->getMessage());
             $medecins = [];
+            $pagination = $this->buildPaginationData(0, 1, 10);
+            $filters = $this->getBackofficeListFilters([], 'created_at', 'desc');
         }
         
         $page_title = 'Gestion des médecins';
@@ -672,14 +722,14 @@ public function updatePatient(int $id): void {
         
         try {
             // Vérifier si l'email existe déjà
-            if ($this->userModel->findByEmail($_POST['email'])) {
+            if ($this->findUserByEmail($_POST['email'])) {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
                 header('Location: index.php?page=medecins_admin&action=add');
                 exit;
             }
             
             // Créer l'utilisateur
-            $userId = $this->userModel->create([
+            $userId = $this->createUserRecord([
                 'nom' => trim($_POST['nom']),
                 'prenom' => trim($_POST['prenom']),
                 'email' => trim($_POST['email']),
@@ -690,7 +740,7 @@ public function updatePatient(int $id): void {
             ]);
             
             // Ajouter les infos médecin
-            $this->userModel->upsertMedecin($userId, [
+            $this->upsertMedecinExtra($userId, [
                 'specialite' => $_POST['specialite'] ?? '',
                 'numero_ordre' => $_POST['numero_ordre'] ?? '',
                 'tarif' => $_POST['consultation_prix'] ?? 0,
@@ -714,13 +764,13 @@ public function showMedecin(int $id): void {
     $this->auth->requireRole('admin');
     
     // Récupérer l'utilisateur
-    $user = $this->userModel->findById($id);
+    $user = $this->findUserById($id);
     if (!$user) { 
         $this->notFound(); 
     }
     
     // Récupérer les infos médecin
-    $medecinInfo = $this->medecinModel->findByUserId($id);
+    $medecinInfo = $this->findMedecinByUserId($id);
     
     // Fusionner les données
     $medecin = [
@@ -750,13 +800,13 @@ public function editMedecin(int $id): void {
     $this->auth->requireRole('admin');
     
     // Récupérer l'utilisateur
-    $user = $this->userModel->findById($id);
+    $user = $this->findUserById($id);
     if (!$user) { 
         $this->notFound(); 
     }
     
     // Récupérer les infos médecin
-    $medecin = $this->medecinModel->findByUserId($id);
+    $medecin = $this->findMedecinByUserId($id);
     
     // Fusionner les données
     if ($medecin && is_array($medecin)) {
@@ -814,7 +864,7 @@ public function editMedecin(int $id): void {
         } elseif (!filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
             $errors['email'] = 'L\'email n\'est pas valide.';
         } else {
-            $existing = $this->userModel->findByEmail($userData['email']);
+            $existing = $this->findUserByEmail($userData['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 $errors['email'] = 'Cet email est déjà utilisé.';
             }
@@ -828,8 +878,8 @@ public function editMedecin(int $id): void {
         
         // Si erreurs, retourner à la vue
         if (!empty($errors)) {
-            $user = $this->userModel->findById($id);
-            $medecin = $this->medecinModel->findByUserId($id);
+            $user = $this->findUserById($id);
+            $medecin = $this->findMedecinByUserId($id);
             
             if ($medecin && is_array($medecin)) {
                 $medecinData = array_merge($user, $medecin);
@@ -857,10 +907,10 @@ public function editMedecin(int $id): void {
             $userData['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
         }
         
-        $this->userModel->update($id, $userData);
+        $this->updateUserRecord($id, $userData);
         
         // Mettre à jour les infos médecin
-        $this->medecinModel->update($id, [
+        $this->updateMedecinRecord($id, [
             'specialite' => $_POST['specialite'] ?? '',
             'numero_ordre' => $_POST['numero_ordre'] ?? '',
             'cabinet_adresse' => $_POST['cabinet_adresse'] ?? '',
@@ -889,7 +939,7 @@ public function editMedecin(int $id): void {
             }
             // Nettoyer patients.medecin_traitant_id
             try { $db->prepare("UPDATE patients SET medecin_traitant_id = NULL WHERE medecin_traitant_id = ?")->execute([$id]); } catch (Exception $ignore) {}
-            $this->userModel->delete($id);
+            $this->deleteUserRecord($id);
             $this->logAction('Suppression médecin', "Médecin #$id supprimé");
             $_SESSION['flash'] = ['type' => 'success', 'message' => 'Médecin supprimé avec ses données associées.'];
         } catch (Exception $e) {
@@ -902,8 +952,8 @@ public function editMedecin(int $id): void {
 
     public function showValidateMedecin(int $medecinId): void {
         $this->auth->requireRole('admin');
-        $medecin = $this->medecinModel->findByUserId($medecinId);
-        $user    = $this->userModel->findById($medecinId);
+        $medecin = $this->findMedecinByUserId($medecinId);
+        $user    = $this->findUserById($medecinId);
         if (!$medecin || !$user) { $this->notFound(); }
         $viewPath = __DIR__ . '/../views/backoffice/medecin_validate.php';
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
@@ -911,8 +961,8 @@ public function editMedecin(int $id): void {
 
     public function approveMedecin(int $medecinId): void {
         $this->auth->requireRole('admin');
-        $this->userModel->update($medecinId, ['statut' => 'actif']);
-        $this->medecinModel->validate($medecinId, 'validé', $_POST['commentaire'] ?? '');
+        $this->updateUserRecord($medecinId, ['statut' => 'actif']);
+        $this->validateMedecinRecord($medecinId, 'validé', $_POST['commentaire'] ?? '');
         $this->logAction('Validation médecin', "Médecin #$medecinId validé");
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Médecin validé avec succès.'];
         header('Location: index.php?page=medecins_admin');
@@ -925,8 +975,8 @@ public function editMedecin(int $id): void {
 
     public function rejectMedecin(int $medecinId): void {
         $this->auth->requireRole('admin');
-        $this->userModel->update($medecinId, ['statut' => 'inactif']);
-        $this->medecinModel->validate($medecinId, 'refusé', $_POST['commentaire'] ?? '');
+        $this->updateUserRecord($medecinId, ['statut' => 'inactif']);
+        $this->validateMedecinRecord($medecinId, 'refusé', $_POST['commentaire'] ?? '');
         $this->logAction('Refus médecin', "Médecin #$medecinId refusé");
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Demande refusée.'];
         header('Location: index.php?page=medecins_admin');
@@ -1827,11 +1877,17 @@ private function setFlash(string $type, string $message): void {
  */
 private function logAction(string $action, string $description): void {
     try {
-        $this->adminModel->addLog(
-            (int)($_SESSION['user_id'] ?? 0),
-            $action,
-            $description
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "INSERT INTO logs (user_id, action, description, ip_address, created_at)
+             VALUES (:uid, :action, :desc, :ip, NOW())"
         );
+        $stmt->execute([
+            ':uid'    => (int)($_SESSION['user_id'] ?? 0),
+            ':action' => $action,
+            ':desc'   => $description,
+            ':ip'     => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+        ]);
     } catch (Exception $e) {
         error_log('Erreur logAction: ' . $e->getMessage());
     }
@@ -2233,6 +2289,498 @@ private function logAction(string $action, string $description): void {
         }
         header('Location: index.php?page=articles_admin');
         exit;
+    }
+
+    private function db(): PDO {
+        return Database::getInstance()->getConnection();
+    }
+
+    private function getAllUsers(int $offset = 0, int $limit = 100): array {
+        $stmt = $this->db()->prepare("SELECT * FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function getBackofficeListFilters(array $allowedSorts, string $defaultSort, string $defaultDirection = 'desc'): array {
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $sort = (string) ($_GET['sort'] ?? $defaultSort);
+        $direction = strtolower((string) ($_GET['direction'] ?? $defaultDirection));
+        $page = max(1, (int) ($_GET['p'] ?? 1));
+        $perPage = 10;
+
+        if (!isset($allowedSorts[$sort])) {
+            $sort = $defaultSort;
+        }
+
+        if (!in_array($direction, ['asc', 'desc'], true)) {
+            $direction = $defaultDirection;
+        }
+
+        return [
+            'q' => $q,
+            'sort' => $sort,
+            'direction' => $direction,
+            'sort_sql' => $allowedSorts[$sort] ?? $defaultSort,
+            'page' => $page,
+            'per_page' => $perPage,
+            'offset' => ($page - 1) * $perPage,
+        ];
+    }
+
+    private function getFilteredUsers(array $filters): array {
+        $sql = "SELECT u.* FROM users u";
+        $conditions = [];
+        $params = [];
+
+        if ($filters['q'] !== '') {
+            $searchValue = '%' . $filters['q'] . '%';
+            $conditions[] = "(
+                u.nom LIKE :q_nom
+                OR u.prenom LIKE :q_prenom
+                OR u.email LIKE :q_email
+                OR u.telephone LIKE :q_telephone
+                OR u.role LIKE :q_role
+                OR u.statut LIKE :q_statut
+            )";
+            $params[':q_nom'] = $searchValue;
+            $params[':q_prenom'] = $searchValue;
+            $params[':q_email'] = $searchValue;
+            $params[':q_telephone'] = $searchValue;
+            $params[':q_role'] = $searchValue;
+            $params[':q_statut'] = $searchValue;
+        }
+
+        if (!empty($conditions)) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+
+        $countSql = "SELECT COUNT(*) FROM users u" . (!empty($conditions) ? ' WHERE ' . implode(' AND ', $conditions) : '');
+        $countStmt = $this->db()->prepare($countSql);
+        $countStmt->execute($params);
+        $totalItems = (int) $countStmt->fetchColumn();
+
+        $pagination = $this->buildPaginationData($totalItems, $filters['page'], $filters['per_page']);
+        $offset = ($pagination['current_page'] - 1) * $filters['per_page'];
+
+        $sql .= " ORDER BY {$filters['sort_sql']} " . strtoupper($filters['direction']) . " LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db()->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $filters['per_page'], PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return [
+            'items' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'pagination' => $pagination,
+        ];
+    }
+
+    private function getFilteredPatients(array $filters): array {
+        $sql = "
+            SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut, u.created_at,
+                   p.groupe_sanguin
+            FROM users u
+            LEFT JOIN patients p ON u.id = p.user_id
+            WHERE u.role = 'patient'
+        ";
+        $params = [];
+
+        if ($filters['q'] !== '') {
+            $searchValue = '%' . $filters['q'] . '%';
+            $sql .= " AND (
+                u.nom LIKE :q_nom
+                OR u.prenom LIKE :q_prenom
+                OR u.email LIKE :q_email
+                OR u.telephone LIKE :q_telephone
+                OR p.groupe_sanguin LIKE :q_groupe
+                OR u.statut LIKE :q_statut
+            )";
+            $params[':q_nom'] = $searchValue;
+            $params[':q_prenom'] = $searchValue;
+            $params[':q_email'] = $searchValue;
+            $params[':q_telephone'] = $searchValue;
+            $params[':q_groupe'] = $searchValue;
+            $params[':q_statut'] = $searchValue;
+        }
+
+        $countSql = "
+            SELECT COUNT(*)
+            FROM users u
+            LEFT JOIN patients p ON u.id = p.user_id
+            WHERE u.role = 'patient'
+        ";
+        if ($filters['q'] !== '') {
+            $countSql .= " AND (
+                u.nom LIKE :q_nom
+                OR u.prenom LIKE :q_prenom
+                OR u.email LIKE :q_email
+                OR u.telephone LIKE :q_telephone
+                OR p.groupe_sanguin LIKE :q_groupe
+                OR u.statut LIKE :q_statut
+            )";
+        }
+        $countStmt = $this->db()->prepare($countSql);
+        $countStmt->execute($params);
+        $totalItems = (int) $countStmt->fetchColumn();
+
+        $pagination = $this->buildPaginationData($totalItems, $filters['page'], $filters['per_page']);
+        $offset = ($pagination['current_page'] - 1) * $filters['per_page'];
+
+        $sql .= " ORDER BY {$filters['sort_sql']} " . strtoupper($filters['direction']) . " LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db()->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $filters['per_page'], PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return [
+            'items' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'pagination' => $pagination,
+        ];
+    }
+
+    private function getFilteredMedecins(array $filters): array {
+        $sql = "
+            SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.statut, u.created_at,
+                   m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse,
+                   m.statut_validation
+            FROM users u
+            LEFT JOIN medecins m ON u.id = m.user_id
+            WHERE u.role = 'medecin'
+        ";
+        $params = [];
+
+        if ($filters['q'] !== '') {
+            $searchValue = '%' . $filters['q'] . '%';
+            $sql .= " AND (
+                u.nom LIKE :q_nom
+                OR u.prenom LIKE :q_prenom
+                OR u.email LIKE :q_email
+                OR u.telephone LIKE :q_telephone
+                OR m.specialite LIKE :q_specialite
+                OR u.statut LIKE :q_statut
+            )";
+            $params[':q_nom'] = $searchValue;
+            $params[':q_prenom'] = $searchValue;
+            $params[':q_email'] = $searchValue;
+            $params[':q_telephone'] = $searchValue;
+            $params[':q_specialite'] = $searchValue;
+            $params[':q_statut'] = $searchValue;
+        }
+
+        $countSql = "
+            SELECT COUNT(*)
+            FROM users u
+            LEFT JOIN medecins m ON u.id = m.user_id
+            WHERE u.role = 'medecin'
+        ";
+        if ($filters['q'] !== '') {
+            $countSql .= " AND (
+                u.nom LIKE :q_nom
+                OR u.prenom LIKE :q_prenom
+                OR u.email LIKE :q_email
+                OR u.telephone LIKE :q_telephone
+                OR m.specialite LIKE :q_specialite
+                OR u.statut LIKE :q_statut
+            )";
+        }
+        $countStmt = $this->db()->prepare($countSql);
+        $countStmt->execute($params);
+        $totalItems = (int) $countStmt->fetchColumn();
+
+        $pagination = $this->buildPaginationData($totalItems, $filters['page'], $filters['per_page']);
+        $offset = ($pagination['current_page'] - 1) * $filters['per_page'];
+
+        $sql .= " ORDER BY {$filters['sort_sql']} " . strtoupper($filters['direction']) . " LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->db()->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $filters['per_page'], PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return [
+            'items' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+            'pagination' => $pagination,
+        ];
+    }
+
+    private function buildPaginationData(int $totalItems, int $currentPage, int $perPage): array {
+        $totalPages = max(1, (int) ceil($totalItems / $perPage));
+        $currentPage = min(max(1, $currentPage), $totalPages);
+        $startItem = $totalItems > 0 ? (($currentPage - 1) * $perPage) + 1 : 0;
+        $endItem = min($totalItems, $currentPage * $perPage);
+
+        return [
+            'total_items' => $totalItems,
+            'per_page' => $perPage,
+            'current_page' => $currentPage,
+            'total_pages' => $totalPages,
+            'has_previous' => $currentPage > 1,
+            'has_next' => $currentPage < $totalPages,
+            'previous_page' => max(1, $currentPage - 1),
+            'next_page' => min($totalPages, $currentPage + 1),
+            'start_item' => $startItem,
+            'end_item' => $endItem,
+        ];
+    }
+
+    private function findUserById(int $id): ?array {
+        $stmt = $this->db()->prepare("SELECT * FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function findUserByEmail(string $email): ?array {
+        $stmt = $this->db()->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function createUserRecord(array $data): int {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO users
+                (nom, prenom, email, telephone, password, role, statut, adresse, date_naissance, created_at)
+             VALUES
+                (:nom, :prenom, :email, :telephone, :password, :role, :statut, :adresse, :date_naissance, NOW())"
+        );
+        $stmt->execute([
+            ':nom' => $data['nom'] ?? '',
+            ':prenom' => $data['prenom'] ?? '',
+            ':email' => $data['email'] ?? '',
+            ':telephone' => $data['telephone'] ?? '',
+            ':password' => $data['password'] ?? '',
+            ':role' => $data['role'] ?? 'patient',
+            ':statut' => $data['statut'] ?? 'actif',
+            ':adresse' => $data['adresse'] ?? null,
+            ':date_naissance' => $data['date_naissance'] ?? null,
+        ]);
+        return (int) $this->db()->lastInsertId();
+    }
+
+    private function updateUserRecord(int $id, array $data): bool {
+        $allowed = ['nom','prenom','email','telephone','password','role','statut','adresse','date_naissance','avatar','face_photo','face_encoding','face_descriptor','derniere_connexion'];
+        $fields = [];
+        $params = [':id' => $id];
+        foreach ($data as $key => $value) {
+            if (!in_array($key, $allowed, true)) {
+                continue;
+            }
+            $fields[] = "$key = :$key";
+            $params[":$key"] = $value;
+        }
+        if (empty($fields)) {
+            return false;
+        }
+        $stmt = $this->db()->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id");
+        return $stmt->execute($params);
+    }
+
+    private function deleteUserRecord(int $id): bool {
+        $stmt = $this->db()->prepare("DELETE FROM users WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    private function getUserExtras(int $userId, string $role): array {
+        if ($role === 'patient') {
+            $stmt = $this->db()->prepare("SELECT * FROM patients WHERE user_id = :uid LIMIT 1");
+            $stmt->execute([':uid' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
+        if ($role === 'medecin') {
+            return $this->findMedecinByUserId($userId) ?? [];
+        }
+        return [];
+    }
+
+    private function upsertPatientExtra(int $userId, array $data): void {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO patients (user_id, groupe_sanguin)
+             VALUES (:user_id, :groupe_sanguin)
+             ON DUPLICATE KEY UPDATE groupe_sanguin = VALUES(groupe_sanguin)"
+        );
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':groupe_sanguin' => $data['groupe_sanguin'] ?? null,
+        ]);
+    }
+
+    private function findPatientByUserId(int $userId): ?array {
+        $stmt = $this->db()->prepare("SELECT * FROM patients WHERE user_id = :uid LIMIT 1");
+        $stmt->execute([':uid' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function updatePatientRecord(int $userId, array $data): bool {
+        $allowed = [
+            'groupe_sanguin',
+            'allergies',
+            'medicaments_actuels',
+            'antecedents_medicaux',
+            'medecin_traitant_id',
+            'mutuelle',
+            'numero_mutuelle',
+            'numero_securite_sociale',
+            'urgence_contact_nom',
+            'urgence_contact_telephone',
+        ];
+
+        $fields = [];
+        $params = [':user_id' => $userId];
+
+        foreach ($data as $key => $value) {
+            if (!in_array($key, $allowed, true)) {
+                continue;
+            }
+            $fields[] = "$key = :$key";
+            $params[":$key"] = $value;
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $exists = $this->findPatientByUserId($userId);
+        if ($exists) {
+            $stmt = $this->db()->prepare("UPDATE patients SET " . implode(', ', $fields) . " WHERE user_id = :user_id");
+            return $stmt->execute($params);
+        }
+
+        $stmt = $this->db()->prepare(
+            "INSERT INTO patients (user_id, groupe_sanguin)
+             VALUES (:user_id, :groupe_sanguin)"
+        );
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':groupe_sanguin' => $data['groupe_sanguin'] ?? null,
+        ]);
+    }
+
+    private function upsertMedecinExtra(int $userId, array $data): void {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO medecins
+                (user_id, specialite, numero_ordre, annee_experience, consultation_prix, cabinet_adresse)
+             VALUES
+                (:user_id, :specialite, :numero_ordre, :annee_experience, :consultation_prix, :cabinet_adresse)
+             ON DUPLICATE KEY UPDATE
+                specialite = VALUES(specialite),
+                numero_ordre = VALUES(numero_ordre),
+                annee_experience = VALUES(annee_experience),
+                consultation_prix = VALUES(consultation_prix),
+                cabinet_adresse = VALUES(cabinet_adresse)"
+        );
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':specialite' => $data['specialite'] ?? '',
+            ':numero_ordre' => $data['numero_ordre'] ?? '',
+            ':annee_experience' => $data['experience'] ?? ($data['annee_experience'] ?? null),
+            ':consultation_prix' => $data['tarif'] ?? ($data['consultation_prix'] ?? null),
+            ':cabinet_adresse' => $data['adresse_cabinet'] ?? ($data['cabinet_adresse'] ?? ''),
+        ]);
+    }
+
+    private function getMonthlyRegistrations(): array {
+        $stmt = $this->db()->query(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS mois, COUNT(*) AS total
+             FROM users
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+             GROUP BY mois
+             ORDER BY mois ASC"
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function getRepartitionByRole(): array {
+        $stmt = $this->db()->query("SELECT role, COUNT(*) AS total FROM users GROUP BY role");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function findMedecinByUserId(int $userId): ?array {
+        $stmt = $this->db()->prepare(
+            "SELECT m.*, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.date_naissance, u.statut, u.created_at
+             FROM medecins m
+             JOIN users u ON m.user_id = u.id
+             WHERE m.user_id = :uid
+             LIMIT 1"
+        );
+        $stmt->execute([':uid' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function updateMedecinRecord(int $userId, array $data): bool {
+        $map = [
+            'specialite' => 'specialite',
+            'numero_ordre' => 'numero_ordre',
+            'annee_experience' => 'annee_experience',
+            'experience' => 'annee_experience',
+            'consultation_prix' => 'consultation_prix',
+            'tarif' => 'consultation_prix',
+            'cabinet_adresse' => 'cabinet_adresse',
+            'adresse_cabinet' => 'cabinet_adresse',
+            'description' => 'description',
+            'statut_validation' => 'statut_validation',
+            'commentaire_validation' => 'commentaire_validation',
+        ];
+        $fields = [];
+        $params = [':user_id' => $userId];
+        foreach ($data as $key => $value) {
+            if (!isset($map[$key])) {
+                continue;
+            }
+            $column = $map[$key];
+            $placeholder = ':p_' . $column;
+            if (!isset($params[$placeholder])) {
+                $fields[] = "$column = $placeholder";
+            }
+            $params[$placeholder] = $value;
+        }
+        if (empty($fields)) {
+            return false;
+        }
+        $stmt = $this->db()->prepare("UPDATE medecins SET " . implode(', ', $fields) . " WHERE user_id = :user_id");
+        return $stmt->execute($params);
+    }
+
+    private function validateMedecinRecord(int $userId, string $statutValidation, string $commentaire = ''): bool {
+        $stmt = $this->db()->prepare(
+            "UPDATE medecins
+             SET statut_validation = :statut, commentaire_validation = :commentaire
+             WHERE user_id = :user_id"
+        );
+        return $stmt->execute([
+            ':statut' => $statutValidation,
+            ':commentaire' => $commentaire,
+            ':user_id' => $userId,
+        ]);
+    }
+
+    private function getTopSpecialities(): array {
+        $stmt = $this->db()->query(
+            "SELECT specialite, COUNT(*) AS total
+             FROM medecins
+             GROUP BY specialite
+             ORDER BY total DESC
+             LIMIT 5"
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function getMonthlyAppointments(): array {
+        $stmt = $this->db()->query(
+            "SELECT DATE_FORMAT(date_rendezvous, '%Y-%m') AS mois, COUNT(*) AS total
+             FROM rendez_vous
+             WHERE date_rendezvous >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+             GROUP BY mois
+             ORDER BY mois ASC"
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 ?>

@@ -587,9 +587,15 @@ class FrontController {
         $this->requireLogin();
         $this->requireMedecin();
         require_once __DIR__ . '/../models/Disponibilite.php';
-        $disponibiliteModel = new Disponibilite();
         $medecinId = (int)$_SESSION['user_id'];
-        $dispos = $disponibiliteModel->getByMedecin($medecinId);
+        
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT * FROM disponibilites WHERE medecin_id = :medecin_id ORDER BY jour_semaine ASC, heure_debut ASC"
+        );
+        $stmt->execute([':medecin_id' => $medecinId]);
+        $dispos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
         $content = $this->getMedecinDisponibilitesHTML($dispos);
         $this->renderPublicView('Mes disponibilités', $content);
     }
@@ -2371,12 +2377,25 @@ JS;
         $userRole = $_SESSION['user_role'] ?? '';
         $userId   = (int)$_SESSION['user_id'];
         require_once __DIR__ . '/../models/RendezVous.php';
-        $rendezVousModel = new RendezVous();
+        
+        $db = Database::getInstance()->getConnection();
+        $rendezVous = [];
+        
         if ($userRole === 'medecin') {
-            $rendezVous = $rendezVousModel->getByMedecin($userId);
+            // Get rendez-vous for medecin (by medecin_id)
+            $stmt = $db->prepare(
+                "SELECT * FROM rendez_vous WHERE medecin_id = :medecin_id ORDER BY date_rendezvous DESC"
+            );
+            $stmt->execute([':medecin_id' => $userId]);
+            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $title = 'Mes consultations';
         } elseif ($userRole === 'patient') {
-            $rendezVous = $rendezVousModel->getByPatient($userId);
+            // Get rendez-vous for patient (by patient_id)
+            $stmt = $db->prepare(
+                "SELECT * FROM rendez_vous WHERE patient_id = :patient_id ORDER BY date_rendezvous DESC"
+            );
+            $stmt->execute([':patient_id' => $userId]);
+            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $title = 'Mes rendez-vous';
         } else {
             $this->page403(); return;
@@ -2584,10 +2603,10 @@ JS;
         $hasFaceId     = false;
         try {
             $db   = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT face_descriptor FROM users WHERE id = :id");
+            $stmt = $db->prepare("SELECT face_photo, face_descriptors FROM users WHERE id = :id");
             $stmt->execute([':id' => $userId]);
             $user      = $stmt->fetch(PDO::FETCH_ASSOC);
-            $hasFaceId = !empty($user['face_descriptor']);
+            $hasFaceId = !empty($user['face_photo']) || !empty($user['face_descriptors']);
         } catch (Exception $e) {
             error_log('Erreur vérification Face ID: ' . $e->getMessage());
         }

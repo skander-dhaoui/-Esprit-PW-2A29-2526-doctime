@@ -1,5 +1,5 @@
 <?php
-if (class_exists('UserController')) return;
+if (class_exists('AuthController')) return;
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/mail.php';
@@ -65,16 +65,64 @@ class AuthController {
         }
         unset($_SESSION['error'], $_SESSION['errors'], $_SESSION['old']);
 
+        // Générer un captcha pour cette session si absent
+        // NE PAS régénérer si déjà présent - garder le même captcha pour la session actuelle
+        if (empty($_SESSION['captcha_code'])) {
+            $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+            $captcha = "";
+            for ($i = 0; $i < 6; $i++) {
+                $captcha .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+            $_SESSION['captcha_code'] = $captcha;
+        }
+
         $viewPath = __DIR__ . '/../views/frontoffice/login.php';
         $viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
         if (file_exists($viewPath)) {
-            require_once $viewPath;
+            require $viewPath;
         } elseif (file_exists($viewPathHtml)) {
-            require_once $viewPathHtml;
+            require $viewPathHtml;
         } else {
             $errorMsg = $errors['__form'] ?? null;
             $this->renderLoginFallback($errorMsg);
         }
+    }
+
+    // ─────────────────────────────────────────
+    //  Générer un nouveau captcha (AJAX)
+    // ─────────────────────────────────────────
+    public function generateCaptcha(): void {
+        header('Content-Type: application/json');
+        
+        // Générer un nouveau code de 6 caractères
+        $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+        $captcha = "";
+        for ($i = 0; $i < 6; $i++) {
+            $captcha .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+        
+        // Stocker dans la session
+        $_SESSION['captcha_code'] = $captcha;
+        
+        echo json_encode(['captcha' => $captcha]);
+        exit;
+    }
+
+    // ─────────────────────────────────────────
+    //  Récupérer le captcha actuel (AJAX)
+    // ─────────────────────────────────────────
+    public function getCaptcha(): void {
+        header('Content-Type: application/json');
+        
+        // Retourner le captcha actuel SANS le régénérer
+        $captcha = $_SESSION['captcha_code'] ?? null;
+        
+        if ($captcha) {
+            echo json_encode(['captcha' => $captcha]);
+        } else {
+            echo json_encode(['error' => 'Pas de captcha en session']);
+        }
+        exit;
     }
 
     // ─────────────────────────────────────────
@@ -88,6 +136,13 @@ class AuthController {
 
         $email    = trim($_POST['email']    ?? '');
         $password = trim($_POST['password'] ?? '');
+        $captchaResponse = trim($_POST['captcha_response'] ?? '');
+        
+        // DEBUG
+        error_log('LOGIN ATTEMPT - Email: ' . $email . ' | CaptchaResponse empty: ' . (empty($captchaResponse) ? 'YES' : 'NO'));
+        error_log('SESSION captcha_code: ' . ($_SESSION['captcha_code'] ?? 'EMPTY'));
+        error_log('POST data: ' . json_encode($_POST));
+        
         $loginErrors = [];
 
         if (empty($email)) {
@@ -98,18 +153,54 @@ class AuthController {
         if (empty($password)) {
             $loginErrors['password'] = 'Le mot de passe est requis.';
         }
+        if (empty($captchaResponse)) {
+            $loginErrors['captcha_response'] = 'Le code de vérification est requis.';
+        }
 
         if (!empty($loginErrors)) {
+            error_log('Validation errors: ' . json_encode($loginErrors));
             $_SESSION['errors'] = $loginErrors;
             $_SESSION['old']    = $_POST;
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
+        
+        // Valider le captcha côté serveur
+        // Si pas de captcha en session, le générer (première visite)
+        if (empty($_SESSION['captcha_code'])) {
+            $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+            $captcha = "";
+            for ($i = 0; $i < 6; $i++) {
+                $captcha .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+            $_SESSION['captcha_code'] = $captcha;
+            error_log('CAPTCHA GENERATED (was empty): ' . $captcha);
+        }
+        
+        if (strtoupper($captchaResponse) !== $_SESSION['captcha_code']) {
+            error_log('CAPTCHA FAIL - Session: ' . ($_SESSION['captcha_code'] ?? 'EMPTY') . ' | Reçu: ' . strtoupper($captchaResponse) . ' | Match: ' . (strtoupper($captchaResponse) === $_SESSION['captcha_code'] ? 'YES' : 'NO'));
+            $_SESSION['errors'] = ['captcha_response' => 'Code de vérification incorrect. Expected: ' . ($_SESSION['captcha_code'] ?? 'NONE') . ', Got: ' . strtoupper($captchaResponse)];
+            $_SESSION['old']    = ['email' => $email];
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
 
         try {
-            $user = $this->userModel->findByEmail($email);
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT id, nom, prenom, email, password, role, statut FROM users WHERE email = :email");
+            $stmt->execute([':email' => $email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$user || !password_verify($password, $user['password'])) {
+            if (!$user) {
+                error_log('USER NOT FOUND: ' . $email);
+                $_SESSION['errors'] = ['credentials' => 'Email ou mot de passe incorrect.'];
+                $_SESSION['old']    = ['email' => $email];
+                header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+                exit;
+            }
+
+            if (!password_verify($password, $user['password'])) {
+                error_log('PASSWORD WRONG for: ' . $email);
                 $_SESSION['errors'] = ['credentials' => 'Email ou mot de passe incorrect.'];
                 $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
@@ -130,8 +221,10 @@ class AuthController {
             $_SESSION['user_email'] = $user['email'];
 
             try {
-                $this->userModel->update($user['id'], [
-                    'derniere_connexion' => date('Y-m-d H:i:s')
+                $updateStmt = $db->prepare("UPDATE users SET derniere_connexion = :now WHERE id = :id");
+                $updateStmt->execute([
+                    ':now' => date('Y-m-d H:i:s'),
+                    ':id' => $user['id']
                 ]);
             } catch (Exception $e) {
                 // Non bloquant
@@ -267,7 +360,12 @@ public function register(): void {
     }
 
     try {
-        if ($this->userModel->findByEmail($email)) {
+        $db = Database::getInstance()->getConnection();
+        
+        // Check if email already exists
+        $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+        $checkStmt->execute([':email' => $email]);
+        if ($checkStmt->fetch(PDO::FETCH_ASSOC)) {
             $_SESSION['errors'] = ['email' => 'Cet email est déjà utilisé.'];
             $_SESSION['old']    = $_POST;
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
@@ -276,26 +374,37 @@ public function register(): void {
 
         $statut = ($role === 'medecin') ? 'en_attente' : 'actif';
 
-        $userId = $this->userModel->create([
-            'nom'       => $nom,
-            'prenom'    => $prenom,
-            'email'     => $email,
-            'telephone' => $telephone,
-            'password'  => password_hash($password, PASSWORD_DEFAULT),
-            'role'      => $role,
-            'statut'    => $statut,
+        // Create user
+        $createStmt = $db->prepare("
+            INSERT INTO users (nom, prenom, email, telephone, password, role, statut, created_at)
+            VALUES (:nom, :prenom, :email, :telephone, :password, :role, :statut, NOW())
+        ");
+        $createStmt->execute([
+            ':nom'       => $nom,
+            ':prenom'    => $prenom,
+            ':email'     => $email,
+            ':telephone' => $telephone,
+            ':password'  => password_hash($password, PASSWORD_DEFAULT),
+            ':role'      => $role,
+            ':statut'    => $statut,
         ]);
+        $userId = $db->lastInsertId();
 
         if (!$userId) {
             throw new Exception("Erreur lors de la création du compte.");
         }
 
+        // Create medecin entry if applicable
         if ($role === 'medecin') {
-            $this->userModel->createMedecin([
-                'user_id'         => $userId,
-                'specialite'      => $specialite,
-                'numero_ordre'    => $numeroOrdre,
-                'adresse_cabinet' => trim($_POST['adresse_cabinet'] ?? ''),
+            $medecinStmt = $db->prepare("
+                INSERT INTO medecins (user_id, specialite, numero_ordre, adresse_cabinet, created_at)
+                VALUES (:user_id, :specialite, :numero_ordre, :adresse_cabinet, NOW())
+            ");
+            $medecinStmt->execute([
+                ':user_id'         => $userId,
+                ':specialite'      => $specialite,
+                ':numero_ordre'    => $numeroOrdre,
+                ':adresse_cabinet' => trim($_POST['adresse_cabinet'] ?? ''),
             ]);
         }
 
@@ -366,16 +475,27 @@ public function register(): void {
             exit;
         }
 
-        $user = $this->userModel->findByEmail($email);
+        error_log('FORGOT_PASSWORD REQUEST for: ' . $email);
+
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT id, nom, prenom, email FROM users WHERE email = :email");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($user) {
+            error_log('USER FOUND for forgot password: ' . $email . ' (id=' . $user['id'] . ')');
+            
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
             
-            $this->userModel->update($user['id'], [
-                'reset_token' => $token,
-                'reset_expires' => $expires
+            $updateStmt = $db->prepare("UPDATE users SET reset_token = :token, reset_expires = :expires WHERE id = :id");
+            $updateStmt->execute([
+                ':token' => $token,
+                ':expires' => $expires,
+                ':id' => $user['id']
             ]);
+            
+            error_log('Reset token generated and stored');
             
             $resetLink = $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token;
             
@@ -394,7 +514,20 @@ public function register(): void {
                 <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
             ";
             
-            MailConfig::send($user['email'], $user['prenom'] . ' ' . $user['nom'], 'Réinitialisation de votre mot de passe - DocTime', $resetBody);
+            try {
+                error_log('Attempting to send reset email to: ' . $email);
+                $sendResult = MailConfig::send($email, $user['prenom'] . ' ' . $user['nom'], 'Réinitialisation de votre mot de passe - DocTime', $resetBody);
+                if ($sendResult) {
+                    error_log('✅ EMAIL RESET ENVOYÉ AVEC SUCCÈS');
+                } else {
+                    error_log('❌ EMAIL RESET ÉCHOUÉ - Check logs above for details');
+                }
+            } catch (\Throwable $mailErr) {
+                error_log('💥 EMAIL RESET EXCEPTION: ' . $mailErr->getMessage());
+                error_log('Exception file: ' . $mailErr->getFile() . ':' . $mailErr->getLine());
+            }
+        } else {
+            error_log('USER NOT FOUND for forgot password: ' . $email);
         }
         
         $_SESSION['success'] = "Si cet email existe, vous recevrez un lien de réinitialisation.";
@@ -406,10 +539,33 @@ public function register(): void {
         $error = null;
         $validToken = false;
         
+        error_log('=== RESET PASSWORD LINK ===');
+        error_log('Token reçu: ' . ($token ? htmlspecialchars($token) : 'NULL'));
+        
         if ($token) {
+            $originalToken = $token;
             $token = preg_replace('/[^a-f0-9]/', '', $token);
             
-            $stmt = $this->userModel->db->prepare(
+            error_log('Token après regex: ' . htmlspecialchars($token));
+            error_log('Token avant regex: ' . htmlspecialchars($originalToken));
+            
+            $db = Database::getInstance()->getConnection();
+            
+            // Première vérification: le token existe en base?
+            $checkStmt = $db->prepare("SELECT id, email, reset_expires FROM users WHERE reset_token = :token");
+            $checkStmt->execute([':token' => $token]);
+            $checkUser = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($checkUser) {
+                error_log('✅ Token trouvé en base pour email: ' . $checkUser['email']);
+                error_log('   Expires: ' . $checkUser['reset_expires']);
+                error_log('   Now: ' . date('Y-m-d H:i:s'));
+            } else {
+                error_log('❌ Token NOT trouvé en base');
+            }
+            
+            // Deuxième vérification: avec vérification de date
+            $stmt = $db->prepare(
                 "SELECT id FROM users WHERE reset_token = :token AND reset_expires > NOW()"
             );
             $stmt->execute([':token' => $token]);
@@ -418,10 +574,14 @@ public function register(): void {
             if ($user) {
                 $validToken = true;
                 $_SESSION['reset_token'] = $token;
+                error_log('✅ TOKEN VALIDE ET NON EXPIRÉ');
             } else {
                 $error = "Lien invalide ou expiré. Veuillez refaire une demande.";
+                error_log('❌ TOKEN INVALIDE OU EXPIRÉ');
             }
         }
+        
+        error_log('=== END RESET PASSWORD LINK ===');
         
         $viewPath = __DIR__ . '/../views/frontoffice/reset_password.php';
         if (file_exists($viewPath)) {
@@ -437,41 +597,42 @@ public function register(): void {
             exit;
         }
         
-        $token = $_SESSION['reset_token'] ?? null;
+        $token = trim($_POST['token'] ?? '');
         $newPassword = trim($_POST['password'] ?? '');
         $confirmPassword = trim($_POST['confirm_password'] ?? '');
         
-        if (!$token) {
-            $_SESSION['error'] = "Demande invalide. Veuillez refaire une demande.";
+        if (!$token || strlen($newPassword) === 0 || strlen($confirmPassword) === 0) {
+            $_SESSION['error'] = "Données invalides.";
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
             exit;
         }
         
         if (strlen($newPassword) < 8) {
             $_SESSION['error'] = "Le mot de passe doit contenir au moins 8 caractères.";
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . urlencode($token));
             exit;
         }
         
         if (!preg_match('/[A-Z]/', $newPassword)) {
             $_SESSION['error'] = "Le mot de passe doit contenir au moins une majuscule.";
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . urlencode($token));
             exit;
         }
         
         if (!preg_match('/[0-9]/', $newPassword)) {
             $_SESSION['error'] = "Le mot de passe doit contenir au moins un chiffre.";
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . urlencode($token));
             exit;
         }
         
         if ($newPassword !== $confirmPassword) {
             $_SESSION['error'] = "Les mots de passe ne correspondent pas.";
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token);
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . urlencode($token));
             exit;
         }
         
-        $stmt = $this->userModel->db->prepare(
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
             "UPDATE users SET password = :password, reset_token = NULL, reset_expires = NULL 
              WHERE reset_token = :token AND reset_expires > NOW()"
         );
@@ -496,10 +657,16 @@ public function register(): void {
 // ─────────────────────────────────────────
 public function faceLogin(): void {
     header('Content-Type: application/json');
+    try {
     
     $imageData = $_POST['face_image'] ?? '';
     $role = $_POST['role'] ?? 'patient';
-    $email = $_POST['email'] ?? '';
+    $email = trim((string) ($_POST['email'] ?? ''));
+    
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Email invalide pour la reconnaissance faciale.']);
+        exit;
+    }
     
     if (empty($imageData)) {
         echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
@@ -541,6 +708,15 @@ public function faceLogin(): void {
         'role' => $user['role']
     ]);
     exit;
+    } catch (Throwable $e) {
+        error_log('Erreur faceLogin: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur serveur lors de la reconnaissance faciale.'
+        ]);
+        exit;
+    }
 }
 /**
  * Supprimer le visage enregistré de l'utilisateur
@@ -556,8 +732,22 @@ public function deleteFace(): void {
     try {
         $db = Database::getInstance()->getConnection();
         $userId = (int)$_SESSION['user_id'];
+
+        $photoStmt = $db->prepare("SELECT face_photo FROM users WHERE id = :id LIMIT 1");
+        $photoStmt->execute([':id' => $userId]);
+        $facePhoto = $photoStmt->fetchColumn();
+        if (is_string($facePhoto) && $facePhoto !== '') {
+            $fullPath = dirname(__DIR__) . '/' . ltrim(str_replace('\\', '/', $facePhoto), '/');
+            if (is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
         
-        $stmt = $db->prepare("UPDATE users SET face_descriptor = NULL WHERE id = :id");
+        $stmt = $db->prepare(
+            "UPDATE users
+             SET face_photo = NULL, face_descriptors = NULL
+             WHERE id = :id"
+        );
         $result = $stmt->execute([':id' => $userId]);
         
         if ($result) {
@@ -618,7 +808,10 @@ public function registerFace(): void {
             exit;
         }
 
-        $user = $this->userModel->findByEmail($email);
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         echo json_encode(['exists' => (bool)$user]);
         exit;
     }
