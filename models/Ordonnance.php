@@ -252,4 +252,4 @@ public function getMedicaments(int $ordonnanceId): array {
         }
     }
 }
-?>
+?>// update

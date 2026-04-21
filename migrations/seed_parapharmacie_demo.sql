@@ -32,3 +32,4 @@ INSERT INTO produits (nom, reference, description, categorie_id, prix_achat, pri
 
 -- Optionnel: promo de test dans le fichier JSON du projet.
 -- PROMO10, PROMO15 et BIENVENUE20 sont aussi reconnus par défaut dans le code.
+// update

@@ -74,3 +74,4 @@ class Produit {
     public function setUpdatedAt(?string $d): void   { $this->updated_at = $d; }
 
 }
+// update

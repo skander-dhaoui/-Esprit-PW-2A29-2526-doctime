@@ -327,4 +327,4 @@ class User {
 
         return $this->updateAvatar($userId, '');
     }
-}
+}// update

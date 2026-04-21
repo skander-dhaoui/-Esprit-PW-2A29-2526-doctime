@@ -276,4 +276,4 @@ public function update(int $id, int $articleId, ?string $contenuText, ?string $e
         return null;
     }
 }
-?>
+?>// update

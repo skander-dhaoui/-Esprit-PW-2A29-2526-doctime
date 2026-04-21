@@ -386,4 +386,4 @@ class Event {
         return trim($text, '-');
     }
 }
-?>
+?>// update

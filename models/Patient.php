@@ -224,4 +224,4 @@ $upcoming = $this->db->prepare(
             'reclamations' => (int) $claims->fetchColumn(),
         ];
     }
-}
+}// update

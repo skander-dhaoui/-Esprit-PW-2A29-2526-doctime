@@ -51,3 +51,4 @@ class CommandeLigne {
 
     // Pas de logique SQL dans le modèle — utiliser le controller pour les opérations DB.
 }
+// update

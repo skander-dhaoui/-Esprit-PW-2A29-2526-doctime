@@ -7,3 +7,4 @@ ADD COLUMN commentaire_validation TEXT NULL AFTER statut_validation;
 
 -- Index pour la recherche par statut de validation
 CREATE INDEX idx_statut_validation ON medecins(statut_validation);
+// update

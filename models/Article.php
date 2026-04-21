@@ -298,4 +298,4 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
         return $id > 0 ? $id : null;
     }
 }
-?>
+?>// update
