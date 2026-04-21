@@ -115,6 +115,29 @@ if ($page === 'face_login') {
     exit;
 }
 
+// Retourne l'URL de la photo de visage enregistrée pour comparaison côté client (face-api.js)
+if ($page === 'get_face_photo') {
+    header('Content-Type: application/json');
+    $email = trim($_GET['email'] ?? '');
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Email invalide']);
+        exit;
+    }
+    require_once __DIR__ . '/models/User.php';
+    $userModel2 = new User();
+    $userFace = $userModel2->findByEmail($email);
+    if (!$userFace || empty($userFace['face_photo'])) {
+        echo json_encode(['success' => false, 'message' => 'Aucune photo enregistrée pour cet utilisateur']);
+        exit;
+    }
+    $protocol  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/') . '/';
+    $photoUrl  = $protocol . '://' . $host . $scriptDir . $userFace['face_photo'];
+    echo json_encode(['success' => true, 'photo_url' => $photoUrl, 'role' => $userFace['role']]);
+    exit;
+}
+
 if ($page === 'register_face') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Content-Type: application/json');

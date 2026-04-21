@@ -2,278 +2,179 @@
 require_once __DIR__ . '/../config/database.php';
 
 class Reply {
+
+    // ─── Connexion BDD ────────────────────────────────────────────
     private PDO $db;
 
+    // ─── Attributs (propriétés encapsulées) ──────────────────────
+    private ?int    $id_reply     = null;
+    private ?int    $id_article   = null;
+    private ?int    $user_id      = null;
+    private string  $type_reply   = 'text';
+    private ?string $contenu_text = null;
+    private ?string $emoji        = null;
+    private ?string $photo        = null;
+    private string  $auteur       = 'Anonyme';
+    private ?string $date_reply   = null;
+
+    // ─── Constructeur ─────────────────────────────────────────────
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    /**
-     * Récupère tous les commentaires d'un article
-     */
+    // ═══════════════════════════════════════════════════════════════
+    //  GETTERS
+    // ═══════════════════════════════════════════════════════════════
+    public function getIdReply(): ?int        { return $this->id_reply; }
+    public function getIdArticle(): ?int      { return $this->id_article; }
+    public function getUserId(): ?int         { return $this->user_id; }
+    public function getTypeReply(): string    { return $this->type_reply; }
+    public function getContenuText(): ?string { return $this->contenu_text; }
+    public function getEmoji(): ?string       { return $this->emoji; }
+    public function getPhoto(): ?string       { return $this->photo; }
+    public function getAuteur(): string       { return $this->auteur; }
+    public function getDateReply(): ?string   { return $this->date_reply; }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SETTERS (retournent $this pour chaining fluide)
+    // ═══════════════════════════════════════════════════════════════
+    public function setIdReply(?int $v): self      { $this->id_reply     = $v; return $this; }
+    public function setIdArticle(?int $v): self    { $this->id_article   = $v; return $this; }
+    public function setUserId(?int $v): self       { $this->user_id      = $v; return $this; }
+    public function setTypeReply(string $v): self  { $this->type_reply   = $v; return $this; }
+    public function setContenuText(?string $v): self { $this->contenu_text = $v; return $this; }
+    public function setEmoji(?string $v): self     { $this->emoji        = $v; return $this; }
+    public function setPhoto(?string $v): self     { $this->photo        = $v; return $this; }
+    public function setAuteur(string $v): self     { $this->auteur       = $v; return $this; }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  HYDRATATION — remplit l'objet depuis un tableau (ex: row BDD)
+    // ═══════════════════════════════════════════════════════════════
+    public function hydrate(array $data): static {
+        if (isset($data['id_reply']))     $this->id_reply     = (int)$data['id_reply'];
+        if (isset($data['id_article']))   $this->id_article   = (int)$data['id_article'];
+        if (isset($data['user_id']))      $this->user_id      = (int)$data['user_id'];
+        if (isset($data['type_reply']))   $this->type_reply   = $data['type_reply'];
+        if (isset($data['contenu_text'])) $this->contenu_text = $data['contenu_text'];
+        if (isset($data['emoji']))        $this->emoji        = $data['emoji'];
+        if (isset($data['photo']))        $this->photo        = $data['photo'];
+        if (isset($data['auteur']))       $this->auteur       = $data['auteur'];
+        if (isset($data['date_reply']))   $this->date_reply   = $data['date_reply'];
+        return $this;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CRUD — méthodes persistance
+    // ═══════════════════════════════════════════════════════════════
+
     public function getByArticle(int $articleId): array {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
+            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, r.emoji, r.photo, r.date_reply,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN users u ON u.id = r.user_id
-             WHERE r.id_article = :article_id
-             ORDER BY r.date_reply ASC"
-        );
-        $stmt->execute([':article_id' => $articleId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-/**
- * Crée un commentaire mixte (texte + image possible)
- */
-public function createMixte(int $articleId, ?string $contenuText, ?string $emoji, 
-                           ?string $imagePath, ?string $auteur, ?int $userId = null): int {
-    
-    if ($userId === null && !empty($_SESSION['user_id'])) {
-        $userId = (int)$_SESSION['user_id'];
-    }
-    
-    $type = 'mixte';
-    if (!empty($emoji) && empty($contenuText) && empty($imagePath)) {
-        $type = 'emoji';
-    } elseif (!empty($imagePath) && empty($contenuText) && empty($emoji)) {
-        $type = 'photo';
-    } elseif (!empty($contenuText) && empty($emoji) && empty($imagePath)) {
-        $type = 'text';
-    }
-    
-    $stmt = $this->db->prepare(
-        "INSERT INTO reply (id_article, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
-         VALUES (:article_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
-    );
-    $stmt->execute([
-        ':article_id' => $articleId,
-        ':user_id' => $userId,
-        ':type_reply' => $type,
-        ':contenu_text' => $contenuText,
-        ':emoji' => $emoji,
-        ':photo' => $imagePath,
-        ':auteur' => $auteur ?? 'Anonyme'
-    ]);
-    return (int)$this->db->lastInsertId();
-}
-    /**
-     * Récupère les commentaires d'un article du plus récent au plus ancien
-     */
-    public function getByArticleRecent(int $articleId): array {
-        $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
-                    COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN users u ON u.id = r.user_id
-             WHERE r.id_article = :article_id
-             ORDER BY r.date_reply DESC"
+             FROM reply r LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.id_article = :article_id ORDER BY r.date_reply ASC"
         );
         $stmt->execute([':article_id' => $articleId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Récupère un commentaire par son ID
-     */
+    public function getByArticleRecent(int $articleId): array {
+        $stmt = $this->db->prepare(
+            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, r.emoji, r.photo, r.date_reply,
+                    COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
+             FROM reply r LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.id_article = :article_id ORDER BY r.date_reply DESC"
+        );
+        $stmt->execute([':article_id' => $articleId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getById(int $id): array|false {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.user_id, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
+            "SELECT r.id_reply, r.id_article, r.user_id, r.type_reply, r.contenu_text, r.emoji, r.photo, r.date_reply,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN users u ON u.id = r.user_id
-             WHERE r.id_reply = :id"
+             FROM reply r LEFT JOIN users u ON u.id = r.user_id WHERE r.id_reply = :id"
         );
         $stmt->execute([':id' => $id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Compte le nombre de commentaires pour un article
-     */
     public function countByArticle(int $articleId): int {
         $stmt = $this->db->prepare("SELECT COUNT(*) FROM reply WHERE id_article = :article_id");
         $stmt->execute([':article_id' => $articleId]);
         return (int)$stmt->fetchColumn();
     }
 
-    /**
-     * Crée un nouveau commentaire
-     */
-public function create(int $articleId, ?string $contenuText, ?string $emoji,
-                       ?string $photo, ?string $auteur, string $typeReply, ?int $userId = null): int {
-    
-    // Si userId n'est pas passé, on essaie de le récupérer de la session
-    if ($userId === null && !empty($_SESSION['user_id'])) {
-        $userId = (int)$_SESSION['user_id'];
+    public function create(int $articleId, ?string $contenuText, ?string $emoji,
+                           ?string $photo, ?string $auteur, string $typeReply, ?int $userId = null): int {
+        if ($userId === null && !empty($_SESSION['user_id'])) $userId = (int)$_SESSION['user_id'];
+        $stmt = $this->db->prepare(
+            "INSERT INTO reply (id_article, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
+             VALUES (:article_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
+        );
+        $stmt->execute([':article_id' => $articleId, ':user_id' => $userId, ':type_reply' => $typeReply,
+                        ':contenu_text' => $contenuText, ':emoji' => $emoji, ':photo' => $photo, ':auteur' => $auteur ?? 'Anonyme']);
+        return (int)$this->db->lastInsertId();
     }
-    
-    $stmt = $this->db->prepare(
-        "INSERT INTO reply (id_article, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
-         VALUES (:article_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
-    );
-    $stmt->execute([
-        ':article_id' => $articleId,
-        ':user_id' => $userId,
-        ':type_reply' => $typeReply,
-        ':contenu_text' => $contenuText,
-        ':emoji' => $emoji,
-        ':photo' => $photo,
-        ':auteur' => $auteur ?? 'Anonyme'
-    ]);
-    return (int)$this->db->lastInsertId();
-}
 
-    /**
-     * Met à jour un commentaire
-     */
-public function update(int $id, int $articleId, ?string $contenuText, ?string $emoji,
-                       ?string $photo, ?string $auteur, string $typeReply): bool {
-    $userId = null;
-    if (!empty($_SESSION['user_id'])) {
-        $userId = (int)$_SESSION['user_id'];
+    public function createMixte(int $articleId, ?string $contenuText, ?string $emoji,
+                                ?string $imagePath, ?string $auteur, ?int $userId = null): int {
+        if ($userId === null && !empty($_SESSION['user_id'])) $userId = (int)$_SESSION['user_id'];
+        $type = 'mixte';
+        if (!empty($emoji) && empty($contenuText) && empty($imagePath))       $type = 'emoji';
+        elseif (!empty($imagePath) && empty($contenuText) && empty($emoji))   $type = 'photo';
+        elseif (!empty($contenuText) && empty($emoji) && empty($imagePath))   $type = 'text';
+        return $this->create($articleId, $contenuText, $emoji, $imagePath, $auteur, $type, $userId);
     }
-    
-    $stmt = $this->db->prepare(
-        "UPDATE reply SET 
-            id_article = :article_id,
-            user_id = :user_id,
-            type_reply = :type_reply,
-            contenu_text = :contenu_text,
-            emoji = :emoji,
-            photo = :photo,
-            auteur = :auteur
-         WHERE id_reply = :id"
-    );
-    return $stmt->execute([
-        ':article_id' => $articleId,
-        ':user_id' => $userId,
-        ':type_reply' => $typeReply,
-        ':contenu_text' => $contenuText,
-        ':emoji' => $emoji,
-        ':photo' => $photo,
-        ':auteur' => $auteur ?? 'Anonyme',
-        ':id' => $id
-    ]);
-}
-    /**
-     * Supprime un commentaire
-     */
+
+    public function update(int $id, int $articleId, ?string $contenuText, ?string $emoji,
+                           ?string $photo, ?string $auteur, string $typeReply): bool {
+        $userId = !empty($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+        $stmt = $this->db->prepare(
+            "UPDATE reply SET id_article=:article_id, user_id=:user_id, type_reply=:type_reply,
+             contenu_text=:contenu_text, emoji=:emoji, photo=:photo, auteur=:auteur WHERE id_reply=:id"
+        );
+        return $stmt->execute([':article_id' => $articleId, ':user_id' => $userId, ':type_reply' => $typeReply,
+                               ':contenu_text' => $contenuText, ':emoji' => $emoji, ':photo' => $photo,
+                               ':auteur' => $auteur ?? 'Anonyme', ':id' => $id]);
+    }
+
     public function delete(int $id): bool {
-        $stmt = $this->db->prepare("DELETE FROM reply WHERE id_reply = :id");
-        return $stmt->execute([':id' => $id]);
+        return $this->db->prepare("DELETE FROM reply WHERE id_reply = :id")->execute([':id' => $id]);
     }
 
-    /**
-     * Supprime tous les commentaires d'un article
-     */
     public function deleteByArticle(int $articleId): bool {
-        $stmt = $this->db->prepare("DELETE FROM reply WHERE id_article = :article_id");
-        return $stmt->execute([':article_id' => $articleId]);
+        return $this->db->prepare("DELETE FROM reply WHERE id_article = :article_id")->execute([':article_id' => $articleId]);
     }
 
-    /**
-     * Récupère les derniers commentaires
-     */
     public function getLatest(int $limit = 10): array {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
+            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, r.emoji, r.photo, r.date_reply,
                     a.titre AS article_titre,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
-             LEFT JOIN users u ON u.id = r.user_id
-             ORDER BY r.date_reply DESC
-             LIMIT :limit"
+             FROM reply r LEFT JOIN articles a ON r.id_article = a.id LEFT JOIN users u ON u.id = r.user_id
+             ORDER BY r.date_reply DESC LIMIT :limit"
         );
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Récupère les commentaires d'un auteur
-     */
-    public function getByAuthor(string $auteur, int $limit = 20): array {
-        $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
-                    a.titre AS article_titre,
-                    COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
-             LEFT JOIN users u ON u.id = r.user_id
-             WHERE r.auteur = :auteur OR CONCAT(u.nom, ' ', u.prenom) = :auteur
-             ORDER BY r.date_reply DESC
-             LIMIT :limit"
-        );
-        $stmt->bindValue(':auteur', $auteur, PDO::PARAM_STR);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Récupère tous les commentaires (pour l'admin)
-     */
     public function getAll(int $limit = 100): array {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
+            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, r.emoji, r.photo, r.date_reply,
                     a.titre AS article_titre,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
-             FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
-             LEFT JOIN users u ON u.id = r.user_id
-             ORDER BY r.date_reply DESC
-             LIMIT :limit"
+             FROM reply r LEFT JOIN articles a ON r.id_article = a.id LEFT JOIN users u ON u.id = r.user_id
+             ORDER BY r.date_reply DESC LIMIT :limit"
         );
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Compte le nombre total de commentaires
-     */
     public function countAll(): int {
-        $stmt = $this->db->query("SELECT COUNT(*) FROM reply");
-        return (int)$stmt->fetchColumn();
-    }
-
-    // ─────────────────────────────────────────
-    //  Méthodes privées
-    // ─────────────────────────────────────────
-
-    /**
-     * Résout l'ID utilisateur à partir du nom ou de l'email
-     */
-    private function resolveUserId(?string $auteur): ?int {
-        // Si utilisateur connecté, utiliser son ID
-        if (!empty($_SESSION['user_id'])) {
-            return (int)$_SESSION['user_id'];
-        }
-
-        // Si auteur fourni, chercher l'utilisateur correspondant
-        if (!empty($auteur)) {
-            $stmt = $this->db->prepare(
-                "SELECT id FROM users 
-                 WHERE CONCAT(nom, ' ', prenom) = :auteur OR email = :auteur
-                 LIMIT 1"
-            );
-            $stmt->execute([':auteur' => $auteur]);
-            $id = (int)$stmt->fetchColumn();
-            if ($id > 0) {
-                return $id;
-            }
-        }
-
-        // Retourner null pour les commentaires anonymes
-        return null;
+        return (int)$this->db->query("SELECT COUNT(*) FROM reply")->fetchColumn();
     }
 }
 ?>

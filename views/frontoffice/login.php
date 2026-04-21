@@ -72,6 +72,8 @@
         .modal-camera-content video { width: 100%; border-radius: 12px; margin: 15px 0; background: #000; }
         .modal-camera-content canvas { display: none; }
     </style>
+    <!-- Face API JS pour la reconnaissance faciale réelle -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
     <div class="login-card">
@@ -341,14 +343,32 @@
             return true;
         });
 
-        // ── CAMÉRA — RECONNAISSANCE FACIALE ──────────────────────────────────
+        // ── CAMÉRA — RECONNAISSANCE FACIALE AVEC face-api.js ────────────────
         let stream = null;
+        let faceModelsLoaded = false;
+
+        // Charger les modèles face-api.js une seule fois
+        async function loadFaceModels() {
+            if (faceModelsLoaded) return true;
+            try {
+                const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+                ]);
+                faceModelsLoaded = true;
+                return true;
+            } catch (e) {
+                console.error('Erreur chargement modèles:', e);
+                return false;
+            }
+        }
 
         function openCameraModal() {
             const savedEmail = localStorage.getItem('valorys_face_email') || '';
 
             if (!savedEmail) {
-                // Aucun profil Face ID enregistré sur ce navigateur
                 showError(
                     'Aucun visage enregistré sur cet appareil. ' +
                     'Connectez-vous d\'abord avec email/mot de passe, puis enregistrez votre visage dans votre profil.'
@@ -357,10 +377,12 @@
             }
 
             document.getElementById('cameraModal').classList.add('open');
-            // Afficher quel compte est lié à ce navigateur
             document.getElementById('cameraMessage').innerHTML =
                 `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${savedEmail}</strong></span>`;
             startCamera();
+
+            // Précharger les modèles en arrière-plan
+            loadFaceModels();
         }
 
         function closeCameraModal() {
@@ -380,33 +402,95 @@
         }
 
         async function captureFace() {
-            const video  = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const ctx    = canvas.getContext('2d');
-            const msgDiv = document.getElementById('cameraMessage');
+            const video   = document.getElementById('video');
+            const canvas  = document.getElementById('canvas');
+            const ctx     = canvas.getContext('2d');
+            const msgDiv  = document.getElementById('cameraMessage');
+
+            const savedEmail = localStorage.getItem('valorys_face_email') || '';
+            const savedRole  = localStorage.getItem('valorys_face_role')  || 'patient';
 
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Analyse du visage en cours...</span>';
+
+            // Étape 1 : charger les modèles
+            const modelsOk = await loadFaceModels();
+            if (!modelsOk) {
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur chargement modèles IA.</span>';
+                return;
+            }
+
+            // Étape 2 : détecter le visage sur la caméra
+            const detectionOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+            const liveDetection = await faceapi
+                .detectSingleFace(video, detectionOptions)
+                .withFaceLandmarks(true)
+                .withFaceDescriptor();
+
+            if (!liveDetection) {
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage détecté. Placez votre visage devant la caméra.</span>';
+                return;
+            }
+
+            // Étape 3 : récupérer la photo enregistrée
+            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Vérification du profil...</span>';
+            let registeredPhotoUrl = '';
+            try {
+                const photoRes = await fetch(`index.php?page=get_face_photo&email=${encodeURIComponent(savedEmail)}`);
+                const photoData = await photoRes.json();
+                if (!photoData.success) {
+                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage enregistré pour ce compte.</span>';
+                    setTimeout(() => closeCameraModal(), 2500);
+                    return;
+                }
+                registeredPhotoUrl = photoData.photo_url;
+            } catch (e) {
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur serveur.</span>';
+                return;
+            }
+
+            // Étape 4 : charger la photo enregistrée et calculer son descripteur
+            const registeredImg = await faceapi.fetchImage(registeredPhotoUrl);
+            const registeredDetection = await faceapi
+                .detectSingleFace(registeredImg, detectionOptions)
+                .withFaceLandmarks(true)
+                .withFaceDescriptor();
+
+            if (!registeredDetection) {
+                msgDiv.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Impossible d\'analyser la photo enregistrée. Ré-enregistrez votre visage.</span>';
+                setTimeout(() => closeCameraModal(), 3000);
+                return;
+            }
+
+            // Étape 5 : comparer les descripteurs (distance euclidienne)
+            const distance = faceapi.euclideanDistance(liveDetection.descriptor, registeredDetection.descriptor);
+            console.log('Distance faciale:', distance); // Pour debug
+
+            const THRESHOLD = 0.55; // 0 = même personne, > 0.6 = différente personne
+            if (distance >= THRESHOLD) {
+                msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Visage non reconnu (confiance: ${Math.round((1-distance)*100)}%). Réessayez avec un meilleur éclairage.</span>`;
+                setTimeout(() => closeCameraModal(), 3000);
+                return;
+            }
+
+            // Étape 6 : visage validé → envoyer au backend pour connexion
+            msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Visage reconnu (confiance: ${Math.round((1-distance)*100)}%) !</span>`;
+
             const imageData = canvas.toDataURL('image/jpeg');
-            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Reconnaissance en cours...</span>';
+            const payload = new URLSearchParams();
+            payload.append('face_image', imageData);
+            payload.append('role', savedRole);
+            payload.append('email', savedEmail);
 
             try {
-                const savedRole  = localStorage.getItem('valorys_face_role')  || 'patient';
-                const savedEmail = localStorage.getItem('valorys_face_email') || '';
-
-                const payload = new URLSearchParams();
-                payload.append('face_image', imageData);
-                payload.append('role', savedRole);
-                payload.append('email', savedEmail);
-
                 const response = await fetch('index.php?page=face_login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: payload.toString()
                 });
-
                 const result = await response.json();
 
                 if (result.success) {
