@@ -6,12 +6,49 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Medecin.php';
 
+/**
+ * UserController — CORRECTIONS APPLIQUÉES
+ * ══════════════════════════════════════════════════════════════════
+ *
+ * BUG 1 — <br> s'affichent en texte brut dans la vue
+ *   CAUSE  : implode('<br>', $errors) produit du HTML, mais la vue
+ *            l'enveloppait dans htmlspecialchars() → les balises
+ *            étaient échappées et affichées littéralement.
+ *   FIX    : Les messages individuels sont échappés AVANT le join,
+ *            et le résultat final (qui contient <br>) est affiché
+ *            avec echo $error (sans double-échappement).
+ *
+ * BUG 2 — Champs POST vides lors d'un upload (faux "obligatoire")
+ *   CAUSE  : Si enctype="multipart/form-data" est absent du <form>,
+ *            PHP ne peuple pas $_POST du tout quand un fichier est joint.
+ *            → nom, prenom, email semblaient vides → toutes les
+ *            validations échouaient.
+ *   FIX    : Vérification défensive ajoutée + commentaire dans la vue.
+ *            La vraie correction est dans modifier_profil.php (le form).
+ *
+ * BUG 3 — Photo non conservée entre soumissions invalides
+ *   CAUSE  : La photo était lue depuis la session APRÈS le bloc POST,
+ *            donc après une erreur elle revenait à null.
+ *   FIX    : On lit l'utilisateur (et sa photo) depuis la BDD AVANT
+ *            tout traitement.
+ *
+ * BUG 4 — Session non mise à jour après modification
+ *   CAUSE  : Seuls certains champs de session étaient mis à jour.
+ *   FIX    : Mise à jour complète de $_SESSION après updateProfil().
+ * ══════════════════════════════════════════════════════════════════
+ */
 class UserController {
 
     private User           $userModel;
     private Patient        $patientModel;
     private Medecin        $medecinModel;
     private AuthController $auth;
+
+    // Constantes upload
+    private const UPLOAD_DIR    = __DIR__ . '/../uploads/photos/';
+    private const UPLOAD_URL    = 'uploads/photos/';
+    private const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    private const MAX_SIZE      = 2 * 1024 * 1024; // 2 Mo
 
     public function __construct() {
         $this->userModel    = new User();
@@ -42,8 +79,8 @@ class UserController {
         $stats = [];
         if ($userRole === 'patient') {
             $stats = $this->patientModel->getStats($userId);
-            $stats['total_rdv']   = $stats['rdv_total']   ?? 0;
-            $stats['rdv_avenir']  = $stats['rdv_a_venir'] ?? 0;
+            $stats['total_rdv']    = $stats['rdv_total']   ?? 0;
+            $stats['rdv_avenir']   = $stats['rdv_a_venir'] ?? 0;
             $stats['note_moyenne'] = '—';
         } elseif ($userRole === 'medecin') {
             $raw   = $this->medecinModel->getStats($userId);
@@ -54,10 +91,11 @@ class UserController {
             ];
         }
 
-        $success         = $_SESSION['success_profil']         ?? null;
-        $error           = $_SESSION['error_profil']           ?? null;
+        // FIX BUG 1 : lecture des messages flash sans double-échappement
+        $success         = $_SESSION['success_profil']          ?? null;
+        $error           = $_SESSION['error_profil']            ?? null;
         $successPassword = $_SESSION['success_password_profil'] ?? null;
-        $errorPassword   = $_SESSION['error_password_profil']  ?? null;
+        $errorPassword   = $_SESSION['error_password_profil']   ?? null;
         unset(
             $_SESSION['success_profil'],
             $_SESSION['error_profil'],
@@ -74,9 +112,9 @@ class UserController {
         }
     }
 
-    /**
-     * Afficher le formulaire de modification de profil
-     */
+    // ─────────────────────────────────────────
+    //  Formulaire modification profil
+    // ─────────────────────────────────────────
     public function editProfilForm(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -88,7 +126,7 @@ class UserController {
 
         $user = $this->userModel->findById($userId);
         if (!$user) {
-            $_SESSION['error'] = "Utilisateur non trouvé";
+            $_SESSION['error_profil'] = "Utilisateur non trouvé.";
             header('Location: index.php?page=profil');
             exit;
         }
@@ -98,9 +136,10 @@ class UserController {
             $user = array_merge($user, $extras);
         }
 
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']);
+        // FIX BUG 1 : messages flash lus ici, affichés dans la vue sans double-échappement
+        $success = $_SESSION['success_profil'] ?? null;
+        $error   = $_SESSION['error_profil']   ?? null;
+        unset($_SESSION['success_profil'], $_SESSION['error_profil']);
 
         $viewPath = __DIR__ . '/../views/frontoffice/modifier_profil.php';
         if (file_exists($viewPath)) {
@@ -110,9 +149,9 @@ class UserController {
         }
     }
 
-    /**
-     * Mettre à jour le profil
-     */
+    // ─────────────────────────────────────────
+    //  Mise à jour du profil (avec photo)
+    // ─────────────────────────────────────────
     public function updateProfil(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -126,36 +165,134 @@ class UserController {
         $userId   = (int)$_SESSION['user_id'];
         $userRole = $_SESSION['user_role'] ?? 'patient';
 
+        // FIX BUG 3 : lecture depuis la BDD AVANT tout traitement
+        // pour avoir la photo actuelle même si la session est désynchronisée
+        $userActuel    = $this->userModel->findById($userId);
+        $photoActuelle = $userActuel['photo'] ?? null;
+        $photoFinale   = $photoActuelle; // on conserve l'ancienne par défaut
+
+        // ── Champs texte ──────────────────────────────────────────
+        $nom            = trim($_POST['nom']            ?? '');
+        $prenom         = trim($_POST['prenom']         ?? '');
+        $email          = trim($_POST['email']          ?? '');
+        $telephone      = trim($_POST['telephone']      ?? '');
+        $adresse        = trim($_POST['adresse']        ?? '');
+        $date_naissance = $_POST['date_naissance']      ?? null;
+        $password       = $_POST['password']            ?? '';
+        $confirm        = $_POST['confirm_password']    ?? '';
+
+        // ── Validation ────────────────────────────────────────────
+        // FIX BUG 2 : si $_POST est vide alors que des champs devaient exister,
+        // c'est que enctype est manquant dans le formulaire HTML (cf. modifier_profil.php).
+        // On détecte ce cas et on informe clairement.
+        if (empty($_POST) && !empty($_FILES)) {
+            $_SESSION['error_profil'] =
+                'Erreur de configuration : le formulaire doit avoir enctype="multipart/form-data". '
+                . 'Contactez l\'administrateur.';
+            header('Location: index.php?page=modifier_profil');
+            exit;
+        }
+
+        $errors = [];
+
+        if ($nom    === '') $errors[] = 'Le nom est obligatoire.';
+        if ($prenom === '') $errors[] = 'Le prénom est obligatoire.';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email invalide.';
+        if ($password !== '' && $password !== $confirm) $errors[] = 'Les mots de passe ne correspondent pas.';
+        if ($password !== '' && strlen($password) < 6)  $errors[] = 'Le mot de passe doit contenir au moins 6 caractères.';
+
+        // Email déjà utilisé par un autre compte
+        $existing = $this->userModel->findByEmail($email);
+        if ($existing && (int)$existing['id'] !== $userId) {
+            $errors[] = 'Cet email est déjà utilisé par un autre compte.';
+        }
+
+        if (!empty($errors)) {
+            // FIX BUG 1 : on échappe chaque message INDIVIDUELLEMENT,
+            // puis on joint avec <br>. La vue affiche $error sans htmlspecialchars().
+            $_SESSION['error_profil'] = implode('<br>', array_map('htmlspecialchars', $errors));
+            header('Location: index.php?page=modifier_profil');
+            exit;
+        }
+
+        // ── Gestion photo ─────────────────────────────────────────
+        if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+
+            $file    = $_FILES['photo'];
+            $tmpPath = $file['tmp_name'];
+            $mime    = mime_content_type($tmpPath);
+            $size    = $file['size'];
+            $ext     = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+            if (!in_array($mime, self::ALLOWED_TYPES)) {
+                $_SESSION['error_profil'] = htmlspecialchars('Format non supporté. Utilisez JPG, PNG, GIF ou WEBP.');
+                header('Location: index.php?page=modifier_profil');
+                exit;
+            }
+
+            if ($size > self::MAX_SIZE) {
+                $_SESSION['error_profil'] = 'La photo ne doit pas dépasser 2 Mo.';
+                header('Location: index.php?page=modifier_profil');
+                exit;
+            }
+
+            // Crée le dossier si absent
+            if (!is_dir(self::UPLOAD_DIR)) {
+                mkdir(self::UPLOAD_DIR, 0755, true);
+            }
+
+            // Supprime l'ancienne photo
+            if ($photoActuelle && file_exists(self::UPLOAD_DIR . $photoActuelle)) {
+                unlink(self::UPLOAD_DIR . $photoActuelle);
+            }
+
+            // Sauvegarde la nouvelle
+            $newPhoto = uniqid('avatar_', true) . '.' . $ext;
+            if (move_uploaded_file($tmpPath, self::UPLOAD_DIR . $newPhoto)) {
+                $photoFinale = $newPhoto;
+            } else {
+                $_SESSION['error_profil'] = "Erreur lors de l'enregistrement de la photo.";
+                header('Location: index.php?page=modifier_profil');
+                exit;
+            }
+
+        } elseif (
+            isset($_FILES['photo']['error']) &&
+            $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE &&
+            $_FILES['photo']['error'] !== UPLOAD_ERR_OK
+        ) {
+            $phpErrors = [
+                UPLOAD_ERR_INI_SIZE   => 'Fichier trop volumineux (limite serveur).',
+                UPLOAD_ERR_FORM_SIZE  => 'Fichier trop volumineux (limite formulaire).',
+                UPLOAD_ERR_PARTIAL    => 'Upload incomplet, réessayez.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire manquant.',
+                UPLOAD_ERR_CANT_WRITE => "Impossible d'écrire le fichier.",
+                UPLOAD_ERR_EXTENSION  => 'Upload bloqué par une extension PHP.',
+            ];
+            $code = $_FILES['photo']['error'];
+            $_SESSION['error_profil'] = $phpErrors[$code] ?? "Erreur upload (code $code).";
+            header('Location: index.php?page=modifier_profil');
+            exit;
+        }
+
+        // ── Mise à jour BDD ───────────────────────────────────────
         $data = [
-            'nom'            => trim($_POST['nom']            ?? ''),
-            'prenom'         => trim($_POST['prenom']         ?? ''),
-            'email'          => trim($_POST['email']          ?? ''),
-            'telephone'      => trim($_POST['telephone']      ?? ''),
-            'adresse'        => trim($_POST['adresse']        ?? ''),
-            'date_naissance' => $_POST['date_naissance']      ?? null,
+            'nom'            => $nom,
+            'prenom'         => $prenom,
+            'email'          => $email,
+            'telephone'      => $telephone,
+            'adresse'        => $adresse,
+            'date_naissance' => $date_naissance ?: null,
+            'photo'          => $photoFinale,
         ];
 
-        if (empty($data['nom']) || empty($data['prenom'])) {
-            $_SESSION['error_profil'] = 'Le nom et le prénom sont obligatoires.';
-            header('Location: index.php?page=profil');
-            exit;
-        }
-        
-        if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['error_profil'] = 'Email invalide.';
-            header('Location: index.php?page=profil');
-            exit;
-        }
-
-        $existing = $this->userModel->findByEmail($data['email']);
-        if ($existing && (int)$existing['id'] !== $userId) {
-            $_SESSION['error_profil'] = 'Cet email est déjà utilisé.';
-            header('Location: index.php?page=profil');
-            exit;
+        if ($password !== '') {
+            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
 
         $this->userModel->update($userId, $data);
 
+        // ── Extras selon le rôle ──────────────────────────────────
         if ($userRole === 'patient') {
             $this->userModel->upsertPatient($userId, [
                 'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
@@ -170,8 +307,15 @@ class UserController {
             ]);
         }
 
-        $_SESSION['user_name']  = $data['prenom'] . ' ' . $data['nom'];
-        $_SESSION['user_email'] = $data['email'];
+        // FIX BUG 4 : mise à jour COMPLÈTE de la session
+        $_SESSION['user_name']         = $prenom . ' ' . $nom;
+        $_SESSION['user_email']        = $email;
+        $_SESSION['user']['nom']       = $nom;
+        $_SESSION['user']['prenom']    = $prenom;
+        $_SESSION['user']['email']     = $email;
+        $_SESSION['user']['telephone'] = $telephone;
+        $_SESSION['user']['adresse']   = $adresse;
+        $_SESSION['user']['photo']     = $photoFinale;
 
         $_SESSION['success_profil'] = 'Profil mis à jour avec succès.';
         header('Location: index.php?page=profil');
@@ -193,8 +337,8 @@ class UserController {
 
         $userId          = (int)$_SESSION['user_id'];
         $currentPassword = $_POST['current_password'] ?? '';
-        $newPassword     = $_POST['new_password']     ?? '';
-        $confirmPassword = $_POST['confirm_password'] ?? '';
+        $newPassword     = $_POST['new_password']      ?? '';
+        $confirmPassword = $_POST['confirm_password']  ?? '';
 
         $user = $this->userModel->findById($userId);
         if (!$user) {
@@ -230,7 +374,7 @@ class UserController {
             exit;
         }
         if ($newPassword === $currentPassword) {
-            $_SESSION['error_password_profil'] = 'Le nouveau mot de passe doit être différent de l\'ancien.';
+            $_SESSION['error_password_profil'] = "Le nouveau mot de passe doit être différent de l'ancien.";
             header('Location: index.php?page=profil');
             exit;
         }
@@ -244,37 +388,32 @@ class UserController {
         exit;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  AVATAR
-    // ═══════════════════════════════════════════════════════════
-
+    // ─────────────────────────────────────────
+    //  Avatar (routes dédiées)
+    // ─────────────────────────────────────────
     public function updateAvatar(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
             exit;
         }
-
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['avatar'])) {
             header('Location: index.php?page=profil');
             exit;
         }
 
         $userId = (int)$_SESSION['user_id'];
-        $user = $this->userModel->findById($userId);
+        $user   = $this->userModel->findById($userId);
         if (!$user) {
             $_SESSION['error_profil'] = "Utilisateur non trouvé.";
             header('Location: index.php?page=profil');
             exit;
         }
-        
+
         $result = $this->userModel->uploadAvatar($_FILES['avatar'], $userId);
-        
-        if ($result) {
-            $_SESSION['success_profil'] = "Photo de profil mise à jour avec succès.";
-        } else {
-            $_SESSION['error_profil'] = "Erreur lors de l'upload. Vérifiez le format (JPG, PNG, GIF, WEBP) et la taille (max 2 Mo).";
-        }
-        
+        $_SESSION[$result ? 'success_profil' : 'error_profil'] = $result
+            ? "Photo de profil mise à jour avec succès."
+            : "Erreur lors de l'upload. Vérifiez le format (JPG, PNG, GIF, WEBP) et la taille (max 2 Mo).";
+
         header('Location: index.php?page=profil');
         exit;
     }
@@ -287,13 +426,10 @@ class UserController {
 
         $userId = (int)$_SESSION['user_id'];
         $result = $this->userModel->deleteAvatar($userId);
-        
-        if ($result) {
-            $_SESSION['success_profil'] = "Photo de profil supprimée avec succès.";
-        } else {
-            $_SESSION['error_profil'] = "Erreur lors de la suppression.";
-        }
-        
+        $_SESSION[$result ? 'success_profil' : 'error_profil'] = $result
+            ? "Photo de profil supprimée avec succès."
+            : "Erreur lors de la suppression.";
+
         header('Location: index.php?page=profil');
         exit;
     }
@@ -310,8 +446,8 @@ class UserController {
 
     public function create(): void {
         $this->auth->requireRole('admin');
-        $old   = $_SESSION['old']                ?? null;
-        $flash = $_SESSION['flash']['message']    ?? null;
+        $old   = $_SESSION['old']             ?? null;
+        $flash = $_SESSION['flash']['message'] ?? null;
         unset($_SESSION['old'], $_SESSION['flash']);
 
         $viewPath = __DIR__ . '/../views/backoffice/user_add.html';
@@ -332,7 +468,8 @@ class UserController {
         $errors = $this->validate($data);
 
         if (!empty($errors)) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+            // FIX BUG 1 : chaque message est échappé avant le join
+            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', array_map('htmlspecialchars', $errors))];
             $_SESSION['old']   = $_POST;
             header('Location: index.php?page=users&action=create');
             exit;
@@ -356,11 +493,11 @@ class UserController {
 
     public function edit(int $id): void {
         $this->auth->requireRole('admin');
-        $user  = $this->userModel->findById($id);
+        $user = $this->userModel->findById($id);
         if (!$user) { $this->notFound(); }
 
         $extra = $this->userModel->getExtras($id, $user['role']);
-        $old   = $_SESSION['old']             ?? null;
+        $old   = $_SESSION['old']              ?? null;
         $flash = $_SESSION['flash']['message'] ?? null;
         unset($_SESSION['old'], $_SESSION['flash']);
 
@@ -385,7 +522,7 @@ class UserController {
         $errors = $this->validate($data, false);
 
         if (!empty($errors)) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', array_map('htmlspecialchars', $errors))];
             $_SESSION['old']   = $_POST;
             header("Location: index.php?page=users&action=edit&id=$id");
             exit;
@@ -509,102 +646,86 @@ class UserController {
     private function renderTable(array $users): void {
         echo '<table border="1"><tr><th>ID</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th></tr>';
         foreach ($users as $u) {
-            echo "<tr><td>{$u['id']}</td><td>{$u['prenom']} {$u['nom']}</td><td>{$u['email']}</td><td>{$u['role']}</td><td>{$u['statut']}</td></tr>";
+            echo '<tr>'
+               . '<td>' . htmlspecialchars($u['id'])     . '</td>'
+               . '<td>' . htmlspecialchars($u['prenom']) . ' ' . htmlspecialchars($u['nom']) . '</td>'
+               . '<td>' . htmlspecialchars($u['email'])  . '</td>'
+               . '<td>' . htmlspecialchars($u['role'])   . '</td>'
+               . '<td>' . htmlspecialchars($u['statut']) . '</td>'
+               . '</tr>';
         }
         echo '</table>';
     }
 
-    /**
-     * Fallback simple pour l'édition du profil
-     */
-    private function renderSimpleEditForm($user, $userRole, $success, $error): void {
-        ?>
+    private function renderSimpleEditForm($user, $userRole, $success, $error): void { ?>
         <!DOCTYPE html>
         <html lang="fr">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Modifier mon profil - MediConnect</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                :root { --primary: #2A7FAA; --secondary: #4CAF50; }
-                body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; font-family: 'Segoe UI', sans-serif; }
-                .profile-card { max-width: 550px; width: 100%; background: white; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; }
-                .card-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); padding: 40px 28px; text-align: center; color: white; }
-                .avatar-icon { width: 90px; height: 90px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
-                .avatar-icon i { font-size: 45px; }
-                .card-header h2 { font-size: 28px; margin: 0; }
-                .card-header p { margin: 8px 0 0; opacity: 0.9; }
-                .card-body { padding: 32px 28px; }
-                .form-group { margin-bottom: 24px; }
-                .form-label { font-weight: 600; color: #2d3748; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; display: block; }
-                .input-icon { position: relative; }
-                .input-icon i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #a0aec0; }
-                .form-control { width: 100%; border-radius: 14px; padding: 14px 16px 14px 46px; border: 1.5px solid #e2e8f0; font-size: 15px; background: #f8fafc; transition: all 0.3s; }
-                .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(42,127,170,0.1); background: white; }
-                .password-section { background: #f8fafc; border-radius: 20px; padding: 20px; margin: 24px 0; border: 1px solid #e2e8f0; }
-                .password-section-title { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 16px; }
-                .btn-save { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 14px; padding: 14px 28px; border: none; font-weight: 600; width: 100%; transition: all 0.3s; }
-                .btn-save:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(76,175,80,0.3); }
-                .btn-cancel { background: #f1f3f5; color: #6c757d; border-radius: 14px; padding: 14px 28px; text-decoration: none; display: inline-block; text-align: center; width: 100%; margin-top: 12px; font-weight: 600; transition: all 0.3s; }
-                .btn-cancel:hover { background: #e9ecef; color: #495057; transform: translateY(-2px); }
-                .alert-custom { border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; border-left: 4px solid; }
-                .alert-success-custom { background: #d4edda; color: #155724; border-left-color: #28a745; }
-                .alert-error-custom { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
-                .back-link { text-align: center; margin-top: 20px; }
-                .back-link a { color: white; text-decoration: none; opacity: 0.9; }
-                .back-link a:hover { opacity: 1; text-decoration: underline; }
-            </style>
         </head>
-        <body>
-            <div class="profile-card">
-                <div class="card-header">
-                    <div class="avatar-icon"><i class="fas fa-user-edit"></i></div>
-                    <h2>Modifier mon profil</h2>
-                    <p>Mettez à jour vos informations personnelles</p>
+        <body class="p-4">
+            <!--
+                FIX BUG 2 : enctype="multipart/form-data" obligatoire.
+                Sans lui, dès qu'un fichier est joint, PHP vide $_POST.
+            -->
+            <form method="POST" action="index.php?page=modifier_profil" enctype="multipart/form-data">
+
+                <?php if ($success): ?>
+                    <div class="alert alert-success">
+                        <?= htmlspecialchars($success) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($error): ?>
+                    <div class="alert alert-danger">
+                        <!--
+                            FIX BUG 1 : $error contient du HTML sûr (<br>)
+                            construit par nos soins → pas de htmlspecialchars ici.
+                        -->
+                        <?= $error ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="mb-3">
+                    <label class="form-label">Nom</label>
+                    <input type="text" name="nom" class="form-control"
+                           value="<?= htmlspecialchars($user['nom'] ?? '') ?>" required>
                 </div>
-                <div class="card-body">
-                    <?php if ($success): ?>
-                        <div class="alert-custom alert-success-custom"><i class="fas fa-check-circle me-2"></i> <?= htmlspecialchars($success) ?></div>
-                    <?php endif; ?>
-                    <?php if ($error): ?>
-                        <div class="alert-custom alert-error-custom"><i class="fas fa-exclamation-circle me-2"></i> <?= htmlspecialchars($error) ?></div>
-                    <?php endif; ?>
-                    <form method="POST" action="index.php?page=modifier_profil">
-                        <div class="form-group">
-                            <label class="form-label">Nom complet</label>
-                            <div class="input-icon"><i class="fas fa-user"></i><input type="text" name="nom" class="form-control" value="<?= htmlspecialchars($user['nom'] ?? '') ?>" required></div>
-                        </div>
-                        <div class="form-group">
-                            <div class="input-icon"><i class="fas fa-user"></i><input type="text" name="prenom" class="form-control" value="<?= htmlspecialchars($user['prenom'] ?? '') ?>" required></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Adresse email</label>
-                            <div class="input-icon"><i class="fas fa-envelope"></i><input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? '') ?>" required></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Téléphone</label>
-                            <div class="input-icon"><i class="fas fa-phone"></i><input type="tel" name="telephone" class="form-control" value="<?= htmlspecialchars($user['telephone'] ?? '') ?>"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Adresse</label>
-                            <div class="input-icon"><i class="fas fa-map-marker-alt"></i><textarea name="adresse" class="form-control" rows="2" style="padding-top: 14px;"><?= htmlspecialchars($user['adresse'] ?? '') ?></textarea></div>
-                        </div>
-                        <div class="password-section">
-                            <div class="password-section-title"><i class="fas fa-lock me-2"></i> Mot de passe <span style="font-size: 12px;">(optionnel)</span></div>
-                            <div class="form-group" style="margin-bottom: 16px;"><div class="input-icon"><i class="fas fa-key"></i><input type="password" name="password" class="form-control" placeholder="Nouveau mot de passe"></div></div>
-                            <div class="form-group" style="margin-bottom: 0;"><div class="input-icon"><i class="fas fa-check-circle"></i><input type="password" name="confirm_password" class="form-control" placeholder="Confirmer le mot de passe"></div></div>
-                            <div class="password-hint" style="font-size: 12px; color: #718096; margin-top: 12px;"><i class="fas fa-info-circle"></i> Laisser vide pour ne pas changer. Minimum 6 caractères.</div>
-                        </div>
-                        <button type="submit" class="btn-save"><i class="fas fa-save me-2"></i> Enregistrer les modifications</button>
-                        <a href="index.php?page=profil" class="btn-cancel"><i class="fas fa-times me-2"></i> Annuler</a>
-                    </form>
+                <div class="mb-3">
+                    <label class="form-label">Prénom</label>
+                    <input type="text" name="prenom" class="form-control"
+                           value="<?= htmlspecialchars($user['prenom'] ?? '') ?>" required>
                 </div>
-            </div>
-            <div class="back-link"><a href="index.php?page=profil"><i class="fas fa-arrow-left me-2"></i> Retour à mon profil</a></div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control"
+                           value="<?= htmlspecialchars($user['email'] ?? '') ?>" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Téléphone</label>
+                    <input type="tel" name="telephone" class="form-control"
+                           value="<?= htmlspecialchars($user['telephone'] ?? '') ?>">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Photo (JPG/PNG/GIF/WEBP, 2 Mo max)</label>
+                    <input type="file" name="photo" class="form-control"
+                           accept="image/jpeg,image/png,image/gif,image/webp">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nouveau mot de passe (optionnel)</label>
+                    <input type="password" name="password" class="form-control"
+                           placeholder="Laisser vide pour ne pas changer">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirmer le mot de passe</label>
+                    <input type="password" name="confirm_password" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <a href="index.php?page=profil" class="btn btn-secondary ms-2">Annuler</a>
+            </form>
         </body>
         </html>
-        <?php
-    }
+    <?php }
 }

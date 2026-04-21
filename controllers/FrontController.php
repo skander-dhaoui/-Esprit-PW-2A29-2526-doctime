@@ -2004,6 +2004,7 @@ JS;
                 fetch("index.php?page=event_register", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    credentials: "include",
                     body: "event_id=" + eventId
                 })
                 .then(response => response.json())

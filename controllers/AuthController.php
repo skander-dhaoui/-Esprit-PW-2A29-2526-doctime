@@ -57,8 +57,13 @@ class AuthController {
     //  Afficher le formulaire de connexion
     // ─────────────────────────────────────────
     public function showLogin(): void {
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['error']);
+        $errors = $_SESSION['errors'] ?? [];
+        $old    = $_SESSION['old']    ?? [];
+        // Support ancien format
+        if (!empty($_SESSION['error']) && empty($errors)) {
+            $errors['__form'] = $_SESSION['error'];
+        }
+        unset($_SESSION['error'], $_SESSION['errors'], $_SESSION['old']);
 
         $viewPath = __DIR__ . '/../views/frontoffice/login.php';
         $viewPathHtml = __DIR__ . '/../views/frontoffice/login.html';
@@ -67,7 +72,8 @@ class AuthController {
         } elseif (file_exists($viewPathHtml)) {
             require_once $viewPathHtml;
         } else {
-            $this->renderLoginFallback($error);
+            $errorMsg = $errors['__form'] ?? null;
+            $this->renderLoginFallback($errorMsg);
         }
     }
 
@@ -82,15 +88,20 @@ class AuthController {
 
         $email    = trim($_POST['email']    ?? '');
         $password = trim($_POST['password'] ?? '');
+        $loginErrors = [];
 
-        if (empty($email) || empty($password)) {
-            $_SESSION['error'] = "Email et mot de passe requis.";
-            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
-            exit;
+        if (empty($email)) {
+            $loginErrors['email'] = 'L\'email est requis.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $loginErrors['email'] = 'Adresse email invalide.';
+        }
+        if (empty($password)) {
+            $loginErrors['password'] = 'Le mot de passe est requis.';
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $_SESSION['error'] = "Email invalide.";
+        if (!empty($loginErrors)) {
+            $_SESSION['errors'] = $loginErrors;
+            $_SESSION['old']    = $_POST;
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
@@ -98,20 +109,16 @@ class AuthController {
         try {
             $user = $this->userModel->findByEmail($email);
 
-            if (!$user) {
-                $_SESSION['error'] = "Email ou mot de passe incorrect.";
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
-                exit;
-            }
-
-            if (!password_verify($password, $user['password'])) {
-                $_SESSION['error'] = "Email ou mot de passe incorrect.";
+            if (!$user || !password_verify($password, $user['password'])) {
+                $_SESSION['errors'] = ['credentials' => 'Email ou mot de passe incorrect.'];
+                $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
                 exit;
             }
 
             if ($user['statut'] !== 'actif') {
-                $_SESSION['error'] = "Votre compte est " . $user['statut'] . ". Contactez l'administrateur.";
+                $_SESSION['errors'] = ['compte' => 'Votre compte est ' . $user['statut'] . '. Contactez l\'administrateur.'];
+                $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
                 exit;
             }
@@ -142,9 +149,9 @@ class AuthController {
             }
             exit;
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log('Erreur login: ' . $e->getMessage());
-            $_SESSION['error'] = "Erreur serveur. Veuillez réessayer.";
+            $_SESSION['errors'] = ['__form' => 'Erreur serveur. Veuillez réessayer.'];
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
@@ -292,39 +299,42 @@ public function register(): void {
             ]);
         }
 
-        // Envoyer email de bienvenue
-        $welcomeBody = "
-            <h1>Bienvenue sur DocTime !</h1>
-            <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
-            <p>Votre compte a été créé avec succès sur DocTime.</p>
-            <p>Vous pouvez dès maintenant :</p>
-            <ul>
-                <li>Prendre des rendez-vous en ligne</li>
-                <li>Consulter vos ordonnances</li>
-                <li>Discuter avec vos médecins</li>
-            </ul>
-            <p style='margin-top: 30px;'>
-                <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
-            </p>
-            <hr>
-            <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
-        ";
-        
-        MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
+        // Compte créé — envoyer l'email de bienvenue (non bloquant)
+        try {
+            $welcomeBody = "
+                <h1>Bienvenue sur DocTime !</h1>
+                <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
+                <p>Votre compte a été créé avec succès sur DocTime.</p>
+                <p>Vous pouvez dès maintenant :</p>
+                <ul>
+                    <li>Prendre des rendez-vous en ligne</li>
+                    <li>Consulter vos ordonnances</li>
+                    <li>Discuter avec vos médecins</li>
+                </ul>
+                <p style='margin-top: 30px;'>
+                    <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
+                </p>
+                <hr>
+                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+            ";
+            MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
+        } catch (\Throwable $mailErr) {
+            // L'email échoue silencieusement — l'inscription reste valide
+            error_log('Email bienvenue non envoyé : ' . $mailErr->getMessage());
+        }
 
-        // ✅ CORRECTION : TOUJOURS REDIRIGER VERS LA PAGE DE CONNEXION
         if ($role === 'medecin') {
-            $_SESSION['success'] = "Compte médecin créé avec succès. En attente de validation par un administrateur. Vous recevrez un email de confirmation.";
+            $_SESSION['success'] = "Compte médecin créé avec succès. En attente de validation par un administrateur.";
         } else {
             $_SESSION['success'] = "Compte créé avec succès ! Vous pouvez maintenant vous connecter.";
         }
-        
+
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
 
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
         error_log('Erreur register: ' . $e->getMessage());
-        $_SESSION['errors'] = ['__form' => 'Erreur serveur. Veuillez réessayer.'];
+        $_SESSION['errors'] = ['__form' => 'Erreur serveur (' . $e->getMessage() . '). Veuillez réessayer.'];
         $_SESSION['old']     = $_POST;
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
         exit;

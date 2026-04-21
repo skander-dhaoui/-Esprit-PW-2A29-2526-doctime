@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,49 +9,259 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #1e2a3e; color: white; transition: all 0.3s; z-index: 100; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header .logo-img { width: 130px; height: auto; object-fit: contain; margin-bottom: 6px; filter: brightness(0) invert(1); }
-        .sidebar-header small { color: rgba(255,255,255,0.6); font-size: 12px; }
-        .sidebar-menu { padding: 20px 0; }
-        .sidebar-menu a { display: block; padding: 12px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s; font-weight: 500; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.1); color: white; border-left: 4px solid #4CAF50; }
-        .sidebar-menu i { width: 25px; margin-right: 12px; }
-        .main-content { margin-left: 280px; padding: 20px; }
-        .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .navbar-left { display: flex; align-items: center; gap: 20px; }
-        .navbar-logo { height: 40px; margin-right: 15px; }
-        .navbar-menu-items { display: flex; gap: 10px; flex-wrap: wrap; }
-        .navbar-menu-items .nav-link-custom { color: #1e2a3e; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: all 0.3s; font-size: 14px; font-weight: 500; }
-        .navbar-menu-items .nav-link-custom:hover { background: #f0f0f0; color: #4CAF50; }
-        .navbar-menu-items .nav-link-custom i { margin-right: 6px; }
-        .admin-info { display: flex; align-items: center; gap: 15px; }
-        .admin-avatar { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
-        .stat-card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; border-left: 4px solid; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .stat-card h3 { font-size: 32px; margin: 10px 0 5px; font-weight: bold; }
-        .stat-card p { color: #666; margin: 0; }
-        .stat-icon { font-size: 45px; opacity: 0.3; float: right; }
-        .recent-table { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .recent-table h5 { margin-bottom: 20px; color: #1e2a3e; }
-        .badge-active { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-pending { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-inactive { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .chart-container { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f4f6f9;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100%;
+            background: #1e2a3e;
+            color: white;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header .logo-img {
+            width: 130px;
+            height: auto;
+            object-fit: contain;
+            margin-bottom: 6px;
+            filter: brightness(0) invert(1);
+        }
+
+        .sidebar-header small {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 25px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .sidebar-menu i {
+            width: 25px;
+            margin-right: 12px;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+        }
+
+        .navbar-top {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar-logo {
+            height: 40px;
+            margin-right: 15px;
+        }
+
+        .navbar-menu-items {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .navbar-menu-items .nav-link-custom {
+            color: #1e2a3e;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .navbar-menu-items .nav-link-custom:hover {
+            background: #f0f0f0;
+            color: #4CAF50;
+        }
+
+        .navbar-menu-items .nav-link-custom i {
+            margin-right: 6px;
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-avatar {
+            width: 45px;
+            height: 45px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+            border-left: 4px solid;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            font-size: 32px;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        .stat-card p {
+            color: #666;
+            margin: 0;
+        }
+
+        .stat-icon {
+            font-size: 45px;
+            opacity: 0.3;
+            float: right;
+        }
+
+        .recent-table {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .recent-table h5 {
+            margin-bottom: 20px;
+            color: #1e2a3e;
+        }
+
+        .badge-active {
+            background: #d4edda;
+            color: #155724;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .badge-inactive {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
         @media (max-width: 992px) {
-            .sidebar { width: 80px; }
-            .sidebar-header .logo-img { width: 50px; }
-            .sidebar-header small { display: none; }
-            .sidebar-menu a span { display: none; }
-            .sidebar-menu a { text-align: center; padding: 15px; }
-            .sidebar-menu i { margin-right: 0; font-size: 20px; }
-            .main-content { margin-left: 80px; }
-            .navbar-menu-items { justify-content: center; }
+            .sidebar {
+                width: 80px;
+            }
+
+            .sidebar-header .logo-img {
+                width: 50px;
+            }
+
+            .sidebar-header small {
+                display: none;
+            }
+
+            .sidebar-menu a span {
+                display: none;
+            }
+
+            .sidebar-menu a {
+                text-align: center;
+                padding: 15px;
+            }
+
+            .sidebar-menu i {
+                margin-right: 0;
+                font-size: 20px;
+            }
+
+            .main-content {
+                margin-left: 80px;
+            }
+
+            .navbar-menu-items {
+                justify-content: center;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="sidebar">
         <div class="sidebar-header">
@@ -91,26 +302,105 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-3"><div class="stat-card" style="border-left-color: #4CAF50;"><i class="fas fa-users stat-icon"></i><p>Total utilisateurs</p><h3>1,284</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +12% ce mois</small></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color: #2A7FAA;"><i class="fas fa-user-md stat-icon"></i><p>Médecins</p><h3>156</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +8% ce mois</small></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color: #ffc107;"><i class="fas fa-user stat-icon"></i><p>Patients</p><h3>1,078</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +15% ce mois</small></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color: #dc3545;"><i class="fas fa-clock stat-icon"></i><p>En attente validation</p><h3>23</h3><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> À traiter</small></div></div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #4CAF50;"><i class="fas fa-users stat-icon"></i>
+                    <p>Total utilisateurs</p>
+                    <h3>1,284</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +12% ce mois</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #2A7FAA;"><i class="fas fa-user-md stat-icon"></i>
+                    <p>Médecins</p>
+                    <h3>156</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +8% ce mois</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #ffc107;"><i class="fas fa-user stat-icon"></i>
+                    <p>Patients</p>
+                    <h3>1,078</h3><small class="text-success"><i class="fas fa-arrow-up"></i> +15% ce mois</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="border-left-color: #dc3545;"><i class="fas fa-clock stat-icon"></i>
+                    <p>En attente validation</p>
+                    <h3>23</h3><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> À traiter</small>
+                </div>
+            </div>
         </div>
         <div class="row">
-            <div class="col-md-8"><div class="chart-container"><h5><i class="fas fa-chart-line me-2"></i> Évolution des inscriptions</h5><canvas id="evolutionChart" height="250"></canvas></div></div>
-            <div class="col-md-4"><div class="chart-container"><h5><i class="fas fa-chart-pie me-2"></i> Répartition utilisateurs</h5><canvas id="repartitionChart" height="250"></canvas></div></div>
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5><i class="fas fa-chart-line me-2"></i> Évolution des inscriptions</h5><canvas
+                        id="evolutionChart" height="250"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5><i class="fas fa-chart-pie me-2"></i> Répartition utilisateurs</h5><canvas id="repartitionChart"
+                        height="250"></canvas>
+                </div>
+            </div>
         </div>
         <div class="recent-table">
             <h5><i class="fas fa-user-plus me-2"></i> Derniers utilisateurs inscrits</h5>
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead><tr><th>Nom complet</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Nom complet</th>
+                            <th>Email</th>
+                            <th>Rôle</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <tr><td>Sarah Ben Ali</td><td>sarah@email.com</td><td><span class="badge bg-info">Patient</span></td><td><span class="badge-active">Actif</span></td><td>30/03/2026</td><td><a href="user_edit.html?id=125" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a></td></tr>
-                        <tr><td>Dr. Karim Said</td><td>karim.said@email.com</td><td><span class="badge bg-success">Médecin</span></td><td><span class="badge-pending">En validation</span></td><td>28/03/2026</td><td><a href="medecin_validate.html?id=124" class="btn btn-sm btn-warning"><i class="fas fa-check-circle"></i></a></td></tr>
-                        <tr><td>Leila Mansour</td><td>leila@email.com</td><td><span class="badge bg-info">Patient</span></td><td><span class="badge-active">Actif</span></td><td>27/03/2026</td><td><a href="user_edit.html?id=123" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a></td></tr>
-                        <tr><td>Dr. Ahmed Trabelsi</td><td>ahmed.trabelsi@email.com</td><td><span class="badge bg-success">Médecin</span></td><td><span class="badge-active">Actif</span></td><td>26/03/2026</td><td><a href="user_edit.html?id=122" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a></td></tr>
-                        <tr><td>Nadia Hamdi</td><td>nadia@email.com</td><td><span class="badge bg-info">Patient</span></td><td><span class="badge-inactive">Inactif</span></td><td>25/03/2026</td><td><a href="user_edit.html?id=121" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a></td></tr>
+                        <tr>
+                            <td>Sarah Ben Ali</td>
+                            <td>sarah@email.com</td>
+                            <td><span class="badge bg-info">Patient</span></td>
+                            <td><span class="badge-active">Actif</span></td>
+                            <td>30/03/2026</td>
+                            <td><a href="user_edit.html?id=125" class="btn btn-sm btn-primary"><i
+                                        class="fas fa-edit"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Dr. Karim Said</td>
+                            <td>karim.said@email.com</td>
+                            <td><span class="badge bg-success">Médecin</span></td>
+                            <td><span class="badge-pending">En validation</span></td>
+                            <td>28/03/2026</td>
+                            <td><a href="medecin_validate.html?id=124" class="btn btn-sm btn-warning"><i
+                                        class="fas fa-check-circle"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Leila Mansour</td>
+                            <td>leila@email.com</td>
+                            <td><span class="badge bg-info">Patient</span></td>
+                            <td><span class="badge-active">Actif</span></td>
+                            <td>27/03/2026</td>
+                            <td><a href="user_edit.html?id=123" class="btn btn-sm btn-primary"><i
+                                        class="fas fa-edit"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Dr. Ahmed Trabelsi</td>
+                            <td>ahmed.trabelsi@email.com</td>
+                            <td><span class="badge bg-success">Médecin</span></td>
+                            <td><span class="badge-active">Actif</span></td>
+                            <td>26/03/2026</td>
+                            <td><a href="user_edit.html?id=122" class="btn btn-sm btn-primary"><i
+                                        class="fas fa-edit"></i></a></td>
+                        </tr>
+                        <tr>
+                            <td>Nadia Hamdi</td>
+                            <td>nadia@email.com</td>
+                            <td><span class="badge bg-info">Patient</span></td>
+                            <td><span class="badge-inactive">Inactif</span></td>
+                            <td>25/03/2026</td>
+                            <td><a href="user_edit.html?id=121" class="btn btn-sm btn-primary"><i
+                                        class="fas fa-edit"></i></a></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -118,9 +408,10 @@
     </div>
     <script>
         const ctx1 = document.getElementById('evolutionChart').getContext('2d');
-        new Chart(ctx1, { type: 'line', data: { labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'], datasets: [{ label: 'Nouveaux utilisateurs', data: [65,78,89,102,118,145,167,189,210,245,278,312], borderColor: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } });
+        new Chart(ctx1, { type: 'line', data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'], datasets: [{ label: 'Nouveaux utilisateurs', data: [65, 78, 89, 102, 118, 145, 167, 189, 210, 245, 278, 312], borderColor: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.1)', tension: 0.3, fill: true }] }, options: { responsive: true, maintainAspectRatio: true } });
         const ctx2 = document.getElementById('repartitionChart').getContext('2d');
-        new Chart(ctx2, { type: 'doughnut', data: { labels: ['Patients','Médecins','Administrateurs'], datasets: [{ data: [1078,156,3], backgroundColor: ['#4CAF50','#2A7FAA','#ffc107'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } } });
+        new Chart(ctx2, { type: 'doughnut', data: { labels: ['Patients', 'Médecins', 'Administrateurs'], datasets: [{ data: [1078, 156, 3], backgroundColor: ['#4CAF50', '#2A7FAA', '#ffc107'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } } });
     </script>
 </body>
+
 </html>

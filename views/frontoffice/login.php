@@ -9,42 +9,68 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+
         .login-card { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; width: 100%; max-width: 480px; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
         .login-header { background: linear-gradient(135deg, #2A7FAA 0%, #3e8e41 100%); color: white; padding: 30px; text-align: center; }
         .login-header .logo-container { display: flex; justify-content: center; margin-bottom: 10px; }
         .login-header .logo-container img { height: 90px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
         .login-header p { font-size: 13px; opacity: 0.9; margin-top: 6px; }
+
         .login-body { padding: 35px; }
+
         .form-control { border-radius: 10px; padding: 12px 15px; border: 1px solid #ddd; transition: all 0.3s; }
         .form-control:focus { border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.1); }
+        .form-control.is-invalid { border-color: #dc3545; background-color: #fff5f5; background-image: none; }
+        .form-control.is-invalid:focus { border-color: #dc3545; box-shadow: 0 0 0 3px rgba(220,53,69,0.1); }
+
+        .field-error { color: #dc3545; font-size: 12px; margin-top: 5px; font-weight: 500; display: none; }
+        .field-error.show { display: flex; align-items: center; gap: 4px; }
+
         .btn-login { background: #4CAF50; color: white; border-radius: 10px; padding: 12px; width: 100%; font-weight: bold; font-size: 16px; border: none; transition: all 0.3s; }
         .btn-login:hover { background: #2A7FAA; transform: translateY(-2px); }
+        .btn-login:disabled { opacity: 0.7; transform: none; cursor: not-allowed; }
+
         .btn-camera { background: #6c757d; color: white; border-radius: 10px; padding: 12px; width: 100%; font-weight: bold; font-size: 16px; border: none; transition: all 0.3s; margin-bottom: 15px; }
         .btn-camera:hover { background: #5a6268; transform: translateY(-2px); }
+
         .role-selector { display: flex; gap: 15px; margin-bottom: 25px; }
         .role-option { flex: 1; text-align: center; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s; background: #f9f9f9; }
         .role-option i { font-size: 24px; margin-bottom: 5px; display: block; }
         .role-option.active { border-color: #4CAF50; background: #e8f5e9; color: #4CAF50; }
         .role-option:hover { border-color: #4CAF50; transform: translateY(-2px); }
-        .alert-php { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; }
-        .alert-error-js { background: #f8d7da; color: #721c24; border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: none; }
-        .alert-success-js { background: #d4edda; color: #155724; border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: none; }
+
+        /* PHP session alerts */
+        .alert-session { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .alert-session-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-session-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
         .forgot-link, .register-link { color: #2A7FAA; text-decoration: none; font-size: 14px; }
         .forgot-link:hover, .register-link:hover { color: #4CAF50; text-decoration: underline; }
         hr { margin: 20px 0; }
-        .modal-camera { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-camera-content { background: white; border-radius: 20px; width: 90%; max-width: 500px; padding: 20px; text-align: center; }
-        .modal-camera-content video { width: 100%; border-radius: 10px; margin-bottom: 15px; }
-        .modal-camera-content canvas { display: none; }
+
         .captcha-box { background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center; margin-bottom: 20px; }
-        .captcha-code { font-size: 28px; font-weight: bold; letter-spacing: 8px; background: #2A7FAA; color: white; display: inline-block; padding: 10px 20px; border-radius: 10px; font-family: monospace; margin-bottom: 10px; }
-        .captcha-refresh { cursor: pointer; color: #2A7FAA; margin-left: 10px; }
+        .captcha-code { font-size: 28px; font-weight: bold; letter-spacing: 8px; background: #2A7FAA; color: white; display: inline-block; padding: 10px 20px; border-radius: 10px; font-family: monospace; margin-bottom: 10px; user-select: none; }
+        .captcha-refresh { cursor: pointer; color: #2A7FAA; margin-left: 10px; transition: color 0.2s; }
         .captcha-refresh:hover { color: #4CAF50; }
-        
-        /* Spinner */
-        .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
-        .text-info i { margin-right: 5px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .shake { animation: shake 0.35s ease-in-out; }
+
+        /* Camera modal */
+        .modal-camera { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+        .modal-camera.open { display: flex; }
+        .modal-camera-content { background: white; border-radius: 20px; padding: 30px; text-align: center; max-width: 420px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: fadeIn 0.3s ease; }
+        .modal-camera-content h4 { margin-bottom: 8px; color: #1a2035; }
+        .modal-camera-content video { width: 100%; border-radius: 12px; margin: 15px 0; background: #000; }
+        .modal-camera-content canvas { display: none; }
     </style>
 </head>
 <body>
@@ -61,29 +87,21 @@
         <div class="login-body">
             <h4 class="text-center mb-4">Connexion</h4>
 
-            <?php if (!empty($error)): ?>
-                <div class="alert alert-danger alert-php">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    <?= htmlspecialchars($error) ?>
-                </div>
-            <?php endif; ?>
-
             <?php if (!empty($_SESSION['success'])): ?>
-                <div class="alert alert-success alert-php">
-                    <i class="fas fa-check-circle me-2"></i>
+                <div class="alert-session alert-session-success">
+                    <i class="fas fa-check-circle"></i>
                     <?= htmlspecialchars($_SESSION['success']) ?>
                 </div>
                 <?php unset($_SESSION['success']); ?>
             <?php endif; ?>
 
-            <div id="errorMessage" class="alert-error-js">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                <span id="errorText"></span>
-            </div>
-            <div id="successMessage" class="alert-success-js">
-                <i class="fas fa-check-circle me-2"></i>
-                <span id="successText"></span>
-            </div>
+            <?php if (!empty($_SESSION['error'])): ?>
+                <div class="alert-session alert-session-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars($_SESSION['error']) ?>
+                </div>
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
 
             <button type="button" class="btn-camera" onclick="openCameraModal()">
                 <i class="fas fa-camera me-2"></i> Connexion avec reconnaissance faciale
@@ -98,36 +116,54 @@
                 <div class="role-option" data-role="medecin">
                     <i class="fas fa-user-md"></i><div>Médecin</div>
                 </div>
-                <div class="role-option" data-role="admin">
-                    <i class="fas fa-shield-alt"></i><div>Admin</div>
-                </div>
+
             </div>
 
-            <form id="loginForm" method="POST" action="index.php?page=login">
+            <form id="loginForm" method="POST" action="index.php?page=login" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="patient">
 
+                <!-- Email -->
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
+                    <label class="form-label" for="email">Email</label>
                     <input type="email" name="email" id="email" class="form-control"
                            placeholder="exemple@email.com"
-                           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+                           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                           autocomplete="email">
+                    <div class="field-error" id="emailError">
+                        <i class="fas fa-times-circle"></i>
+                        <span id="emailErrorText"></span>
+                    </div>
                 </div>
 
+                <!-- Mot de passe -->
                 <div class="mb-3">
-                    <label class="form-label">Mot de passe</label>
+                    <label class="form-label" for="password">Mot de passe</label>
                     <input type="password" name="password" id="password" class="form-control"
-                           placeholder="••••••••" required>
+                           placeholder="•••••••••"
+                           autocomplete="current-password">
+                    <div class="field-error" id="passwordError">
+                        <i class="fas fa-times-circle"></i>
+                        <span id="passwordErrorText"></span>
+                    </div>
                 </div>
 
+                <!-- CAPTCHA -->
                 <div class="captcha-box">
                     <div>
                         <span class="captcha-code" id="captchaCode"></span>
                         <i class="fas fa-sync-alt captcha-refresh" onclick="generateCaptcha()" title="Recharger"></i>
                     </div>
                     <input type="text" id="captchaInput" class="form-control mt-2"
-                           placeholder="Saisissez le code ci-dessus" style="text-align:center;">
+                           placeholder="Saisissez le code ci-dessus"
+                           style="text-align:center;"
+                           autocomplete="off">
+                    <div class="field-error" id="captchaError" style="justify-content:center;">
+                        <i class="fas fa-times-circle"></i>
+                        <span id="captchaErrorText"></span>
+                    </div>
                 </div>
 
+                <!-- Remember + Forgot -->
                 <div class="mb-3 form-check d-flex justify-content-between align-items-center">
                     <div>
                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
@@ -136,7 +172,7 @@
                     <a href="index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
                 </div>
 
-                <button type="submit" class="btn-login">
+                <button type="submit" class="btn-login" id="submitBtn">
                     <i class="fas fa-sign-in-alt me-2"></i> Se connecter
                 </button>
             </form>
@@ -154,7 +190,7 @@
     <!-- Modal Caméra -->
     <div id="cameraModal" class="modal-camera">
         <div class="modal-camera-content">
-            <h4><i class="fas fa-camera"></i> Reconnaissance faciale</h4>
+            <h4><i class="fas fa-camera me-2"></i>Reconnaissance faciale</h4>
             <p class="text-muted">Placez votre visage devant la caméra</p>
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
@@ -166,112 +202,187 @@
                     <i class="fas fa-times"></i> Annuler
                 </button>
             </div>
-            <div id="cameraMessage" class="mt-2"></div>
+            <div id="cameraMessage" class="mt-3" style="font-size:14px;min-height:24px;"></div>
         </div>
     </div>
 
     <script>
-        // ── CAPTCHA ──────────────────────────────────
+        // ── CAPTCHA ──────────────────────────────────────────────────────────
         let currentCaptcha = "";
+
         function generateCaptcha() {
             const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
             let c = "";
             for (let i = 0; i < 6; i++) c += chars.charAt(Math.floor(Math.random() * chars.length));
             currentCaptcha = c;
             document.getElementById("captchaCode").innerText = c;
+            // Reset captcha field error on regeneration
+            clearFieldError('captchaInput', 'captchaError');
         }
-        function verifyCaptcha() {
-            return document.getElementById("captchaInput").value.toUpperCase() === currentCaptcha;
-        }
+
         generateCaptcha();
 
-        // ── RÔLE ─────────────────────────────────────
-        document.querySelectorAll('.role-option').forEach(o => {
-            o.addEventListener('click', function () {
+        // ── RÔLE ─────────────────────────────────────────────────────────────
+        document.querySelectorAll('.role-option').forEach(option => {
+            option.addEventListener('click', function () {
                 document.querySelectorAll('.role-option').forEach(x => x.classList.remove('active'));
                 this.classList.add('active');
                 document.getElementById('selectedRole').value = this.dataset.role;
             });
         });
 
-        // ── SOUMISSION FORMULAIRE ────────────────────
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
-            const email    = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // ── HELPERS ERREUR CHAMP ──────────────────────────────────────────────
+        function showFieldError(inputId, errorDivId, errorTextId, message) {
+            const input = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorDivId);
+            const errorText = document.getElementById(errorTextId);
 
-            if (!email || !password) {
-                e.preventDefault();
-                showError('Veuillez remplir tous les champs.');
-                return;
+            if (input) {
+                input.classList.add('is-invalid');
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 350);
             }
-            if (!verifyCaptcha()) {
-                e.preventDefault();
-                showError('Code CAPTCHA incorrect. Réessayez.');
-                generateCaptcha();
-                document.getElementById('captchaInput').value = '';
-                return;
+            if (errorText) errorText.innerText = message;
+            if (errorDiv) errorDiv.classList.add('show');
+        }
+
+        function clearFieldError(inputId, errorDivId) {
+            const input = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorDivId);
+
+            if (input) input.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.classList.remove('show');
+                const span = errorDiv.querySelector('span');
+                if (span) span.innerText = '';
+            }
+        }
+
+        function clearAllErrors() {
+            clearFieldError('email', 'emailError');
+            clearFieldError('password', 'passwordError');
+            clearFieldError('captchaInput', 'captchaError');
+        }
+
+        // ── VALIDATION EN TEMPS RÉEL ─────────────────────────────────────────
+        document.getElementById('email').addEventListener('input', function () {
+            if (this.classList.contains('is-invalid')) {
+                clearFieldError('email', 'emailError');
             }
         });
 
-        // ── MESSAGES JS ──────────────────────────────
-        function showError(msg) {
-            const d = document.getElementById('errorMessage');
-            document.getElementById('errorText').innerText = msg;
-            d.style.display = 'block';
-            setTimeout(() => d.style.display = 'none', 5000);
-        }
-        function showSuccess(msg) {
-            const d = document.getElementById('successMessage');
-            document.getElementById('successText').innerText = msg;
-            d.style.display = 'block';
+        document.getElementById('password').addEventListener('input', function () {
+            if (this.classList.contains('is-invalid')) {
+                clearFieldError('password', 'passwordError');
+            }
+        });
+
+        document.getElementById('captchaInput').addEventListener('input', function () {
+            if (this.classList.contains('is-invalid')) {
+                clearFieldError('captchaInput', 'captchaError');
+            }
+        });
+
+        // ── VALIDATION ────────────────────────────────────────────────────────
+        function isValidEmail(email) {
+            return /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/.test(email);
         }
 
-        // 📹 CAMÉRA AVEC RECONNAISSANCE FACIALE 📹
+        function validateForm() {
+            clearAllErrors();
+            let isValid = true;
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const captchaInput = document.getElementById('captchaInput').value.toUpperCase().trim();
+
+            // Email
+            if (!email) {
+                showFieldError('email', 'emailError', 'emailErrorText', 'L\'adresse email est requise.');
+                isValid = false;
+            } else if (!isValidEmail(email)) {
+                showFieldError('email', 'emailError', 'emailErrorText', 'Veuillez saisir un email valide (ex: nom@domaine.com).');
+                isValid = false;
+            }
+
+            // Mot de passe
+            if (!password) {
+                showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe est requis.');
+                isValid = false;
+            } else if (password.length < 6) {
+                showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe doit contenir au moins 6 caractères.');
+                isValid = false;
+            }
+
+            // CAPTCHA
+            if (!captchaInput) {
+                showFieldError('captchaInput', 'captchaError', 'captchaErrorText', 'Veuillez saisir le code de vérification.');
+                isValid = false;
+            } else if (captchaInput !== currentCaptcha) {
+                showFieldError('captchaInput', 'captchaError', 'captchaErrorText', 'Code incorrect. Un nouveau code a été généré.');
+                generateCaptcha();
+                document.getElementById('captchaInput').value = '';
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // ── SOUMISSION ────────────────────────────────────────────────────────
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                return false;
+            }
+            // Désactiver le bouton pour éviter la double soumission
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Connexion...';
+            return true;
+        });
+
+        // ── CAMÉRA — RECONNAISSANCE FACIALE ──────────────────────────────────
         let stream = null;
-        
+
         function openCameraModal() {
-            document.getElementById('cameraModal').style.display = 'flex';
+            document.getElementById('cameraModal').classList.add('open');
+            document.getElementById('cameraMessage').innerHTML = '';
             startCamera();
         }
-        
+
         function closeCameraModal() {
             if (stream) stream.getTracks().forEach(t => t.stop());
-            document.getElementById('cameraModal').style.display = 'none';
-            const msgDiv = document.getElementById('cameraMessage');
-            if (msgDiv) msgDiv.innerHTML = '';
+            stream = null;
+            document.getElementById('cameraModal').classList.remove('open');
         }
-        
+
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 document.getElementById('video').srcObject = stream;
             } catch (err) {
-                const msgDiv = document.getElementById('cameraMessage');
-                if (msgDiv) msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible d\'accéder à la caméra.</span>';
+                document.getElementById('cameraMessage').innerHTML =
+                    '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible d\'accéder à la caméra.</span>';
             }
         }
-        
+
         async function captureFace() {
-            const video = document.getElementById('video');
+            const video  = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx    = canvas.getContext('2d');
             const msgDiv = document.getElementById('cameraMessage');
-            
-            canvas.width = video.videoWidth;
+
+            canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
+
             const imageData = canvas.toDataURL('image/jpeg');
-            
-            if (msgDiv) {
-                msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Reconnaissance en cours...</span>';
-            }
-            
+            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Reconnaissance en cours...</span>';
+
             try {
-                // Pour la démo, on simule l'identification via un token local
-                const savedRole = localStorage.getItem('valorys_face_role') || 'patient';
+                const savedRole  = localStorage.getItem('valorys_face_role')  || 'patient';
                 const savedEmail = localStorage.getItem('valorys_face_email') || '';
-                
+
                 const payload = new URLSearchParams();
                 payload.append('face_image', imageData);
                 payload.append('role', savedRole);
@@ -282,35 +393,45 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: payload.toString()
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    if (msgDiv) {
-                        msgDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>' + result.message + '</span>';
-                    }
-                    setTimeout(() => {
-                        closeCameraModal();
-                        window.location.href = result.redirect;
-                    }, 1500);
+                    msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>${result.message}</span>`;
+                    setTimeout(() => { closeCameraModal(); window.location.href = result.redirect; }, 1500);
                 } else {
-                    if (msgDiv) {
-                        msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>' + result.message + '</span>';
-                    }
-                    setTimeout(() => {
-                        closeCameraModal();
-                    }, 2000);
+                    msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${result.message}</span>`;
+                    setTimeout(() => closeCameraModal(), 2500);
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                if (msgDiv) {
-                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion au serveur</span>';
-                }
-                setTimeout(() => {
-                    closeCameraModal();
-                }, 2000);
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion au serveur.</span>';
+                setTimeout(() => closeCameraModal(), 2500);
             }
         }
+
+        // Fermer le modal caméra en cliquant en dehors
+        document.getElementById('cameraModal').addEventListener('click', function (e) {
+            if (e.target === this) closeCameraModal();
+        });
+
+        // ── ERREURS PHP (passées via $error) ─────────────────────────────────
+        <?php if (!empty($error)): ?>
+        (function() {
+            const phpError = <?= json_encode($error) ?>;
+            // Tenter de mapper l'erreur PHP sur le bon champ
+            const lower = phpError.toLowerCase();
+            if (lower.includes('email') || lower.includes('identifiant')) {
+                showFieldError('email', 'emailError', 'emailErrorText', phpError);
+            } else if (lower.includes('mot de passe') || lower.includes('password')) {
+                showFieldError('password', 'passwordError', 'passwordErrorText', phpError);
+            } else {
+                // Erreur générique : affichée sous le champ email par défaut
+                showFieldError('email', 'emailError', 'emailErrorText', phpError);
+            }
+        })();
+        <?php endif; ?>
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

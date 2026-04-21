@@ -5,9 +5,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 $page_title = 'Gestion des Sponsors';
-$current_page = 'sponsors';
+$current_page = 'sponsors_admin';
 
-// Get counts
 $totalSponsors = count($sponsors ?? []);
 ?>
 <!DOCTYPE html>
@@ -51,7 +50,6 @@ $totalSponsors = count($sponsors ?? []);
             display: flex;
         }
 
-        /* Topbar & Search Component */
         .top-navbar {
             background: var(--white);
             padding: 15px 30px;
@@ -89,7 +87,6 @@ $totalSponsors = count($sponsors ?? []);
             gap: 6px;
         }
 
-        /* Main Wrapper */
         .main-content {
             margin-left: 260px;
             flex: 1;
@@ -103,7 +100,6 @@ $totalSponsors = count($sponsors ?? []);
             flex: 1;
         }
 
-        /* Card Setup */
         .card {
             background: var(--white);
             border: none;
@@ -145,13 +141,15 @@ $totalSponsors = count($sponsors ?? []);
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
+            color: white;
+            text-decoration: none;
         }
         .btn-primary:hover {
             background: var(--teal-dark);
             transform: translateY(-1px);
+            color: white;
         }
 
-        /* Table Design */
         .table-responsive {
             padding: 0 24px 24px 24px;
             margin-top: 20px;
@@ -193,7 +191,6 @@ $totalSponsors = count($sponsors ?? []);
             color: var(--gray-900);
         }
 
-        /* Badges */
         .badge-niveau {
             padding: 6px 12px;
             border-radius: 12px;
@@ -202,11 +199,10 @@ $totalSponsors = count($sponsors ?? []);
             color: white;
             display: inline-block;
         }
-
-        .badge-niveau.argent { background-color: var(--gray-500); }
+        .badge-niveau.argent  { background-color: var(--gray-500); }
         .badge-niveau.platine { background-color: #00bcd4; }
-        .badge-niveau.or { background-color: var(--orange); }
-        .badge-niveau.bronze { background-color: #d1b48c; }
+        .badge-niveau.or      { background-color: var(--orange); }
+        .badge-niveau.bronze  { background-color: #d1b48c; }
 
         .site-link {
             color: var(--blue);
@@ -217,7 +213,6 @@ $totalSponsors = count($sponsors ?? []);
         }
         .site-link:hover { text-decoration: underline; }
 
-        /* Action Buttons */
         .actions {
             display: flex;
             gap: 8px;
@@ -237,17 +232,13 @@ $totalSponsors = count($sponsors ?? []);
             cursor: pointer;
             text-decoration: none;
         }
+        .btn-icon:hover { background: var(--gray-50); }
 
-        .btn-icon:hover {
-            background: var(--gray-50);
-        }
+        .bi-edit  { color: var(--blue); border-color: rgba(59,130,246,.2); background: rgba(59,130,246,.05); }
+        .bi-edit:hover  { background: rgba(59,130,246,.1); color: var(--blue); }
 
-        .bi-edit { color: var(--blue); border-color: rgba(59, 130, 246, 0.2); background: rgba(59, 130, 246, 0.05); }
-        .bi-edit:hover { background: rgba(59, 130, 246, 0.1); color: var(--blue); }
-
-        .bi-delete { color: var(--red); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); }
-        .bi-delete:hover { background: rgba(239, 68, 68, 0.1); color: var(--red); }
-
+        .bi-delete { color: var(--red); border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.05); }
+        .bi-delete:hover { background: rgba(239,68,68,.1); color: var(--red); }
     </style>
 </head>
 <body>
@@ -255,11 +246,10 @@ $totalSponsors = count($sponsors ?? []);
     <?php include __DIR__ . '/../sidebar.php'; ?>
 
     <div class="main-content">
-        <!-- Top Navbar -->
         <div class="top-navbar">
             <div class="header-title-box">
                 <h2>
-                    <i class="fas fa-chart-line" style="color:var(--green)"></i>
+                    <i class="fas fa-hand-holding-usd" style="color:var(--green)"></i>
                     Gestion des Sponsors
                 </h2>
             </div>
@@ -277,7 +267,7 @@ $totalSponsors = count($sponsors ?? []);
                         <p><?= $totalSponsors ?> sponsor(s) enregistré(s)</p>
                     </div>
                     <div class="card-toolbar-right">
-                        <a href="index.php?page=sponsors&action=create" class="btn btn-primary">
+                        <a href="index.php?page=sponsors_admin&action=create" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nouveau sponsor
                         </a>
                     </div>
@@ -303,13 +293,13 @@ $totalSponsors = count($sponsors ?? []);
                                 <td colspan="8" class="text-center py-4 text-muted">Aucun sponsor trouvé.</td>
                             </tr>
                             <?php else: ?>
-                                <?php foreach($sponsors as $s): 
+                                <?php foreach ($sponsors as $s):
                                     $niveauClass = match(strtolower($s['niveau'] ?? '')) {
-                                        'or' => 'or',
-                                        'argent' => 'argent',
+                                        'or'      => 'or',
+                                        'argent'  => 'argent',
                                         'platine' => 'platine',
-                                        'bronze' => 'bronze',
-                                        default => 'argent'
+                                        'bronze'  => 'bronze',
+                                        default   => 'argent'
                                     };
                                 ?>
                                 <tr>
@@ -334,10 +324,13 @@ $totalSponsors = count($sponsors ?? []);
                                     </td>
                                     <td>
                                         <div class="actions">
-                                            <a href="index.php?page=sponsors&action=edit&id=<?= $s['id'] ?>" class="btn-icon bi-edit" title="Modifier">
+                                            <a href="index.php?page=sponsors_admin&action=edit&id=<?= $s['id'] ?>"
+                                               class="btn-icon bi-edit" title="Modifier">
                                                 <i class="fas fa-pen"></i>
                                             </a>
-                                            <a href="#" onclick="confirmDelete(event, <?= $s['id'] ?>)" class="btn-icon bi-delete" title="Supprimer">
+                                            <a href="#"
+                                               onclick="confirmDelete(event, <?= $s['id'] ?>)"
+                                               class="btn-icon bi-delete" title="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                         </div>
@@ -352,11 +345,6 @@ $totalSponsors = count($sponsors ?? []);
         </div>
     </div>
 
-    <form id="delete-form" method="POST" style="display:none;">
-        <input type="hidden" name="action" value="delete">
-        <!-- We link to index.php?page=sponsors&action=delete&id=X in JS -->
-    </form>
-
     <?php if (isset($flash)): ?>
         <script>
             Swal.fire({
@@ -369,11 +357,10 @@ $totalSponsors = count($sponsors ?? []);
     <?php endif; ?>
 
     <script>
-        // Update time
         setInterval(() => {
             const now = new Date();
-            const timeStr = now.toLocaleDateString('fr-FR') + ' ' + 
-                            now.getHours().toString().padStart(2, '0') + ':' + 
+            const timeStr = now.toLocaleDateString('fr-FR') + ' ' +
+                            now.getHours().toString().padStart(2, '0') + ':' +
                             now.getMinutes().toString().padStart(2, '0');
             document.getElementById('currentTime').textContent = timeStr;
         }, 60000);
@@ -391,7 +378,7 @@ $totalSponsors = count($sponsors ?? []);
                 cancelButtonText: 'Annuler'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `index.php?page=sponsors&action=delete&id=${id}`;
+                    window.location.href = `index.php?page=sponsors_admin&action=delete&id=${id}`;
                 }
             });
         }
