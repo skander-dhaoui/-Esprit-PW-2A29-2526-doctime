@@ -69,8 +69,25 @@ class UserController {
         $userId   = (int)$_SESSION['user_id'];
         $userRole = $_SESSION['user_role'] ?? 'patient';
 
-        $user   = $this->userModel->findById($userId);
-        $extras = $this->userModel->getExtras($userId, $userRole);
+        $db = Database::getInstance()->getConnection();
+
+        // Récupérer les infos utilisateur
+        $userStmt = $db->prepare("SELECT id, nom, prenom, email, telephone, adresse, date_naissance, avatar, role, statut, created_at FROM users WHERE id = :id");
+        $userStmt->execute([':id' => $userId]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Récupérer les infos spécifiques au rôle
+        if ($userRole === 'patient') {
+            $extraStmt = $db->prepare("SELECT groupe_sanguin FROM patients WHERE user_id = :uid LIMIT 1");
+            $extraStmt->execute([':uid' => $userId]);
+            $extras = $extraStmt->fetch(PDO::FETCH_ASSOC) ?? [];
+        } elseif ($userRole === 'medecin') {
+            $extraStmt = $db->prepare("SELECT specialite, numero_ordre, cabinet_adresse, description, statut_validation FROM medecins WHERE user_id = :uid LIMIT 1");
+            $extraStmt->execute([':uid' => $userId]);
+            $extras = $extraStmt->fetch(PDO::FETCH_ASSOC) ?? [];
+        } else {
+            $extras = [];
+        }
 
         if (!empty($extras)) {
             $user = array_merge($user, $extras);
@@ -78,15 +95,34 @@ class UserController {
 
         $stats = [];
         if ($userRole === 'patient') {
-            $stats = $this->patientModel->getStats($userId);
-            $stats['total_rdv']    = $stats['rdv_total']   ?? 0;
-            $stats['rdv_avenir']   = $stats['rdv_a_venir'] ?? 0;
-            $stats['note_moyenne'] = '—';
-        } elseif ($userRole === 'medecin') {
-            $raw   = $this->medecinModel->getStats($userId);
+            $statsStmt = $db->prepare("
+                SELECT 
+                    COUNT(*) as rdv_total,
+                    SUM(CASE WHEN statut IN ('en_attente', 'confirmé') AND date_rendezvous >= NOW() THEN 1 ELSE 0 END) as rdv_a_venir
+                FROM rendez_vous 
+                WHERE patient_id = :pid
+            ");
+            $statsStmt->execute([':pid' => $userId]);
+            $statsData = $statsStmt->fetch(PDO::FETCH_ASSOC);
             $stats = [
-                'total_rdv'    => $raw['rdv_total']  ?? 0,
-                'rdv_avenir'   => $raw['rdv_pending'] ?? 0,
+                'total_rdv'    => $statsData['rdv_total'] ?? 0,
+                'rdv_avenir'   => $statsData['rdv_a_venir'] ?? 0,
+                'note_moyenne' => '—',
+            ];
+        } elseif ($userRole === 'medecin') {
+            $statsStmt = $db->prepare("
+                SELECT
+                    COUNT(*) as rdv_total,
+                    SUM(CASE WHEN statut IN ('en_attente', 'confirmé') THEN 1 ELSE 0 END) as rdv_pending,
+                    COUNT(DISTINCT patient_id) as patients
+                FROM rendez_vous
+                WHERE medecin_id = :mid
+            ");
+            $statsStmt->execute([':mid' => $userId]);
+            $statsData = $statsStmt->fetch(PDO::FETCH_ASSOC);
+            $stats = [
+                'total_rdv'    => $statsData['rdv_total'] ?? 0,
+                'rdv_avenir'   => $statsData['rdv_pending'] ?? 0,
                 'note_moyenne' => '4.8',
             ];
         }
@@ -124,14 +160,14 @@ class UserController {
         $userId   = (int)$_SESSION['user_id'];
         $userRole = $_SESSION['user_role'] ?? 'patient';
 
-        $user = $this->userModel->findById($userId);
+        $user = $this->findUserById($userId);
         if (!$user) {
             $_SESSION['error_profil'] = "Utilisateur non trouvé.";
             header('Location: index.php?page=profil');
             exit;
         }
 
-        $extras = $this->userModel->getExtras($userId, $userRole);
+        $extras = $this->getUserExtras($userId, $userRole);
         if (!empty($extras)) {
             $user = array_merge($user, $extras);
         }
@@ -166,10 +202,12 @@ class UserController {
         $userRole = $_SESSION['user_role'] ?? 'patient';
 
         // FIX BUG 3 : lecture depuis la BDD AVANT tout traitement
-        // pour avoir la photo actuelle même si la session est désynchronisée
-        $userActuel    = $this->userModel->findById($userId);
-        $photoActuelle = $userActuel['photo'] ?? null;
-        $photoFinale   = $photoActuelle; // on conserve l'ancienne par défaut
+        $db = Database::getInstance()->getConnection();
+        $userStmt = $db->prepare("SELECT * FROM users WHERE id = :id");
+        $userStmt->execute([':id' => $userId]);
+        $userActuel = $userStmt->fetch(PDO::FETCH_ASSOC);
+        $photoActuelle = $userActuel['avatar'] ?? null;
+        $photoFinale   = $photoActuelle;
 
         // ── Champs texte ──────────────────────────────────────────
         $nom            = trim($_POST['nom']            ?? '');
@@ -202,8 +240,10 @@ class UserController {
         if ($password !== '' && strlen($password) < 6)  $errors[] = 'Le mot de passe doit contenir au moins 6 caractères.';
 
         // Email déjà utilisé par un autre compte
-        $existing = $this->userModel->findByEmail($email);
-        if ($existing && (int)$existing['id'] !== $userId) {
+        $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email AND id != :id LIMIT 1");
+        $checkStmt->execute([':email' => $email, ':id' => $userId]);
+        $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
             $errors[] = 'Cet email est déjà utilisé par un autre compte.';
         }
 
@@ -283,27 +323,72 @@ class UserController {
             'telephone'      => $telephone,
             'adresse'        => $adresse,
             'date_naissance' => $date_naissance ?: null,
-            'photo'          => $photoFinale,
+            'avatar'         => $photoFinale,
         ];
 
         if ($password !== '') {
             $data['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
 
-        $this->userModel->update($userId, $data);
+        // Mise à jour utilisateur
+        $updateStmt = $db->prepare("
+            UPDATE users SET 
+                nom = :nom,
+                prenom = :prenom,
+                email = :email,
+                telephone = :telephone,
+                adresse = :adresse,
+                date_naissance = :date_naissance,
+                avatar = :avatar
+                " . ($password !== '' ? ", password = :password" : "") . "
+            WHERE id = :id
+        ");
+        $execData = [
+            ':nom' => $data['nom'],
+            ':prenom' => $data['prenom'],
+            ':email' => $data['email'],
+            ':telephone' => $data['telephone'],
+            ':adresse' => $data['adresse'],
+            ':date_naissance' => $data['date_naissance'],
+            ':avatar' => $data['avatar'],
+            ':id' => $userId,
+        ];
+        if ($password !== '') {
+            $execData[':password'] = $data['password'];
+        }
+        $updateStmt->execute($execData);
 
         // ── Extras selon le rôle ──────────────────────────────────
         if ($userRole === 'patient') {
-            $this->userModel->upsertPatient($userId, [
-                'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
-            ]);
+            $groupeSanguin = $_POST['groupe_sanguin'] ?? null;
+            $checkPatientStmt = $db->prepare("SELECT id FROM patients WHERE user_id = :uid");
+            $checkPatientStmt->execute([':uid' => $userId]);
+            $patientExists = $checkPatientStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($patientExists) {
+                $updatePatientStmt = $db->prepare("UPDATE patients SET groupe_sanguin = :gs WHERE user_id = :uid");
+                $updatePatientStmt->execute([':gs' => $groupeSanguin, ':uid' => $userId]);
+            } else {
+                $insertPatientStmt = $db->prepare("INSERT INTO patients (user_id, groupe_sanguin) VALUES (:uid, :gs)");
+                $insertPatientStmt->execute([':uid' => $userId, ':gs' => $groupeSanguin]);
+            }
         } elseif ($userRole === 'medecin') {
-            $this->medecinModel->update($userId, [
-                'specialite'      => $_POST['specialite']      ?? '',
-                'tarif'           => $_POST['tarif']           ?? 0,
-                'experience'      => $_POST['experience']      ?? 0,
-                'adresse_cabinet' => $_POST['adresse_cabinet'] ?? '',
-                'bio'             => $_POST['bio']             ?? '',
+            $updateMedecinStmt = $db->prepare("
+                UPDATE medecins SET
+                    specialite = :specialite,
+                    tarif = :tarif,
+                    experience = :experience,
+                    cabinet_adresse = :adresse,
+                    description = :bio
+                WHERE user_id = :uid
+            ");
+            $updateMedecinStmt->execute([
+                ':specialite' => $_POST['specialite'] ?? '',
+                ':tarif' => $_POST['tarif'] ?? 0,
+                ':experience' => $_POST['experience'] ?? 0,
+                ':adresse' => $_POST['adresse_cabinet'] ?? '',
+                ':bio' => $_POST['bio'] ?? '',
+                ':uid' => $userId,
             ]);
         }
 
@@ -340,7 +425,7 @@ class UserController {
         $newPassword     = $_POST['new_password']      ?? '';
         $confirmPassword = $_POST['confirm_password']  ?? '';
 
-        $user = $this->userModel->findById($userId);
+        $user = $this->findUserById($userId);
         if (!$user) {
             $_SESSION['error_password_profil'] = 'Utilisateur introuvable.';
             header('Location: index.php?page=profil');
@@ -379,7 +464,7 @@ class UserController {
             exit;
         }
 
-        $this->userModel->update($userId, [
+        $this->updateUserRecord($userId, [
             'password' => password_hash($newPassword, PASSWORD_DEFAULT),
         ]);
 
@@ -402,14 +487,14 @@ class UserController {
         }
 
         $userId = (int)$_SESSION['user_id'];
-        $user   = $this->userModel->findById($userId);
+        $user   = $this->findUserById($userId);
         if (!$user) {
             $_SESSION['error_profil'] = "Utilisateur non trouvé.";
             header('Location: index.php?page=profil');
             exit;
         }
 
-        $result = $this->userModel->uploadAvatar($_FILES['avatar'], $userId);
+        $result = $this->uploadAvatarFile($_FILES['avatar'], $userId);
         $_SESSION[$result ? 'success_profil' : 'error_profil'] = $result
             ? "Photo de profil mise à jour avec succès."
             : "Erreur lors de l'upload. Vérifiez le format (JPG, PNG, GIF, WEBP) et la taille (max 2 Mo).";
@@ -425,7 +510,7 @@ class UserController {
         }
 
         $userId = (int)$_SESSION['user_id'];
-        $result = $this->userModel->deleteAvatar($userId);
+        $result = $this->deleteAvatarFile($userId);
         $_SESSION[$result ? 'success_profil' : 'error_profil'] = $result
             ? "Photo de profil supprimée avec succès."
             : "Erreur lors de la suppression.";
@@ -439,7 +524,7 @@ class UserController {
     // ─────────────────────────────────────────
     public function index(): void {
         $this->auth->requireRole('admin');
-        $users    = $this->userModel->getAll();
+        $users    = $this->getAllUsers();
         $viewPath = __DIR__ . '/../views/backoffice/users_list.html';
         file_exists($viewPath) ? require_once $viewPath : $this->renderTable($users);
     }
@@ -475,7 +560,7 @@ class UserController {
             exit;
         }
 
-        if ($this->userModel->findByEmail($data['email'])) {
+        if ($this->findUserByEmail($data['email'])) {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
             $_SESSION['old']   = $_POST;
             header('Location: index.php?page=users&action=create');
@@ -483,7 +568,7 @@ class UserController {
         }
 
         $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        $userId           = $this->userModel->create($data);
+        $userId           = $this->createUserRecord($data);
         $this->saveRoleExtras($userId, $data['role']);
 
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur créé avec succès.'];
@@ -493,10 +578,10 @@ class UserController {
 
     public function edit(int $id): void {
         $this->auth->requireRole('admin');
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
-        $extra = $this->userModel->getExtras($id, $user['role']);
+        $extra = $this->getUserExtras($id, $user['role']);
         $old   = $_SESSION['old']              ?? null;
         $flash = $_SESSION['flash']['message'] ?? null;
         unset($_SESSION['old'], $_SESSION['flash']);
@@ -515,7 +600,7 @@ class UserController {
             exit;
         }
 
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
         $data   = $this->extractFormData(false);
@@ -528,7 +613,7 @@ class UserController {
             exit;
         }
 
-        $existing = $this->userModel->findByEmail($data['email']);
+        $existing = $this->findUserByEmail($data['email']);
         if ($existing && (int)$existing['id'] !== $id) {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
             $_SESSION['old']   = $_POST;
@@ -540,7 +625,7 @@ class UserController {
             $data['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
         }
 
-        $this->userModel->update($id, $data);
+        $this->updateUserRecord($id, $data);
         $this->saveRoleExtras($id, $data['role']);
 
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur mis à jour.'];
@@ -557,7 +642,7 @@ class UserController {
             exit;
         }
 
-        $this->userModel->delete($id);
+        $this->deleteUserRecord($id);
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Utilisateur supprimé.'];
         header('Location: index.php?page=users');
         exit;
@@ -565,11 +650,11 @@ class UserController {
 
     public function toggleStatus(int $id): void {
         $this->auth->requireRole('admin');
-        $user = $this->userModel->findById($id);
+        $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
         $newStatus = ($user['statut'] === 'actif') ? 'inactif' : 'actif';
-        $this->userModel->update($id, ['statut' => $newStatus]);
+        $this->updateUserRecord($id, ['statut' => $newStatus]);
         header('Location: index.php?page=users');
         exit;
     }
@@ -622,13 +707,13 @@ class UserController {
 
     private function saveRoleExtras(int $userId, string $role): void {
         if ($role === 'patient') {
-            $this->userModel->upsertPatient($userId, [
+            $this->upsertPatientExtra($userId, [
                 'groupe_sanguin' => $_POST['groupe_sanguin'] ?? null,
             ]);
         }
 
         if ($role === 'medecin') {
-            $this->userModel->upsertMedecin($userId, [
+            $this->upsertMedecinExtra($userId, [
                 'specialite'      => $_POST['specialite']      ?? '',
                 'numero_ordre'    => $_POST['numero_ordre']    ?? '',
                 'tarif'           => $_POST['tarif']           ?? 0,
@@ -636,6 +721,162 @@ class UserController {
                 'adresse_cabinet' => $_POST['adresse_cabinet'] ?? '',
             ]);
         }
+    }
+
+    private function db(): PDO {
+        return Database::getInstance()->getConnection();
+    }
+
+    private function getAllUsers(int $offset = 0, int $limit = 100): array {
+        $stmt = $this->db()->prepare("SELECT * FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function findUserById(int $id): ?array {
+        $stmt = $this->db()->prepare("SELECT * FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function findUserByEmail(string $email): ?array {
+        $stmt = $this->db()->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    private function createUserRecord(array $data): int {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO users
+                (nom, prenom, email, telephone, password, role, statut, adresse, date_naissance, created_at)
+             VALUES
+                (:nom, :prenom, :email, :telephone, :password, :role, :statut, :adresse, :date_naissance, NOW())"
+        );
+        $stmt->execute([
+            ':nom' => $data['nom'] ?? '',
+            ':prenom' => $data['prenom'] ?? '',
+            ':email' => $data['email'] ?? '',
+            ':telephone' => $data['telephone'] ?? '',
+            ':password' => $data['password'] ?? '',
+            ':role' => $data['role'] ?? 'patient',
+            ':statut' => $data['statut'] ?? 'actif',
+            ':adresse' => $data['adresse'] ?? null,
+            ':date_naissance' => $data['date_naissance'] ?? null,
+        ]);
+        return (int) $this->db()->lastInsertId();
+    }
+
+    private function updateUserRecord(int $id, array $data): bool {
+        $allowed = ['nom','prenom','email','telephone','password','role','statut','adresse','date_naissance','avatar','face_photo','face_encoding','face_descriptor','derniere_connexion'];
+        $fields = [];
+        $params = [':id' => $id];
+        foreach ($data as $key => $value) {
+            if (!in_array($key, $allowed, true)) {
+                continue;
+            }
+            $fields[] = "$key = :$key";
+            $params[":$key"] = $value;
+        }
+        if (empty($fields)) {
+            return false;
+        }
+        $stmt = $this->db()->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id");
+        return $stmt->execute($params);
+    }
+
+    private function deleteUserRecord(int $id): bool {
+        $stmt = $this->db()->prepare("DELETE FROM users WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    private function getUserExtras(int $userId, string $role): array {
+        if ($role === 'patient') {
+            $stmt = $this->db()->prepare("SELECT * FROM patients WHERE user_id = :uid LIMIT 1");
+            $stmt->execute([':uid' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
+        if ($role === 'medecin') {
+            $stmt = $this->db()->prepare("SELECT * FROM medecins WHERE user_id = :uid LIMIT 1");
+            $stmt->execute([':uid' => $userId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
+        return [];
+    }
+
+    private function upsertPatientExtra(int $userId, array $data): void {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO patients (user_id, groupe_sanguin)
+             VALUES (:user_id, :groupe_sanguin)
+             ON DUPLICATE KEY UPDATE groupe_sanguin = VALUES(groupe_sanguin)"
+        );
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':groupe_sanguin' => $data['groupe_sanguin'] ?? null,
+        ]);
+    }
+
+    private function upsertMedecinExtra(int $userId, array $data): void {
+        $stmt = $this->db()->prepare(
+            "INSERT INTO medecins
+                (user_id, specialite, numero_ordre, annee_experience, consultation_prix, cabinet_adresse)
+             VALUES
+                (:user_id, :specialite, :numero_ordre, :annee_experience, :consultation_prix, :cabinet_adresse)
+             ON DUPLICATE KEY UPDATE
+                specialite = VALUES(specialite),
+                numero_ordre = VALUES(numero_ordre),
+                annee_experience = VALUES(annee_experience),
+                consultation_prix = VALUES(consultation_prix),
+                cabinet_adresse = VALUES(cabinet_adresse)"
+        );
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':specialite' => $data['specialite'] ?? '',
+            ':numero_ordre' => $data['numero_ordre'] ?? '',
+            ':annee_experience' => $data['experience'] ?? ($data['annee_experience'] ?? null),
+            ':consultation_prix' => $data['tarif'] ?? ($data['consultation_prix'] ?? null),
+            ':cabinet_adresse' => $data['adresse_cabinet'] ?? ($data['cabinet_adresse'] ?? ''),
+        ]);
+    }
+
+    private function uploadAvatarFile(array $file, int $userId): bool {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return false;
+        }
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!in_array($file['type'] ?? '', $allowedTypes, true)) {
+            return false;
+        }
+        if (($file['size'] ?? 0) > 2 * 1024 * 1024) {
+            return false;
+        }
+        $uploadDir = dirname(__DIR__) . '/uploads/avatars';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            return false;
+        }
+        $extension = strtolower(pathinfo($file['name'] ?? 'avatar.jpg', PATHINFO_EXTENSION)) ?: 'jpg';
+        $filename = 'avatar_' . $userId . '_' . time() . '.' . $extension;
+        $absolutePath = $uploadDir . '/' . $filename;
+        $relativePath = 'uploads/avatars/' . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $absolutePath)) {
+            return false;
+        }
+        return $this->updateUserRecord($userId, ['avatar' => $relativePath]);
+    }
+
+    private function deleteAvatarFile(int $userId): bool {
+        $user = $this->findUserById($userId);
+        if (!$user) {
+            return false;
+        }
+        if (!empty($user['avatar'])) {
+            $oldFile = dirname(__DIR__) . '/' . ltrim((string) $user['avatar'], '/');
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+        return $this->updateUserRecord($userId, ['avatar' => null]);
     }
 
     private function notFound(): void {

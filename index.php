@@ -14,7 +14,9 @@ define('DEBUG_MODE', false);
 // INCLUDES — MODÈLES
 // =============================================
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/mail.php';
 require_once __DIR__ . '/models/User.php';
+require_once __DIR__ . '/models/FaceRecognition.php';
 require_once __DIR__ . '/models/Patient.php';
 require_once __DIR__ . '/models/Medecin.php';
 require_once __DIR__ . '/models/Admin.php';
@@ -89,6 +91,7 @@ $disponibiliteCtrl = class_exists('DisponibiliteController') ? new Disponibilite
 // =============================================
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
+    'social_login', 'social_callback',
     'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
     'evenements', 'detail_evenement', 'event_register',
     'sponsors',  // ← page front publique
@@ -323,6 +326,19 @@ if (DEBUG_MODE) {
 }
 
 // =============================================
+// ROUTAGE DES ACTIONS GLOBALES
+// =============================================
+if ($action === 'generate_captcha' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $auth->generateCaptcha();
+    exit;
+}
+
+if ($action === 'get_captcha' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $auth->getCaptcha();
+    exit;
+}
+
+// =============================================
 // ROUTAGE PRINCIPAL
 // =============================================
 switch ($page) {
@@ -398,6 +414,22 @@ switch ($page) {
             exit;
         }
         $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->login() : $auth->showLogin();
+        break;
+
+    case 'social_login':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=' . ($userRole === 'admin' ? 'dashboard' : 'accueil'));
+            exit;
+        }
+        $auth->startSocialLogin($_GET['provider'] ?? '');
+        break;
+
+    case 'social_callback':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=' . ($userRole === 'admin' ? 'dashboard' : 'accueil'));
+            exit;
+        }
+        $auth->handleSocialCallback($_GET['provider'] ?? '');
         break;
 
     case 'register':

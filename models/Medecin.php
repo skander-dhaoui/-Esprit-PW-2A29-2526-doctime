@@ -1,283 +1,70 @@
 <?php
+declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
+final class Medecin
+{
+    private int     $id;
+    private int     $userId;
+    private string  $specialite;
+    private ?string $numeroOrdre;
+    private ?int    $anneeExperience;
+    private ?float  $consultationPrix;
+    private ?string $cabinetAdresse;
+    private ?string $description;
+    private string  $statutValidation;
+    private ?string $commentaireValidation;
+    private ?PDO    $db = null;
 
-class Medecin {
-
-    private PDO $db;
-
-    public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+    public function __construct(array $data = [])
+    {
+        $this->id                   = (int)    ($data['id']                      ?? 0);
+        $this->userId               = (int)    ($data['user_id']                 ?? 0);
+        $this->specialite           = (string) ($data['specialite']              ?? 'Généraliste');
+        $this->numeroOrdre          =          ($data['numero_ordre']            ?? null);
+        $this->anneeExperience      = isset($data['annee_experience']) && $data['annee_experience'] !== null ? (int)$data['annee_experience'] : null;
+        $this->consultationPrix     = isset($data['consultation_prix']) && $data['consultation_prix'] !== null ? (float)$data['consultation_prix'] : null;
+        $this->cabinetAdresse       =          ($data['cabinet_adresse']         ?? null);
+        $this->description          =          ($data['description']             ?? null);
+        $this->statutValidation     = (string) ($data['statut_validation']       ?? 'en_attente');
+        $this->commentaireValidation =         ($data['commentaire_validation']  ?? null);
     }
 
-    // ─────────────────────────────────────────
-    //  Profil médecin
-    // ─────────────────────────────────────────
+    public function __destruct() {}
 
-public function findByUserId(int $userId): array|false {
-    try {
-        $stmt = $this->db->prepare(
-            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone,
-                    u.adresse, u.date_naissance, u.statut, u.created_at,
-                    m.id as medecin_id, COALESCE(m.specialite, 'Généraliste') as specialite, 
-                    m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
-             FROM users u
-             LEFT JOIN medecins m ON u.id = m.user_id
-             WHERE u.id = :uid AND u.role = 'medecin'
-             LIMIT 1"
-        );
-        $stmt->execute([':uid' => $userId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Retourner un tableau vide si aucun résultat, pas false
-        if ($result === false) {
-            return [];
-        }
-        return $result;
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::findByUserId - ' . $e->getMessage());
-        return [];
-    }
-}
+    // ── Getters ──────────────────────────────────────────────────
+    public function getId(): int                    { return $this->id; }
+    public function getUserId(): int                { return $this->userId; }
+    public function getSpecialite(): string         { return $this->specialite; }
+    public function getNumeroOrdre(): ?string       { return $this->numeroOrdre; }
+    public function getAnneeExperience(): ?int      { return $this->anneeExperience; }
+    public function getConsultationPrix(): ?float   { return $this->consultationPrix; }
+    public function getCabinetAdresse(): ?string    { return $this->cabinetAdresse; }
+    public function getDescription(): ?string       { return $this->description; }
+    public function getStatutValidation(): string   { return $this->statutValidation; }
+    public function getCommentaireValidation(): ?string { return $this->commentaireValidation; }
 
-    public function getById(int $id): array|false {
-        try {
-            $stmt = $this->db->prepare("SELECT * FROM medecins WHERE id = :id LIMIT 1");
-            $stmt->execute([':id' => $id]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getById - ' . $e->getMessage());
-            return false;
-        }
-    }
+    // ── Setters ──────────────────────────────────────────────────
+    public function setId(int $v): void                    { $this->id                    = $v; }
+    public function setUserId(int $v): void                { $this->userId                = $v; }
+    public function setSpecialite(string $v): void          { $this->specialite            = $v; }
+    public function setNumeroOrdre(?string $v): void        { $this->numeroOrdre           = $v; }
+    public function setAnneeExperience(?int $v): void       { $this->anneeExperience       = $v; }
+    public function setConsultationPrix(?float $v): void    { $this->consultationPrix      = $v; }
+    public function setCabinetAdresse(?string $v): void     { $this->cabinetAdresse        = $v; }
+    public function setDescription(?string $v): void        { $this->description           = $v; }
+    public function setStatutValidation(string $v): void    { $this->statutValidation      = $v; }
+    public function setCommentaireValidation(?string $v): void { $this->commentaireValidation = $v; }
 
+    // ── Database Methods ─────────────────────────────────────────
 
-    
-
-    public function update(int $userId, array $data): bool {
-        try {
-            $set    = [];
-            $params = [':user_id' => $userId];
-            foreach ($data as $key => $value) {
-                $set[]         = "$key = :$key";
-                $params[":$key"] = $value;
-            }
-            if (empty($set)) return false;
-            $stmt = $this->db->prepare(
-                "UPDATE medecins SET " . implode(', ', $set) . " WHERE user_id = :user_id"
-            );
-            return $stmt->execute($params);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::update - ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    public function validate(int $userId, string $statutValidation, string $commentaire = ''): bool {
-        try {
-            $stmt = $this->db->prepare(
-                "UPDATE medecins
-                 SET statut_validation = :statut, commentaire_validation = :commentaire
-                 WHERE user_id = :user_id"
-            );
-            return $stmt->execute([
-                ':statut'      => $statutValidation,
-                ':commentaire' => $commentaire,
-                ':user_id'     => $userId,
-            ]);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::validate - ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Rendez-vous
-    // ─────────────────────────────────────────
-
-    public function getTodayAppointments(int $medecinId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT rv.*, u.nom, u.prenom, u.email, u.telephone
-                 FROM rendez_vous rv
-                 JOIN users u ON rv.patient_id = u.id
-                 WHERE rv.medecin_id = :mid
-                   AND DATE(rv.date) = CURDATE()
-                 ORDER BY rv.heure ASC"
-            );
-            $stmt->execute([':mid' => $medecinId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getTodayAppointments - ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function getUpcomingAppointments(int $medecinId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT rv.*, u.nom, u.prenom
-                 FROM rendez_vous rv
-                 JOIN users u ON rv.patient_id = u.id
-                 WHERE rv.medecin_id = :mid
-                   AND rv.date > CURDATE()
-                   AND rv.statut IN ('en_attente','confirmé')
-                 ORDER BY rv.date ASC, rv.heure ASC
-                 LIMIT 10"
-            );
-            $stmt->execute([':mid' => $medecinId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getUpcomingAppointments - ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function getAllAppointments(int $medecinId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT rv.*, u.nom, u.prenom, u.email
-                 FROM rendez_vous rv
-                 JOIN users u ON rv.patient_id = u.id
-                 WHERE rv.medecin_id = :mid
-                 ORDER BY rv.date DESC, rv.heure DESC"
-            );
-            $stmt->execute([':mid' => $medecinId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getAllAppointments - ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function getAppointmentById(int $id): array|false {
-        try {
-            $stmt = $this->db->prepare("SELECT * FROM rendez_vous WHERE id = :id LIMIT 1");
-            $stmt->execute([':id' => $id]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    public function updateAppointmentStatus(int $id, string $status): bool {
-        try {
-            $stmt = $this->db->prepare(
-                "UPDATE rendez_vous SET statut = :statut WHERE id = :id"
-            );
-            return $stmt->execute([':statut' => $status, ':id' => $id]);
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    public function completeAppointment(int $id, string $note = ''): bool {
-        try {
-            $stmt = $this->db->prepare(
-                "UPDATE rendez_vous SET statut = 'terminé', note_medecin = :note WHERE id = :id"
-            );
-            return $stmt->execute([':note' => $note, ':id' => $id]);
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Patients
-    // ─────────────────────────────────────────
-
-    public function getPatients(int $medecinId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT DISTINCT u.id, u.nom, u.prenom, u.email, u.telephone,
-                        MAX(rv.date) AS derniere_visite
-                 FROM rendez_vous rv
-                 JOIN users u ON rv.patient_id = u.id
-                 WHERE rv.medecin_id = :mid AND rv.statut = 'terminé'
-                 GROUP BY u.id
-                 ORDER BY u.nom ASC"
-            );
-            $stmt->execute([':mid' => $medecinId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log('Erreur Medecin::getPatients - ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function hasPatient(int $medecinId, int $patientId): bool {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT COUNT(*) FROM rendez_vous
-                 WHERE medecin_id = :mid AND patient_id = :pid"
-            );
-            $stmt->execute([':mid' => $medecinId, ':pid' => $patientId]);
-            return (int) $stmt->fetchColumn() > 0;
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    public function getPatientHistory(int $medecinId, int $patientId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT * FROM rendez_vous
-                 WHERE medecin_id = :mid AND patient_id = :pid
-                 ORDER BY date DESC"
-            );
-            $stmt->execute([':mid' => $medecinId, ':pid' => $patientId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Disponibilités
-    // ─────────────────────────────────────────
-
-    public function getAvailabilities(int $medecinId): array {
-        try {
-            $stmt = $this->db->prepare(
-                "SELECT * FROM disponibilites WHERE medecin_id = :mid ORDER BY jour_semaine, heure_debut"
-            );
-            $stmt->execute([':mid' => $medecinId]);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
-    public function createAvailability(array $data): int {
-        try {
-            $stmt = $this->db->prepare(
-                "INSERT INTO disponibilites (medecin_id, jour_semaine, heure_debut, heure_fin, actif)
-                 VALUES (:medecin_id, :jour_semaine, :heure_debut, :heure_fin, :actif)"
-            );
-            $stmt->execute($data);
-            return (int) $this->db->lastInsertId();
-        } catch (Exception $e) {
-            return 0;
-        }
-    }
-
-    public function deleteAvailability(int $id, int $medecinId): bool {
-        try {
-            $stmt = $this->db->prepare(
-                "DELETE FROM disponibilites WHERE id = :id AND medecin_id = :mid"
-            );
-            return $stmt->execute([':id' => $id, ':mid' => $medecinId]);
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Statistiques
-    // ─────────────────────────────────────────
-
+    /**
+     * Get statistics for a medecin
+     */
     public function getStats(int $medecinId): array {
         try {
+            if (!$this->db) {
+                $this->db = Database::getInstance()->getConnection();
+            }
             $total = $this->db->prepare(
                 "SELECT COUNT(*) FROM rendez_vous WHERE medecin_id = :mid"
             );
@@ -285,7 +72,7 @@ public function findByUserId(int $userId): array|false {
 
             $today = $this->db->prepare(
                 "SELECT COUNT(*) FROM rendez_vous
-                 WHERE medecin_id = :mid AND DATE(date) = CURDATE()"
+                 WHERE medecin_id = :mid AND DATE(date_rendezvous) = CURDATE()"
             );
             $today->execute([':mid' => $medecinId]);
 
@@ -307,216 +94,108 @@ public function findByUserId(int $userId): array|false {
                 'rdv_pending'  => (int) $pending->fetchColumn(),
             ];
         } catch (Exception $e) {
+            error_log("Error in getStats: " . $e->getMessage());
             return ['rdv_total' => 0, 'rdv_today' => 0, 'patients' => 0, 'rdv_pending' => 0];
         }
     }
 
-    public function getTopSpecialities(): array {
-        try {
-            $stmt = $this->db->query(
-                "SELECT specialite, COUNT(*) AS total
-                 FROM medecins
-                 GROUP BY specialite
-                 ORDER BY total DESC
-                 LIMIT 5"
-            );
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
+    public function findByUserId(int $userId): ?array
+    {
+        if (!$this->db) {
+            $this->db = Database::getInstance()->getConnection();
         }
+
+        $stmt = $this->db->prepare("SELECT * FROM medecins WHERE user_id = :user_id LIMIT 1");
+        $stmt->execute([':user_id' => $userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function getMonthlyAppointments(): array {
-        try {
-            $stmt = $this->db->query(
-                "SELECT DATE_FORMAT(date, '%Y-%m') AS mois, COUNT(*) AS total
-                 FROM rendez_vous
-                 WHERE date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                 GROUP BY mois
-                 ORDER BY mois ASC"
-            );
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            return [];
+    public function update(int $userId, array $data): bool
+    {
+        if ($userId <= 0) {
+            return false;
         }
-    }
 
+        if (!$this->db) {
+            $this->db = Database::getInstance()->getConnection();
+        }
 
-// ─────────────────────────────────────────
-//  Récupération des médecins avec leurs utilisateurs (pour l'affichage)
-// ─────────────────────────────────────────
+        $allowedMap = [
+            'specialite' => 'specialite',
+            'numero_ordre' => 'numero_ordre',
+            'annee_experience' => 'annee_experience',
+            'consultation_prix' => 'consultation_prix',
+            'cabinet_adresse' => 'cabinet_adresse',
+            'adresse_cabinet' => 'cabinet_adresse',
+            'description' => 'description',
+            'statut_validation' => 'statut_validation',
+            'commentaire_validation' => 'commentaire_validation',
+            'tarif' => 'consultation_prix',
+            'experience' => 'annee_experience',
+        ];
 
-/**
- * Récupère tous les médecins avec leurs informations utilisateur
- * Utilisé dans la page publique listeMedecins()
- */
-public function getAllMedecinsWithUsers(): array {
-    try {
+        $fields = [];
+        $params = [':user_id' => $userId];
+
+        foreach ($data as $key => $value) {
+            if (!isset($allowedMap[$key])) {
+                continue;
+            }
+
+            $column = $allowedMap[$key];
+            $placeholder = ':p_' . $column;
+            if (isset($params[$placeholder])) {
+                $params[$placeholder] = $value;
+                continue;
+            }
+
+            $fields[] = "$column = $placeholder";
+            $params[$placeholder] = $value;
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $exists = $this->findByUserId($userId);
+
+        if ($exists) {
+            $sql = "UPDATE medecins SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute($params);
+        }
+
+        $defaults = [
+            'specialite' => '',
+            'numero_ordre' => '',
+            'annee_experience' => null,
+            'consultation_prix' => null,
+            'cabinet_adresse' => null,
+            'description' => null,
+        ];
+
+        foreach ($data as $key => $value) {
+            if (isset($allowedMap[$key])) {
+                $defaults[$allowedMap[$key]] = $value;
+            }
+        }
+
         $stmt = $this->db->prepare(
-            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut,
-                    m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
-             FROM users u
-             INNER JOIN medecins m ON u.id = m.user_id
-             WHERE u.role = 'medecin' AND u.statut = 'actif'
-             ORDER BY u.nom ASC"
+            "INSERT INTO medecins (
+                user_id, specialite, numero_ordre, annee_experience, consultation_prix, cabinet_adresse, description
+            ) VALUES (
+                :user_id, :specialite, :numero_ordre, :annee_experience, :consultation_prix, :cabinet_adresse, :description
+            )"
         );
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::getAllMedecinsWithUsers - ' . $e->getMessage());
-        return [];
+
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':specialite' => (string) $defaults['specialite'],
+            ':numero_ordre' => (string) $defaults['numero_ordre'],
+            ':annee_experience' => $defaults['annee_experience'],
+            ':consultation_prix' => $defaults['consultation_prix'],
+            ':cabinet_adresse' => $defaults['cabinet_adresse'],
+            ':description' => $defaults['description'],
+        ]);
     }
-}
-
-/**
- * Alias pour getAllMedecinsWithUsers() pour compatibilité avec FrontController
- */
-public function getAllWithUsers(): array {
-    try {
-        $stmt = $this->db->prepare(
-            "SELECT u.id as user_id, u.nom, u.prenom, u.email, u.telephone, u.adresse, u.statut,
-                    COALESCE(m.specialite, 'Généraliste') as specialite,
-                    m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse
-             FROM users u
-             LEFT JOIN medecins m ON u.id = m.user_id
-             WHERE u.role = 'medecin' AND u.statut = 'actif'
-             ORDER BY u.nom ASC"
-        );
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Debug - loguer le nombre de médecins trouvés
-        error_log("Nombre de médecins trouvés: " . count($result));
-        
-        return $result;
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::getAllWithUsers - ' . $e->getMessage());
-        return [];
-    }
-}
-
-// ─────────────────────────────────────────
-//  Rendez-vous avec détails patient/médecin
-// ─────────────────────────────────────────
-
-/**
- * Récupère les rendez-vous d'un médecin avec les infos patient
- */
-public function getAppointmentsWithPatients(int $medecinId, ?string $statut = null, ?string $date = null): array {
-    try {
-        $sql = "SELECT rv.*, 
-                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
-                       u_patient.email AS patient_email,
-                       u_patient.telephone AS patient_telephone,
-                       u_patient.adresse AS patient_adresse
-                FROM rendez_vous rv
-                JOIN users u_patient ON rv.patient_id = u_patient.id
-                WHERE rv.medecin_id = :medecin_id";
-        
-        $params = [':medecin_id' => $medecinId];
-        
-        if (!empty($statut)) {
-            $sql .= " AND rv.statut = :statut";
-            $params[':statut'] = $statut;
-        }
-        
-        if (!empty($date)) {
-            $sql .= " AND DATE(rv.date_rendezvous) = :date";
-            $params[':date'] = $date;
-        }
-        
-        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
-        
-        $stmt = $this->db->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::getAppointmentsWithPatients - ' . $e->getMessage());
-        return [];
-    }
-}
-
-// ─────────────────────────────────────────
-//  Rendez-vous d'un patient avec le médecin
-// ─────────────────────────────────────────
-
-/**
- * Récupère les rendez-vous d'un patient avec les infos médecin
- */
-public function getPatientAppointmentsWithMedecin(int $patientId, ?string $statut = null, ?string $date = null): array {
-    try {
-        $sql = "SELECT rv.*, 
-                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
-                       u_medecin.email AS medecin_email,
-                       m.specialite
-                FROM rendez_vous rv
-                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
-                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
-                WHERE rv.patient_id = :patient_id";
-        
-        $params = [':patient_id' => $patientId];
-        
-        if (!empty($statut)) {
-            $sql .= " AND rv.statut = :statut";
-            $params[':statut'] = $statut;
-        }
-        
-        if (!empty($date)) {
-            $sql .= " AND DATE(rv.date_rendezvous) = :date";
-            $params[':date'] = $date;
-        }
-        
-        $sql .= " ORDER BY rv.date_rendezvous DESC, rv.heure_rendezvous ASC";
-        
-        $stmt = $this->db->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::getPatientAppointmentsWithMedecin - ' . $e->getMessage());
-        return [];
-    }
-}
-
-// ─────────────────────────────────────────
-//  Détail d'un rendez-vous avec toutes les infos
-// ─────────────────────────────────────────
-
-/**
- * Récupère les détails complets d'un rendez-vous
- */
-public function getRendezVousDetail(int $id): ?array {
-    try {
-        $sql = "SELECT rv.*, 
-                       CONCAT(u_patient.prenom, ' ', u_patient.nom) AS patient_nom,
-                       u_patient.email AS patient_email,
-                       u_patient.telephone AS patient_telephone,
-                       u_patient.adresse AS patient_adresse,
-                       CONCAT(u_medecin.prenom, ' ', u_medecin.nom) AS medecin_nom,
-                       u_medecin.email AS medecin_email,
-                       m.specialite,
-                       m.cabinet_adresse
-                FROM rendez_vous rv
-                JOIN users u_patient ON rv.patient_id = u_patient.id
-                JOIN users u_medecin ON rv.medecin_id = u_medecin.id
-                LEFT JOIN medecins m ON rv.medecin_id = m.user_id
-                WHERE rv.id = :id";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ?: null;
-    } catch (Exception $e) {
-        error_log('Erreur Medecin::getRendezVousDetail - ' . $e->getMessage());
-        return null;
-    }
-}
-
-
-
 }

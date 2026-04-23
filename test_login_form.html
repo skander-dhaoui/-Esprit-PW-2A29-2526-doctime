@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login</title>
+</head>
+<body>
+    <h2>Test Login avec Captcha</h2>
+    <form method="POST" action="index.php?page=login">
+        <div>
+            <label>Email:</label><br>
+            <input type="email" name="email" value="test@test.fr" required>
+        </div>
+        <div>
+            <label>Mot de passe:</label><br>
+            <input type="password" name="password" value="Test1234" required>
+        </div>
+        <div>
+            <label>Captcha (depuis SESSION):</label><br>
+            <input type="text" name="captcha_response" id="captchaInput" required>
+        </div>
+        <button type="button" onclick="fillCaptcha()">Récupérer le Captcha du Serveur</button>
+        <button type="submit">Se connecter</button>
+    </form>
+
+    <script>
+        function fillCaptcha() {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.captcha) {
+                        document.getElementById('captchaInput').value = data.captcha;
+                        alert('Captcha rempli: ' + data.captcha);
+                    } else {
+                        alert('Erreur: ' + data.error);
+                    }
+                })
+                .catch(err => alert('Erreur AJAX: ' + err));
+        }
+    </script>
+</body>
+</html>

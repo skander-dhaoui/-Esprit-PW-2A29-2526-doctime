@@ -1,6 +1,7 @@
 <?php
 if (class_exists('AuthController')) return;
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/social_auth.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../models/FaceRecognition.php';
@@ -214,32 +215,16 @@ class AuthController {
                 exit;
             }
 
-            session_regenerate_id(true);
-            $_SESSION['user_id']    = $user['id'];
-            $_SESSION['user_role']  = $user['role'];
-            $_SESSION['user_name']  = trim($user['nom'] . ' ' . $user['prenom']);
-            $_SESSION['user_email'] = $user['email'];
-
-            try {
-                $updateStmt = $db->prepare("UPDATE users SET derniere_connexion = :now WHERE id = :id");
-                $updateStmt->execute([
-                    ':now' => date('Y-m-d H:i:s'),
-                    ':id' => $user['id']
-                ]);
-            } catch (Exception $e) {
-                // Non bloquant
+            $redirect = $this->buildPostLoginRedirect($user);
+            if (!$this->startTwoFactorChallenge($user, $redirect)) {
+                $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA. Vérifiez la configuration email.'];
+                $_SESSION['old']    = ['email' => $email];
+                header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+                exit;
             }
 
-            $redirect = $_SESSION['redirect_after_login'] ?? null;
-            unset($_SESSION['redirect_after_login']);
-
-            if ($redirect && strpos($redirect, 'login') === false && strpos($redirect, 'register') === false) {
-                header('Location: ' . $redirect);
-            } elseif ($user['role'] === 'admin') {
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=dashboard');
-            } else {
-                header('Location: ' . $this->getBaseUrl() . 'index.php?page=accueil');
-            }
+            $_SESSION['success'] = 'Un code de vérification a été envoyé à votre adresse email.';
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
             exit;
 
         } catch (\Exception $e) {
@@ -799,6 +784,101 @@ public function registerFace(): void {
     // ─────────────────────────────────────────
     //  Vérifier email (AJAX)
     // ─────────────────────────────────────────
+public function startSocialLogin(string $provider): void {
+    $this->ensureSocialAuthConfigLoaded();
+    $provider = strtolower(trim($provider));
+    $config = SocialAuthConfig::get($provider);
+
+    if ($config === null) {
+        $_SESSION['error'] = 'Fournisseur de connexion sociale non pris en charge.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    if (!SocialAuthConfig::isConfigured($provider)) {
+        $_SESSION['error'] = 'La connexion ' . $config['label'] . ' n\'est pas encore configurée sur ce serveur.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    $state = bin2hex(random_bytes(16));
+    $_SESSION['oauth_state_' . $provider] = $state;
+
+    $params = [
+        'client_id'     => $config['client_id'],
+        'redirect_uri'  => $this->getSocialCallbackUrl($provider),
+        'response_type' => 'code',
+        'scope'         => $config['scope'],
+        'state'         => $state,
+    ];
+
+    header('Location: ' . $config['auth_url'] . '?' . http_build_query($params));
+    exit;
+}
+
+public function handleSocialCallback(string $provider): void {
+    $this->ensureSocialAuthConfigLoaded();
+    $provider = strtolower(trim($provider));
+    $config = SocialAuthConfig::get($provider);
+
+    if ($config === null) {
+        $_SESSION['error'] = 'Retour OAuth invalide.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    $stateKey = 'oauth_state_' . $provider;
+    $expectedState = $_SESSION[$stateKey] ?? '';
+    $receivedState = trim((string) ($_GET['state'] ?? ''));
+    unset($_SESSION[$stateKey]);
+
+    if ($expectedState === '' || $receivedState === '' || !hash_equals($expectedState, $receivedState)) {
+        $_SESSION['error'] = 'Échec de vérification de la connexion ' . $config['label'] . '.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    if (!empty($_GET['error'])) {
+        $_SESSION['error'] = 'Connexion ' . $config['label'] . ' annulée ou refusée.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    $code = trim((string) ($_GET['code'] ?? ''));
+    if ($code === '') {
+        $_SESSION['error'] = 'Code de retour ' . $config['label'] . ' manquant.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+
+    try {
+        $tokenData = $this->exchangeSocialCodeForToken($provider, $code, $config);
+        $profile = $this->fetchSocialProfile($provider, $tokenData, $config);
+        $user = $this->findOrCreateSocialUser($provider, $profile);
+
+        if (empty($user) || empty($user['id'])) {
+            throw new RuntimeException('Compte social introuvable ou non créé.');
+        }
+
+        if (($user['statut'] ?? 'actif') !== 'actif') {
+            $_SESSION['error'] = 'Votre compte est ' . $user['statut'] . '. Contactez l\'administrateur.';
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
+
+        $this->startUserSession($user);
+
+        $_SESSION['success'] = 'Connexion ' . $config['label'] . ' réussie.';
+        header('Location: ' . $this->getBaseUrl() . $this->buildPostLoginRedirectPath($user));
+        exit;
+    } catch (\Throwable $e) {
+        error_log('Erreur social login [' . $provider . ']: ' . $e->getMessage());
+        $_SESSION['error'] = 'Impossible de finaliser la connexion ' . $config['label'] . '.';
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        exit;
+    }
+}
+
     public function checkEmail(): void {
         header('Content-Type: application/json');
         $email = trim($_POST['email'] ?? $_GET['email'] ?? '');
@@ -819,6 +899,325 @@ public function registerFace(): void {
     // ─────────────────────────────────────────
     //  Helper : URL de base
     // ─────────────────────────────────────────
+    private function ensureSocialAuthConfigLoaded(): void {
+        if (!class_exists('SocialAuthConfig', false)) {
+            require_once __DIR__ . '/../config/social_auth.php';
+        }
+
+        if (!class_exists('SocialAuthConfig', false)) {
+            throw new RuntimeException('La configuration SocialAuthConfig est introuvable.');
+        }
+    }
+
+    private function getSocialCallbackUrl(string $provider): string {
+        $this->ensureSocialAuthConfigLoaded();
+        return $this->getBaseUrl() . 'index.php?page=social_callback&provider=' . urlencode($provider);
+    }
+
+    private function exchangeSocialCodeForToken(string $provider, string $code, array $config): array {
+        $payload = [
+            'client_id'     => $config['client_id'],
+            'client_secret' => $config['client_secret'],
+            'redirect_uri'  => $this->getSocialCallbackUrl($provider),
+            'code'          => $code,
+            'grant_type'    => 'authorization_code',
+        ];
+
+        $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload);
+
+        if (empty($response['access_token'])) {
+            throw new RuntimeException('Access token non reçu.');
+        }
+
+        return $response;
+    }
+
+    private function fetchSocialProfile(string $provider, array $tokenData, array $config): array {
+        $accessToken = (string) $tokenData['access_token'];
+
+        if ($provider === 'google') {
+            return $this->sendHttpRequest($config['user_url'], 'GET', [], [
+                'Authorization: Bearer ' . $accessToken,
+            ]);
+        }
+
+        if ($provider === 'facebook') {
+            return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
+        }
+
+        if ($provider === 'instagram') {
+            return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
+        }
+
+        throw new RuntimeException('Fournisseur social non supporté.');
+    }
+
+    private function findOrCreateSocialUser(string $provider, array $profile): array {
+        $normalized = $this->normalizeSocialProfile($provider, $profile);
+        $db = Database::getInstance()->getConnection();
+
+        $providerMatch = null;
+        if ($this->usersHasSocialColumns()) {
+            $providerStmt = $db->prepare(
+                "SELECT * FROM users WHERE social_provider = :provider AND social_provider_id = :provider_id LIMIT 1"
+            );
+            $providerStmt->execute([
+                ':provider'    => $provider,
+                ':provider_id' => $normalized['provider_id'],
+            ]);
+            $providerMatch = $providerStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }
+
+        if ($providerMatch) {
+            $this->updateSocialUser((int) $providerMatch['id'], $provider, $normalized);
+            return $this->userModel->findById((int) $providerMatch['id']) ?? $providerMatch;
+        }
+
+        $emailMatch = null;
+        if ($normalized['email'] !== '') {
+            $emailMatch = $this->userModel->findByEmail($normalized['email']);
+        }
+
+        if ($emailMatch) {
+            $this->updateSocialUser((int) $emailMatch['id'], $provider, $normalized);
+            return $this->userModel->findById((int) $emailMatch['id']) ?? $emailMatch;
+        }
+
+        return $this->createSocialUser($provider, $normalized);
+    }
+
+    private function normalizeSocialProfile(string $provider, array $profile): array {
+        if ($provider === 'google') {
+            return [
+                'provider_id' => (string) ($profile['sub'] ?? ''),
+                'email'       => trim((string) ($profile['email'] ?? '')),
+                'prenom'      => trim((string) ($profile['given_name'] ?? 'Utilisateur')),
+                'nom'         => trim((string) ($profile['family_name'] ?? 'Google')),
+                'avatar'      => trim((string) ($profile['picture'] ?? '')),
+            ];
+        }
+
+        if ($provider === 'facebook') {
+            $picture = '';
+            if (!empty($profile['picture']['data']['url'])) {
+                $picture = (string) $profile['picture']['data']['url'];
+            }
+
+            return [
+                'provider_id' => (string) ($profile['id'] ?? ''),
+                'email'       => trim((string) ($profile['email'] ?? '')),
+                'prenom'      => trim((string) ($profile['first_name'] ?? 'Utilisateur')),
+                'nom'         => trim((string) ($profile['last_name'] ?? 'Facebook')),
+                'avatar'      => $picture,
+            ];
+        }
+
+        if ($provider === 'instagram') {
+            $username = trim((string) ($profile['username'] ?? 'instagram_user'));
+
+            return [
+                'provider_id' => (string) ($profile['id'] ?? ''),
+                'email'       => 'instagram_' . preg_replace('/[^a-zA-Z0-9_]/', '', $username) . '@social.local',
+                'prenom'      => $username,
+                'nom'         => 'Instagram',
+                'avatar'      => '',
+            ];
+        }
+
+        throw new RuntimeException('Profil social non supporté.');
+    }
+
+    private function createSocialUser(string $provider, array $normalized): array {
+        if ($normalized['provider_id'] === '') {
+            throw new RuntimeException('Identifiant social manquant.');
+        }
+
+        $db = Database::getInstance()->getConnection();
+        $password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        $hasSocialColumns = $this->usersHasSocialColumns();
+
+        $columns = 'nom, prenom, email, telephone, password, role, statut, avatar, created_at';
+        $values  = ':nom, :prenom, :email, :telephone, :password, :role, :statut, :avatar, NOW()';
+        $params = [
+            ':nom'       => $normalized['nom'],
+            ':prenom'    => $normalized['prenom'],
+            ':email'     => $normalized['email'],
+            ':telephone' => null,
+            ':password'  => $password,
+            ':role'      => 'patient',
+            ':statut'    => 'actif',
+            ':avatar'    => null,
+        ];
+
+        if ($hasSocialColumns) {
+            $columns .= ', social_provider, social_provider_id, social_avatar';
+            $values  .= ', :social_provider, :social_provider_id, :social_avatar';
+            $params[':social_provider'] = $provider;
+            $params[':social_provider_id'] = $normalized['provider_id'];
+            $params[':social_avatar'] = $normalized['avatar'] !== '' ? $normalized['avatar'] : null;
+        }
+
+        $stmt = $db->prepare("INSERT INTO users ($columns) VALUES ($values)");
+        $stmt->execute($params);
+
+        $userId = (int) $db->lastInsertId();
+        if ($userId <= 0) {
+            throw new RuntimeException('Création du compte social impossible.');
+        }
+
+        return $this->userModel->findById($userId) ?? [];
+    }
+
+    private function updateSocialUser(int $userId, string $provider, array $normalized): void {
+        $lastConnection = date('Y-m-d H:i:s');
+
+        if ($this->usersHasSocialColumns()) {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare(
+                "UPDATE users
+                 SET social_provider = :provider,
+                     social_provider_id = :provider_id,
+                     social_avatar = :social_avatar,
+                     derniere_connexion = :derniere_connexion
+                 WHERE id = :id"
+            );
+            $stmt->execute([
+                ':provider'           => $provider,
+                ':provider_id'        => $normalized['provider_id'],
+                ':social_avatar'      => $normalized['avatar'] !== '' ? $normalized['avatar'] : null,
+                ':derniere_connexion' => $lastConnection,
+                ':id'                 => $userId,
+            ]);
+            return;
+        }
+
+        $this->userModel->update($userId, [
+            'derniere_connexion' => $lastConnection,
+        ]);
+    }
+
+    private function usersHasSocialColumns(): bool {
+        static $hasColumns = null;
+
+        if ($hasColumns !== null) {
+            return $hasColumns;
+        }
+
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SHOW COLUMNS FROM users LIKE 'social_provider'");
+        $hasColumns = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $hasColumns;
+    }
+
+    private function sendHttpRequest(string $url, string $method = 'GET', array $data = [], array $headers = []): array {
+        $method = strtoupper($method);
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init();
+
+            if ($method === 'GET' && !empty($data)) {
+                $separator = str_contains($url, '?') ? '&' : '?';
+                $url .= $separator . http_build_query($data);
+            }
+
+            if ($method === 'POST' && !in_array('Content-Type: application/x-www-form-urlencoded', $headers, true)) {
+                $headers[] = 'Content-Type: application/x-www-form-urlencoded';
+            }
+
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 20,
+                CURLOPT_HTTPHEADER     => $headers,
+            ]);
+
+            if ($method === 'POST') {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            }
+
+            $raw = curl_exec($ch);
+            if ($raw === false) {
+                $error = curl_error($ch);
+                curl_close($ch);
+                throw new RuntimeException('Erreur réseau: ' . $error);
+            }
+
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode >= 400) {
+                throw new RuntimeException('Réponse HTTP ' . $httpCode . ' reçue.');
+            }
+
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                throw new RuntimeException('Réponse JSON invalide.');
+            }
+
+            return $decoded;
+        }
+
+        if ($method === 'GET' && !empty($data)) {
+            $separator = str_contains($url, '?') ? '&' : '?';
+            $url .= $separator . http_build_query($data);
+        }
+
+        if ($method === 'POST' && !in_array('Content-Type: application/x-www-form-urlencoded', $headers, true)) {
+            $headers[] = 'Content-Type: application/x-www-form-urlencoded';
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method'        => $method,
+                'header'        => implode("\r\n", $headers),
+                'content'       => $method === 'POST' ? http_build_query($data) : '',
+                'ignore_errors' => true,
+                'timeout'       => 20,
+            ],
+        ]);
+
+        $raw = @file_get_contents($url, false, $context);
+        if ($raw === false) {
+            throw new RuntimeException('Échec de la requête HTTP.');
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            throw new RuntimeException('Réponse JSON invalide.');
+        }
+
+        return $decoded;
+    }
+
+    private function startUserSession(array $user): void {
+        session_regenerate_id(true);
+
+        $_SESSION['user_id']    = $user['id'];
+        $_SESSION['user_role']  = $user['role'];
+        $_SESSION['user_name']  = trim(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? ''));
+        $_SESSION['user_email'] = $user['email'] ?? '';
+
+        $this->userModel->update((int) $user['id'], [
+            'derniere_connexion' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    private function buildPostLoginRedirectPath(array $user): string {
+        $redirect = $_SESSION['redirect_after_login'] ?? null;
+        unset($_SESSION['redirect_after_login']);
+
+        if (is_string($redirect) && $redirect !== '' && strpos($redirect, 'login') === false && strpos($redirect, 'register') === false) {
+            return ltrim($redirect, '/');
+        }
+
+        return match ($user['role'] ?? 'patient') {
+            'admin'   => 'index.php?page=dashboard',
+            default   => 'index.php?page=accueil',
+        };
+    }
+
     private function getBaseUrl(): string {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host     = $_SERVER['HTTP_HOST'] ?? 'localhost';

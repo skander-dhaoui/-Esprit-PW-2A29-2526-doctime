@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login Simple</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 600px; }
+        .box { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        input { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; }
+        button:hover { background: #45a049; }
+        .error { color: red; }
+        .success { color: green; }
+        code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Test Login Simplifié</h1>
+
+    <div class="box">
+        <h3>Identifiants de test</h3>
+        <p><strong>Email:</strong> <code>test@test.fr</code></p>
+        <p><strong>Mot de passe:</strong> <code>Test1234</code></p>
+    </div>
+
+    <div class="box">
+        <h3>Étape 1: Charger la page de login</h3>
+        <button onclick="checkLoginPage()">Vérifier la page de login</button>
+        <div id="result1" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h3>Étape 2: Récupérer le captcha</h3>
+        <button onclick="getCaptcha()">Récupérer le captcha</button>
+        <div id="result2" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h3>Étape 3: Tenter une connexion avec ce captcha</h3>
+        <input type="text" id="captchaValue" placeholder="Captcha sera rempli ici" readonly>
+        <input type="email" id="email" value="test@test.fr" placeholder="Email">
+        <input type="password" id="password" value="Test1234" placeholder="Mot de passe">
+        <button onclick="tryLogin()">Se connecter</button>
+        <div id="result3" style="margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        function checkLoginPage() {
+            fetch('index.php?page=login')
+                .then(r => r.text())
+                .then(html => {
+                    const hasCaptchaCode = html.includes('id="captchaCode"');
+                    const div = document.getElementById('result1');
+                    if (hasCaptchaCode) {
+                        div.innerHTML = '<span class="success">✓ Page login chargée correctement</span>';
+                    } else {
+                        div.innerHTML = '<span class="error">✗ Element captchaCode manquant</span>';
+                    }
+                })
+                .catch(e => {
+                    document.getElementById('result1').innerHTML = '<span class="error">✗ Erreur: ' + e + '</span>';
+                });
+        }
+
+        function getCaptcha() {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    const div = document.getElementById('result2');
+                    if (data.captcha) {
+                        document.getElementById('captchaValue').value = data.captcha;
+                        div.innerHTML = '<span class="success">✓ Captcha reçu: ' + data.captcha + '</span>';
+                    } else {
+                        div.innerHTML = '<span class="error">✗ Erreur: ' + (data.error || 'Inconnu') + '</span>';
+                    }
+                })
+                .catch(e => {
+                    document.getElementById('result2').innerHTML = '<span class="error">✗ Erreur AJAX: ' + e + '</span>';
+                });
+        }
+
+        function tryLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const captcha = document.getElementById('captchaValue').value;
+
+            if (!captcha) {
+                document.getElementById('result3').innerHTML = '<span class="error">✗ D\'abord charger le captcha!</span>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('captcha_response', captcha);
+
+            fetch('index.php?page=login', { method: 'POST', body: formData })
+                .then(r => {
+                    const div = document.getElementById('result3');
+                    if (r.status === 302 || r.redirected) {
+                        div.innerHTML = '<span class="success">✓ Connexion réussie! Redirection en cours...</span>';
+                        setTimeout(() => window.location = r.url || 'index.php?page=accueil', 1000);
+                    } else {
+                        div.innerHTML = '<span class="error">✗ Code HTTP: ' + r.status + '</span>';
+                    }
+                })
+                .catch(e => {
+                    document.getElementById('result3').innerHTML = '<span class="error">✗ Erreur: ' + e + '</span>';
+                });
+        }
+    </script>
+</body>
+</html>

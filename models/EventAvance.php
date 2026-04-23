@@ -1,268 +1,72 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
+declare(strict_types=1);
 
 /**
- * EventAvance — Gestion avancée des événements (porté depuis DOCTIME_advanced)
- * Adapté à la structure Valorys : table `events`, `participations`, `sponsors`
+ * EventAvance — entité représentant des données statistiques agrégées d'un événement.
+ * Pas une table directe : alimentée depuis les jointures events + participations + sponsors.
  */
-class EventAvance {
-    private PDO $pdo;
+final class EventAvance
+{
+    private int     $id;
+    private string  $titre;
+    private string  $status;
+    private int     $capaciteMax;
+    private int     $nbInscrits;
+    private int     $nbPresents;
+    private int     $nbAbsents;
+    private float   $tauxRemplissage;
+    private float   $recettesTotales;
+    private ?string $sponsorNom;
+    private ?string $sponsorNiveau;
+    private string  $dateDebut;
+    private string  $dateFin;
 
-    public function __construct() {
-        $this->pdo = Database::getInstance()->getConnection();
+    public function __construct(array $data = [])
+    {
+        $this->id              = (int)    ($data['id']               ?? 0);
+        $this->titre           = (string) ($data['titre']            ?? '');
+        $this->status          = (string) ($data['status']           ?? 'à venir');
+        $this->capaciteMax     = (int)    ($data['capacite_max']     ?? 0);
+        $this->nbInscrits      = (int)    ($data['nb_inscrits']      ?? 0);
+        $this->nbPresents      = (int)    ($data['nb_presents']      ?? 0);
+        $this->nbAbsents       = (int)    ($data['nb_absents']       ?? 0);
+        $this->tauxRemplissage = (float)  ($data['taux_remplissage'] ?? 0.0);
+        $this->recettesTotales = (float)  ($data['recettes_totales'] ?? 0.0);
+        $this->sponsorNom      =          ($data['sponsor_nom']      ?? null);
+        $this->sponsorNiveau   =          ($data['sponsor_niveau']   ?? null);
+        $this->dateDebut       = (string) ($data['date_debut']       ?? '');
+        $this->dateFin         = (string) ($data['date_fin']         ?? '');
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // 1. STATISTIQUES DÉTAILLÉES PAR ÉVÉNEMENT
-    // ═══════════════════════════════════════════════════════════════════
+    public function __destruct() {}
 
-    public function getStatsEvenement(int $id): array {
-        // Infos de base de l'événement
-        $stmt = $this->pdo->prepare("
-            SELECT e.*,
-                   s.nom AS sponsor_nom, s.niveau AS sponsor_niveau
-            FROM events e
-            LEFT JOIN sponsors s ON e.sponsor_id = s.id
-            WHERE e.id = :id
-        ");
-        $stmt->execute([':id' => $id]);
-        $evenement = $stmt->fetch();
-        if (!$evenement) return [];
+    // ── Getters ──────────────────────────────────────────────────
+    public function getId(): int               { return $this->id; }
+    public function getTitre(): string         { return $this->titre; }
+    public function getStatus(): string        { return $this->status; }
+    public function getCapaciteMax(): int      { return $this->capaciteMax; }
+    public function getNbInscrits(): int       { return $this->nbInscrits; }
+    public function getNbPresents(): int       { return $this->nbPresents; }
+    public function getNbAbsents(): int        { return $this->nbAbsents; }
+    public function getTauxRemplissage(): float { return $this->tauxRemplissage; }
+    public function getRecettesTotales(): float { return $this->recettesTotales; }
+    public function getSponsorNom(): ?string    { return $this->sponsorNom; }
+    public function getSponsorNiveau(): ?string { return $this->sponsorNiveau; }
+    public function getDateDebut(): string     { return $this->dateDebut; }
+    public function getDateFin(): string       { return $this->dateFin; }
 
-        $capacite = (int)($evenement['capacite_max'] ?? 0);
-
-        // Nombre total de participations
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM participations
-            WHERE event_id = :id AND statut != 'absent'
-        ");
-        $stmt->execute([':id' => $id]);
-        $nbInscrits = (int)$stmt->fetchColumn();
-
-        // Taux de remplissage
-        $tauxRemplissage = $capacite > 0
-            ? round(($nbInscrits / $capacite) * 100, 1)
-            : 0;
-
-        // Répartition par statut de participation
-        $stmt = $this->pdo->prepare("
-            SELECT statut, COUNT(*) as total
-            FROM participations
-            WHERE event_id = :id
-            GROUP BY statut
-        ");
-        $stmt->execute([':id' => $id]);
-        $repartitionStatut = $stmt->fetchAll();
-
-        // Évolution des inscriptions par jour
-        $stmt = $this->pdo->prepare("
-            SELECT DATE(date_inscription) AS jour, COUNT(*) AS total
-            FROM participations
-            WHERE event_id = :id
-            GROUP BY jour
-            ORDER BY jour ASC
-        ");
-        $stmt->execute([':id' => $id]);
-        $evolutionInscriptions = $stmt->fetchAll();
-
-        // Liste complète des participants avec infos utilisateur
-        $stmt = $this->pdo->prepare("
-            SELECT p.id, p.statut, p.date_inscription,
-                   u.nom, u.prenom, u.email
-            FROM participations p
-            JOIN users u ON p.user_id = u.id
-            WHERE p.event_id = :id
-            ORDER BY p.date_inscription DESC
-        ");
-        $stmt->execute([':id' => $id]);
-        $participants = $stmt->fetchAll();
-
-        return [
-            'evenement'              => $evenement,
-            'nb_inscrits'            => $nbInscrits,
-            'places_restantes'       => max(0, $capacite - $nbInscrits),
-            'taux_remplissage'       => $tauxRemplissage,
-            'repartition_statut'     => $repartitionStatut,
-            'evolution_inscriptions' => $evolutionInscriptions,
-            'participants'           => $participants,
-        ];
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 2. RECHERCHE ET FILTRAGE AVANCÉ
-    // ═══════════════════════════════════════════════════════════════════
-
-    public function recherche(array $filtres): array {
-        $conditions = ['1=1'];
-        $params     = [];
-
-        if (!empty($filtres['q'])) {
-            $conditions[] = "(e.titre LIKE :q OR e.description LIKE :q OR e.lieu LIKE :q)";
-            $params[':q'] = '%' . $filtres['q'] . '%';
-        }
-
-        if (!empty($filtres['statut'])) {
-            $conditions[] = "e.status = :statut";
-            $params[':statut'] = $filtres['statut'];
-        }
-
-        if (!empty($filtres['date_debut_min'])) {
-            $conditions[] = "e.date_debut >= :date_debut_min";
-            $params[':date_debut_min'] = $filtres['date_debut_min'];
-        }
-
-        if (!empty($filtres['date_debut_max'])) {
-            $conditions[] = "e.date_debut <= :date_debut_max";
-            $params[':date_debut_max'] = $filtres['date_debut_max'];
-        }
-
-        if (!empty($filtres['prix_min'])) {
-            $conditions[] = "e.prix >= :prix_min";
-            $params[':prix_min'] = (float)$filtres['prix_min'];
-        }
-
-        if (!empty($filtres['prix_max'])) {
-            $conditions[] = "e.prix <= :prix_max";
-            $params[':prix_max'] = (float)$filtres['prix_max'];
-        }
-
-        if (isset($filtres['avec_places']) && $filtres['avec_places']) {
-            $conditions[] = "e.places_restantes > 0";
-        }
-
-        if (!empty($filtres['sponsor_id'])) {
-            $conditions[] = "e.sponsor_id = :sponsor_id";
-            $params[':sponsor_id'] = (int)$filtres['sponsor_id'];
-        }
-
-        $tri   = in_array($filtres['tri'] ?? '', ['date_debut', 'titre', 'prix', 'capacite_max'])
-               ? $filtres['tri'] : 'date_debut';
-        $ordre = ($filtres['ordre'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
-
-        $sql = "
-            SELECT e.*,
-                   s.nom AS sponsor_nom,
-                   (SELECT COUNT(*) FROM participations p
-                    WHERE p.event_id = e.id AND p.statut != 'absent') AS nb_inscrits
-            FROM events e
-            LEFT JOIN sponsors s ON e.sponsor_id = s.id
-            WHERE " . implode(' AND ', $conditions) . "
-            ORDER BY e.$tri $ordre
-        ";
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 3. EXPORT CSV DES PARTICIPANTS D'UN ÉVÉNEMENT
-    // ═══════════════════════════════════════════════════════════════════
-
-    public function getParticipantsForExport(int $eventId, string $statut = ''): array {
-        $params = [':eid' => $eventId];
-        $statutCondition = '';
-        if (!empty($statut)) {
-            $statutCondition = "AND p.statut = :statut";
-            $params[':statut'] = $statut;
-        }
-
-        $stmt = $this->pdo->prepare("
-            SELECT u.nom, u.prenom, u.email,
-                   p.statut, p.date_inscription,
-                   e.titre AS evenement_titre, e.date_debut, e.date_fin, e.lieu
-            FROM participations p
-            JOIN users u ON p.user_id = u.id
-            JOIN events e ON p.event_id = e.id
-            WHERE p.event_id = :eid $statutCondition
-            ORDER BY u.nom, u.prenom
-        ");
-        $stmt->execute($params);
-        return $stmt->fetchAll();
-    }
-
-    public function findBasic(int $id): array|false {
-        $stmt = $this->pdo->prepare("SELECT id, titre, date_debut, date_fin, lieu FROM events WHERE id = :id");
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 4. TABLEAU DE BORD GLOBAL AVANCÉ
-    // ═══════════════════════════════════════════════════════════════════
-
-    public function getVueEnsemble(): array {
-        // Événements proches de la saturation (>= 80%)
-        $alertes = $this->pdo->query("
-            SELECT e.id, e.titre, e.date_debut, e.capacite_max,
-                   COUNT(p.id) AS nb_inscrits,
-                   ROUND(COUNT(p.id) / NULLIF(e.capacite_max, 0) * 100, 1) AS taux
-            FROM events e
-            LEFT JOIN participations p ON p.event_id = e.id AND p.statut != 'absent'
-            WHERE e.status = 'à venir'
-              AND e.capacite_max > 0
-            GROUP BY e.id
-            HAVING taux >= 80
-            ORDER BY taux DESC
-        ")->fetchAll();
-
-        // Top 5 événements par nombre d'inscrits
-        $topEvenements = $this->pdo->query("
-            SELECT e.id, e.titre, e.status,
-                   COUNT(p.id) AS nb_inscrits, e.capacite_max,
-                   ROUND(COUNT(p.id) / NULLIF(e.capacite_max, 0) * 100, 1) AS taux
-            FROM events e
-            LEFT JOIN participations p ON p.event_id = e.id AND p.statut != 'absent'
-            GROUP BY e.id
-            ORDER BY nb_inscrits DESC
-            LIMIT 5
-        ")->fetchAll();
-
-        // Résumé financier : revenus estimés (prix × inscrits)
-        $revenuEstime = $this->pdo->query("
-            SELECT e.id, e.titre, e.prix,
-                   COUNT(p.id) AS nb_confirmes,
-                   ROUND(e.prix * COUNT(p.id), 2) AS revenu
-            FROM events e
-            JOIN participations p ON p.event_id = e.id AND p.statut = 'inscrit'
-            GROUP BY e.id
-            ORDER BY revenu DESC
-            LIMIT 8
-        ")->fetchAll();
-
-        // Répartition des événements par statut
-        $parStatut = $this->pdo->query("
-            SELECT status, COUNT(*) AS total
-            FROM events
-            GROUP BY status
-            ORDER BY total DESC
-        ")->fetchAll();
-
-        // Événements à venir dans les 30 jours
-        $prochains = $this->pdo->query("
-            SELECT e.id, e.titre, e.date_debut, e.lieu, e.status,
-                   COUNT(p.id) AS nb_inscrits, e.capacite_max
-            FROM events e
-            LEFT JOIN participations p ON p.event_id = e.id AND p.statut != 'absent'
-            WHERE e.date_debut BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 30 DAY)
-            GROUP BY e.id
-            ORDER BY e.date_debut ASC
-        ")->fetchAll();
-
-        return [
-            'alertes_saturation' => $alertes,
-            'top_evenements'     => $topEvenements,
-            'revenu_estime'      => $revenuEstime,
-            'par_statut'         => $parStatut,
-            'prochains_30j'      => $prochains,
-        ];
-    }
-
-    public function getSponsors(): array {
-        return $this->pdo->query("SELECT id, nom FROM sponsors WHERE actif = 1 ORDER BY nom")->fetchAll();
-    }
-
-    public function getStatuts(): array {
-        return ['à venir', 'en_cours', 'terminé', 'annulé'];
-    }
+    // ── Setters ──────────────────────────────────────────────────
+    public function setId(int $v): void               { $this->id              = $v; }
+    public function setTitre(string $v): void          { $this->titre           = $v; }
+    public function setStatus(string $v): void         { $this->status          = $v; }
+    public function setCapaciteMax(int $v): void       { $this->capaciteMax     = $v; }
+    public function setNbInscrits(int $v): void        { $this->nbInscrits      = $v; }
+    public function setNbPresents(int $v): void        { $this->nbPresents      = $v; }
+    public function setNbAbsents(int $v): void         { $this->nbAbsents       = $v; }
+    public function setTauxRemplissage(float $v): void { $this->tauxRemplissage = $v; }
+    public function setRecettesTotales(float $v): void { $this->recettesTotales = $v; }
+    public function setSponsorNom(?string $v): void    { $this->sponsorNom      = $v; }
+    public function setSponsorNiveau(?string $v): void { $this->sponsorNiveau   = $v; }
+    public function setDateDebut(string $v): void      { $this->dateDebut       = $v; }
+    public function setDateFin(string $v): void        { $this->dateFin         = $v; }
 }
