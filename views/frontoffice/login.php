@@ -34,10 +34,13 @@
 
         .btn-camera { background: #6c757d; color: white; border-radius: 10px; padding: 12px; width: 100%; font-weight: bold; font-size: 16px; border: none; transition: all 0.3s; margin-bottom: 15px; }
         .btn-camera:hover { background: #5a6268; transform: translateY(-2px); }
-        .social-login { display: grid; gap: 10px; margin-bottom: 14px; }
-        .btn-social { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: 700; border: 1px solid #e5e7eb; transition: all 0.2s; }
+        .social-login { display: flex; justify-content: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .btn-social { width: 54px; height: 54px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: 50%; text-decoration: none; font-weight: 700; border: 1px solid #e5e7eb; transition: all 0.2s; }
         .btn-social:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(0,0,0,0.08); }
+        .btn-social span { display: none; }
+        .btn-social i { font-size: 20px; }
         .btn-google { background: #ffffff; color: #1f2937; }
+        .btn-github { background: #111827; color: #ffffff; border-color: #111827; }
         .btn-facebook { background: #1877f2; color: #ffffff; border-color: #1877f2; }
         .btn-instagram { color: #ffffff; border: none; background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4); }
         .social-hint { font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 18px; }
@@ -131,27 +134,7 @@
                 <i class="fas fa-camera me-2"></i> Connexion avec reconnaissance faciale
             </button>
 
-            <div class="text-center mb-3"><span class="text-muted">ou</span></div>
-
-            <div class="social-login">
-                <a class="btn-social btn-google" href="index.php?page=social_login&provider=google">
-                    <i class="fab fa-google"></i>
-                    <span>Continuer avec Google</span>
-                </a>
-                <a class="btn-social btn-facebook" href="index.php?page=social_login&provider=facebook">
-                    <i class="fab fa-facebook-f"></i>
-                    <span>Continuer avec Facebook</span>
-                </a>
-                <a class="btn-social btn-instagram" href="index.php?page=social_login&provider=instagram">
-                    <i class="fab fa-instagram"></i>
-                    <span>Continuer avec Instagram</span>
-                </a>
-            </div>
-            <div class="social-hint">
-                Si les clés OAuth ne sont pas encore configurées, un message d'information sera affiché.
-            </div>
-
-            <div class="text-center mb-3"><span class="text-muted">ou connectez-vous avec votre compte DocTime</span></div>
+            <div class="text-center mb-3"><span class="text-muted">connectez-vous avec votre compte DocTime</span></div>
 
             <div class="role-selector">
                 <div class="role-option active" data-role="patient">
@@ -215,6 +198,30 @@
                         <label class="form-check-label" for="remember">Se souvenir de moi</label>
                     </div>
                     <a href="index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
+                </div>
+
+                <div class="text-center mb-3 mt-3"><span class="text-muted">ou continuer avec</span></div>
+
+                <div class="social-login">
+                    <a class="btn-social btn-google" href="index.php?page=social_login&provider=google">
+                        <i class="fab fa-google"></i>
+                        <span>Continuer avec Google</span>
+                    </a>
+                    <a class="btn-social btn-github" href="index.php?page=social_login&provider=github">
+                        <i class="fab fa-github"></i>
+                        <span>Continuer avec GitHub</span>
+                    </a>
+                    <a class="btn-social btn-facebook" href="index.php?page=social_login&provider=facebook">
+                        <i class="fab fa-facebook-f"></i>
+                        <span>Continuer avec Facebook</span>
+                    </a>
+                    <a class="btn-social btn-instagram" href="index.php?page=social_login&provider=instagram">
+                        <i class="fab fa-instagram"></i>
+                        <span>Continuer avec Instagram</span>
+                    </a>
+                </div>
+                <div class="social-hint">
+                    Si les clés OAuth ne sont pas encore configurées, un message d'information sera affiché.
                 </div>
 
                 <button type="submit" class="btn-login" id="submitBtn">

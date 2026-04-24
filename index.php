@@ -91,6 +91,7 @@ $disponibiliteCtrl = class_exists('DisponibiliteController') ? new Disponibilite
 // =============================================
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
+    'verify_2fa', 'resend_2fa',
     'social_login', 'social_callback',
     'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
     'evenements', 'detail_evenement', 'event_register',
@@ -98,7 +99,7 @@ $publicPages = [
     'contact', 'about',
 ];
 
-$guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login'];
+$guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login', 'verify_2fa', 'resend_2fa'];
 
 $isLoggedIn = !empty($_SESSION['user_id']);
 $userRole   = $_SESSION['user_role'] ?? '';
@@ -438,6 +439,22 @@ switch ($page) {
             exit;
         }
         $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->register() : $auth->showRegister();
+        break;
+
+    case 'verify_2fa':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=accueil');
+            exit;
+        }
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->verifyTwoFactorCode() : $auth->showVerifyTwoFactor();
+        break;
+
+    case 'resend_2fa':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=accueil');
+            exit;
+        }
+        $auth->resendTwoFactorCode();
         break;
 
     case 'forgot_password':

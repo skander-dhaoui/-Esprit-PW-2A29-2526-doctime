@@ -19,6 +19,16 @@ class SocialAuthConfig
                 'token_url'     => 'https://oauth2.googleapis.com/token',
                 'user_url'      => 'https://openidconnect.googleapis.com/v1/userinfo',
             ],
+            'github' => [
+                'label'         => 'GitHub',
+                'client_id'     => self::env('GITHUB_CLIENT_ID'),
+                'client_secret' => self::env('GITHUB_CLIENT_SECRET'),
+                'scope'         => 'read:user user:email',
+                'auth_url'      => 'https://github.com/login/oauth/authorize',
+                'token_url'     => 'https://github.com/login/oauth/access_token',
+                'user_url'      => 'https://api.github.com/user',
+                'email_url'     => 'https://api.github.com/user/emails',
+            ],
             'facebook' => [
                 'label'         => 'Facebook',
                 'client_id'     => self::env('FACEBOOK_CLIENT_ID'),
@@ -32,10 +42,14 @@ class SocialAuthConfig
                 'label'         => 'Instagram',
                 'client_id'     => self::env('INSTAGRAM_CLIENT_ID'),
                 'client_secret' => self::env('INSTAGRAM_CLIENT_SECRET'),
-                'scope'         => 'user_profile',
-                'auth_url'      => 'https://api.instagram.com/oauth/authorize',
+                'scope'         => self::env('INSTAGRAM_SCOPE', 'instagram_business_basic'),
+                'auth_url'      => 'https://www.instagram.com/oauth/authorize',
                 'token_url'     => 'https://api.instagram.com/oauth/access_token',
-                'user_url'      => 'https://graph.instagram.com/me?fields=id,username,account_type',
+                'user_url'      => 'https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,account_type',
+                'auth_params'   => [
+                    'enable_fb_login'      => self::env('INSTAGRAM_ENABLE_FB_LOGIN', '0'),
+                    'force_authentication' => self::env('INSTAGRAM_FORCE_AUTHENTICATION', '1'),
+                ],
             ],
         ];
     }

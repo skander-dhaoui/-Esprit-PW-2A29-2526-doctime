@@ -19,9 +19,9 @@ class AuthController {
         $this->faceModel = new FaceRecognition();
     }
 
-    // ─────────────────────────────────────────
-    //  Vérifier si connecté
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  VÃ©rifier si connectÃ©
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function requireAuth(): void {
         if (empty($_SESSION['user_id'])) {
             $_SESSION['error'] = "Veuillez vous connecter.";
@@ -30,6 +30,9 @@ class AuthController {
         }
     }
 
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  VÃ©rifier le rÃ´le
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // ─────────────────────────────────────────
     //  Vérifier le rôle
     // ─────────────────────────────────────────
@@ -64,7 +67,6 @@ class AuthController {
         if (!empty($_SESSION['error']) && empty($errors)) {
             $errors['__form'] = $_SESSION['error'];
         }
-        unset($_SESSION['error'], $_SESSION['errors'], $_SESSION['old']);
 
         // Générer un captcha pour cette session si absent
         // NE PAS régénérer si déjà présent - garder le même captcha pour la session actuelle
@@ -89,13 +91,13 @@ class AuthController {
         }
     }
 
-    // ─────────────────────────────────────────
-    //  Générer un nouveau captcha (AJAX)
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  GÃ©nÃ©rer un nouveau captcha (AJAX)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function generateCaptcha(): void {
         header('Content-Type: application/json');
         
-        // Générer un nouveau code de 6 caractères
+        // GÃ©nÃ©rer un nouveau code de 6 caractÃ¨res
         $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
         $captcha = "";
         for ($i = 0; $i < 6; $i++) {
@@ -109,13 +111,13 @@ class AuthController {
         exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Récupérer le captcha actuel (AJAX)
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  RÃ©cupÃ©rer le captcha actuel (AJAX)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function getCaptcha(): void {
         header('Content-Type: application/json');
         
-        // Retourner le captcha actuel SANS le régénérer
+        // Retourner le captcha actuel SANS le rÃ©gÃ©nÃ©rer
         $captcha = $_SESSION['captcha_code'] ?? null;
         
         if ($captcha) {
@@ -126,9 +128,9 @@ class AuthController {
         exit;
     }
 
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //  Traiter la connexion
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function login(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
@@ -155,7 +157,7 @@ class AuthController {
             $loginErrors['password'] = 'Le mot de passe est requis.';
         }
         if (empty($captchaResponse)) {
-            $loginErrors['captcha_response'] = 'Le code de vérification est requis.';
+            $loginErrors['captcha_response'] = 'Le code de vÃ©rification est requis.';
         }
 
         if (!empty($loginErrors)) {
@@ -166,8 +168,8 @@ class AuthController {
             exit;
         }
         
-        // Valider le captcha côté serveur
-        // Si pas de captcha en session, le générer (première visite)
+        // Valider le captcha cÃ´tÃ© serveur
+        // Si pas de captcha en session, le gÃ©nÃ©rer (premiÃ¨re visite)
         if (empty($_SESSION['captcha_code'])) {
             $chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
             $captcha = "";
@@ -179,8 +181,8 @@ class AuthController {
         }
         
         if (strtoupper($captchaResponse) !== $_SESSION['captcha_code']) {
-            error_log('CAPTCHA FAIL - Session: ' . ($_SESSION['captcha_code'] ?? 'EMPTY') . ' | Reçu: ' . strtoupper($captchaResponse) . ' | Match: ' . (strtoupper($captchaResponse) === $_SESSION['captcha_code'] ? 'YES' : 'NO'));
-            $_SESSION['errors'] = ['captcha_response' => 'Code de vérification incorrect. Expected: ' . ($_SESSION['captcha_code'] ?? 'NONE') . ', Got: ' . strtoupper($captchaResponse)];
+            error_log('CAPTCHA FAIL - Session: ' . ($_SESSION['captcha_code'] ?? 'EMPTY') . ' | ReÃ§u: ' . strtoupper($captchaResponse) . ' | Match: ' . (strtoupper($captchaResponse) === $_SESSION['captcha_code'] ? 'YES' : 'NO'));
+            $_SESSION['errors'] = ['captcha_response' => 'Code de vÃ©rification incorrect. Expected: ' . ($_SESSION['captcha_code'] ?? 'NONE') . ', Got: ' . strtoupper($captchaResponse)];
             $_SESSION['old']    = ['email' => $email];
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
@@ -217,27 +219,27 @@ class AuthController {
 
             $redirect = $this->buildPostLoginRedirect($user);
             if (!$this->startTwoFactorChallenge($user, $redirect)) {
-                $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA. Vérifiez la configuration email.'];
+                $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA. VÃ©rifiez la configuration email.'];
                 $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
                 exit;
             }
 
-            $_SESSION['success'] = 'Un code de vérification a été envoyé à votre adresse email.';
+            $_SESSION['success'] = 'Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  votre adresse email.';
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
             exit;
 
         } catch (\Exception $e) {
             error_log('Erreur login: ' . $e->getMessage());
-            $_SESSION['errors'] = ['__form' => 'Erreur serveur. Veuillez réessayer.'];
+            $_SESSION['errors'] = ['__form' => 'Erreur serveur. Veuillez rÃ©essayer.'];
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
     }
 
-    // ─────────────────────────────────────────
-    //  Déconnexion
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  DÃ©connexion
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function logout(): void {
         session_unset();
         session_destroy();
@@ -246,14 +248,14 @@ class AuthController {
             session_start();
         }
 
-        $_SESSION['success'] = "Vous êtes déconnecté.";
+        $_SESSION['success'] = "Vous Ãªtes dÃ©connectÃ©.";
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
 
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //  Inscription
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function showRegister(): void {
         $errors = $_SESSION['errors'] ?? [];
         $error  = $_SESSION['error']  ?? null;
@@ -300,7 +302,7 @@ public function register(): void {
         $errors['nom'] = 'Le nom est requis.';
     }
     if ($prenom === '') {
-        $errors['prenom'] = 'Le prénom est requis.';
+        $errors['prenom'] = 'Le prÃ©nom est requis.';
     }
     if ($email === '') {
         $errors['email'] = 'L\'email est requis.';
@@ -308,12 +310,12 @@ public function register(): void {
         $errors['email'] = 'Adresse email invalide.';
     }
     if ($telephone === '') {
-        $errors['telephone'] = 'Le téléphone est requis.';
+        $errors['telephone'] = 'Le tÃ©lÃ©phone est requis.';
     }
     if ($password === '') {
         $errors['password'] = 'Le mot de passe est requis.';
     } elseif (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
-        $errors['password'] = 'Au moins 8 caractères, une majuscule et un chiffre.';
+        $errors['password'] = 'Au moins 8 caractÃ¨res, une majuscule et un chiffre.';
     }
     if ($passwordConfirm === '') {
         $errors['password_confirm'] = 'Veuillez confirmer le mot de passe.';
@@ -326,10 +328,10 @@ public function register(): void {
     }
     if ($role === 'medecin') {
         if ($specialite === '') {
-            $errors['specialite'] = 'Veuillez sélectionner une spécialité.';
+            $errors['specialite'] = 'Veuillez sÃ©lectionner une spÃ©cialitÃ©.';
         }
         if ($numeroOrdre === '') {
-            $errors['numero_ordre'] = 'Le numéro d\'ordre est requis.';
+            $errors['numero_ordre'] = 'Le numÃ©ro d\'ordre est requis.';
         }
     }
 
@@ -351,7 +353,7 @@ public function register(): void {
         $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
         $checkStmt->execute([':email' => $email]);
         if ($checkStmt->fetch(PDO::FETCH_ASSOC)) {
-            $_SESSION['errors'] = ['email' => 'Cet email est déjà utilisé.'];
+            $_SESSION['errors'] = ['email' => 'Cet email est dÃ©jÃ  utilisÃ©.'];
             $_SESSION['old']    = $_POST;
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
             exit;
@@ -376,7 +378,7 @@ public function register(): void {
         $userId = $db->lastInsertId();
 
         if (!$userId) {
-            throw new Exception("Erreur lors de la création du compte.");
+            throw new Exception("Erreur lors de la crÃ©ation du compte.");
         }
 
         // Create medecin entry if applicable
@@ -393,34 +395,34 @@ public function register(): void {
             ]);
         }
 
-        // Compte créé — envoyer l'email de bienvenue (non bloquant)
+        // Compte crÃ©Ã© â€” envoyer l'email de bienvenue (non bloquant)
         try {
             $welcomeBody = "
                 <h1>Bienvenue sur DocTime !</h1>
                 <p>Bonjour <strong>" . htmlspecialchars($prenom) . " " . htmlspecialchars($nom) . "</strong>,</p>
-                <p>Votre compte a été créé avec succès sur DocTime.</p>
-                <p>Vous pouvez dès maintenant :</p>
+                <p>Votre compte a Ã©tÃ© crÃ©Ã© avec succÃ¨s sur DocTime.</p>
+                <p>Vous pouvez dÃ¨s maintenant :</p>
                 <ul>
                     <li>Prendre des rendez-vous en ligne</li>
                     <li>Consulter vos ordonnances</li>
-                    <li>Discuter avec vos médecins</li>
+                    <li>Discuter avec vos mÃ©decins</li>
                 </ul>
                 <p style='margin-top: 30px;'>
                     <a href='" . $this->getBaseUrl() . "index.php?page=login' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Se connecter</a>
                 </p>
                 <hr>
-                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+                <p style='font-size:12px;color:#666;'>Â© 2024 DocTime - Plateforme mÃ©dicale</p>
             ";
             MailConfig::send($email, $prenom . ' ' . $nom, 'Bienvenue sur DocTime !', $welcomeBody);
         } catch (\Throwable $mailErr) {
-            // L'email échoue silencieusement — l'inscription reste valide
-            error_log('Email bienvenue non envoyé : ' . $mailErr->getMessage());
+            // L'email Ã©choue silencieusement â€” l'inscription reste valide
+            error_log('Email bienvenue non envoyÃ© : ' . $mailErr->getMessage());
         }
 
         if ($role === 'medecin') {
-            $_SESSION['success'] = "Compte médecin créé avec succès. En attente de validation par un administrateur.";
+            $_SESSION['success'] = "Compte mÃ©decin crÃ©Ã© avec succÃ¨s. En attente de validation par un administrateur.";
         } else {
-            $_SESSION['success'] = "Compte créé avec succès ! Vous pouvez maintenant vous connecter.";
+            $_SESSION['success'] = "Compte crÃ©Ã© avec succÃ¨s ! Vous pouvez maintenant vous connecter.";
         }
 
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
@@ -428,16 +430,16 @@ public function register(): void {
 
     } catch (\Exception $e) {
         error_log('Erreur register: ' . $e->getMessage());
-        $_SESSION['errors'] = ['__form' => 'Erreur serveur (' . $e->getMessage() . '). Veuillez réessayer.'];
+        $_SESSION['errors'] = ['__form' => 'Erreur serveur (' . $e->getMessage() . '). Veuillez rÃ©essayer.'];
         $_SESSION['old']     = $_POST;
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=register');
         exit;
     }
 }
 
-    // ─────────────────────────────────────────
-    //  Mot de passe oublié (avec envoi d'email)
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  Mot de passe oubliÃ© (avec envoi d'email)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function showForgotPassword(): void {
         $error   = $_SESSION['error']   ?? null;
         $success = $_SESSION['success'] ?? null;
@@ -485,37 +487,37 @@ public function register(): void {
             $resetLink = $this->getBaseUrl() . 'index.php?page=reset_password&token=' . $token;
             
             $resetBody = "
-                <h1>Réinitialisation de votre mot de passe</h1>
+                <h1>RÃ©initialisation de votre mot de passe</h1>
                 <p>Bonjour <strong>" . htmlspecialchars($user['prenom'] . ' ' . $user['nom']) . "</strong>,</p>
-                <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous :</p>
+                <p>Vous avez demandÃ© Ã  rÃ©initialiser votre mot de passe. Cliquez sur le bouton ci-dessous :</p>
                 <p style='margin: 30px 0;'>
-                    <a href='" . $resetLink . "' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>Réinitialiser mon mot de passe</a>
+                    <a href='" . $resetLink . "' style='background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>RÃ©initialiser mon mot de passe</a>
                 </p>
-                <p>Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.</p>
+                <p>Si vous n'Ãªtes pas Ã  l'origine de cette demande, ignorez simplement cet email.</p>
                 <div style='background:#f8f9fa;padding:10px;border-left:4px solid #ffc107;margin-top:20px;'>
-                    <strong>⚠️ Ce lien expirera dans 1 heure.</strong>
+                    <strong>âš ï¸ Ce lien expirera dans 1 heure.</strong>
                 </div>
                 <hr>
-                <p style='font-size:12px;color:#666;'>© 2024 DocTime - Plateforme médicale</p>
+                <p style='font-size:12px;color:#666;'>Â© 2024 DocTime - Plateforme mÃ©dicale</p>
             ";
             
             try {
                 error_log('Attempting to send reset email to: ' . $email);
-                $sendResult = MailConfig::send($email, $user['prenom'] . ' ' . $user['nom'], 'Réinitialisation de votre mot de passe - DocTime', $resetBody);
+                $sendResult = MailConfig::send($email, $user['prenom'] . ' ' . $user['nom'], 'RÃ©initialisation de votre mot de passe - DocTime', $resetBody);
                 if ($sendResult) {
-                    error_log('✅ EMAIL RESET ENVOYÉ AVEC SUCCÈS');
+                    error_log('âœ… EMAIL RESET ENVOYÃ‰ AVEC SUCCÃˆS');
                 } else {
-                    error_log('❌ EMAIL RESET ÉCHOUÉ - Check logs above for details');
+                    error_log('âŒ EMAIL RESET Ã‰CHOUÃ‰ - Check logs above for details');
                 }
             } catch (\Throwable $mailErr) {
-                error_log('💥 EMAIL RESET EXCEPTION: ' . $mailErr->getMessage());
+                error_log('ðŸ’¥ EMAIL RESET EXCEPTION: ' . $mailErr->getMessage());
                 error_log('Exception file: ' . $mailErr->getFile() . ':' . $mailErr->getLine());
             }
         } else {
             error_log('USER NOT FOUND for forgot password: ' . $email);
         }
         
-        $_SESSION['success'] = "Si cet email existe, vous recevrez un lien de réinitialisation.";
+        $_SESSION['success'] = "Si cet email existe, vous recevrez un lien de rÃ©initialisation.";
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
         exit;
     }
@@ -525,31 +527,31 @@ public function register(): void {
         $validToken = false;
         
         error_log('=== RESET PASSWORD LINK ===');
-        error_log('Token reçu: ' . ($token ? htmlspecialchars($token) : 'NULL'));
+        error_log('Token reÃ§u: ' . ($token ? htmlspecialchars($token) : 'NULL'));
         
         if ($token) {
             $originalToken = $token;
             $token = preg_replace('/[^a-f0-9]/', '', $token);
             
-            error_log('Token après regex: ' . htmlspecialchars($token));
+            error_log('Token aprÃ¨s regex: ' . htmlspecialchars($token));
             error_log('Token avant regex: ' . htmlspecialchars($originalToken));
             
             $db = Database::getInstance()->getConnection();
             
-            // Première vérification: le token existe en base?
+            // PremiÃ¨re vÃ©rification: le token existe en base?
             $checkStmt = $db->prepare("SELECT id, email, reset_expires FROM users WHERE reset_token = :token");
             $checkStmt->execute([':token' => $token]);
             $checkUser = $checkStmt->fetch(PDO::FETCH_ASSOC);
             
             if ($checkUser) {
-                error_log('✅ Token trouvé en base pour email: ' . $checkUser['email']);
+                error_log('âœ… Token trouvÃ© en base pour email: ' . $checkUser['email']);
                 error_log('   Expires: ' . $checkUser['reset_expires']);
                 error_log('   Now: ' . date('Y-m-d H:i:s'));
             } else {
-                error_log('❌ Token NOT trouvé en base');
+                error_log('âŒ Token NOT trouvÃ© en base');
             }
             
-            // Deuxième vérification: avec vérification de date
+            // DeuxiÃ¨me vÃ©rification: avec vÃ©rification de date
             $stmt = $db->prepare(
                 "SELECT id FROM users WHERE reset_token = :token AND reset_expires > NOW()"
             );
@@ -559,10 +561,10 @@ public function register(): void {
             if ($user) {
                 $validToken = true;
                 $_SESSION['reset_token'] = $token;
-                error_log('✅ TOKEN VALIDE ET NON EXPIRÉ');
+                error_log('âœ… TOKEN VALIDE ET NON EXPIRÃ‰');
             } else {
-                $error = "Lien invalide ou expiré. Veuillez refaire une demande.";
-                error_log('❌ TOKEN INVALIDE OU EXPIRÉ');
+                $error = "Lien invalide ou expirÃ©. Veuillez refaire une demande.";
+                error_log('âŒ TOKEN INVALIDE OU EXPIRÃ‰');
             }
         }
         
@@ -587,13 +589,13 @@ public function register(): void {
         $confirmPassword = trim($_POST['confirm_password'] ?? '');
         
         if (!$token || strlen($newPassword) === 0 || strlen($confirmPassword) === 0) {
-            $_SESSION['error'] = "Données invalides.";
+            $_SESSION['error'] = "DonnÃ©es invalides.";
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
             exit;
         }
         
         if (strlen($newPassword) < 8) {
-            $_SESSION['error'] = "Le mot de passe doit contenir au moins 8 caractères.";
+            $_SESSION['error'] = "Le mot de passe doit contenir au moins 8 caractÃ¨res.";
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=reset_password&token=' . urlencode($token));
             exit;
         }
@@ -628,18 +630,18 @@ public function register(): void {
         
         if ($result && $stmt->rowCount() > 0) {
             unset($_SESSION['reset_token']);
-            $_SESSION['success'] = "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.";
+            $_SESSION['success'] = "Mot de passe rÃ©initialisÃ© avec succÃ¨s. Vous pouvez maintenant vous connecter.";
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         } else {
-            $_SESSION['error'] = "Lien invalide ou expiré.";
+            $_SESSION['error'] = "Lien invalide ou expirÃ©.";
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=forgot_password');
         }
         exit;
     }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Reconnaissance faciale
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 public function faceLogin(): void {
     header('Content-Type: application/json');
     try {
@@ -654,11 +656,11 @@ public function faceLogin(): void {
     }
     
     if (empty($imageData)) {
-        echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
+        echo json_encode(['success' => false, 'message' => 'Aucune image reÃ§ue']);
         exit;
     }
     
-    // Vérifier l'utilisateur par reconnaissance faciale
+    // VÃ©rifier l'utilisateur par reconnaissance faciale
     $user = $this->faceModel->findUserByFace($imageData, $role, $email);
     
     if (!$user) {
@@ -666,20 +668,20 @@ public function faceLogin(): void {
         exit;
     }
     
-    // Vérifier si le compte est actif
+    // VÃ©rifier si le compte est actif
     if ($user['statut'] !== 'actif') {
         echo json_encode(['success' => false, 'message' => 'Votre compte est ' . $user['statut'] . '. Contactez l\'administrateur.']);
         exit;
     }
     
-    // Démarrer la session
+    // DÃ©marrer la session
     session_regenerate_id(true);
     $_SESSION['user_id']    = $user['id'];
     $_SESSION['user_role']  = $user['role'];
     $_SESSION['user_name']  = trim($user['nom'] . ' ' . $user['prenom']);
     $_SESSION['user_email'] = $user['email'];
     
-    // Déterminer la redirection selon le rôle
+    // DÃ©terminer la redirection selon le rÃ´le
     $redirect = match($user['role']) {
         'admin'   => 'index.php?page=dashboard',
         'medecin' => 'index.php?page=accueil',
@@ -688,7 +690,7 @@ public function faceLogin(): void {
     
     echo json_encode([
         'success' => true,
-        'message' => 'Reconnaissance faciale réussie !',
+        'message' => 'Reconnaissance faciale rÃ©ussie !',
         'redirect' => $redirect,
         'role' => $user['role']
     ]);
@@ -704,13 +706,13 @@ public function faceLogin(): void {
     }
 }
 /**
- * Supprimer le visage enregistré de l'utilisateur
+ * Supprimer le visage enregistrÃ© de l'utilisateur
  */
 public function deleteFace(): void {
     $this->requireAuth();
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+        echo json_encode(['success' => false, 'message' => 'MÃ©thode non autorisÃ©e']);
         exit;
     }
     
@@ -736,7 +738,7 @@ public function deleteFace(): void {
         $result = $stmt->execute([':id' => $userId]);
         
         if ($result) {
-            echo json_encode(['success' => true, 'message' => 'Visage supprimé avec succès']);
+            echo json_encode(['success' => true, 'message' => 'Visage supprimÃ© avec succÃ¨s']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Erreur lors de la suppression']);
         }
@@ -757,7 +759,7 @@ public function registerFace(): void {
     // Essayer de lire depuis $_POST (si form-data)
     $imageData = $_POST['face_image'] ?? '';
     
-    // Si vide, lire le flux d'entrée (JSON payload)
+    // Si vide, lire le flux d'entrÃ©e (JSON payload)
     if (empty($imageData)) {
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
@@ -768,7 +770,7 @@ public function registerFace(): void {
     }
     
     if (empty($imageData)) {
-        echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
+        echo json_encode(['success' => false, 'message' => 'Aucune image reÃ§ue']);
         exit;
     }
     
@@ -776,14 +778,14 @@ public function registerFace(): void {
     
     echo json_encode([
         'success' => $result,
-        'message' => $result ? 'Visage enregistré avec succès ! Vous pourrez vous connecter par reconnaissance faciale.' : 'Erreur lors de l\'enregistrement'
+        'message' => $result ? 'Visage enregistrÃ© avec succÃ¨s ! Vous pourrez vous connecter par reconnaissance faciale.' : 'Erreur lors de l\'enregistrement'
     ]);
     exit;
 }
 
-    // ─────────────────────────────────────────
-    //  Vérifier email (AJAX)
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  VÃ©rifier email (AJAX)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 public function startSocialLogin(string $provider): void {
     $this->ensureSocialAuthConfigLoaded();
     $provider = strtolower(trim($provider));
@@ -796,7 +798,7 @@ public function startSocialLogin(string $provider): void {
     }
 
     if (!SocialAuthConfig::isConfigured($provider)) {
-        $_SESSION['error'] = 'La connexion ' . $config['label'] . ' n\'est pas encore configurée sur ce serveur.';
+        $_SESSION['error'] = 'La connexion ' . $config['label'] . ' n\'est pas encore configurÃ©e sur ce serveur.';
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
@@ -833,13 +835,13 @@ public function handleSocialCallback(string $provider): void {
     unset($_SESSION[$stateKey]);
 
     if ($expectedState === '' || $receivedState === '' || !hash_equals($expectedState, $receivedState)) {
-        $_SESSION['error'] = 'Échec de vérification de la connexion ' . $config['label'] . '.';
+        $_SESSION['error'] = 'Ã‰chec de vÃ©rification de la connexion ' . $config['label'] . '.';
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
 
     if (!empty($_GET['error'])) {
-        $_SESSION['error'] = 'Connexion ' . $config['label'] . ' annulée ou refusée.';
+        $_SESSION['error'] = 'Connexion ' . $config['label'] . ' annulÃ©e ou refusÃ©e.';
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
@@ -857,7 +859,7 @@ public function handleSocialCallback(string $provider): void {
         $user = $this->findOrCreateSocialUser($provider, $profile);
 
         if (empty($user) || empty($user['id'])) {
-            throw new RuntimeException('Compte social introuvable ou non créé.');
+            throw new RuntimeException('Compte social introuvable ou non crÃ©Ã©.');
         }
 
         if (($user['statut'] ?? 'actif') !== 'actif') {
@@ -868,7 +870,7 @@ public function handleSocialCallback(string $provider): void {
 
         $this->startUserSession($user);
 
-        $_SESSION['success'] = 'Connexion ' . $config['label'] . ' réussie.';
+        $_SESSION['success'] = 'Connexion ' . $config['label'] . ' rÃ©ussie.';
         header('Location: ' . $this->getBaseUrl() . $this->buildPostLoginRedirectPath($user));
         exit;
     } catch (\Throwable $e) {
@@ -896,9 +898,9 @@ public function handleSocialCallback(string $provider): void {
         exit;
     }
 
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //  Helper : URL de base
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private function ensureSocialAuthConfigLoaded(): void {
         if (!class_exists('SocialAuthConfig', false)) {
             require_once __DIR__ . '/../config/social_auth.php';
@@ -926,7 +928,7 @@ public function handleSocialCallback(string $provider): void {
         $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload);
 
         if (empty($response['access_token'])) {
-            throw new RuntimeException('Access token non reçu.');
+            throw new RuntimeException('Access token non reÃ§u.');
         }
 
         return $response;
@@ -949,7 +951,7 @@ public function handleSocialCallback(string $provider): void {
             return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
         }
 
-        throw new RuntimeException('Fournisseur social non supporté.');
+        throw new RuntimeException('Fournisseur social non supportÃ©.');
     }
 
     private function findOrCreateSocialUser(string $provider, array $profile): array {
@@ -1024,7 +1026,7 @@ public function handleSocialCallback(string $provider): void {
             ];
         }
 
-        throw new RuntimeException('Profil social non supporté.');
+        throw new RuntimeException('Profil social non supportÃ©.');
     }
 
     private function createSocialUser(string $provider, array $normalized): array {
@@ -1062,7 +1064,7 @@ public function handleSocialCallback(string $provider): void {
 
         $userId = (int) $db->lastInsertId();
         if ($userId <= 0) {
-            throw new RuntimeException('Création du compte social impossible.');
+            throw new RuntimeException('CrÃ©ation du compte social impossible.');
         }
 
         return $this->userModel->findById($userId) ?? [];
@@ -1141,19 +1143,19 @@ public function handleSocialCallback(string $provider): void {
             if ($raw === false) {
                 $error = curl_error($ch);
                 curl_close($ch);
-                throw new RuntimeException('Erreur réseau: ' . $error);
+                throw new RuntimeException('Erreur rÃ©seau: ' . $error);
             }
 
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
             if ($httpCode >= 400) {
-                throw new RuntimeException('Réponse HTTP ' . $httpCode . ' reçue.');
+                throw new RuntimeException('RÃ©ponse HTTP ' . $httpCode . ' reÃ§ue.');
             }
 
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
-                throw new RuntimeException('Réponse JSON invalide.');
+                throw new RuntimeException('RÃ©ponse JSON invalide.');
             }
 
             return $decoded;
@@ -1180,12 +1182,12 @@ public function handleSocialCallback(string $provider): void {
 
         $raw = @file_get_contents($url, false, $context);
         if ($raw === false) {
-            throw new RuntimeException('Échec de la requête HTTP.');
+            throw new RuntimeException('Ã‰chec de la requÃªte HTTP.');
         }
 
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Réponse JSON invalide.');
+            throw new RuntimeException('RÃ©ponse JSON invalide.');
         }
 
         return $decoded;
@@ -1226,9 +1228,9 @@ public function handleSocialCallback(string $provider): void {
         return $protocol . '://' . $host . $base;
     }
 
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //  Vues de secours
-    // ─────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private function renderLoginFallback(?string $error): void {
         ?>
         <!DOCTYPE html>
@@ -1244,7 +1246,7 @@ public function handleSocialCallback(string $provider): void {
                 <div class="col-md-5">
                     <div class="card shadow">
                         <div class="card-header bg-primary text-white text-center">
-                            <h4>Valorys — Connexion</h4>
+                            <h4>Valorys â€” Connexion</h4>
                         </div>
                         <div class="card-body p-4">
                             <?php if ($error): ?>
@@ -1263,8 +1265,8 @@ public function handleSocialCallback(string $provider): void {
                             </form>
                             <hr>
                             <div class="text-center">
-                                <a href="index.php?page=register">Créer un compte</a> |
-                                <a href="index.php?page=forgot_password">Mot de passe oublié</a>
+                                <a href="index.php?page=register">CrÃ©er un compte</a> |
+                                <a href="index.php?page=forgot_password">Mot de passe oubliÃ©</a>
                             </div>
                         </div>
                     </div>
@@ -1291,7 +1293,7 @@ public function handleSocialCallback(string $provider): void {
                 <div class="col-md-6">
                     <div class="card shadow">
                         <div class="card-header bg-success text-white text-center">
-                            <h4>Valorys — Inscription</h4>
+                            <h4>Valorys â€” Inscription</h4>
                         </div>
                         <div class="card-body p-4">
                             <?php if ($error): ?>
@@ -1304,7 +1306,7 @@ public function handleSocialCallback(string $provider): void {
                                         <input type="text" name="nom" class="form-control" required>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Prénom *</label>
+                                        <label class="form-label">PrÃ©nom *</label>
                                         <input type="text" name="prenom" class="form-control" required>
                                     </div>
                                 </div>
@@ -1320,14 +1322,14 @@ public function handleSocialCallback(string $provider): void {
                                     <label class="form-label">Je suis</label>
                                     <select name="role" class="form-select">
                                         <option value="patient">Patient</option>
-                                        <option value="medecin">Médecin</option>
+                                        <option value="medecin">MÃ©decin</option>
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-success w-100">S'inscrire</button>
                             </form>
                             <hr>
                             <div class="text-center">
-                                <a href="index.php?page=login">Déjà un compte ? Se connecter</a>
+                                <a href="index.php?page=login">DÃ©jÃ  un compte ? Se connecter</a>
                             </div>
                         </div>
                     </div>
@@ -1345,7 +1347,7 @@ public function handleSocialCallback(string $provider): void {
         <html lang="fr">
         <head>
             <meta charset="UTF-8">
-            <title>Mot de passe oublié - Valorys</title>
+            <title>Mot de passe oubliÃ© - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         </head>
         <body class="bg-light">
@@ -1354,7 +1356,7 @@ public function handleSocialCallback(string $provider): void {
                 <div class="col-md-5">
                     <div class="card shadow">
                         <div class="card-header bg-warning text-dark text-center">
-                            <h4>Mot de passe oublié</h4>
+                            <h4>Mot de passe oubliÃ©</h4>
                         </div>
                         <div class="card-body p-4">
                             <?php if ($error): ?>
@@ -1372,7 +1374,7 @@ public function handleSocialCallback(string $provider): void {
                             </form>
                             <hr>
                             <div class="text-center">
-                                <a href="index.php?page=login">Retour à la connexion</a>
+                                <a href="index.php?page=login">Retour Ã  la connexion</a>
                             </div>
                         </div>
                     </div>
@@ -1390,7 +1392,7 @@ public function handleSocialCallback(string $provider): void {
         <html lang="fr">
         <head>
             <meta charset="UTF-8">
-            <title>Réinitialisation - Valorys</title>
+            <title>RÃ©initialisation - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         </head>
         <body class="bg-light">
@@ -1399,7 +1401,7 @@ public function handleSocialCallback(string $provider): void {
                 <div class="col-md-5">
                     <div class="card shadow">
                         <div class="card-header bg-primary text-white text-center">
-                            <h4>Réinitialisation du mot de passe</h4>
+                            <h4>RÃ©initialisation du mot de passe</h4>
                         </div>
                         <div class="card-body p-4">
                             <?php if ($error): ?>
@@ -1410,13 +1412,13 @@ public function handleSocialCallback(string $provider): void {
                                     <div class="mb-3">
                                         <label class="form-label">Nouveau mot de passe *</label>
                                         <input type="password" name="password" class="form-control" required>
-                                        <small class="text-muted">Minimum 8 caractères, 1 majuscule, 1 chiffre</small>
+                                        <small class="text-muted">Minimum 8 caractÃ¨res, 1 majuscule, 1 chiffre</small>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Confirmer le mot de passe *</label>
                                         <input type="password" name="confirm_password" class="form-control" required>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100">Réinitialiser</button>
+                                    <button type="submit" class="btn btn-primary w-100">RÃ©initialiser</button>
                                 </form>
                             <?php else: ?>
                                 <a href="index.php?page=forgot_password" class="btn btn-primary w-100">Faire une nouvelle demande</a>
@@ -1429,6 +1431,226 @@ public function handleSocialCallback(string $provider): void {
         </body>
         </html>
         <?php
+    }
+
+    public function showVerifyTwoFactor(): void {
+        if (empty($_SESSION['pending_2fa'])) {
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
+        $viewPath = __DIR__ . '/../views/frontoffice/verify_2fa.php';
+        if (file_exists($viewPath)) {
+            require $viewPath;
+        } else {
+            echo "Vue verify_2fa.php manquante.";
+        }
+    }
+
+    public function verifyTwoFactorCode(): void {
+        if (empty($_SESSION['pending_2fa'])) {
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
+
+        $code = trim((string)($_POST['verification_code'] ?? $_POST['code'] ?? ''));
+        $pending = $_SESSION['pending_2fa'];
+
+        if (time() > $pending['expires_at']) {
+            $_SESSION['errors'] = ['__form' => 'Le code a expiré. Veuillez demander un nouveau code.'];
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
+            exit;
+        }
+
+        if ($code !== $pending['code']) {
+            $_SESSION['errors'] = ['__form' => 'Code de vérification incorrect.'];
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
+            exit;
+        }
+
+        $user = $pending['user'];
+        $redirect = $pending['redirect'];
+
+        $_SESSION['user_id']   = $user['id'];
+        $_SESSION['user_name'] = $user['nom'];
+        $_SESSION['user_role'] = $user['role'];
+        $_SESSION['success']   = 'Connexion réussie.';
+
+        unset($_SESSION['pending_2fa']);
+
+        header('Location: ' . $this->getBaseUrl() . ltrim($redirect, '/'));
+        exit;
+    }
+
+    public function resendTwoFactorCode(): void {
+        if (empty($_SESSION['pending_2fa'])) {
+            header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+            exit;
+        }
+
+        $pending = $_SESSION['pending_2fa'];
+        if (!$this->startTwoFactorChallenge($pending['user'], $pending['redirect'])) {
+            $_SESSION['errors'] = ['__form' => 'Impossible de renvoyer le code.'];
+        } else {
+            $_SESSION['success'] = 'Un nouveau code a été envoyé.';
+        }
+
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
+        exit;
+    }
+
+    private function buildPostLoginRedirect(array $user): string {
+        return match($user['role'] ?? '') {
+            'admin'   => 'index.php?page=dashboard',
+            'medecin' => 'index.php?page=accueil',
+            default   => 'index.php?page=accueil'
+        };
+    }
+
+    private function startTwoFactorChallenge(array $user, string $redirect): bool {
+        $code = (string) random_int(100000, 999999);
+        $phone = $this->normalizeWhatsappNumber((string) ($user['telephone'] ?? ''));
+        
+        $whatsappSuccess = false;
+        if ($phone !== null) {
+            $whatsappSuccess = $this->sendWhatsAppVerificationCode($phone, $code, (string) ($user['prenom'] ?? ''));
+        } else {
+            error_log('2FA WhatsApp impossible: numéro utilisateur manquant ou invalide. Tentative par email.');
+        }
+
+        $emailSuccess = false;
+        if (!$whatsappSuccess) {
+            $email = $user['email'] ?? '';
+            if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $emailBody = "
+                    <h1>Code de vérification</h1>
+                    <p>Bonjour " . htmlspecialchars((string)($user['prenom'] ?? '')) . ",</p>
+                    <p>Votre code de vérification à 6 chiffres est : <strong>" . $code . "</strong></p>
+                    <p>Il expirera dans 5 minutes.</p>
+                ";
+                try {
+                    $emailSuccess = MailConfig::send($email, ($user['prenom'] ?? '') . ' ' . ($user['nom'] ?? ''), 'Votre code de vérification DocTime', $emailBody);
+                } catch (\Throwable $e) {
+                    error_log('Erreur envoi email 2FA: ' . $e->getMessage());
+                }
+            }
+        }
+
+        if (!$whatsappSuccess && !$emailSuccess) {
+            return false;
+        }
+
+        $_SESSION['pending_2fa'] = [
+            'code' => $code,
+            'expires_at' => time() + 300,
+            'redirect' => $redirect,
+            'user' => $user,
+            'phone' => $phone ?? '',
+            'masked_phone' => $phone !== null ? $this->maskPhoneNumber($phone) : 'Email',
+            'method' => $whatsappSuccess ? 'WhatsApp' : 'Email'
+        ];
+
+        return true;
+    }
+
+    private function sendWhatsAppVerificationCode(string $phone, string $code, string $firstName = ''): bool {
+        $token = $this->getEnvValue('WHATSAPP_ACCESS_TOKEN');
+        $phoneNumberId = $this->getEnvValue('WHATSAPP_PHONE_NUMBER_ID');
+
+        if ($token === '' || $phoneNumberId === '') {
+            error_log('WhatsApp 2FA non configuré: token ou phone number id manquant.');
+            return false;
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $phone,
+            'type' => 'text',
+            'text' => [
+                'preview_url' => false,
+                'body' => trim(sprintf(
+                    "Bonjour%s, votre code de vérification DocTime est : %s. Il expire dans 5 minutes.",
+                    $firstName !== '' ? ' ' . $firstName : '',
+                    $code
+                )),
+            ],
+        ];
+
+        $headers = [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ];
+
+        try {
+            if (function_exists('curl_init')) {
+                $ch = curl_init('https://graph.facebook.com/v25.0/' . rawurlencode($phoneNumberId) . '/messages');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST => true,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 20,
+                    CURLOPT_HTTPHEADER => $headers,
+                    CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                ]);
+
+                $raw = curl_exec($ch);
+                if ($raw === false) {
+                    $error = curl_error($ch);
+                    curl_close($ch);
+                    throw new \RuntimeException($error);
+                }
+
+                $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode >= 400) {
+                    throw new \RuntimeException('HTTP ' . $httpCode . ' - ' . $raw);
+                }
+
+                return true;
+            }
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => implode("\r\n", $headers),
+                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                    'ignore_errors' => true,
+                    'timeout' => 20,
+                ],
+            ]);
+
+            $raw = @file_get_contents('https://graph.facebook.com/v25.0/' . rawurlencode($phoneNumberId) . '/messages', false, $context);
+            if ($raw === false) {
+                throw new \RuntimeException('Échec de l’envoi WhatsApp.');
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Erreur WhatsApp 2FA: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function normalizeWhatsappNumber(string $phone): ?string {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        if (strlen($phone) < 8) return null;
+        if (!str_starts_with($phone, '216') && strlen($phone) == 8) {
+            $phone = '216' . $phone;
+        }
+        return $phone;
+    }
+
+    private function maskPhoneNumber(string $phone): string {
+        $len = strlen($phone);
+        if ($len <= 4) return $phone;
+        return str_repeat('*', $len - 4) . substr($phone, -4);
+    }
+
+    private function getEnvValue(string $key, string $default = ''): string {
+        $value = getenv($key);
+        if ($value === false || $value === null) {
+            return $default;
+        }
+        return trim((string) $value);
     }
 }
 ?>
