@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $pending2fa = $_SESSION['pending_2fa'] ?? [];
-$maskedPhone = $pending2fa['masked_phone'] ?? 'votre numéro WhatsApp';
+$maskedEmail = $pending2fa['masked_phone'] ?? 'votre adresse email';
 $expiresAt = $pending2fa['expires_at'] ?? null;
 $remainingSeconds = 0;
 
@@ -15,7 +15,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification 2FA - DocTime</title>
+    <title>Verification 2FA - DocTime</title>
     <style>
         body {
             margin: 0;
@@ -121,9 +121,9 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 <body>
 <div class="wrap">
     <div class="card">
-        <div class="badge">✓</div>
-        <h1>Vérification WhatsApp</h1>
-        <p>Un code à 6 chiffres a été envoyé sur <strong><?= htmlspecialchars((string) $maskedPhone) ?></strong>.</p>
+        <div class="badge">@</div>
+        <h1>Verification email</h1>
+        <p>Un code a 6 chiffres a ete envoye a <strong><?= htmlspecialchars((string) $maskedEmail) ?></strong>.</p>
 
         <?php if (!empty($_SESSION['errors']['__form'])): ?>
             <div class="alert alert-error"><?= htmlspecialchars((string) $_SESSION['errors']['__form']) ?></div>
@@ -136,7 +136,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
         <?php unset($_SESSION['errors'], $_SESSION['success']); ?>
 
         <form method="POST" action="index.php?page=verify_2fa" autocomplete="one-time-code">
-            <label for="verification_code">Code de vérification</label>
+            <label for="verification_code">Code de verification</label>
             <input id="verification_code" name="verification_code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
 
             <div class="actions">
@@ -149,7 +149,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
             <?php if ($remainingSeconds > 0): ?>
                 Le code expire dans environ <?= htmlspecialchars((string) ceil($remainingSeconds / 60)) ?> minute(s).
             <?php else: ?>
-                Le code a expiré. Demande-en un nouveau.
+                Le code a expire. Demande-en un nouveau.
             <?php endif; ?>
         </div>
     </div>

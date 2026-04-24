@@ -218,7 +218,8 @@ class AuthController {
             }
 
             $redirect = $this->buildPostLoginRedirect($user);
-            if (!$this->startTwoFactorChallenge($user, $redirect)) {
+            if (!$this->startEmailTwoFactorChallenge($user, $redirect)) {
+                $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA par email. Verifiez la configuration email.'];
                 $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA. VÃ©rifiez la configuration email.'];
                 $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
@@ -226,6 +227,7 @@ class AuthController {
             }
 
             $_SESSION['success'] = 'Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  votre adresse email.';
+            $_SESSION['success'] = 'Un code de verification a ete envoye par email.';
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
             exit;
 
@@ -925,7 +927,15 @@ public function handleSocialCallback(string $provider): void {
             'grant_type'    => 'authorization_code',
         ];
 
-        $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload);
+        $headers = [];
+        if ($provider === 'github') {
+            $headers = [
+                'Accept: application/json',
+                'User-Agent: DocTime',
+            ];
+        }
+
+        $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload, $headers);
 
         if (empty($response['access_token'])) {
             throw new RuntimeException('Access token non reÃ§u.');
@@ -949,6 +959,23 @@ public function handleSocialCallback(string $provider): void {
 
         if ($provider === 'instagram') {
             return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
+        }
+
+        if ($provider === 'github') {
+            $headers = [
+                'Authorization: Bearer ' . $accessToken,
+                'Accept: application/vnd.github+json',
+                'User-Agent: DocTime',
+            ];
+
+            $profile = $this->sendHttpRequest($config['user_url'], 'GET', [], $headers);
+            $emails = $this->sendHttpRequest($config['email_url'], 'GET', [], $headers);
+
+            if (is_array($emails)) {
+                $profile['emails'] = $emails;
+            }
+
+            return $profile;
         }
 
         throw new RuntimeException('Fournisseur social non supportÃ©.');
@@ -1023,6 +1050,50 @@ public function handleSocialCallback(string $provider): void {
                 'prenom'      => $username,
                 'nom'         => 'Instagram',
                 'avatar'      => '',
+            ];
+        }
+
+        if ($provider === 'github') {
+            $email = trim((string) ($profile['email'] ?? ''));
+            if ($email === '' && !empty($profile['emails']) && is_array($profile['emails'])) {
+                foreach ($profile['emails'] as $emailItem) {
+                    if (!is_array($emailItem) || empty($emailItem['email'])) {
+                        continue;
+                    }
+
+                    if (!empty($emailItem['primary']) || !empty($emailItem['verified'])) {
+                        $email = trim((string) $emailItem['email']);
+                        break;
+                    }
+
+                    if ($email === '') {
+                        $email = trim((string) $emailItem['email']);
+                    }
+                }
+            }
+
+            $fullName = trim((string) ($profile['name'] ?? ''));
+            $firstName = 'Utilisateur';
+            $lastName = 'GitHub';
+
+            if ($fullName !== '') {
+                $nameParts = preg_split('/\s+/', $fullName) ?: [];
+                $firstName = trim((string) ($nameParts[0] ?? 'Utilisateur'));
+                $lastName = trim((string) implode(' ', array_slice($nameParts, 1))) ?: 'GitHub';
+            } elseif (!empty($profile['login'])) {
+                $firstName = trim((string) $profile['login']);
+            }
+
+            if ($email === '' && !empty($profile['login'])) {
+                $email = 'github_' . preg_replace('/[^a-zA-Z0-9_]/', '', (string) $profile['login']) . '@social.local';
+            }
+
+            return [
+                'provider_id' => (string) ($profile['id'] ?? ''),
+                'email'       => $email,
+                'prenom'      => $firstName,
+                'nom'         => $lastName,
+                'avatar'      => trim((string) ($profile['avatar_url'] ?? '')),
             ];
         }
 
@@ -1488,12 +1559,15 @@ public function handleSocialCallback(string $provider): void {
         }
 
         $pending = $_SESSION['pending_2fa'];
-        if (!$this->startTwoFactorChallenge($pending['user'], $pending['redirect'])) {
+        if (!$this->startEmailTwoFactorChallenge($pending['user'], $pending['redirect'])) {
             $_SESSION['errors'] = ['__form' => 'Impossible de renvoyer le code.'];
         } else {
             $_SESSION['success'] = 'Un nouveau code a été envoyé.';
         }
 
+        if (!empty($_SESSION['success'])) {
+            $_SESSION['success'] = 'Un nouveau code a ete envoye par email.';
+        }
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
         exit;
     }
@@ -1504,6 +1578,51 @@ public function handleSocialCallback(string $provider): void {
             'medecin' => 'index.php?page=accueil',
             default   => 'index.php?page=accueil'
         };
+    }
+
+    private function startEmailTwoFactorChallenge(array $user, string $redirect): bool {
+        $code = (string) random_int(100000, 999999);
+        $email = trim((string) ($user['email'] ?? ''));
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            error_log('2FA email impossible: adresse email utilisateur manquante ou invalide.');
+            return false;
+        }
+
+        $emailBody = "
+            <h1>Code de verification</h1>
+            <p>Bonjour " . htmlspecialchars((string) ($user['prenom'] ?? '')) . ",</p>
+            <p>Votre code de verification a 6 chiffres est : <strong>" . htmlspecialchars($code) . "</strong></p>
+            <p>Il expirera dans 5 minutes.</p>
+        ";
+
+        try {
+            $emailSuccess = MailConfig::send(
+                $email,
+                trim((string) (($user['prenom'] ?? '') . ' ' . ($user['nom'] ?? ''))),
+                'Votre code de verification DocTime',
+                $emailBody
+            );
+        } catch (\Throwable $e) {
+            error_log('Erreur envoi email 2FA: ' . $e->getMessage());
+            $emailSuccess = false;
+        }
+
+        if (!$emailSuccess) {
+            return false;
+        }
+
+        $_SESSION['pending_2fa'] = [
+            'code' => $code,
+            'expires_at' => time() + 300,
+            'redirect' => $redirect,
+            'user' => $user,
+            'phone' => '',
+            'masked_phone' => $email,
+            'method' => 'Email'
+        ];
+
+        return true;
     }
 
     private function startTwoFactorChallenge(array $user, string $redirect): bool {
