@@ -27,9 +27,34 @@ class AiProxyController {
     public function __construct() {
         // Priorité à la variable d'environnement (depuis .env chargé par helpers.php)
         $env = $_ENV['ANTHROPIC_API_KEY'] ?? getenv('ANTHROPIC_API_KEY');
-        if ($env && $env !== 'sk-ant-api03-placeholder-replace-me') {
+        if ($env) {
             $this->apiKey = $env;
         }
+    }
+
+    /**
+     * Mode démonstration - répond sans API externe
+     */
+    private function demoMode(string $userMessage): array {
+        $userMessage = strtolower($userMessage);
+        
+        $responses = [
+            'métier' => "🎯 **Métiers dans l'événementiel médical en Tunisie :**\n\n• **Chef de projet événementiel médical** - Organise conférences et formations\n• **Community manager santé** - Gestion des réseaux sociaux médicaux\n• **Graphiste médical** - Création de supports visuels pour événements\n• **Photographe médical** - Documentation des événements\n\nEn Tunisie, ces métiers sont en croissance avec le développement du tourisme médical! 🇹🇳",
+            
+            'carrière' => "📈 **Plan de carrière pour expert en événements médicaux :**\n\n1. **Débutant** : Assistant événementiel (6-12 mois)\n2. **Junior** : Coordinateur de projets (1-3 ans)\n3. **Senior** : Chef de projet médical (3-5 ans)\n4. **Expert** : Directeur des événements médicaux (5+ ans)\n\n💡 Conseils : Formez-vous en gestion de projet et apprenez le vocabulaire médical!",
+            
+            'tunisie' => "🇹🇳 **Événements médicaux en Tunisie :**\n\nLa Tunisie est reconnue pour :\n• Le tourisme médical de qualité\n• Les conférences médicales internationales\n• Les formations continues pour professionnels de santé\n\nLes opportunités sont nombreuses dans les villes de Tunis, Sfax et Hammamet!",
+            
+            'compétence' => "💡 **Compétences clés pour réussir :**\n\n• Gestion de projet (planning, budget, équipes)\n• Communication et relations publiques\n• Connaissance du secteur médical/santé\n• Maîtrise des outils numériques\n• Français et anglais professionnels\n\nCes compétences sont très demandées en Tunisie!",
+        ];
+        
+        foreach ($responses as $keyword => $response) {
+            if (strpos($userMessage, $keyword) !== false) {
+                return ['content' => [['text' => $response]]];
+            }
+        }
+        
+        return ['content' => [['text' => "🤖 Je suis en mode démonstration. Pour accéder à toutes mes capacités IA, veuillez configurer une clé API Anthropic dans le fichier .env\n\nPosez-moi des questions sur : les métiers, la carrière, ou la Tunisie! 🇹🇳"]]];
     }
 
     /**
@@ -48,12 +73,12 @@ class AiProxyController {
             exit;
         }
 
-        // Vérifier la clé API
-        if (empty($this->apiKey)) {
-            http_response_code(500);
-            echo json_encode([
-                'error' => 'Clé API manquante. Ajoutez ANTHROPIC_API_KEY dans AiProxyController.php ou en variable d\'environnement.'
-            ]);
+        // Vérifier la clé API - sinon utiliser le mode démonstration
+        if (empty($this->apiKey) || $this->apiKey === 'sk-ant-api03-placeholder-replace-me') {
+            // Mode démonstration : répondre localement sans API externe
+            $lastMessage = end($data['messages'])['content'] ?? '';
+            $response = $this->demoMode($lastMessage);
+            echo json_encode($response);
             exit;
         }
 
