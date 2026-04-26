@@ -6,6 +6,10 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Medecin.php';
 
+use App\Models\User;
+use App\Models\Patient;
+use App\Models\Medecin;
+
 /**
  * UserController — CORRECTIONS APPLIQUÉES
  * ══════════════════════════════════════════════════════════════════

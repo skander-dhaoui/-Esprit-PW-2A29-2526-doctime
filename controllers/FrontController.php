@@ -1,5 +1,13 @@
 <?php
 
+use App\Models\Medecin;
+use App\Models\Article;
+use App\Models\Reply;
+use App\Models\Disponibilite;
+use App\Models\User;
+use App\Models\Produit;
+use App\Models\Event;
+
 class FrontController {
     
     private function requireLogin(): void {

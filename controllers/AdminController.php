@@ -7,6 +7,11 @@ require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Admin.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\User;
+use App\Models\Medecin;
+use App\Models\Patient;
+use App\Models\Admin;
+
 class AdminController {
 
     private User        $userModel;

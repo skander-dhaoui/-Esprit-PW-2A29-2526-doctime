@@ -7,6 +7,10 @@ require_once __DIR__ . '/../models/Commande.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Produit;
+use App\Models\Categorie;
+use App\Models\Commande;
+
 class PharmacieController {
 
     private Produit    $produitModel;

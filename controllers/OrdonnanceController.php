@@ -6,6 +6,12 @@ require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
+
+use App\Models\Ordonnance;
+use App\Models\RendezVous;
+use App\Models\Medecin;
+use App\Models\Patient;
+
 class OrdonnanceController {
 
     private Ordonnance $ordonnanceModel;

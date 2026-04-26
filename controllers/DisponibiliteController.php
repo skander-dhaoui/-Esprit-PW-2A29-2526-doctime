@@ -5,6 +5,9 @@ require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Disponibilite;
+use App\Models\Medecin;
+
 class DisponibiliteController {
 
     private Disponibilite $disponibiliteModel;

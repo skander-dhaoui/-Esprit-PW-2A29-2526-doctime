@@ -3,6 +3,9 @@
 require_once __DIR__ . '/../models/Produit.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
+
+use App\Models\Produit;
+
 class ProduitController {
 
     private Produit $produitModel;

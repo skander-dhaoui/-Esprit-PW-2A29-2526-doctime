@@ -6,6 +6,9 @@ require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../models/FaceRecognition.php';
 
+use App\Models\User;
+use App\Models\FaceRecognition;
+
 class AuthController {
 
     private User $userModel;

@@ -4,6 +4,9 @@ require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Medecin;
+use App\Models\User;
+
 class MedecinController {
 
     private Medecin     $medecinModel;

@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../models/EventAvance.php';
 
+use App\Models\EventAvance;
+
 /**
  * EventAvanceController — Gestion avancée des événements (porté depuis DOCTIME_advanced)
  * Routing Valorys : ?page=evenements_avance_admin&action=...

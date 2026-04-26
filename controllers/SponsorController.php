@@ -5,6 +5,9 @@ require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Sponsor;
+use App\Models\Event;
+
 class SponsorController {
 
     private Sponsor $sponsorModel;
