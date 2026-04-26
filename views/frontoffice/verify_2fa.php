@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $pending2fa = $_SESSION['pending_2fa'] ?? [];
-$maskedEmail = $pending2fa['masked_phone'] ?? 'votre adresse email';
+$maskedEmail = $pending2fa['masked_email'] ?? $pending2fa['masked_phone'] ?? 'votre adresse email';
 $expiresAt = $pending2fa['expires_at'] ?? null;
 $remainingSeconds = 0;
 

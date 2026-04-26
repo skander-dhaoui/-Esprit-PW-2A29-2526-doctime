@@ -182,11 +182,13 @@ class AuthController {
         
         if (strtoupper($captchaResponse) !== $_SESSION['captcha_code']) {
             error_log('CAPTCHA FAIL - Session: ' . ($_SESSION['captcha_code'] ?? 'EMPTY') . ' | ReÃ§u: ' . strtoupper($captchaResponse) . ' | Match: ' . (strtoupper($captchaResponse) === $_SESSION['captcha_code'] ? 'YES' : 'NO'));
-            $_SESSION['errors'] = ['captcha_response' => 'Code de vÃ©rification incorrect. Expected: ' . ($_SESSION['captcha_code'] ?? 'NONE') . ', Got: ' . strtoupper($captchaResponse)];
+            $_SESSION['errors'] = ['captcha_response' => 'Code de verification incorrect.'];
             $_SESSION['old']    = ['email' => $email];
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
+
+        unset($_SESSION['captcha_code']);
 
         try {
             $db = Database::getInstance()->getConnection();
@@ -220,13 +222,11 @@ class AuthController {
             $redirect = $this->buildPostLoginRedirect($user);
             if (!$this->startEmailTwoFactorChallenge($user, $redirect)) {
                 $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA par email. Verifiez la configuration email.'];
-                $_SESSION['errors'] = ['__form' => 'Impossible d\'envoyer le code 2FA. VÃ©rifiez la configuration email.'];
                 $_SESSION['old']    = ['email' => $email];
                 header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
                 exit;
             }
 
-            $_SESSION['success'] = 'Un code de vÃ©rification a Ã©tÃ© envoyÃ© Ã  votre adresse email.';
             $_SESSION['success'] = 'Un code de verification a ete envoye par email.';
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=verify_2fa');
             exit;
@@ -1597,6 +1597,7 @@ public function handleSocialCallback(string $provider): void {
         ";
 
         try {
+            error_log('2FA email: tentative envoi a ' . $email);
             $emailSuccess = MailConfig::send(
                 $email,
                 trim((string) (($user['prenom'] ?? '') . ' ' . ($user['nom'] ?? ''))),
@@ -1618,10 +1619,13 @@ public function handleSocialCallback(string $provider): void {
             'redirect' => $redirect,
             'user' => $user,
             'phone' => '',
-            'masked_phone' => $email,
+            'email' => $email,
+            'masked_email' => $this->maskEmailAddress($email),
+            'masked_phone' => $this->maskEmailAddress($email),
             'method' => 'Email'
         ];
 
+        error_log('2FA email: code envoye a ' . $email);
         return true;
     }
 
@@ -1762,6 +1766,16 @@ public function handleSocialCallback(string $provider): void {
         $len = strlen($phone);
         if ($len <= 4) return $phone;
         return str_repeat('*', $len - 4) . substr($phone, -4);
+    }
+
+    private function maskEmailAddress(string $email): string {
+        [$local, $domain] = array_pad(explode('@', $email, 2), 2, '');
+        if ($local === '' || $domain === '') {
+            return $email;
+        }
+
+        $visible = min(2, strlen($local));
+        return substr($local, 0, $visible) . str_repeat('*', max(1, strlen($local) - $visible)) . '@' . $domain;
     }
 
     private function getEnvValue(string $key, string $default = ''): string {

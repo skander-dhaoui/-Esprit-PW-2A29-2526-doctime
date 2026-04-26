@@ -108,20 +108,18 @@ class MailConfig {
             $mail->Port       = self::$smtpPort;
             
             // Tester la connexion
-            $mail->smtpConnect();
-            
-            if ($mail->smtpConnected()) {
+            if ($mail->smtpConnect()) {
                 $result['success'] = true;
-                $result['message'] = '✅ Connexion SMTP réussie';
+                $result['message'] = 'Connexion SMTP reussie';
                 $result['details'][] = "Serveur: " . self::$smtpHost;
                 $result['details'][] = "Port: " . self::$smtpPort;
                 $result['details'][] = "Utilisateur: " . self::$smtpUser;
                 $mail->smtpClose();
             } else {
-                $result['message'] = '❌ Impossible de se connecter au serveur SMTP';
+                $result['message'] = 'Impossible de se connecter au serveur SMTP';
             }
         } catch (Exception $e) {
-            $result['message'] = '❌ Erreur de connexion: ' . $e->getMessage();
+            $result['message'] = 'Erreur de connexion: ' . $e->getMessage();
             $result['details'][] = "Erreur SMTP: " . $mail->ErrorInfo;
         }
         
