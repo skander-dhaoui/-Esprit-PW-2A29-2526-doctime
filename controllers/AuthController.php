@@ -246,6 +246,7 @@ class AuthController {
     //  DÃ©connexion
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function logout(): void {
+        // Destroy session
         session_unset();
         session_destroy();
 
@@ -253,12 +254,12 @@ class AuthController {
             session_start();
         }
 
-        $_SESSION['success'] = "Vous Ãªtes dÃ©connectÃ©.";
-        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
+        $_SESSION['success'] = "Vous êtes déconnecté.";
+        header('Location: ' . $this->getBaseUrl() . 'index.php?page=login&logout=1');
         exit;
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────
     //  Inscription
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public function showRegister(): void {
@@ -650,43 +651,146 @@ public function register(): void {
 public function faceLogin(): void {
     header('Content-Type: application/json');
     try {
+        error_log("[FACE] faceLogin called at " . date('Y-m-d H:i:s'));
     
-    $imageData = $_POST['face_image'] ?? '';
-    $role = $_POST['role'] ?? 'patient';
-    $email = trim((string) ($_POST['email'] ?? ''));
-    
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo json_encode(['success' => false, 'message' => 'Email invalide pour la reconnaissance faciale.']);
-        exit;
-    }
-    
-    if (empty($imageData)) {
-        echo json_encode(['success' => false, 'message' => 'Aucune image reÃ§ue']);
-        exit;
-    }
-    
-    // VÃ©rifier l'utilisateur par reconnaissance faciale
-    $user = $this->faceModel->findUserByFace($imageData, $role, $email);
-    
+        $imageData = $_POST['face_image'] ?? '';
+        $role = $_POST['role'] ?? 'patient';
+        $email = trim((string) ($_POST['email'] ?? ''));
+        $liveDescriptor = $_POST['face_descriptor'] ?? '';
+        
+        error_log("[FACE] faceLogin params: email=$email, role=$role, has_image=" . (!empty($imageData) ? 'YES' : 'NO') . ", has_descriptor=" . (!empty($liveDescriptor) ? 'YES' : 'NO'));
+
+        if (empty($imageData) && empty($liveDescriptor)) {
+            error_log("[FACE] No facial data received");
+            echo json_encode(['success' => false, 'message' => 'Aucune donnée faciale reçue']);
+            exit;
+        }
+
+        $db = \Database::getInstance()->getConnection();
+        $user = null;
+
+        $liveVector = !empty($liveDescriptor) ? json_decode($liveDescriptor, true) : null;
+        
+        if ($liveVector && is_array($liveVector)) {
+            error_log("[FACE] Live descriptor decoded, vector dimensions: " . count($liveVector));
+        } else {
+            error_log("[FACE] FAILED to decode live descriptor or not an array");
+        }
+
+        if ($liveVector && is_array($liveVector)) {
+            $minDist = 0.55; // Distance threshold
+            error_log("[FACE] Starting face comparison with threshold=$minDist");
+
+            if (!empty($email)) {
+                // Mode 1:1 — Specific user comparison
+                error_log("[FACE] Mode 1:1 - searching for email=$email, role=$role");
+                $stmt = $db->prepare("SELECT * FROM users WHERE email = :email AND role = :role LIMIT 1");
+                $stmt->execute([':email' => $email, ':role' => $role]);
+                $u = $stmt->fetch(\PDO::FETCH_ASSOC);
+                
+                if ($u) {
+                    error_log("[FACE] User found: " . $u['email'] . ", has_descriptors=" . (!empty($u['face_descriptors']) ? 'YES' : 'NO'));
+                    if (!empty($u['face_descriptors'])) {
+                        $savedVector = json_decode($u['face_descriptors'], true);
+                        if ($savedVector && is_array($savedVector)) {
+                            error_log("[FACE] Saved vector dimensions: " . count($savedVector));
+                            
+                            // Ensure both vectors have 128 dimensions
+                            $liveCount = count($liveVector);
+                            $savedCount = count($savedVector);
+                            if ($liveCount !== $savedCount) {
+                                error_log("[FACE] Vector size mismatch: live=$liveCount, saved=$savedCount");
+                            }
+                            
+                            $dist = 0;
+                            $maxDim = min(128, min(count($liveVector), count($savedVector)));
+                            for ($i = 0; $i < $maxDim; $i++) {
+                                $diff = (float)$liveVector[$i] - (float)$savedVector[$i];
+                                $dist += $diff * $diff;
+                            }
+                            $dist = sqrt($dist);
+                            error_log("[FACE] Distance calculation: $dist (threshold=$minDist, match=" . ($dist < $minDist ? 'YES' : 'NO') . ")");
+                            
+                            if ($dist < $minDist) {
+                                $user = $u;
+                                error_log("[FACE] MATCH FOUND at distance $dist");
+                            } else {
+                                error_log("[FACE] Distance too high: $dist >= $minDist");
+                            }
+                        } else {
+                            error_log("[FACE] Failed to decode saved vector");
+                        }
+                    } else {
+                        error_log("[FACE] User has no face_descriptors in database");
+                    }
+                } else {
+                    error_log("[FACE] User not found with email=$email and role=$role");
+                }
+            } else {
+                // Mode 1:N — Automatic search
+                error_log("[FACE] Mode 1:N - searching all users with face data");
+                $stmt = $db->query("SELECT id, email, role, statut, nom, prenom, face_descriptors FROM users WHERE face_descriptors IS NOT NULL");
+                $allUsers = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                error_log("[FACE] Found " . count($allUsers) . " users with face data");
+                $bestMatch = null;
+
+                foreach ($allUsers as $u) {
+                    $savedVector = json_decode($u['face_descriptors'], true);
+                    if (!$savedVector || !is_array($savedVector)) continue;
+                    
+                    $dist = 0;
+                    $maxDim = min(128, min(count($liveVector), count($savedVector)));
+                    for ($i = 0; $i < $maxDim; $i++) {
+                        $diff = (float)$liveVector[$i] - (float)$savedVector[$i];
+                        $dist += $diff * $diff;
+                    }
+                    $dist = sqrt($dist);
+                    
+                    error_log("[FACE] Comparing with " . $u['email'] . ": distance=$dist");
+
+                    if ($dist < $minDist) {
+                        $minDist = $dist;
+                        $bestMatch = $u;
+                        error_log("[FACE] New best match: " . $u['email'] . " at distance=$dist");
+                    }
+                }
+                $user = $bestMatch;
+                if ($user) {
+                    error_log("[FACE] MATCH FOUND: " . $user['email'] . " at distance=$minDist");
+                }
+            }
+        }
+
     if (!$user) {
-        echo json_encode(['success' => false, 'message' => 'Visage non reconnu. Veuillez utiliser email/mot de passe.']);
+        echo json_encode(['success' => false, 'message' => 'Visage non reconnu ou utilisateur introuvable.']);
         exit;
     }
     
-    // VÃ©rifier si le compte est actif
-    if ($user['statut'] !== 'actif') {
-        echo json_encode(['success' => false, 'message' => 'Votre compte est ' . $user['statut'] . '. Contactez l\'administrateur.']);
+    // Vérifier si le compte est actif
+    $statut = $user['statut'] ?? 'en_attente';
+    error_log("[FACE] User account status: $statut");
+    
+    if (!in_array($statut, ['actif', 'ACTIF', 'active', 'ACTIVE'])) {
+        $statusMessage = match(strtolower($statut)) {
+            'inactif' => 'désactivé',
+            'en_attente' => 'en attente d\'activation',
+            'suspend' => 'suspendu',
+            default => $statut
+        };
+        echo json_encode(['success' => false, 'message' => 'Votre compte est ' . $statusMessage . '. Contactez l\'administrateur.']);
         exit;
     }
     
-    // DÃ©marrer la session
+    // Démarrer la session
     session_regenerate_id(true);
     $_SESSION['user_id']    = $user['id'];
     $_SESSION['user_role']  = $user['role'];
-    $_SESSION['user_name']  = trim($user['nom'] . ' ' . $user['prenom']);
+    $_SESSION['user_name']  = trim(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? ''));
     $_SESSION['user_email'] = $user['email'];
     
-    // DÃ©terminer la redirection selon le rÃ´le
+    error_log("[FACE] Session started for user: " . $user['email'] . " (ID: " . $user['id'] . ")");
+    
+    // Déterminer la redirection selon le rôle
     $redirect = match($user['role']) {
         'admin'   => 'index.php?page=dashboard',
         'medecin' => 'index.php?page=accueil',
@@ -695,7 +799,7 @@ public function faceLogin(): void {
     
     echo json_encode([
         'success' => true,
-        'message' => 'Reconnaissance faciale rÃ©ussie !',
+        'message' => 'Reconnaissance faciale réussie !',
         'redirect' => $redirect,
         'role' => $user['role']
     ]);
@@ -755,35 +859,91 @@ public function deleteFace(): void {
 }
 public function registerFace(): void {
     header('Content-Type: application/json');
+    error_log("[FACE] registerFace called at " . date('Y-m-d H:i:s'));
     
     if (!isset($_SESSION['user_id'])) {
+        error_log("[FACE] registerFace - No session user_id");
         echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter d\'abord.']);
         exit;
     }
     
-    // Essayer de lire depuis $_POST (si form-data)
-    $imageData = $_POST['face_image'] ?? '';
+    $userId = $_SESSION['user_id'];
+    $json = file_get_contents('php://input');
+    $data = json_decode($json, true);
     
-    // Si vide, lire le flux d'entrÃ©e (JSON payload)
-    if (empty($imageData)) {
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
-        if (is_array($data)) {
-            // Supporte "image" ou "face_image"
-            $imageData = $data['image'] ?? $data['face_image'] ?? '';
-        }
+    error_log("[FACE] registerFace userId=$userId");
+    error_log("[FACE] registerFace payload keys=" . implode(", ", array_keys($data ?? [])));
+    
+    if (isset($data['descriptor']) && is_array($data['descriptor'])) {
+        error_log("[FACE] descriptor array found, elements=" . count($data['descriptor']));
     }
+
+    $imageData = $_POST['face_image'] ?? $data['image'] ?? $data['face_image'] ?? '';
+    $descriptor = null;
     
+    if (is_array($data) && isset($data['descriptor']) && is_array($data['descriptor'])) {
+        $descriptor = json_encode($data['descriptor']);
+        $descriptorArray = json_decode($descriptor, true);
+        error_log("[FACE] descriptor encoded, array_count=" . count($descriptorArray ?? []) . ", json_length=" . strlen($descriptor));
+    } else {
+        error_log("[FACE] WARNING: NO descriptor found in JSON payload");
+        error_log("[FACE] data type: " . gettype($data) . ", has descriptor key: " . (isset($data['descriptor']) ? 'YES' : 'NO'));
+    }
+
     if (empty($imageData)) {
-        echo json_encode(['success' => false, 'message' => 'Aucune image reÃ§ue']);
+        error_log("[FACE] NO image data received");
+        echo json_encode(['success' => false, 'message' => 'Aucune image reçue']);
         exit;
     }
     
-    $result = $this->faceModel->saveFacePhoto($_SESSION['user_id'], $imageData);
+    error_log("[FACE] Image data size: " . strlen($imageData) . " bytes");
+    
+    $uploadDir = __DIR__ . '/../uploads/faces/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    $filename = 'face_' . $userId . '_' . time() . '.jpg';
+    $filepath = $uploadDir . $filename;
+    $relativePath = 'uploads/faces/' . $filename;
+
+    $cleanData = str_replace(['data:image/jpeg;base64,', 'data:image/png;base64,', ' '], ['', '', '+'], $imageData);
+    $imageBinary = base64_decode($cleanData);
+    
+    error_log("[FACE] Image binary size after decode: " . strlen($imageBinary) . " bytes");
+
+    $result = false;
+    if (file_put_contents($filepath, $imageBinary)) {
+        error_log("[FACE] Face photo saved to $filepath");
+        
+        $db = \Database::getInstance()->getConnection();
+        
+        // Log what we're about to save
+        error_log("[FACE] About to save: descriptor=" . ($descriptor ? substr($descriptor, 0, 100) . "..." : "NULL"));
+        
+        $stmt = $db->prepare("UPDATE users SET face_photo = :photo, face_descriptors = :descriptors WHERE id = :id");
+        $result = $stmt->execute([
+            ':photo' => $relativePath, 
+            ':descriptors' => $descriptor,
+            ':id' => $userId
+        ]);
+        
+        error_log("[FACE] DB update " . ($result ? "SUCCESS" : "FAILED"));
+        
+        // Verify what was actually saved
+        if ($result) {
+            $verifyStmt = $db->prepare("SELECT face_descriptors FROM users WHERE id = :id LIMIT 1");
+            $verifyStmt->execute([':id' => $userId]);
+            $saved = $verifyStmt->fetchColumn();
+            error_log("[FACE] Verification - descriptors in DB: " . ($saved ? substr($saved, 0, 100) . "..." : "NULL"));
+        }
+    } else {
+        error_log("[FACE] Failed to write file: $filepath");
+    }
     
     echo json_encode([
         'success' => $result,
-        'message' => $result ? 'Visage enregistrÃ© avec succÃ¨s ! Vous pourrez vous connecter par reconnaissance faciale.' : 'Erreur lors de l\'enregistrement'
+        'message' => $result ? 'Visage enregistré avec succès !' : 'Erreur lors de l\'enregistrement'
     ]);
     exit;
 }
@@ -824,6 +984,11 @@ public function startSocialLogin(string $provider): void {
 }
 
 public function handleSocialCallback(string $provider): void {
+    error_log('=== SOCIAL CALLBACK START ===');
+    error_log('Provider: ' . $provider);
+    error_log('GET params: ' . json_encode($_GET));
+    error_log('Session state: ' . ($_SESSION['oauth_state_' . $provider] ?? 'NOT SET'));
+    
     $this->ensureSocialAuthConfigLoaded();
     $provider = strtolower(trim($provider));
     $config = SocialAuthConfig::get($provider);
@@ -839,14 +1004,17 @@ public function handleSocialCallback(string $provider): void {
     $receivedState = trim((string) ($_GET['state'] ?? ''));
     unset($_SESSION[$stateKey]);
 
+    error_log('State validation: expected=' . $expectedState . ' | received=' . $receivedState);
+
     if ($expectedState === '' || $receivedState === '' || !hash_equals($expectedState, $receivedState)) {
-        $_SESSION['error'] = 'Ã‰chec de vÃ©rification de la connexion ' . $config['label'] . '.';
+        $_SESSION['error'] = 'Échec de vérification de la connexion ' . $config['label'] . '.';
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
 
     if (!empty($_GET['error'])) {
-        $_SESSION['error'] = 'Connexion ' . $config['label'] . ' annulÃ©e ou refusÃ©e.';
+        $_SESSION['error'] = 'Connexion ' . $config['label'] . ' annulée ou refusée.';
+        error_log('OAuth User canceled: ' . $_GET['error']);
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
@@ -854,17 +1022,24 @@ public function handleSocialCallback(string $provider): void {
     $code = trim((string) ($_GET['code'] ?? ''));
     if ($code === '') {
         $_SESSION['error'] = 'Code de retour ' . $config['label'] . ' manquant.';
+        error_log('Authorization code is empty');
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
     }
 
     try {
+        error_log('Attempting to exchange code for token...');
         $tokenData = $this->exchangeSocialCodeForToken($provider, $code, $config);
+        error_log('Successfully got token data');
+        
         $profile = $this->fetchSocialProfile($provider, $tokenData, $config);
+        error_log('Successfully fetched profile: ' . json_encode($profile));
+        
         $user = $this->findOrCreateSocialUser($provider, $profile);
+        error_log('User found/created: id=' . ($user['id'] ?? 'null'));
 
         if (empty($user) || empty($user['id'])) {
-            throw new RuntimeException('Compte social introuvable ou non crÃ©Ã©.');
+            throw new RuntimeException('Compte social introuvable ou non créé.');
         }
 
         if (($user['statut'] ?? 'actif') !== 'actif') {
@@ -875,11 +1050,14 @@ public function handleSocialCallback(string $provider): void {
 
         $this->startUserSession($user);
 
-        $_SESSION['success'] = 'Connexion ' . $config['label'] . ' rÃ©ussie.';
+        $_SESSION['success'] = 'Connexion ' . $config['label'] . ' réussie.';
+        error_log('=== SOCIAL CALLBACK SUCCESS ===');
         header('Location: ' . $this->getBaseUrl() . $this->buildPostLoginRedirectPath($user));
         exit;
     } catch (\Throwable $e) {
-        error_log('Erreur social login [' . $provider . ']: ' . $e->getMessage());
+        error_log('❌ Erreur social login [' . $provider . ']: ' . $e->getMessage());
+        error_log('Exception file: ' . $e->getFile() . ':' . $e->getLine());
+        error_log('Stack trace: ' . $e->getTraceAsString());
         $_SESSION['error'] = 'Impossible de finaliser la connexion ' . $config['label'] . '.';
         header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
         exit;
@@ -930,6 +1108,12 @@ public function handleSocialCallback(string $provider): void {
             'grant_type'    => 'authorization_code',
         ];
 
+        error_log('=== OAUTH TOKEN EXCHANGE START ===');
+        error_log('Provider: ' . $provider);
+        error_log('Code: ' . substr($code, 0, 20) . '...');
+        error_log('Callback URL: ' . $this->getSocialCallbackUrl($provider));
+        error_log('Payload: ' . json_encode($payload));
+
         $headers = [];
         if ($provider === 'github') {
             $headers = [
@@ -938,12 +1122,20 @@ public function handleSocialCallback(string $provider): void {
             ];
         }
 
-        $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload, $headers);
-
-        if (empty($response['access_token'])) {
-            throw new RuntimeException('Access token non reÃ§u.');
+        try {
+            $response = $this->sendHttpRequest($config['token_url'], 'POST', $payload, $headers);
+            error_log('Token response: ' . json_encode($response));
+        } catch (RuntimeException $e) {
+            error_log('HTTP Error during token exchange: ' . $e->getMessage());
+            throw $e;
         }
 
+        if (empty($response['access_token'])) {
+            error_log('Access token missing from response. Full response: ' . json_encode($response));
+            throw new RuntimeException('Access token non reçu. Response: ' . json_encode($response));
+        }
+
+        error_log('=== OAUTH TOKEN EXCHANGE SUCCESS ===');
         return $response;
     }
 
@@ -1002,17 +1194,23 @@ public function handleSocialCallback(string $provider): void {
 
         if ($providerMatch) {
             $this->updateSocialUser((int) $providerMatch['id'], $provider, $normalized);
-            return $this->userModel->findById((int) $providerMatch['id']) ?? $providerMatch;
+            $stmt = $db->prepare("SELECT * FROM users WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => $providerMatch['id']]);
+            return $stmt->fetch(\PDO::FETCH_ASSOC) ?: $providerMatch;
         }
 
         $emailMatch = null;
         if ($normalized['email'] !== '') {
-            $emailMatch = $this->userModel->findByEmail($normalized['email']);
+            $stmt = $db->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+            $stmt->execute([':email' => $normalized['email']]);
+            $emailMatch = $stmt->fetch(\PDO::FETCH_ASSOC);
         }
 
         if ($emailMatch) {
             $this->updateSocialUser((int) $emailMatch['id'], $provider, $normalized);
-            return $this->userModel->findById((int) $emailMatch['id']) ?? $emailMatch;
+            $stmt = $db->prepare("SELECT * FROM users WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => $emailMatch['id']]);
+            return $stmt->fetch(\PDO::FETCH_ASSOC) ?: $emailMatch;
         }
 
         return $this->createSocialUser($provider, $normalized);
@@ -1141,7 +1339,9 @@ public function handleSocialCallback(string $provider): void {
             throw new RuntimeException('CrÃ©ation du compte social impossible.');
         }
 
-        return $this->userModel->findById($userId) ?? [];
+        $stmt = $db->prepare("SELECT * FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $userId]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
     }
 
     private function updateSocialUser(int $userId, string $provider, array $normalized): void {
@@ -1167,8 +1367,11 @@ public function handleSocialCallback(string $provider): void {
             return;
         }
 
-        $this->userModel->update($userId, [
-            'derniere_connexion' => $lastConnection,
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("UPDATE users SET derniere_connexion = :derniere_connexion WHERE id = :id");
+        $stmt->execute([
+            ':derniere_connexion' => $lastConnection,
+            ':id'                 => $userId,
         ]);
     }
 
@@ -1217,19 +1420,26 @@ public function handleSocialCallback(string $provider): void {
             if ($raw === false) {
                 $error = curl_error($ch);
                 curl_close($ch);
-                throw new RuntimeException('Erreur rÃ©seau: ' . $error);
+                throw new RuntimeException('Erreur réseau: ' . $error);
             }
 
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode >= 400) {
-                throw new RuntimeException('RÃ©ponse HTTP ' . $httpCode . ' reÃ§ue.');
-            }
+            error_log('HTTP Response [' . $httpCode . ']: ' . substr($raw, 0, 500));
 
             $decoded = json_decode($raw, true);
             if (!is_array($decoded)) {
-                throw new RuntimeException('RÃ©ponse JSON invalide.');
+                if ($httpCode >= 400) {
+                    throw new RuntimeException('Réponse HTTP ' . $httpCode . ' reçue. Réponse: ' . substr($raw, 0, 200));
+                }
+                throw new RuntimeException('Réponse JSON invalide: ' . substr($raw, 0, 200));
+            }
+
+            if ($httpCode >= 400) {
+                $errorMsg = $decoded['error'] ?? 'Unknown error';
+                $errorDesc = $decoded['error_description'] ?? '';
+                throw new RuntimeException('OAuth Error [' . $httpCode . ']: ' . $errorMsg . '. ' . $errorDesc);
             }
 
             return $decoded;
@@ -1256,12 +1466,20 @@ public function handleSocialCallback(string $provider): void {
 
         $raw = @file_get_contents($url, false, $context);
         if ($raw === false) {
-            throw new RuntimeException('Ã‰chec de la requÃªte HTTP.');
+            throw new RuntimeException('Échec de la requête HTTP (stream).');
         }
+
+        error_log('Stream Response: ' . substr($raw, 0, 500));
 
         $decoded = json_decode($raw, true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('RÃ©ponse JSON invalide.');
+            throw new RuntimeException('Réponse JSON invalide (stream): ' . substr($raw, 0, 200));
+        }
+
+        if (!empty($decoded['error'])) {
+            $errorMsg = $decoded['error'] ?? 'Unknown error';
+            $errorDesc = $decoded['error_description'] ?? '';
+            throw new RuntimeException('OAuth Error: ' . $errorMsg . '. ' . $errorDesc);
         }
 
         return $decoded;
@@ -1275,8 +1493,11 @@ public function handleSocialCallback(string $provider): void {
         $_SESSION['user_name']  = trim(($user['nom'] ?? '') . ' ' . ($user['prenom'] ?? ''));
         $_SESSION['user_email'] = $user['email'] ?? '';
 
-        $this->userModel->update((int) $user['id'], [
-            'derniere_connexion' => date('Y-m-d H:i:s'),
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("UPDATE users SET derniere_connexion = :date WHERE id = :id");
+        $stmt->execute([
+            ':date' => date('Y-m-d H:i:s'),
+            ':id'   => $user['id'],
         ]);
     }
 

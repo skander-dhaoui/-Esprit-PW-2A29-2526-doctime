@@ -7,6 +7,8 @@ use App\Models\Disponibilite;
 use App\Models\User;
 use App\Models\Produit;
 use App\Models\Event;
+use App\Repositories\UserRepository;
+use App\Repositories\ArticleRepository;
 
 class FrontController {
     
@@ -2968,8 +2970,8 @@ public function monProfil(): void {
     $userRole = $_SESSION['user_role'];
     
     // Récupérer les infos utilisateur
-    $userModel = new User();
-    $user = $userModel->getUserById($userId);
+    $userRepo = new UserRepository();
+    $user = $userRepo->getUserById($userId);
     
     // Statistiques
     $rdvModel = new RendezVous();
@@ -3006,10 +3008,10 @@ public function monProfil(): void {
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Email invalide";
             
             if (empty($errors)) {
-                if ($userModel->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
+                if ($userRepo->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
                     $success = "Profil mis à jour avec succès";
                     // Recharger les données
-                    $user = $userModel->getUserById($userId);
+                    $user = $userRepo->getUserById($userId);
                     $_SESSION['user_name'] = $prenom . ' ' . $nom;
                     $_SESSION['user_email'] = $email;
                 } else {
@@ -3035,7 +3037,7 @@ public function monProfil(): void {
             if (!preg_match('/[0-9]/', $newPassword)) $errors[] = "Un chiffre requis";
             
             if (empty($errors)) {
-                if ($userModel->changePassword($userId, $currentPassword, $newPassword)) {
+                if ($userRepo->changePassword($userId, $currentPassword, $newPassword)) {
                     $successPassword = "Mot de passe modifié avec succès";
                 } else {
                     $errorPassword = "Mot de passe actuel incorrect";
@@ -3063,9 +3065,9 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (move_uploaded_file($file['tmp_name'], $filepath)) {
-                    if ($userModel->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
+                    if ($userRepo->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
                         $success = "Avatar mis à jour avec succès";
-                        $user = $userModel->getUserById($userId);
+                        $user = $userRepo->getUserById($userId);
                     } else {
                         $error = "Erreur lors de l'enregistrement";
                     }
@@ -3099,7 +3101,7 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (file_put_contents($filepath, $imageData)) {
-                    if ($userModel->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
+                    if ($userRepo->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Visage enregistré avec succès']);
                         return;
@@ -3590,8 +3592,135 @@ public function monProfil(): void {
 
 
     /**
- * Afficher la page d'enregistrement facial
- */
+     * Afficher la page d'enregistrement facial
+     */
+    public function renderRegisterFace(): void {
+        $this->requireLogin();
+        $userId = $_SESSION['user_id'];
+        
+        $content = '
+        <div class="row">
+            <div class="col-md-8 mx-auto text-center">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5">
+                        <i class="fas fa-face-smile fa-4x text-primary mb-4"></i>
+                        <h3>Enregistrement de votre visage</h3>
+                        <p class="text-muted mb-4">Cette étape nous permet d\'extraire les caractéristiques de votre visage pour vous permettre de vous connecter sans mot de passe.</p>
+                        
+                        <div class="camera-container mb-4" style="position:relative; max-width:500px; margin:0 auto;">
+                            <video id="video" width="100%" height="auto" autoplay playsinline style="border-radius:15px; border:5px solid #f8f9fa;"></video>
+                            <canvas id="canvas" style="display:none;"></canvas>
+                            <div id="scanLine" style="position:absolute; top:0; left:0; width:100%; height:2px; background:rgba(0,123,255,0.5); display:none;"></div>
+                        </div>
+                        
+                        <div id="statusMessage" class="alert alert-info mb-4" style="display:none;"></div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="captureBtn" class="btn btn-primary btn-lg" onclick="startCapture()">
+                                <i class="fas fa-camera me-2"></i> Capturer mon visage
+                            </button>
+                            <a href="index.php?page=mon_profil" class="btn btn-link">Retour au profil</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+        <script>
+            let stream = null;
+            let modelsLoaded = false;
+            const video = document.getElementById("video");
+            const status = document.getElementById("statusMessage");
+            const scanLine = document.getElementById("scanLine");
 
-    
+            async function initCamera() {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                    video.srcObject = stream;
+                } catch (err) {
+                    showStatus("Erreur d\'accès à la caméra: " + err.message, "danger");
+                }
+            }
+
+            function showStatus(msg, type = "info") {
+                status.innerHTML = msg;
+                status.className = "alert alert-" + type + " mb-4";
+                status.style.display = "block";
+            }
+
+            async function loadModels() {
+                if (modelsLoaded) return;
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Chargement de l\'intelligence artificielle...");
+                const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                modelsLoaded = true;
+                showStatus("IA prête. Placez votre visage bien en face de la caméra.");
+            }
+
+            async function startCapture() {
+                const btn = document.getElementById("captureBtn");
+                btn.disabled = true;
+                
+                if (!modelsLoaded) await loadModels();
+                
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Analyse de votre visage...");
+                scanLine.style.display = "block";
+                
+                // Détection
+                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks(true)
+                    .withFaceDescriptor();
+                
+                if (!detections) {
+                    showStatus("Aucun visage détecté. Veuillez bien vous placer face à la lumière.", "warning");
+                    btn.disabled = false;
+                    scanLine.style.display = "none";
+                    return;
+                }
+
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Enregistrement sur le serveur...");
+                
+                const canvas = document.getElementById("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext("2d").drawImage(video, 0, 0);
+                const imageData = canvas.toDataURL("image/jpeg");
+                
+                const payload = {
+                    image: imageData,
+                    descriptor: Array.from(detections.descriptor) // Convert Float32Array to normal Array
+                };
+
+                try {
+                    const response = await fetch("index.php?page=register_face", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showStatus("<i class=\'fas fa-check-circle me-2\'></i>" + result.message, "success");
+                        setTimeout(() => { window.location.href = "index.php?page=mon_profil"; }, 2000);
+                    } else {
+                        showStatus(result.message, "danger");
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    showStatus("Erreur réseau: " + err.message, "danger");
+                    btn.disabled = false;
+                }
+                scanLine.style.display = "none";
+            }
+
+            initCamera();
+            loadModels();
+        </script>
+        ';
+        
+        $this->renderTemporaryView('Enregistrement Face ID', $content);
+    }
 } // FIN DE LA CLASSE FrontController

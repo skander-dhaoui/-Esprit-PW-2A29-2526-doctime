@@ -259,6 +259,12 @@
     </div>
 
     <script>
+        // Si on vient de se déconnecter (via paramètre URL), nettoyer les données faciales
+        <?php if (isset($_GET['logout'])): ?>
+            localStorage.removeItem('valorys_face_email');
+            localStorage.removeItem('valorys_face_role');
+        <?php endif; ?>
+
         // ── CAPTCHA ──────────────────────────────────────────────────────────
         let currentCaptcha = "<?= htmlspecialchars($_SESSION['captcha_code'] ?? '', ENT_QUOTES, 'UTF-8') ?>";
         
@@ -459,16 +465,13 @@
         function openCameraModal() {
             const context = getFaceLoginContext();
 
-            if (!context.email) {
-                showError(
-                    'Saisissez d\'abord votre email ou utilisez l\'appareil sur lequel vous avez enregistré votre visage.'
-                );
-                return;
-            }
-
             document.getElementById('cameraModal').classList.add('open');
-            document.getElementById('cameraMessage').innerHTML =
-                `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${context.email}</strong></span>`;
+            const msgDiv = document.getElementById('cameraMessage');
+            if (context.email) {
+                msgDiv.innerHTML = `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${context.email}</strong></span>`;
+            } else {
+                msgDiv.innerHTML = '';
+            }
             startCamera();
 
             // Précharger les modèles en arrière-plan
@@ -479,6 +482,15 @@
             if (stream) stream.getTracks().forEach(t => t.stop());
             stream = null;
             document.getElementById('cameraModal').classList.remove('open');
+        }
+
+        function showError(message) {
+            const msgDiv = document.getElementById('cameraMessage');
+            if (msgDiv) {
+                msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>${message}</span>`;
+            } else {
+                alert(message);
+            }
         }
 
         async function startCamera() {
@@ -501,11 +513,6 @@
             const savedEmail = contextData.email;
             const savedRole  = contextData.role;
 
-            if (!savedEmail) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Email introuvable. Saisissez votre email puis réessayez.</span>';
-                return;
-            }
-
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -527,79 +534,30 @@
                 .withFaceDescriptor();
 
             if (!liveDetection) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage détecté. Placez votre visage devant la caméra.</span>';
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage détecté.</span>';
                 return;
             }
 
-            // Étape 3 : récupérer la photo enregistrée
-            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Vérification du profil...</span>';
-            let registeredPhotoUrl = '';
-            try {
-                const photoRes = await fetch(`index.php?page=get_face_photo&email=${encodeURIComponent(savedEmail)}`);
-                const photoData = await photoRes.json();
-                if (!photoData.success) {
-                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage enregistré pour ce compte.</span>';
-                    setTimeout(() => closeCameraModal(), 2500);
-                    return;
-                }
-                registeredPhotoUrl = photoData.photo_url;
-            } catch (e) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur serveur.</span>';
-                return;
-            }
-
-            // Étape 4 : charger la photo enregistrée et calculer son descripteur
-            const registeredImg = await faceapi.fetchImage(registeredPhotoUrl);
-            const registeredDetection = await faceapi
-                .detectSingleFace(registeredImg, detectionOptions)
-                .withFaceLandmarks(true)
-                .withFaceDescriptor();
-
-            if (!registeredDetection) {
-                msgDiv.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Impossible d\'analyser la photo enregistrée. Ré-enregistrez votre visage.</span>';
-                setTimeout(() => closeCameraModal(), 3000);
-                return;
-            }
-
-            // Étape 5 : comparer les descripteurs (distance euclidienne)
-            const distance = faceapi.euclideanDistance(liveDetection.descriptor, registeredDetection.descriptor);
-            console.log('Distance faciale:', distance); // Pour debug
-
-            const THRESHOLD = 0.55; // 0 = même personne, > 0.6 = différente personne
-            if (distance >= THRESHOLD) {
-                msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Visage non reconnu (confiance: ${Math.round((1-distance)*100)}%). Réessayez avec un meilleur éclairage.</span>`;
-                setTimeout(() => closeCameraModal(), 3000);
-                return;
-            }
-
-            // Étape 6 : visage validé → envoyer au backend pour connexion
-            msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>Visage reconnu (confiance: ${Math.round((1-distance)*100)}%) !</span>`;
-
+            // Étape 3 : Envoyer le descripteur au serveur pour identification
+            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Identification en cours...</span>';
+            
             const imageData = canvas.toDataURL('image/jpeg');
             const payload = new FormData();
             payload.append('face_image', imageData);
-            payload.append('role', savedRole);
-            payload.append('email', savedEmail);
+            payload.append('face_descriptor', JSON.stringify(Array.from(liveDetection.descriptor)));
+            
+            // On envoie l'email/role seulement s'ils sont déjà connus (facultatif maintenant)
+            if (savedEmail) payload.append('email', savedEmail);
+            if (savedRole)  payload.append('role', savedRole);
 
             try {
                 const response = await fetch('index.php?page=face_login', {
                     method: 'POST',
                     body: payload
                 });
-                const rawText = await response.text();
-                let result = null;
-
-                try {
-                    result = JSON.parse(rawText);
-                } catch (e) {
-                    console.error('Réponse non JSON face_login:', rawText);
-                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur du serveur facial. Vérifiez l\'endpoint face_login.</span>';
-                    return;
-                }
+                const result = await response.json();
 
                 if (result.success) {
-                    localStorage.setItem('valorys_face_email', savedEmail);
-                    localStorage.setItem('valorys_face_role', savedRole);
                     msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>${result.message}</span>`;
                     setTimeout(() => { closeCameraModal(); window.location.href = result.redirect; }, 1500);
                 } else {
@@ -607,7 +565,7 @@
                     setTimeout(() => closeCameraModal(), 2500);
                 }
             } catch (error) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion au serveur.</span>';
+                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion.</span>';
                 setTimeout(() => closeCameraModal(), 2500);
             }
         }

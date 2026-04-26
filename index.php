@@ -1,7 +1,10 @@
 <?php
 
+// Initialize error handling and logging
+require_once __DIR__ . '/error_handler.php';
+
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
@@ -11,7 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 define('DEBUG_MODE', false);
 
 // =============================================
-// INCLUDES — MODÈLES
+// INCLUDES — MODÈLES & REPOSITORIES
 // =============================================
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/mail.php';
@@ -22,6 +25,8 @@ require_once __DIR__ . '/models/Medecin.php';
 require_once __DIR__ . '/models/Admin.php';
 require_once __DIR__ . '/models/Article.php';
 require_once __DIR__ . '/models/Reply.php';
+require_once __DIR__ . '/repositories/ArticleRepository.php';
+require_once __DIR__ . '/repositories/UserRepository.php';
 
 // Modèles optionnels
 $optionalModels = [
@@ -127,9 +132,11 @@ if ($page === 'get_face_photo') {
         echo json_encode(['success' => false, 'message' => 'Email invalide']);
         exit;
     }
-    require_once __DIR__ . '/models/User.php';
-    $userModel2 = new User();
-    $userFace = $userModel2->findByEmail($email);
+    $db = Database::getInstance()->getConnection();
+    $stmt = $db->prepare("SELECT face_photo, role FROM users WHERE email = :email LIMIT 1");
+    $stmt->execute([':email' => $email]);
+    $userFace = $stmt->fetch(PDO::FETCH_ASSOC);
+    
     if (!$userFace || empty($userFace['face_photo'])) {
         echo json_encode(['success' => false, 'message' => 'Aucune photo enregistrée pour cet utilisateur']);
         exit;

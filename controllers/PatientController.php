@@ -8,17 +8,18 @@ require_once __DIR__ . '/AuthController.php';
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Medecin;
+use App\Repositories\UserRepository;
 
 class PatientController {
 
     private Patient        $patientModel;
-    private User           $userModel;
+    private UserRepository $userRepo;
     private Medecin        $medecinModel;
     private AuthController $auth;
 
     public function __construct() {
         $this->patientModel = new Patient();
-        $this->userModel    = new User();
+        $this->userRepo     = new UserRepository();
         $this->medecinModel = new Medecin();
         $this->auth         = new AuthController();
     }
@@ -566,7 +567,7 @@ public function createAppointment(): void {
         $this->auth->requireRole('patient');
 
         $userId  = (int)$_SESSION['user_id'];
-        $user    = $this->userModel->findById($userId);
+        $user    = $this->userRepo->findById($userId);
         $patient = $this->patientModel->findByUserId($userId);
         $stats   = $this->patientModel->getStats($userId);
 

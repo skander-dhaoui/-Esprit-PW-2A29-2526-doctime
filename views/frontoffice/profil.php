@@ -620,6 +620,20 @@
                             </button>
                         </div>
                         <div id="faceStatus" class="mt-3"></div>
+                    <div class="text-center">
+                        <div id="faceVideoContainer">
+                            <video id="faceVideo" width="450" height="340" autoplay playsinline style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
+                            <canvas id="faceCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn-save" onclick="captureFace()" id="captureFaceBtn">
+                                <i class="fas fa-camera me-2"></i> Enregistrer mon visage
+                            </button>
+                            <button type="button" class="btn-cancel" onclick="stopFaceCamera()" id="stopCameraBtn" style="display:none;">
+                                <i class="fas fa-stop me-2"></i> Arrêter
+                            </button>
+                        </div>
+                        <div id="faceStatus" class="mt-3"></div>
                         <div class="alert alert-info mt-3" style="background: #e7f3ff; border: none; border-radius: 12px; font-size: 12px;">
                             <i class="fas fa-info-circle me-2"></i>
                             Placez votre visage face à la caméra dans un endroit bien éclairé
@@ -658,204 +672,35 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script>
-        // ═══ FUNCTIONS ═══
-        function showFieldError(fieldId, message) {
-            const container = document.getElementById(fieldId + '-error');
-            if (container) {
-                container.innerHTML = '<div class="field-error">' + message + '</div>';
-            }
-        }
-
-        function clearFieldError(fieldId) {
-            const container = document.getElementById(fieldId + '-error');
-            if (container) {
-                container.innerHTML = '';
-            }
-        }
-
-        function showToast(message, type = 'error') {
-            let toastEl = document.getElementById('customToast');
-            
-            if (!toastEl) {
-                const toastDiv = document.createElement('div');
-                toastDiv.id = 'customToast';
-                toastDiv.className = 'toast-message ' + (type === 'error' ? 'toast-error' : 'toast-success');
-                toastDiv.innerHTML = `
-                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
-                    <div class="toast-content">
-                        <div class="toast-title">${type === 'error' ? 'Erreur' : 'Succès'}</div>
-                        <div class="toast-text"></div>
-                    </div>
-                    <i class="fas fa-times toast-close"></i>
-                `;
-                document.body.appendChild(toastDiv);
-                toastEl = document.getElementById('customToast');
-            }
-            
-            toastEl.className = 'toast-message ' + (type === 'error' ? 'toast-error' : 'toast-success');
-            toastEl.querySelector('.toast-title').textContent = type === 'error' ? 'Erreur' : 'Succès';
-            toastEl.querySelector('.toast-text').textContent = message;
-            toastEl.style.display = 'flex';
-            
-            if (toastEl.timeoutId) clearTimeout(toastEl.timeoutId);
-            toastEl.timeoutId = setTimeout(() => {
-                toastEl.style.display = 'none';
-            }, 5000);
-            
-            toastEl.querySelector('.toast-close').onclick = () => {
-                toastEl.style.display = 'none';
-                if (toastEl.timeoutId) clearTimeout(toastEl.timeoutId);
-            };
-        }
-
-        // Avatar Upload
-        function uploadAvatarOnly() {
-            const input = document.getElementById('avatarInput');
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-                
-                if (!allowedTypes.includes(file.type)) {
-                    showToast('Format non supporté. Utilisez JPG, PNG, GIF ou WEBP.', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                if (file.size > 2 * 1024 * 1024) {
-                    showToast('L\'image ne doit pas dépasser 2 Mo.', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                document.getElementById('avatarForm').submit();
-            }
-        }
-
-        // Profile Validation
-        function validateProfileForm() {
-            let isValid = true;
-            
-            clearFieldError('nom');
-            clearFieldError('prenom');
-            clearFieldError('email');
-            
-            const nom = document.getElementById('nom').value.trim();
-            const prenom = document.getElementById('prenom').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            
-            if (!nom) {
-                showFieldError('nom', 'Le nom est obligatoire.');
-                isValid = false;
-            }
-            
-            if (!prenom) {
-                showFieldError('prenom', 'Le prénom est obligatoire.');
-                isValid = false;
-            }
-            
-            if (!email) {
-                showFieldError('email', 'L\'email est obligatoire.');
-                isValid = false;
-            } else if (!emailRegex.test(email)) {
-                showFieldError('email', 'Email invalide.');
-                isValid = false;
-            }
-            
-            return isValid;
-        }
-
-        // Password Validation
-        function validatePasswordForm() {
-            let isValid = true;
-            
-            clearFieldError('currentPassword');
-            clearFieldError('newPassword');
-            clearFieldError('confirmPassword');
-            
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (!currentPassword) {
-                showFieldError('currentPassword', 'Mot de passe actuel requis.');
-                isValid = false;
-            }
-            
-            if (!newPassword) {
-                showFieldError('newPassword', 'Nouveau mot de passe requis.');
-                isValid = false;
-            } else if (newPassword.length < 8) {
-                showFieldError('newPassword', '8 caractères minimum.');
-                isValid = false;
-            } else if (!/[A-Z]/.test(newPassword)) {
-                showFieldError('newPassword', 'Une majuscule requise.');
-                isValid = false;
-            } else if (!/[0-9]/.test(newPassword)) {
-                showFieldError('newPassword', 'Un chiffre requis.');
-                isValid = false;
-            }
-            
-            if (!confirmPassword) {
-                showFieldError('confirmPassword', 'Confirmation requise.');
-                isValid = false;
-            } else if (newPassword !== confirmPassword) {
-                showFieldError('confirmPassword', 'Les mots de passe ne correspondent pas.');
-                isValid = false;
-            }
-            
-            return isValid;
-        }
-
-        function updatePasswordRequirements() {
-            const password = document.getElementById('newPassword').value;
-            const checks = {
-                Length: password.length >= 8,
-                Upper: /[A-Z]/.test(password),
-                Number: /[0-9]/.test(password)
-            };
-            const labels = {
-                Length: '8 caractères',
-                Upper: '1 majuscule',
-                Number: '1 chiffre'
-            };
-            Object.keys(checks).forEach(k => {
-                const el = document.getElementById('req' + k);
-                const ok = checks[k];
-                el.className = ok ? 'requirement-valid' : 'requirement-invalid';
-                el.innerHTML = '<i class="fas fa-' + (ok ? 'check-circle' : 'circle') + '"></i> ' + labels[k];
-            });
-        }
-
-        function cancelPassword() {
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            updatePasswordRequirements();
-            clearFieldError('currentPassword');
-            clearFieldError('newPassword');
-            clearFieldError('confirmPassword');
-        }
-
-        // Face Recognition
+        // ═══ Face Recognition ═══
         let faceStream = null;
-        let faceVideo = null;
+        let faceVideo = document.getElementById('faceVideo');
+        let modelsLoaded = false;
 
-        function startFaceCamera() {
+        async function startFaceCamera() {
             faceVideo = document.getElementById('faceVideo');
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        faceStream = stream;
-                        faceVideo.srcObject = stream;
-                        faceVideo.play();
-                        document.getElementById('captureFaceBtn').style.display = 'inline-block';
-                        document.getElementById('stopCameraBtn').style.display = 'inline-block';
-                    })
-                    .catch(function(err) {
-                        document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger">Erreur caméra: ' + err.message + '</div>';
-                    });
+            if (!faceVideo) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                faceStream = stream;
+                faceVideo.srcObject = stream;
+                faceVideo.play();
+                document.getElementById('captureFaceBtn').style.display = 'inline-block';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
+                
+                if (!modelsLoaded) {
+                    showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Chargement de l\'IA...');
+                    const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                    modelsLoaded = true;
+                    showFaceStatus('<i class="fas fa-check-circle text-success me-2"></i>IA prête. Placez-vous bien en face.');
+                }
+            } catch (err) {
+                showFaceStatus('Erreur caméra: ' + err.message, 'danger');
             }
         }
 
@@ -864,120 +709,100 @@
                 faceStream.getTracks().forEach(track => track.stop());
                 faceStream = null;
             }
-            if (faceVideo) {
-                faceVideo.srcObject = null;
-            }
+            if (faceVideo) faceVideo.srcObject = null;
             document.getElementById('captureFaceBtn').style.display = 'none';
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
-        function captureFace() {
-            let video = document.getElementById('faceVideo');
-            let canvas = document.getElementById('faceCanvas');
-            let context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            let imageData = canvas.toDataURL('image/jpeg', 0.8);
-            
-            document.getElementById('faceStatus').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Envoi...</div>';
-            
-            fetch('index.php?page=register_face', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData, action: 'register_face' })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Sauvegarde locale pour simuler la reconnaissance faciale sans saisie d'email
-                    localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
-                    localStorage.setItem('valorys_face_role', '<?= htmlspecialchars($userRole ?? $_SESSION['user_role'] ?? 'patient') ?>');
-                    
-                    document.getElementById('faceStatus').innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
-                    stopFaceCamera();
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' + data.message + '</div>';
+        function showFaceStatus(html, type = 'info') {
+            const status = document.getElementById('faceStatus');
+            if (status) status.innerHTML = `<div class="alert alert-${type} mb-0">${html}</div>`;
+        }
+
+        async function captureFace() {
+            const btn = document.getElementById('captureFaceBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Analyse du visage...');
+
+            try {
+                console.log('[FACE] captureFace started');
+                const detections = await faceapi.detectSingleFace(faceVideo, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks(true)
+                    .withFaceDescriptor();
+
+                if (!detections) {
+                    showFaceStatus('Visage non détecté. Assurez-vous d\'être bien éclairé.', 'warning');
+                    btn.disabled = false;
+                    return;
                 }
-            })
-            .catch(error => {
-                document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger">Erreur: ' + error + '</div>';
-            });
+
+                console.log('[FACE] Face detected, descriptor dimensions:', detections.descriptor.length);
+                
+                showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...');
+                const canvas = document.getElementById('faceCanvas');
+                canvas.width = faceVideo.videoWidth;
+                canvas.height = faceVideo.videoHeight;
+                canvas.getContext('2d').drawImage(faceVideo, 0, 0);
+                
+                const descriptorArray = Array.from(detections.descriptor);
+                console.log('[FACE] Descriptor array created, length:', descriptorArray.length);
+                
+                const payload = {
+                    image: canvas.toDataURL('image/jpeg', 0.8),
+                    descriptor: descriptorArray
+                };
+                
+                console.log('[FACE] Payload has descriptor:', 'descriptor' in payload);
+
+                const response = await fetch('index.php?page=register_face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                console.log('[FACE] Server response:', data);
+                
+                if (data.success) {
+                    localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
+                    localStorage.setItem('valorys_face_registered', 'true');
+                    showFaceStatus(data.message, 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showFaceStatus(data.message, 'danger');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error('[FACE] Error:', err);
+                showFaceStatus('Erreur: ' + err.message, 'danger');
+                btn.disabled = false;
+            }
         }
 
         function deleteFace() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer votre visage enregistré ?')) {
+            if (confirm('Supprimer votre visage ?')) {
                 fetch('index.php?page=api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'delete_face' })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        localStorage.removeItem('valorys_face_email');
-                        localStorage.removeItem('valorys_face_role');
-                        location.reload();
-                    } else {
-                        showToast(data.message || 'Erreur lors de la suppression', 'error');
-                    }
-                })
-                .catch(error => {
-                    showToast('Erreur réseau', 'error');
+                }).then(() => {
+                    localStorage.removeItem('valorys_face_email');
+                    location.reload();
                 });
             }
         }
 
-        // Event Listeners
-        const profileForm = document.getElementById('profileForm');
-        if (profileForm) {
-            profileForm.addEventListener('submit', function(e) {
-                if (!validateProfileForm()) {
-                    e.preventDefault();
-                    const firstError = document.querySelector('.field-error');
-                    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            });
+        // ═══ Other UI Functions ═══
+        function uploadAvatarOnly() { document.getElementById('avatarForm').submit(); }
+        function cancelPassword() {
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
         }
 
-        const passwordForm = document.getElementById('passwordForm');
-        if (passwordForm) {
-            passwordForm.addEventListener('submit', function(e) {
-                if (!validatePasswordForm()) {
-                    e.preventDefault();
-                    const firstError = document.querySelector('.field-error');
-                    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            });
-        }
-
-        if (document.getElementById('newPassword')) {
-            document.getElementById('newPassword').addEventListener('input', updatePasswordRequirements);
-        }
-
-        // Auto-hide alerts
-        setTimeout(() => {
-            document.querySelectorAll('.alert-success-custom, .alert-error-custom').forEach(el => {
-                if (el !== document.getElementById('faceStatus')?.querySelector('.alert')) {
-                    el.style.opacity = '0';
-                    setTimeout(() => { if(el.parentNode) el.style.display = 'none'; }, 300);
-                }
-            });
-        }, 5000);
-
-        // Start face camera if needed
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if (empty($user['face_photo']) && empty($user['face_descriptors']) && empty($user['face_encoding']) && empty($user['face_descriptor'])): ?>
+        document.addEventListener('DOMContentLoaded', () => {
+            <?php if (empty($user['face_photo']) && empty($user['face_descriptors'])): ?>
             startFaceCamera();
-            <?php else: ?>
-            localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
-            localStorage.setItem('valorys_face_role', '<?= htmlspecialchars($userRole ?? $_SESSION['user_role'] ?? 'patient') ?>');
             <?php endif; ?>
         });
     </script>

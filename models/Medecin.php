@@ -1,201 +1,139 @@
 <?php
 declare(strict_types=1);
 
+namespace App\Models;
+
 final class Medecin
 {
-    private int     $id;
-    private int     $userId;
-    private string  $specialite;
+    private int $id;
+    private int $userId;
+    private string $specialite;
     private ?string $numeroOrdre;
-    private ?int    $anneeExperience;
-    private ?float  $consultationPrix;
+    private ?int $anneeExperience;
+    private ?float $consultationPrix;
     private ?string $cabinetAdresse;
     private ?string $description;
-    private string  $statutValidation;
+    private string $statutValidation;
     private ?string $commentaireValidation;
-    private ?PDO    $db = null;
 
     public function __construct(array $data = [])
     {
-        $this->id                   = (int)    ($data['id']                      ?? 0);
-        $this->userId               = (int)    ($data['user_id']                 ?? 0);
-        $this->specialite           = (string) ($data['specialite']              ?? 'Généraliste');
-        $this->numeroOrdre          =          ($data['numero_ordre']            ?? null);
-        $this->anneeExperience      = isset($data['annee_experience']) && $data['annee_experience'] !== null ? (int)$data['annee_experience'] : null;
-        $this->consultationPrix     = isset($data['consultation_prix']) && $data['consultation_prix'] !== null ? (float)$data['consultation_prix'] : null;
-        $this->cabinetAdresse       =          ($data['cabinet_adresse']         ?? null);
-        $this->description          =          ($data['description']             ?? null);
-        $this->statutValidation     = (string) ($data['statut_validation']       ?? 'en_attente');
-        $this->commentaireValidation =         ($data['commentaire_validation']  ?? null);
+        $this->id = (int) ($data['id'] ?? 0);
+        $this->userId = (int) ($data['user_id'] ?? 0);
+        $this->specialite = (string) ($data['specialite'] ?? 'Généraliste');
+        $this->numeroOrdre = $data['numero_ordre'] ?? null;
+        $this->anneeExperience = isset($data['annee_experience']) && $data['annee_experience'] !== null ? (int)$data['annee_experience'] : null;
+        $this->consultationPrix = isset($data['consultation_prix']) && $data['consultation_prix'] !== null ? (float)$data['consultation_prix'] : null;
+        $this->cabinetAdresse = $data['cabinet_adresse'] ?? null;
+        $this->description = $data['description'] ?? null;
+        $this->statutValidation = (string) ($data['statut_validation'] ?? 'en_attente');
+        $this->commentaireValidation = $data['commentaire_validation'] ?? null;
     }
 
-    public function __destruct() {}
-
-    // ── Getters ──────────────────────────────────────────────────
-    public function getId(): int                    { return $this->id; }
-    public function getUserId(): int                { return $this->userId; }
-    public function getSpecialite(): string         { return $this->specialite; }
-    public function getNumeroOrdre(): ?string       { return $this->numeroOrdre; }
-    public function getAnneeExperience(): ?int      { return $this->anneeExperience; }
-    public function getConsultationPrix(): ?float   { return $this->consultationPrix; }
-    public function getCabinetAdresse(): ?string    { return $this->cabinetAdresse; }
-    public function getDescription(): ?string       { return $this->description; }
-    public function getStatutValidation(): string   { return $this->statutValidation; }
-    public function getCommentaireValidation(): ?string { return $this->commentaireValidation; }
-
-    // ── Setters ──────────────────────────────────────────────────
-    public function setId(int $v): void                    { $this->id                    = $v; }
-    public function setUserId(int $v): void                { $this->userId                = $v; }
-    public function setSpecialite(string $v): void          { $this->specialite            = $v; }
-    public function setNumeroOrdre(?string $v): void        { $this->numeroOrdre           = $v; }
-    public function setAnneeExperience(?int $v): void       { $this->anneeExperience       = $v; }
-    public function setConsultationPrix(?float $v): void    { $this->consultationPrix      = $v; }
-    public function setCabinetAdresse(?string $v): void     { $this->cabinetAdresse        = $v; }
-    public function setDescription(?string $v): void        { $this->description           = $v; }
-    public function setStatutValidation(string $v): void    { $this->statutValidation      = $v; }
-    public function setCommentaireValidation(?string $v): void { $this->commentaireValidation = $v; }
-
-    // ── Database Methods ─────────────────────────────────────────
-
-    /**
-     * Get statistics for a medecin
-     */
-    public function getStats(int $medecinId): array {
-        try {
-            if (!$this->db) {
-                $this->db = Database::getInstance()->getConnection();
-            }
-            $total = $this->db->prepare(
-                "SELECT COUNT(*) FROM rendez_vous WHERE medecin_id = :mid"
-            );
-            $total->execute([':mid' => $medecinId]);
-
-            $today = $this->db->prepare(
-                "SELECT COUNT(*) FROM rendez_vous
-                 WHERE medecin_id = :mid AND DATE(date_rendezvous) = CURDATE()"
-            );
-            $today->execute([':mid' => $medecinId]);
-
-            $patients = $this->db->prepare(
-                "SELECT COUNT(DISTINCT patient_id) FROM rendez_vous WHERE medecin_id = :mid"
-            );
-            $patients->execute([':mid' => $medecinId]);
-
-            $pending = $this->db->prepare(
-                "SELECT COUNT(*) FROM rendez_vous
-                 WHERE medecin_id = :mid AND statut = 'en_attente'"
-            );
-            $pending->execute([':mid' => $medecinId]);
-
-            return [
-                'rdv_total'    => (int) $total->fetchColumn(),
-                'rdv_today'    => (int) $today->fetchColumn(),
-                'patients'     => (int) $patients->fetchColumn(),
-                'rdv_pending'  => (int) $pending->fetchColumn(),
-            ];
-        } catch (Exception $e) {
-            error_log("Error in getStats: " . $e->getMessage());
-            return ['rdv_total' => 0, 'rdv_today' => 0, 'patients' => 0, 'rdv_pending' => 0];
-        }
-    }
-
-    public function findByUserId(int $userId): ?array
+    public function __destruct()
     {
-        if (!$this->db) {
-            $this->db = Database::getInstance()->getConnection();
-        }
-
-        $stmt = $this->db->prepare("SELECT * FROM medecins WHERE user_id = :user_id LIMIT 1");
-        $stmt->execute([':user_id' => $userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        // Nettoyage des ressources si nécessaire
     }
 
-    public function update(int $userId, array $data): bool
+    // Getters
+    public function getId(): int
     {
-        if ($userId <= 0) {
-            return false;
-        }
+        return $this->id;
+    }
 
-        if (!$this->db) {
-            $this->db = Database::getInstance()->getConnection();
-        }
+    public function getUserId(): int
+    {
+        return $this->userId;
+    }
 
-        $allowedMap = [
-            'specialite' => 'specialite',
-            'numero_ordre' => 'numero_ordre',
-            'annee_experience' => 'annee_experience',
-            'consultation_prix' => 'consultation_prix',
-            'cabinet_adresse' => 'cabinet_adresse',
-            'adresse_cabinet' => 'cabinet_adresse',
-            'description' => 'description',
-            'statut_validation' => 'statut_validation',
-            'commentaire_validation' => 'commentaire_validation',
-            'tarif' => 'consultation_prix',
-            'experience' => 'annee_experience',
-        ];
+    public function getSpecialite(): string
+    {
+        return $this->specialite;
+    }
 
-        $fields = [];
-        $params = [':user_id' => $userId];
+    public function getNumeroOrdre(): ?string
+    {
+        return $this->numeroOrdre;
+    }
 
-        foreach ($data as $key => $value) {
-            if (!isset($allowedMap[$key])) {
-                continue;
-            }
+    public function getAnneeExperience(): ?int
+    {
+        return $this->anneeExperience;
+    }
 
-            $column = $allowedMap[$key];
-            $placeholder = ':p_' . $column;
-            if (isset($params[$placeholder])) {
-                $params[$placeholder] = $value;
-                continue;
-            }
+    public function getConsultationPrix(): ?float
+    {
+        return $this->consultationPrix;
+    }
 
-            $fields[] = "$column = $placeholder";
-            $params[$placeholder] = $value;
-        }
+    public function getCabinetAdresse(): ?string
+    {
+        return $this->cabinetAdresse;
+    }
 
-        if (empty($fields)) {
-            return false;
-        }
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
 
-        $exists = $this->findByUserId($userId);
+    public function getStatutValidation(): string
+    {
+        return $this->statutValidation;
+    }
 
-        if ($exists) {
-            $sql = "UPDATE medecins SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
-            $stmt = $this->db->prepare($sql);
-            return $stmt->execute($params);
-        }
+    public function getCommentaireValidation(): ?string
+    {
+        return $this->commentaireValidation;
+    }
 
-        $defaults = [
-            'specialite' => '',
-            'numero_ordre' => '',
-            'annee_experience' => null,
-            'consultation_prix' => null,
-            'cabinet_adresse' => null,
-            'description' => null,
-        ];
+    // Setters
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
 
-        foreach ($data as $key => $value) {
-            if (isset($allowedMap[$key])) {
-                $defaults[$allowedMap[$key]] = $value;
-            }
-        }
+    public function setUserId(int $userId): void
+    {
+        $this->userId = $userId;
+    }
 
-        $stmt = $this->db->prepare(
-            "INSERT INTO medecins (
-                user_id, specialite, numero_ordre, annee_experience, consultation_prix, cabinet_adresse, description
-            ) VALUES (
-                :user_id, :specialite, :numero_ordre, :annee_experience, :consultation_prix, :cabinet_adresse, :description
-            )"
-        );
+    public function setSpecialite(string $specialite): void
+    {
+        $this->specialite = $specialite;
+    }
 
-        return $stmt->execute([
-            ':user_id' => $userId,
-            ':specialite' => (string) $defaults['specialite'],
-            ':numero_ordre' => (string) $defaults['numero_ordre'],
-            ':annee_experience' => $defaults['annee_experience'],
-            ':consultation_prix' => $defaults['consultation_prix'],
-            ':cabinet_adresse' => $defaults['cabinet_adresse'],
-            ':description' => $defaults['description'],
-        ]);
+    public function setNumeroOrdre(?string $numeroOrdre): void
+    {
+        $this->numeroOrdre = $numeroOrdre;
+    }
+
+    public function setAnneeExperience(?int $anneeExperience): void
+    {
+        $this->anneeExperience = $anneeExperience;
+    }
+
+    public function setConsultationPrix(?float $consultationPrix): void
+    {
+        $this->consultationPrix = $consultationPrix;
+    }
+
+    public function setCabinetAdresse(?string $cabinetAdresse): void
+    {
+        $this->cabinetAdresse = $cabinetAdresse;
+    }
+
+    public function setDescription(?string $description): void
+    {
+        $this->description = $description;
+    }
+
+    public function setStatutValidation(string $statutValidation): void
+    {
+        $this->statutValidation = $statutValidation;
+    }
+
+    public function setCommentaireValidation(?string $commentaireValidation): void
+    {
+        $this->commentaireValidation = $commentaireValidation;
     }
 }

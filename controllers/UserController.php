@@ -9,6 +9,7 @@ require_once __DIR__ . '/../models/Medecin.php';
 use App\Models\User;
 use App\Models\Patient;
 use App\Models\Medecin;
+use App\Repositories\UserRepository;
 
 /**
  * UserController — CORRECTIONS APPLIQUÉES
@@ -43,7 +44,7 @@ use App\Models\Medecin;
  */
 class UserController {
 
-    private User           $userModel;
+    private UserRepository $userRepo;
     private Patient        $patientModel;
     private Medecin        $medecinModel;
     private AuthController $auth;
@@ -55,7 +56,7 @@ class UserController {
     private const MAX_SIZE      = 2 * 1024 * 1024; // 2 Mo
 
     public function __construct() {
-        $this->userModel    = new User();
+        $this->userRepo     = new UserRepository();
         $this->patientModel = new Patient();
         $this->medecinModel = new Medecin();
         $this->auth         = new AuthController();

@@ -11,17 +11,19 @@ use App\Models\User;
 use App\Models\Medecin;
 use App\Models\Patient;
 use App\Models\Admin;
+use App\Repositories\ArticleRepository;
+use App\Repositories\UserRepository;
 
 class AdminController {
 
-    private User        $userModel;
+    private UserRepository $userRepo;
     private Medecin     $medecinModel;
     private Patient     $patientModel;
     private Admin       $adminModel;
     private AuthController $auth;
 
     public function __construct() {
-        $this->userModel    = new User();
+        $this->userRepo     = new UserRepository();
         $this->medecinModel = new Medecin();
         $this->patientModel = new Patient();
         $this->adminModel   = new Admin();
@@ -1940,7 +1942,7 @@ private function logAction(string $action, string $description): void {
     public function advancedArticles(): void {
         $this->auth->requireRole('admin');
         require_once __DIR__ . '/../models/Article.php';
-        $articleModel = new Article();
+        $articleModel = new ArticleRepository();
 
         $filtres = [
             'keyword'    => trim($_GET['keyword'] ?? ''),
@@ -2086,7 +2088,7 @@ private function logAction(string $action, string $description): void {
         require_once __DIR__ . '/../models/Article.php';
         
         try {
-            $articleModel = new Article();
+            $articleModel = new ArticleRepository();
             $db = Database::getInstance()->getConnection();
             
             // Get article with author info
@@ -2200,7 +2202,7 @@ private function logAction(string $action, string $description): void {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le titre et le contenu sont obligatoires.'];
         } else {
             try {
-                $articleModel = new Article();
+                $articleModel = new ArticleRepository();
                 $newId = $articleModel->create([
                     'titre'     => $titre,
                     'contenu'   => $contenu,
@@ -2223,7 +2225,7 @@ private function logAction(string $action, string $description): void {
         $this->auth->requireRole('admin');
         require_once __DIR__ . '/../models/Article.php';
 
-        $articleModel = new Article();
+        $articleModel = new ArticleRepository();
         $article = $articleModel->getById($id);
         if (!$article) {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Article introuvable.'];
@@ -2250,7 +2252,7 @@ private function logAction(string $action, string $description): void {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Le titre et le contenu sont obligatoires.'];
         } else {
             try {
-                $articleModel = new Article();
+                $articleModel = new ArticleRepository();
                 // updateFull() persists categorie, status, tags — unlike basic update()
                 $result = $articleModel->updateFull(
                     $id,
@@ -2281,7 +2283,7 @@ private function logAction(string $action, string $description): void {
         require_once __DIR__ . '/../models/Article.php';
         
         try {
-            $articleModel = new Article();
+            $articleModel = new ArticleRepository();
             $result = $articleModel->delete($id);
             if($result) {
                 $this->logAction('Suppression article', "Article #$id supprimé");

@@ -6,16 +6,17 @@ require_once __DIR__ . '/AuthController.php';
 
 use App\Models\Medecin;
 use App\Models\User;
+use App\Repositories\UserRepository;
 
 class MedecinController {
 
     private Medecin     $medecinModel;
-    private User        $userModel;
+    private UserRepository $userRepo;
     private AuthController $auth;
 
     public function __construct() {
         $this->medecinModel = new Medecin();
-        $this->userModel    = new User();
+        $this->userRepo     = new UserRepository();
         $this->auth         = new AuthController();
     }
 
@@ -570,7 +571,7 @@ private function renderRendezVousDetailFallback(array $rdv): void {
             die('Accès interdit.');
         }
 
-        $patient  = $this->userModel->findById($patientId);
+        $patient  = $this->userRepo->findById($patientId);
         $history  = $this->medecinModel->getPatientHistory($medecinId, $patientId);
 
         require_once __DIR__ . '/../views/frontoffice/medecin_patient_detail.html';
@@ -583,7 +584,7 @@ private function renderRendezVousDetailFallback(array $rdv): void {
         $this->auth->requireRole('medecin');
 
         $userId  = $_SESSION['user_id'];
-        $user    = $this->userModel->findById($userId);
+        $user    = $this->userRepo->findById($userId);
         $medecin = $this->medecinModel->findByUserId($userId);
 
         require_once __DIR__ . '/../views/frontoffice/medecin_profil.html';
@@ -614,7 +615,7 @@ private function renderRendezVousDetailFallback(array $rdv): void {
             'bio'              => trim($_POST['bio']              ?? ''),
         ];
 
-        $this->userModel->update($userId, $userData);
+        $this->userRepo->update($userId, $userData);
         $this->medecinModel->update($userId, $medecinData);
 
         $_SESSION['user_nom']    = $userData['nom'];
