@@ -2052,4 +2052,4 @@ private function setFlash(string $type, string $message): void {
         }
         echo '</table>';
     }
-}
+}// update

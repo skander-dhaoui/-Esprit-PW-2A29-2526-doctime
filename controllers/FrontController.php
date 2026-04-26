@@ -2758,3 +2758,4 @@ private function getMedecinDisponibilitesHTML($dispos): string {
 
     
 } // FIN DE LA CLASSE FrontController
+// update

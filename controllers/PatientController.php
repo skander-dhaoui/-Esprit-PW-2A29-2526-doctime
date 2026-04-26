@@ -578,4 +578,4 @@ public function createAppointment(): void {
         echo json_encode(array_merge(['success' => $success, 'message' => $message], $data));
         exit;
     }
-}
+}// update
