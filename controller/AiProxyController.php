@@ -25,9 +25,9 @@ class AiProxyController {
     private int    $maxTokens = 1000;
 
     public function __construct() {
-        // Priorité à la variable d'environnement
-        $env = getenv('ANTHROPIC_API_KEY');
-        if ($env) {
+        // Priorité à la variable d'environnement (depuis .env chargé par helpers.php)
+        $env = $_ENV['ANTHROPIC_API_KEY'] ?? getenv('ANTHROPIC_API_KEY');
+        if ($env && $env !== 'sk-ant-api03-placeholder-replace-me') {
             $this->apiKey = $env;
         }
     }
