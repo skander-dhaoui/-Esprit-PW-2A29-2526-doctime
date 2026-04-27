@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login Afnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .test-section { border: 1px solid #ccc; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        input, button { padding: 10px; margin: 5px; }
+        button { cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <h1>Test de Login - afnengorai@gmail.com</h1>
+    
+    <div class="test-section">
+        <h2>Étape 1: Récupérer le captcha</h2>
+        <button onclick="fetchCaptcha()">Récupérer le captcha</button>
+        <p id="captchaResult"></p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 2: Login avec credentials corrects</h2>
+        <form id="loginForm" method="POST" action="index.php?page=login">
+            <input type="hidden" name="role" value="patient">
+            <div>
+                <label>Email:</label><br>
+                <input type="text" name="email" id="email" value="afnengorai@gmail.com" style="width: 300px;">
+            </div>
+            <div>
+                <label>Mot de passe:</label><br>
+                <input type="password" name="password" id="password" value="Afnen123" style="width: 300px;">
+            </div>
+            <div>
+                <label>Code captcha:</label><br>
+                <input type="text" name="captcha_response" id="captchaInput" style="width: 300px;">
+            </div>
+            <button type="submit">Se connecter</button>
+        </form>
+        <p id="loginResult"></p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 3: Test avec email invalide</h2>
+        <form method="POST" action="index.php?page=login">
+            <input type="hidden" name="role" value="patient">
+            <div>
+                <label>Email invalide:</label><br>
+                <input type="text" name="email" value="invalid-email" style="width: 300px;">
+            </div>
+            <div>
+                <label>Mot de passe:</label><br>
+                <input type="password" name="password" value="Test1234" style="width: 300px;">
+            </div>
+            <div>
+                <label>Code captcha:</label><br>
+                <input type="text" name="captcha_response" value="ABC123" style="width: 300px;">
+            </div>
+            <button type="submit">Tester email invalide</button>
+        </form>
+        <p>Vous devriez voir un message d'erreur "Adresse email invalide"</p>
+    </div>
+    
+    <script>
+        async function fetchCaptcha() {
+            try {
+                const response = await fetch('index.php?action=get_captcha', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.captcha) {
+                    document.getElementById('captchaResult').innerHTML = 
+                        '<span class="success">✅ Captcha reçu: ' + data.captcha + '</span>';
+                    document.getElementById('captchaInput').value = data.captcha;
+                } else if (data.error) {
+                    document.getElementById('captchaResult').innerHTML = 
+                        '<span class="error">❌ Erreur: ' + data.error + '</span>';
+                }
+            } catch (e) {
+                document.getElementById('captchaResult').innerHTML = 
+                    '<span class="error">❌ Erreur fetch: ' + e.message + '</span>';
+            }
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const captcha = document.getElementById('captchaInput').value;
+            if (!captcha) {
+                document.getElementById('loginResult').innerHTML = 
+                    '<span class="error">❌ Veuillez d\'abord récupérer le captcha!</span>';
+                e.preventDefault();
+                return false;
+            }
+            document.getElementById('loginResult').innerHTML = 
+                '<span class="success">✅ Envoi du formulaire...</span>';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login Simple</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        form { max-width: 400px; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; }
+        button { background: #4CAF50; color: white; cursor: pointer; border: none; }
+        .info { background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Test Login (Sans Captcha - Debug)</h2>
+    
+    <div class="info">
+        <p><strong>Compte test:</strong></p>
+        <p>Email: <code>test@test.fr</code></p>
+        <p>Mot de passe: <code>Test1234</code></p>
+    </div>
+
+    <h3>Test 1: Vérification du Captcha en Session</h3>
+    <button onclick="checkSession()">Vérifier la Session</button>
+    <div id="sessionResult"></div>
+
+    <h3>Test 2: Formulaire Login Normal (avec Captcha)</h3>
+    <form method="POST" action="index.php?page=login" id="normalForm">
+        <input type="email" name="email" value="test@test.fr" placeholder="Email">
+        <input type="password" name="password" value="Test1234" placeholder="Mot de passe">
+        <input type="text" name="captcha_response" id="captcha1" placeholder="Captcha (remplir avant submit)">
+        <button type="button" onclick="loadCaptcha('captcha1')">Charger Captcha</button>
+        <button type="submit">Se connecter</button>
+    </form>
+
+    <h3>Test 3: Login Direct sans Validation Frontend</h3>
+    <form method="POST" action="index.php?page=login" id="directForm">
+        <input type="email" name="email" value="test@test.fr" placeholder="Email">
+        <input type="password" name="password" value="Test1234" placeholder="Mot de passe">
+        <input type="text" name="captcha_response" id="captcha2" placeholder="Captcha">
+        <button type="button" onclick="loadAndSubmit('captcha2')">Charger Captcha et Se connecter</button>
+    </form>
+
+    <script>
+        function checkSession() {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    const div = document.getElementById('sessionResult');
+                    if (data.captcha) {
+                        div.innerHTML = '<div class="info">✓ Captcha en session: <code>' + data.captcha + '</code></div>';
+                    } else {
+                        div.innerHTML = '<div class="info">✗ Pas de captcha: ' + (data.error || 'Inconnu') + '</div>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('sessionResult').innerHTML = '<div class="info">✗ Erreur AJAX: ' + err + '</div>';
+                });
+        }
+
+        function loadCaptcha(inputId) {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.captcha) {
+                        document.getElementById(inputId).value = data.captcha;
+                        alert('Captcha chargé: ' + data.captcha);
+                    } else {
+                        alert('Erreur: ' + (data.error || 'Inconnu'));
+                    }
+                });
+        }
+
+        function loadAndSubmit(inputId) {
+            fetch('index.php?action=get_captcha', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.captcha) {
+                        document.getElementById(inputId).value = data.captcha;
+                        document.getElementById('directForm').submit();
+                    }
+                });
+        }
+
+        // Vérifier la session au chargement
+        checkSession();
+    </script>
+</body>
+</html>
