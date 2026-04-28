@@ -2029,7 +2029,16 @@ JS;
 
     private function getRendezVousHTML($rendezVous, $userRole, $title): string {
         $isMedecin = ($userRole === 'medecin');
-        $html = '
+        // Bouton "Prendre un RDV" toujours visible pour les patients
+        $html = '';
+        if (!$isMedecin) {
+            $html .= '<div style="display:flex;justify-content:flex-end;margin-bottom:15px;">
+                <a href="index.php?page=prendre_rendez_vous" class="btn btn-success">
+                    <i class="fas fa-calendar-plus me-2"></i>Prendre un nouveau rendez-vous
+                </a>
+            </div>';
+        }
+        $html .= '
         <style>
             .rdv-card { background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-left:4px solid #2A7FAA;position:relative; }
             .rdv-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid #eee; }
@@ -2134,7 +2143,7 @@ JS;
                 if ($isMedecin && $rdv['statut'] === 'confirmé') {
                     $html .= '<a href="index.php?page=terminer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-terminer" onclick="return confirm(\'Terminer ce rendez-vous ?\')"><i class="fas fa-check-double me-1"></i>Terminer</a>';
                 }
-                if (!$isMedecin && $rdv['statut'] === 'terminé') {
+                if (!$isMedecin && ($rdv['statut'] === 'terminé' || $rdv['statut'] === 'annulé')) {
                     $html .= '<a href="index.php?page=patient_disponibilites&medecin_id=' . $rdv['medecin_id'] . '" class="btn-action btn-nouveau-rdv"><i class="fas fa-calendar-plus me-1"></i>Nouveau rendez-vous</a>';
                 }
                 $html .= '</div></div>';

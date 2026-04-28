@@ -1698,6 +1698,10 @@ public function getByPatient(int $patientId, string $statut = null, string $date
             $this->ensureWaitlistTable();
             $conn = $this->db->getConnection();
 
+            // On récupère uniquement les entrées où le RDV converti
+            // appartient BIEN à ce patient (évite les fausses notifications
+            // si un ancien enregistrement 'converted' traîne après un
+            // nouveau cycle de réservation directe).
             $stmt = $conn->prepare("
                 SELECT wl.id,
                        wl.date_rendezvous,
@@ -1706,24 +1710,30 @@ public function getByPatient(int $patientId, string $statut = null, string $date
                        CONCAT(u.prenom, ' ', u.nom) AS medecin_nom
                 FROM rendez_vous_waitlist wl
                 LEFT JOIN users u ON u.id = wl.medecin_id
+                INNER JOIN rendez_vous rv ON rv.id = wl.converted_rdv_id
+                    AND rv.patient_id = :patient_id_join
                 WHERE wl.patient_id = :patient_id
                   AND wl.status = 'converted'
                   AND wl.notified_patient = 0
                 ORDER BY wl.converted_at DESC, wl.updated_at DESC
             ");
-            $stmt->execute([':patient_id' => $patientId]);
+            $stmt->execute([
+                ':patient_id'      => $patientId,
+                ':patient_id_join' => $patientId,
+            ]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            if (!empty($rows)) {
-                $mark = $conn->prepare("
-                    UPDATE rendez_vous_waitlist
-                    SET notified_patient = 1, updated_at = NOW()
-                    WHERE patient_id = :patient_id
-                      AND status = 'converted'
-                      AND notified_patient = 0
-                ");
-                $mark->execute([':patient_id' => $patientId]);
-            }
+            // Dans tous les cas, marquer TOUTES les entrées converted non notifiées
+            // de ce patient comme notifiées (y compris celles sans RDV valide),
+            // pour éviter qu'elles ne réapparaissent lors des prochains appels.
+            $mark = $conn->prepare("
+                UPDATE rendez_vous_waitlist
+                SET notified_patient = 1, updated_at = NOW()
+                WHERE patient_id = :patient_id
+                  AND status = 'converted'
+                  AND notified_patient = 0
+            ");
+            $mark->execute([':patient_id' => $patientId]);
 
             return $rows ?: [];
         } catch (Exception $e) {
