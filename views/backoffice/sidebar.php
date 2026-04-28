@@ -233,4 +233,4 @@ $current_page = $_GET['page'] ?? 'dashboard';
     background: #fdecea;
     color: #c62828;
 }
-</style>
+</style>// update

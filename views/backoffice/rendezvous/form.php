@@ -213,3 +213,4 @@ document.querySelectorAll('#patient_id, #medecin_id, #date_rendezvous, #heure_re
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+// update

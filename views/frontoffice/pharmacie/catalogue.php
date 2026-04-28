@@ -206,3 +206,4 @@ document.addEventListener('DOMContentLoaded', function(){
     if (cat) cat.addEventListener('change', fetchProducts);
 });
 </script>
+// update

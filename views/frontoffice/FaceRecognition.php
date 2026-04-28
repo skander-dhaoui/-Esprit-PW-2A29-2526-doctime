@@ -54,4 +54,4 @@ class FaceRecognition {
         $stmt->execute([':id' => $userId]);
         return $stmt->fetch() !== false;
     }
-}
+}// update

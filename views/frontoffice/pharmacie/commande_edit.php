@@ -132,3 +132,4 @@ document.getElementById('formEditFront').addEventListener('submit', function(e) 
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
+// update

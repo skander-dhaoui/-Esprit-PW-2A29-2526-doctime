@@ -236,4 +236,4 @@ function openEditModal(id, date, heure, motif, medecinId) {
 }
 </script>
 </body>
-</html>
+</html>// update

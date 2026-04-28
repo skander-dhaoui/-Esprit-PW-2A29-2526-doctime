@@ -76,4 +76,4 @@ $current_page = 'patients';
     </div>
 </div>
 </body>
-</html>
+</html>// update

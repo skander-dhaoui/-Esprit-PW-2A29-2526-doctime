@@ -442,4 +442,4 @@ $page_title = 'Gestion des médecins';
     });
 </script>
 </body>
-</html>
+</html>// update

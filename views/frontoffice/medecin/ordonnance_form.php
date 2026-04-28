@@ -95,4 +95,4 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
+</html>// update
