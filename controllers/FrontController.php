@@ -50,7 +50,56 @@ class FrontController {
     }
 
     public function accueilPublic(): void {
+        require_once __DIR__ . '/../models/Review.php';
+        
+        try {
+            $reviewModel = new Review();
+            $page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+            $perPage = 6;
+            $offset = ($page - 1) * $perPage;
+            
+            // Récupérer les données
+            $reviews = $reviewModel->getApproved($perPage, $offset);
+            $totalCount = $reviewModel->count(true);
+            $totalPages = ceil($totalCount / $perPage);
+            
+            // Enrichir avec emojis
+            foreach ($reviews as &$review) {
+                $review['emojis'] = $reviewModel->getEmojis($review['id']);
+            }
+            
+            $stats = $reviewModel->getStats();
+            
+            $reviewData = [
+                'reviews' => $reviews,
+                'stats' => $stats,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ]
+            ];
+        } catch (\Exception $e) {
+            // En cas d'erreur, utiliser des données vides
+            $reviewData = [
+                'reviews' => [],
+                'stats' => ['total' => 0, 'average_rating' => 0, 'by_sentiment' => []],
+                'pagination' => ['current_page' => 1, 'total_pages' => 1]
+            ];
+        }
+        
+        // Préparer le contenu avec la section d'avis
         $content = $this->getPublicDashboardHTML();
+        
+        // Inclure la section d'avis
+        ob_start();
+        $stats = $reviewData['stats'];
+        $reviews = $reviewData['reviews'];
+        $pagination = $reviewData['pagination'];
+        include __DIR__ . '/../views/frontoffice/reviews_section.php';
+        $reviewsContent = ob_get_clean();
+        
+        $content .= $reviewsContent;
+        
         $this->renderPublicView('Accueil', $content);
     }
 
