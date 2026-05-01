@@ -247,7 +247,7 @@
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
             <div class="d-flex gap-2 mt-3">
-                <button class="btn btn-success w-50" onclick="captureFace()">
+                <button class="btn btn-success w-50" id="captureFaceBtn" onclick="captureFace()">
                     <i class="fas fa-camera"></i> Capturer
                 </button>
                 <button class="btn btn-secondary w-50" onclick="closeCameraModal()">
@@ -426,23 +426,68 @@
         // ── CAMÉRA — RECONNAISSANCE FACIALE AVEC face-api.js ────────────────
         let stream = null;
         let faceModelsLoaded = false;
+        let faceModelsPromise = null;
+        const FACE_MODEL_URLS = [
+            'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights',
+            'https://justadudewhohacks.github.io/face-api.js/models'
+        ];
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function withTimeout(promise, timeoutMs, message) {
+            let timeoutId;
+            const timeout = new Promise((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+            });
+
+            return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+        }
 
         // Charger les modèles face-api.js une seule fois
-        async function loadFaceModels() {
+        async function loadFaceModels(onStatus = null) {
             if (faceModelsLoaded) return true;
-            try {
-                const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
-                faceModelsLoaded = true;
-                return true;
-            } catch (e) {
-                console.error('Erreur chargement modèles:', e);
+
+            if (typeof faceapi === 'undefined') {
+                console.error('face-api.js non charge');
                 return false;
             }
+
+            if (!faceModelsPromise) {
+                faceModelsPromise = (async () => {
+                    for (const modelUrl of FACE_MODEL_URLS) {
+                        try {
+                            if (typeof onStatus === 'function') {
+                                onStatus('Chargement de l IA...');
+                            }
+
+                            await withTimeout(Promise.all([
+                                faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
+                                faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUrl),
+                                faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl)
+                            ]), 15000, 'Chargement IA trop long');
+
+                            faceModelsLoaded = true;
+                            return true;
+                        } catch (e) {
+                            console.warn('Erreur chargement modeles depuis ' + modelUrl, e);
+                        }
+                    }
+
+                    return false;
+                })();
+            }
+
+            const loaded = await faceModelsPromise;
+            if (!loaded) faceModelsPromise = null;
+            return loaded;
         }
 
         function getFaceLoginContext() {
@@ -468,7 +513,7 @@
             document.getElementById('cameraModal').classList.add('open');
             const msgDiv = document.getElementById('cameraMessage');
             if (context.email) {
-                msgDiv.innerHTML = `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${context.email}</strong></span>`;
+                msgDiv.innerHTML = `<span class="text-muted" style="font-size:12px;"><i class="fas fa-link me-1"></i>Compte lié : <strong>${escapeHtml(context.email)}</strong></span>`;
             } else {
                 msgDiv.innerHTML = '';
             }
@@ -496,7 +541,9 @@
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                document.getElementById('video').srcObject = stream;
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                await video.play();
             } catch (err) {
                 document.getElementById('cameraMessage').innerHTML =
                     '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible d\'accéder à la caméra.</span>';
@@ -508,65 +555,100 @@
             const canvas  = document.getElementById('canvas');
             const ctx     = canvas.getContext('2d');
             const msgDiv  = document.getElementById('cameraMessage');
+            const btn     = document.getElementById('captureFaceBtn');
+
+            if (btn && btn.disabled) return;
+            if (btn) btn.disabled = true;
 
             const contextData = getFaceLoginContext();
             const savedEmail = contextData.email;
             const savedRole  = contextData.role;
-
-            canvas.width  = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Analyse du visage en cours...</span>';
-
-            // Étape 1 : charger les modèles
-            const modelsOk = await loadFaceModels();
-            if (!modelsOk) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur chargement modèles IA.</span>';
-                return;
-            }
-
-            // Étape 2 : détecter le visage sur la caméra
-            const detectionOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
-            const liveDetection = await faceapi
-                .detectSingleFace(video, detectionOptions)
-                .withFaceLandmarks(true)
-                .withFaceDescriptor();
-
-            if (!liveDetection) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage détecté.</span>';
-                return;
-            }
-
-            // Étape 3 : Envoyer le descripteur au serveur pour identification
-            msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Identification en cours...</span>';
-            
-            const imageData = canvas.toDataURL('image/jpeg');
-            const payload = new FormData();
-            payload.append('face_image', imageData);
-            payload.append('face_descriptor', JSON.stringify(Array.from(liveDetection.descriptor)));
-            
-            // On envoie l'email/role seulement s'ils sont déjà connus (facultatif maintenant)
-            if (savedEmail) payload.append('email', savedEmail);
-            if (savedRole)  payload.append('role', savedRole);
+            let canRetry = true;
 
             try {
-                const response = await fetch('index.php?page=face_login', {
-                    method: 'POST',
-                    body: payload
+                if (!stream || !video.videoWidth || !video.videoHeight) {
+                    msgDiv.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-circle me-1"></i>Attendez que la caméra soit prête, puis réessayez.</span>';
+                    return;
+                }
+
+                canvas.width  = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Chargement de l IA...</span>';
+
+                // Étape 1 : charger les modèles
+                const modelsOk = await loadFaceModels(status => {
+                    msgDiv.innerHTML = `<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>${escapeHtml(status)}</span>`;
                 });
+                if (!modelsOk) {
+                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible de charger l IA. Vérifiez votre connexion internet puis réessayez.</span>';
+                    return;
+                }
+
+                // Étape 2 : détecter le visage sur la caméra
+                msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Analyse du visage en cours...</span>';
+                const detectionOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+                const liveDetection = await withTimeout(
+                    faceapi
+                        .detectSingleFace(video, detectionOptions)
+                        .withFaceLandmarks(true)
+                        .withFaceDescriptor(),
+                    15000,
+                    'Analyse trop longue'
+                );
+
+                if (!liveDetection) {
+                    msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Aucun visage détecté. Placez-vous face à la lumière et réessayez.</span>';
+                    return;
+                }
+
+                // Étape 3 : Envoyer le descripteur au serveur pour identification
+                msgDiv.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Identification en cours...</span>';
+
+                const imageData = canvas.toDataURL('image/jpeg', 0.85);
+                const payload = new FormData();
+                payload.append('face_image', imageData);
+                payload.append('face_descriptor', JSON.stringify(Array.from(liveDetection.descriptor)));
+
+                // On envoie l'email/role seulement s'ils sont déjà connus (facultatif maintenant)
+                if (savedEmail) payload.append('email', savedEmail);
+                if (savedRole)  payload.append('role', savedRole);
+
+                const controller = new AbortController();
+                const fetchTimeout = setTimeout(() => controller.abort(), 15000);
+                let response;
+                try {
+                    response = await fetch('index.php?page=face_login', {
+                        method: 'POST',
+                        body: payload,
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(fetchTimeout);
+                }
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
                 const result = await response.json();
 
                 if (result.success) {
-                    msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>${result.message}</span>`;
+                    canRetry = false;
+                    msgDiv.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>${escapeHtml(result.message)}</span>`;
                     setTimeout(() => { closeCameraModal(); window.location.href = result.redirect; }, 1500);
                 } else {
-                    msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${result.message}</span>`;
+                    msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${escapeHtml(result.message || 'Visage non reconnu.')}</span>`;
                     setTimeout(() => closeCameraModal(), 2500);
                 }
             } catch (error) {
-                msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur de connexion.</span>';
-                setTimeout(() => closeCameraModal(), 2500);
+                const message = error.name === 'AbortError'
+                    ? 'La reconnaissance prend trop de temps. Réessayez.'
+                    : 'Erreur pendant la reconnaissance: ' + error.message;
+                msgDiv.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>${escapeHtml(message)}</span>`;
+            } finally {
+                if (canRetry && btn) btn.disabled = false;
             }
         }
 

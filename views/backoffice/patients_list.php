@@ -188,7 +188,7 @@ $current_page = 'patients';
 
         .filter-form {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto auto;
+            grid-template-columns: 2fr 1fr 1fr auto;
             gap: 12px;
             margin-bottom: 20px;
             align-items: end;
@@ -227,6 +227,7 @@ $current_page = 'patients';
             flex-wrap: wrap;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
 </head>
 <body>
 
@@ -273,7 +274,7 @@ $current_page = 'patients';
             </a>
         </div>
 
-        <form method="get" class="filter-form">
+        <form method="get" action="index.php" class="filter-form" data-dynamic-filter>
             <input type="hidden" name="page" value="patients">
             <div>
                 <label class="form-label" for="patients-q">Recherche</label>
@@ -297,7 +298,6 @@ $current_page = 'patients';
                     <option value="desc" <?= ($filters['direction'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Décroissant</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Appliquer</button>
             <a href="index.php?page=patients" class="btn btn-outline-secondary">Réinitialiser</a>
         </form>
 
@@ -312,6 +312,10 @@ $current_page = 'patients';
                 <tbody>
                 <?php if (!empty($patients)): ?>
                     <?php foreach ($patients as $p): ?>
+                    <?php
+                        $patientName = trim(($p['prenom'] ?? '') . ' ' . ($p['nom'] ?? ''));
+                        $patientLabel = $patientName !== '' ? $patientName : ($p['email'] ?? 'ce patient');
+                    ?>
                     <tr>
                         <td><strong><?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($p['email']) ?></td>
@@ -323,7 +327,17 @@ $current_page = 'patients';
                         <td><?= date('d/m/Y', strtotime($p['created_at'])) ?></td>
                         <td>
                             <a href="index.php?page=patients&action=edit&id=<?= $p['id'] ?>" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
-                            <a href="index.php?page=patients&action=delete&id=<?= $p['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')"><i class="fas fa-trash"></i></a>
+                            <a href="index.php?page=patients&action=delete&id=<?= $p['id'] ?>"
+                               class="btn btn-sm btn-danger"
+                               title="Supprimer"
+                               data-confirm-action
+                               data-confirm-title="Supprimer le patient"
+                               data-confirm-message="<?= htmlspecialchars('Supprimer définitivement le dossier de ' . $patientLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
+                               data-confirm-text="Supprimer"
+                               data-confirm-class="btn-danger"
+                               data-confirm-icon="fa-trash">
+                                <i class="fas fa-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -356,6 +370,8 @@ $current_page = 'patients';
     </div>
 </div>
 
+<?php include __DIR__ . '/components/dynamic_filter.php'; ?>
+<?php include __DIR__ . '/components/confirm_modal.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -70,13 +70,28 @@
                 </tbody>
             </table>
         </div>
+        
+        <?php
+            $page_param = 'p';
+            include __DIR__ . '/components/pagination.php';
+            unset($page_param);
+        ?>
     <?php endif; ?>
 </div>
 
 <script>
 function confirmDelete(url) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce médecin ?')) {
-        window.location.href = url;
+    if (window.ValorysConfirm) {
+        window.ValorysConfirm.open({
+            href: url,
+            title: 'Supprimer le médecin',
+            message: 'Supprimer définitivement ce médecin ?',
+            confirmText: 'Supprimer',
+            confirmClass: 'btn-danger',
+            icon: 'fa-trash'
+        });
+        return;
     }
+    window.location.href = url;
 }
 </script>

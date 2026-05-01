@@ -65,13 +65,28 @@
                 </tbody>
             </table>
         </div>
+        
+        <?php
+            $page_param = 'p';
+            include __DIR__ . '/components/pagination.php';
+            unset($page_param);
+        ?>
     <?php endif; ?>
 </div>
 
 <script>
 function confirmDelete(url) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-        window.location.href = url;
+    if (window.ValorysConfirm) {
+        window.ValorysConfirm.open({
+            href: url,
+            title: "Supprimer l'utilisateur",
+            message: 'Supprimer définitivement cet utilisateur ?',
+            confirmText: 'Supprimer',
+            confirmClass: 'btn-danger',
+            icon: 'fa-trash'
+        });
+        return;
     }
+    window.location.href = url;
 }
 </script>

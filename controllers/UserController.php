@@ -1,4 +1,21 @@
 <?php
+/**
+ * UserController.php
+ * 
+ * Contrôleur pour la gestion des utilisateurs
+ * Gère :
+ * - L'affichage du profil utilisateur connecté
+ * - La modification du profil (avec upload de photo)
+ * - Le changement de mot de passe avec validation forte
+ * - La gestion d'avatar (upload/suppression)
+ * - CRUD utilisateurs pour l'administration
+ * 
+ * Bugs corrigés :
+ * - BUG 1 : Balises <br> affichées en texte brut dans les erreurs
+ * - BUG 2 : Champs POST vides lors d'upload (enctype manquant)
+ * - BUG 3 : Photo non conservée entre soumissions invalides
+ * - BUG 4 : Session non mise à jour après modification
+ */
 if (class_exists('UserController')) return;
 
 require_once __DIR__ . '/../config/database.php';
@@ -11,60 +28,49 @@ use App\Models\Patient;
 use App\Models\Medecin;
 use App\Repositories\UserRepository;
 
-/**
- * UserController — CORRECTIONS APPLIQUÉES
- * ══════════════════════════════════════════════════════════════════
- *
- * BUG 1 — <br> s'affichent en texte brut dans la vue
- *   CAUSE  : implode('<br>', $errors) produit du HTML, mais la vue
- *            l'enveloppait dans htmlspecialchars() → les balises
- *            étaient échappées et affichées littéralement.
- *   FIX    : Les messages individuels sont échappés AVANT le join,
- *            et le résultat final (qui contient <br>) est affiché
- *            avec echo $error (sans double-échappement).
- *
- * BUG 2 — Champs POST vides lors d'un upload (faux "obligatoire")
- *   CAUSE  : Si enctype="multipart/form-data" est absent du <form>,
- *            PHP ne peuple pas $_POST du tout quand un fichier est joint.
- *            → nom, prenom, email semblaient vides → toutes les
- *            validations échouaient.
- *   FIX    : Vérification défensive ajoutée + commentaire dans la vue.
- *            La vraie correction est dans modifier_profil.php (le form).
- *
- * BUG 3 — Photo non conservée entre soumissions invalides
- *   CAUSE  : La photo était lue depuis la session APRÈS le bloc POST,
- *            donc après une erreur elle revenait à null.
- *   FIX    : On lit l'utilisateur (et sa photo) depuis la BDD AVANT
- *            tout traitement.
- *
- * BUG 4 — Session non mise à jour après modification
- *   CAUSE  : Seuls certains champs de session étaient mis à jour.
- *   FIX    : Mise à jour complète de $_SESSION après updateProfil().
- * ══════════════════════════════════════════════════════════════════
- */
+
 class UserController {
 
-    private UserRepository $userRepo;
-    private Patient        $patientModel;
-    private Medecin        $medecinModel;
-    private AuthController $auth;
+    // Propriétés pour accéder aux modèles et repositories
+    private UserRepository $userRepo;       // Repository pour les opérations utilisateurs
+    private Patient        $patientModel;   // Modèle pour les patients
+    private Medecin        $medecinModel;   // Modèle pour les médecins
+    private AuthController $auth;           // Contrôleur d'authentification
 
-    // Constantes upload
+    // ──── Constantes pour l'upload de fichiers ────
+    // Répertoire de destination des uploads
     private const UPLOAD_DIR    = __DIR__ . '/../uploads/photos/';
+    // URL relative pour accéder aux fichiers
     private const UPLOAD_URL    = 'uploads/photos/';
+    // Types MIME autorisés pour les images
     private const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    // Taille maximale d'une image : 2 Mo
     private const MAX_SIZE      = 2 * 1024 * 1024; // 2 Mo
 
+    /**
+     * Constructeur du contrôleur UserController
+     * Initialise tous les modèles et repositories nécessaires
+     */
     public function __construct() {
+        // Initialiser le repository utilisateurs
         $this->userRepo     = new UserRepository();
+        // Initialiser le modèle patient
         $this->patientModel = new Patient();
+        // Initialiser le modèle médecin
         $this->medecinModel = new Medecin();
+        // Initialiser le contrôleur d'authentification
         $this->auth         = new AuthController();
     }
 
-    // ─────────────────────────────────────────
-    //  Profil utilisateur connecté
-    // ─────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    //  PROFIL UTILISATEUR CONNECTÉ - Affichage et gestion
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Afficher le profil de l'utilisateur connecté
+     * Récupère les infos utilisateur, les extras selon le rôle
+     * et affiche les statistiques pertinentes (rendez-vous, etc.)
+     */
     public function showProfil(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -153,9 +159,10 @@ class UserController {
         }
     }
 
-    // ─────────────────────────────────────────
-    //  Formulaire modification profil
-    // ─────────────────────────────────────────
+    /**
+     * Afficher le formulaire de modification du profil
+     * Récupère les infos de l'utilisateur et l'affiche pour édition
+     */
     public function editProfilForm(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -190,9 +197,11 @@ class UserController {
         }
     }
 
-    // ─────────────────────────────────────────
-    //  Mise à jour du profil (avec photo)
-    // ─────────────────────────────────────────
+    /**
+     * Mettre à jour le profil utilisateur connecté
+     * Valide et enregistre les données du profil, gère l'upload de photo
+     * Gère les cas d'erreur (enctype manquant, fichier invalide, etc.)
+     */
     public function updateProfil(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -412,9 +421,14 @@ class UserController {
         exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Changement de mot de passe
-    // ─────────────────────────────────────────
+    /**
+     * Changer le mot de passe de l'utilisateur connecté
+     * Valide le mot de passe actuel et applique une politique forte :
+     * - Minimum 8 caractères
+     * - Au moins une majuscule
+     * - Au moins un chiffre
+     * - Confirmation du mot de passe
+     */
     public function changePassword(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -478,9 +492,10 @@ class UserController {
         exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Avatar (routes dédiées)
-    // ─────────────────────────────────────────
+    /**
+     * Mettre à jour la photo de profil (avatar) d'un utilisateur
+     * Gère l'upload d'un fichier image et remplace l'ancien avatar
+     */
     public function updateAvatar(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -508,6 +523,10 @@ class UserController {
         exit;
     }
 
+    /**
+     * Supprimer la photo de profil (avatar) d'un utilisateur
+     * Supprime le fichier et met à jour la BD pour supprimer la référence
+     */
     public function deleteAvatar(): void {
         if (empty($_SESSION['user_id'])) {
             header('Location: index.php?page=login');
@@ -524,9 +543,14 @@ class UserController {
         exit;
     }
 
-    // ─────────────────────────────────────────
-    //  CRUD utilisateurs (backoffice admin)
-    // ─────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    //  CRUD UTILISATEURS - Gestion administrative
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Afficher la liste de tous les utilisateurs
+     * Accessible uniquement par les administrateurs
+     */
     public function index(): void {
         $this->auth->requireRole('admin');
         $users    = $this->getAllUsers();
@@ -534,6 +558,10 @@ class UserController {
         file_exists($viewPath) ? require_once $viewPath : $this->renderTable($users);
     }
 
+    /**
+     * Afficher le formulaire de création d'un utilisateur
+     * Accessible uniquement par les administrateurs
+     */
     public function create(): void {
         $this->auth->requireRole('admin');
         $old   = $_SESSION['old']             ?? null;
@@ -547,6 +575,10 @@ class UserController {
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
 
+    /**
+     * Créer un nouvel utilisateur via le formulaire d'administration
+     * Valide les données, vérifie l'email unique, crée l'utilisateur et les extras
+     */
     public function store(): void {
         $this->auth->requireRole('admin');
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -581,6 +613,11 @@ class UserController {
         exit;
     }
 
+    /**
+     * Afficher le formulaire d'édition d'un utilisateur
+     * Récupère les infos complètes de l'utilisateur pour modification
+     * @param int $id L'ID de l'utilisateur à modifier
+     */
     public function edit(int $id): void {
         $this->auth->requireRole('admin');
         $user = $this->findUserById($id);
@@ -598,6 +635,11 @@ class UserController {
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
 
+    /**
+     * Mettre à jour un utilisateur existant via l'administration
+     * Valide les données, met à jour l'utilisateur et les extras
+     * @param int $id L'ID de l'utilisateur à mettre à jour
+     */
     public function update(int $id): void {
         $this->auth->requireRole('admin');
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -638,6 +680,11 @@ class UserController {
         exit;
     }
 
+    /**
+     * Supprimer un utilisateur
+     * Empêche un admin de supprimer son propre compte
+     * @param int $id L'ID de l'utilisateur à supprimer
+     */
     public function delete(int $id): void {
         $this->auth->requireRole('admin');
 
@@ -653,6 +700,10 @@ class UserController {
         exit;
     }
 
+    /**
+     * Basculer l'état d'activité d'un utilisateur (actif/inactif)
+     * @param int $id L'ID de l'utilisateur
+     */
     public function toggleStatus(int $id): void {
         $this->auth->requireRole('admin');
         $user = $this->findUserById($id);

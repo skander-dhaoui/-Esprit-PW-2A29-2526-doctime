@@ -28,6 +28,7 @@
         .flash-messages { margin-bottom: 20px; }
         .alert { border-radius: 6px; padding: 12px 16px; }
     </style>
+    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
 </head>
 <body>
     <div class="admin-wrapper">
@@ -84,6 +85,7 @@
         </div>
     </div>
 
+    <?php include __DIR__ . '/components/confirm_modal.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

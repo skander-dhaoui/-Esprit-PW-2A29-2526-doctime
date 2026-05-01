@@ -268,7 +268,7 @@
 
         .filter-form {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto auto;
+            grid-template-columns: 2fr 1fr 1fr auto;
             gap: 12px;
             margin-bottom: 20px;
             align-items: end;
@@ -307,6 +307,7 @@
             flex-wrap: wrap;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
 </head>
 <body>
 
@@ -387,7 +388,7 @@
             </a>
         </div>
 
-        <form method="get" class="filter-form">
+        <form method="get" action="index.php" class="filter-form" data-dynamic-filter>
             <input type="hidden" name="page" value="medecins_admin">
             <div>
                 <label class="form-label" for="medecins-q">Recherche</label>
@@ -412,7 +413,6 @@
                     <option value="desc" <?= ($filters['direction'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Décroissant</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Appliquer</button>
             <a href="index.php?page=medecins_admin" class="btn btn-outline-secondary">Réinitialiser</a>
         </form>
 
@@ -433,6 +433,10 @@
                 <tbody>
                 <?php if (!empty($medecins)): ?>
                     <?php foreach ($medecins as $m): ?>
+                    <?php
+                        $medecinName = trim(($m['prenom'] ?? '') . ' ' . ($m['nom'] ?? ''));
+                        $medecinLabel = $medecinName !== '' ? 'Dr. ' . $medecinName : ($m['email'] ?? 'ce médecin');
+                    ?>
                     <tr>
                         <td><strong>Dr. <?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($m['email']) ?></td>
@@ -463,7 +467,15 @@
                                 <a href="index.php?page=medecins_admin&action=edit&id=<?= $m['id'] ?>" class="btn-action btn-edit" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['id'] ?>" class="btn-action btn-delete" title="Supprimer" onclick="return confirm('Supprimer définitivement ce médecin ?')">
+                                <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['id'] ?>"
+                                   class="btn-action btn-delete"
+                                   title="Supprimer"
+                                   data-confirm-action
+                                   data-confirm-title="Supprimer le médecin"
+                                   data-confirm-message="<?= htmlspecialchars('Supprimer définitivement le compte de ' . $medecinLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
+                                   data-confirm-text="Supprimer"
+                                   data-confirm-class="btn-danger"
+                                   data-confirm-icon="fa-trash">
                                     <i class="fas fa-trash"></i>
                                 </a>
                             </div>
@@ -504,6 +516,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/components/dynamic_filter.php'; ?>
+<?php include __DIR__ . '/components/confirm_modal.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -207,7 +207,7 @@
 
         .filter-form {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto auto;
+            grid-template-columns: 2fr 1fr 1fr auto;
             gap: 12px;
             margin-bottom: 20px;
             align-items: end;
@@ -246,6 +246,7 @@
             flex-wrap: wrap;
         }
     </style>
+    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
 </head>
 <body>
 
@@ -326,7 +327,7 @@
             </a>
         </div>
 
-        <form method="get" class="filter-form">
+        <form method="get" action="index.php" class="filter-form" data-dynamic-filter>
             <input type="hidden" name="page" value="users">
             <div>
                 <label class="form-label" for="users-q">Recherche</label>
@@ -349,7 +350,6 @@
                     <option value="desc" <?= ($filters['direction'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Décroissant</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Appliquer</button>
             <a href="index.php?page=users" class="btn btn-outline-secondary">Réinitialiser</a>
         </form>
 
@@ -369,6 +369,13 @@
                 <tbody>
                 <?php if (!empty($users)): ?>
                     <?php foreach ($users as $u): ?>
+                        <?php
+                            $userName = trim(($u['prenom'] ?? '') . ' ' . ($u['nom'] ?? ''));
+                            $userLabel = $userName !== '' ? $userName : ($u['email'] ?? 'cet utilisateur');
+                            $toggleText = $u['statut'] === 'actif' ? 'Désactiver' : 'Activer';
+                            $toggleClass = $u['statut'] === 'actif' ? 'btn-warning' : 'btn-success';
+                            $toggleIcon = $u['statut'] === 'actif' ? 'fa-user-slash' : 'fa-user-check';
+                        ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($u['prenom'] . ' ' . $u['nom']) ?></strong></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
@@ -394,11 +401,27 @@
                                 <a href="index.php?page=users&action=edit&id=<?= $u['id'] ?>" class="btn btn-sm btn-primary" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="index.php?page=users&action=toggle&id=<?= $u['id'] ?>" class="btn btn-sm <?= $u['statut'] === 'actif' ? 'btn-warning' : 'btn-success' ?>" title="<?= $u['statut'] === 'actif' ? 'Désactiver' : 'Activer' ?>" onclick="return confirm('Modifier le statut ?')">
+                                <a href="index.php?page=users&action=toggle&id=<?= $u['id'] ?>"
+                                   class="btn btn-sm <?= $toggleClass ?>"
+                                   title="<?= $toggleText ?>"
+                                   data-confirm-action
+                                   data-confirm-title="Modifier le statut"
+                                   data-confirm-message="<?= htmlspecialchars($toggleText . ' le compte de ' . $userLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
+                                   data-confirm-text="<?= $toggleText ?>"
+                                   data-confirm-class="<?= $toggleClass ?>"
+                                   data-confirm-icon="<?= $toggleIcon ?>">
                                     <i class="fas <?= $u['statut'] === 'actif' ? 'fa-ban' : 'fa-check' ?>"></i>
                                 </a>
                                 <?php if ($u['id'] != $_SESSION['user_id']): ?>
-                                <a href="index.php?page=users&action=delete&id=<?= $u['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer définitivement cet utilisateur ?')">
+                                <a href="index.php?page=users&action=delete&id=<?= $u['id'] ?>"
+                                   class="btn btn-sm btn-danger"
+                                   title="Supprimer"
+                                   data-confirm-action
+                                   data-confirm-title="Supprimer l'utilisateur"
+                                   data-confirm-message="<?= htmlspecialchars('Supprimer définitivement le compte de ' . $userLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
+                                   data-confirm-text="Supprimer"
+                                   data-confirm-class="btn-danger"
+                                   data-confirm-icon="fa-trash">
                                     <i class="fas fa-trash"></i>
                                 </a>
                                 <?php endif; ?>
@@ -439,6 +462,8 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/components/dynamic_filter.php'; ?>
+<?php include __DIR__ . '/components/confirm_modal.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
