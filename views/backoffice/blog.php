@@ -92,6 +92,7 @@
         <a href="index.php?page=users"><i class="fas fa-users"></i><span>Utilisateurs</span></a>
         <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i><span>Médecins</span></a>
         <a href="index.php?page=patients"><i class="fas fa-user-injured"></i><span>Patients</span></a>
+        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i><span>Avis</span></a>
         <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i><span>Rendez-vous</span></a>
         <a href="index.php?page=blog" class="active"><i class="fas fa-blog"></i><span>Blog / Forum</span></a>
         <a href="index.php?page=stats"><i class="fas fa-chart-line"></i><span>Statistiques</span></a>

@@ -52,6 +52,9 @@
                 <a href="index.php?page=patients" class="<?= ($currentPage ?? '') === 'patients' ? 'active' : '' ?>">
                     <i class="fas fa-user-injured"></i> Patients
                 </a>
+                <a href="index.php?page=avis_admin" class="<?= ($currentPage ?? '') === 'avis_admin' ? 'active' : '' ?>">
+                    <i class="fas fa-star"></i> Avis
+                </a>
                 <a href="index.php?page=articles_admin" class="<?= ($currentPage ?? '') === 'articles_admin' ? 'active' : '' ?>">
                     <i class="fas fa-newspaper"></i> Articles
                 </a>

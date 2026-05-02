@@ -664,6 +664,12 @@ switch ($page) {
         }
         break;
 
+    // ─── Avis (Front-office) ──────────────────────────────────────────────
+    case 'avis':
+        requireLogin();
+        require __DIR__ . '/views/frontoffice/avis_list.php';
+        break;
+
     // ══════════════════════════════════════════════════════════════════════
     // BACKOFFICE ADMIN
     // ══════════════════════════════════════════════════════════════════════
@@ -703,6 +709,11 @@ switch ($page) {
         } else {
             $adminCtrl->listPatients();
         }
+        break;
+
+    case 'avis_admin':
+        adminOnly();
+        require __DIR__ . '/views/backoffice/avis_admin.php';
         break;
 
     case 'medecins_admin':
@@ -820,6 +831,11 @@ switch ($page) {
         } else {
             $sponsorCtrl->index();
         }
+        break;
+
+    case 'avis_admin':
+        adminOnly();
+        require __DIR__ . '/views/backoffice/avis_admin.php';
         break;
 
     case 'produits_admin':

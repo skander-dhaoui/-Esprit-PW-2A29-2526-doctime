@@ -403,6 +403,9 @@
                         <a class="nav-link" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link active" href="index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
                     </li>
                     <li class="nav-item">

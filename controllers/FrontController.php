@@ -753,6 +753,7 @@ class FrontController {
                             <a class="nav-link <?= $activePage == 'dashboard'      ? 'active' : '' ?>" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                             <a class="nav-link <?= $activePage == 'users'          ? 'active' : '' ?>" href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
                             <a class="nav-link <?= $activePage == 'patients'       ? 'active' : '' ?>" href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
+                            <a class="nav-link <?= $activePage == 'avis'           ? 'active' : '' ?>" href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
                             <a class="nav-link <?= $activePage == 'medecins'       ? 'active' : '' ?>" href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
                             <a class="nav-link <?= $activePage == 'disponibilites' ? 'active' : '' ?>" href="index.php?page=disponibilites_admin"><i class="fas fa-clock"></i> Disponibilités</a>
                             <a class="nav-link <?= $activePage == 'rendezvous'     ? 'active' : '' ?>" href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>

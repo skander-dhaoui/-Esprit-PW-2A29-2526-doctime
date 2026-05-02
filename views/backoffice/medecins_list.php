@@ -331,6 +331,7 @@
         <a href="index.php?page=patients">
             <i class="fas fa-user-injured"></i> Patients
         </a>
+        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
         <a href="index.php?page=rendez_vous_admin">
             <i class="fas fa-calendar-check"></i> Rendez-vous
         </a>

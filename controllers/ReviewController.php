@@ -57,6 +57,12 @@ class ReviewController {
 
         $data = json_decode(file_get_contents('php://input'), true);
 
+        if (!is_array($data)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Données invalides']);
+            exit;
+        }
+
         // Validation
         $errors = $this->validateReviewData($data);
         if (!empty($errors)) {

@@ -38,6 +38,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                 <li class="nav-item"><a class="nav-link active" href="index.php?page=prendre_rendezvous">Prendre RDV</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
             </ul>

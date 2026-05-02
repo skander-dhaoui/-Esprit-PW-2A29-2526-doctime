@@ -85,6 +85,7 @@ $formAction = $isEdit
         <div class="sidebar-nav-divider"></div>
         <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
         <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
+        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
         <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
         <div class="sidebar-nav-divider"></div>
         <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>

@@ -51,6 +51,7 @@ $current_page = 'medecins_admin';
         <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
         <a href="index.php?page=medecins_admin" class="active"><i class="fas fa-user-md"></i> Médecins</a>
         <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
+        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
         <div class="nav-divider"></div>
         <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
     </nav>

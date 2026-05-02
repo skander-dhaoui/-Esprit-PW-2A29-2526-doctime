@@ -9,6 +9,13 @@ class Review {
     }
 
     /**
+     * Récupère la connexion PDO
+     */
+    public function getConnection() {
+        return $this->db;
+    }
+
+    /**
      * Crée un nouvel avis
      */
     public function create(array $data): array {

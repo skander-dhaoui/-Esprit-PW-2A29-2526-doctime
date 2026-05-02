@@ -21,6 +21,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=patients" class="<?= $current_page === 'patients' ? 'active' : '' ?>">
             <i class="fas fa-user-injured"></i> Patients
         </a>
+        <a href="index.php?page=avis_admin" class="<?= $current_page === 'avis_admin' ? 'active' : '' ?>">
+            <i class="fas fa-star"></i> Avis
+        </a>
         <a href="index.php?page=rendez_vous_admin" class="<?= $current_page === 'rendez_vous_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-check"></i> Rendez-vous
         </a>
@@ -42,7 +45,7 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=participations" class="<?= $current_page === 'participations' ? 'active' : '' ?>">
             <i class="fas fa-handshake"></i> Participations
         </a>
-<a href="index.php?page=sponsors_admin" class="<?= $current_page === 'sponsors_admin' ? 'active' : '' ?>">
+        <a href="index.php?page=sponsors_admin" class="<?= $current_page === 'sponsors_admin' ? 'active' : '' ?>">
             <i class="fas fa-hand-holding-usd"></i> Sponsors
         </a>
         <div class="nav-divider"></div>

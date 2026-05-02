@@ -31,6 +31,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
                 <li class="nav-item"><a class="nav-link active" href="index.php?page=mes_rendez_vous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=disponibilites">Disponibilités</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=ordonnances">Ordonnances</a></li>
                 <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
