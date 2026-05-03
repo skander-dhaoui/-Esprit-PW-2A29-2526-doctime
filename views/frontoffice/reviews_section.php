@@ -769,8 +769,25 @@ if (form) {
             if (data.success) {
                 errorDiv.style.display = 'none';
                 const isUpdate = btn.getAttribute('data-edit-id');
-                const message = isUpdate ? 'Avis mis à jour avec succès! ✏️' : 'Avis publié avec succès! 🎉';
-                alert(message);
+                const message = isUpdate ? 'Votre avis a été mis à jour avec succès.' : 'Votre avis a été publié avec succès.';
+                
+                // Affichage d'une modale de succès stylisée
+                const successDiv = document.createElement('div');
+                successDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px 40px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center; z-index: 10000; animation: slideInUp 0.3s ease; min-width: 320px;';
+                successDiv.innerHTML = `
+                    <i class="fas fa-check-circle" style="font-size: 50px; color: #4CAF50; margin-bottom: 15px; display: block; animation: scaleIn 0.5s ease;"></i>
+                    <h4 style="color: #333; margin-bottom: 10px; font-weight: 600;">Super !</h4>
+                    <p style="color: #666; margin: 0; font-size: 15px;">${message}</p>
+                `;
+                document.body.appendChild(successDiv);
+                
+                // Ajouter l'animation keyframes si elle n'existe pas
+                if (!document.getElementById('scaleInKeyframes')) {
+                    const style = document.createElement('style');
+                    style.id = 'scaleInKeyframes';
+                    style.innerHTML = '@keyframes scaleIn { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }';
+                    document.head.appendChild(style);
+                }
                 
                 // Reset form
                 form.reset();
@@ -787,12 +804,32 @@ if (form) {
                 
                 setTimeout(() => location.reload(), 1500);
             } else {
-                errorDiv.innerHTML = `<strong>❌ Erreur:</strong> ${data.message || 'Veuillez vérifier votre avis'}`;
-                if (data.errors) {
-                    errorDiv.innerHTML += '<br>' + Object.values(data.errors).join('<br>');
+                if (data.message && data.message.includes('⛔')) {
+                    // Affichage personnalisé pour le blocage d'insultes
+                    errorDiv.className = 'alert mt-3';
+                    errorDiv.style.cssText = 'background: #fff8f8; border: 1px solid #f5c6cb; border-left: 5px solid #dc3545; border-radius: 8px; padding: 15px; display: block; box-shadow: 0 4px 12px rgba(220,53,69,0.1);';
+                    errorDiv.innerHTML = `
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-hand-paper" style="font-size: 32px; color: #dc3545;"></i>
+                            <div>
+                                <h6 style="margin: 0 0 5px 0; color: #dc3545; font-weight: 700; text-transform: uppercase; font-size: 14px;">Modération Automatique</h6>
+                                <p style="margin: 0; color: #333; font-size: 14px;">Votre avis n'a pas pu être publié car notre système a détecté un <strong>langage inapproprié</strong> ou offensant.</p>
+                                <p style="margin: 3px 0 0 0; color: #666; font-size: 12px;"><i>Veuillez modifier votre texte pour rester courtois et respectueux.</i></p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Affichage générique pour les autres erreurs
+                    errorDiv.className = 'alert alert-danger mt-3';
+                    errorDiv.style.cssText = 'display: block;';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> <strong>Attention :</strong> ${data.message || 'Veuillez vérifier votre avis'}`;
+                    if (data.errors) {
+                        errorDiv.innerHTML += '<hr class="my-2"><ul class="mb-0" style="font-size:13px; padding-left:20px;">' + 
+                            Object.values(data.errors).map(err => `<li>${err}</li>`).join('') + 
+                            '</ul>';
+                    }
                 }
-                errorDiv.style.display = 'block';
-                window.scrollTo(0, form.offsetTop - 100);
+                window.scrollTo({ top: form.offsetTop - 100, behavior: 'smooth' });
             }
         } catch (error) {
             const errorDiv = document.getElementById('formErrors');

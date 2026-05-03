@@ -426,6 +426,13 @@ try {
         }
     }
 
+    if ($hasProfanity) {
+        http_response_code(400);
+        $response['message'] = '⛔ Votre avis contient un langage inapproprié et ne peut pas être publié.';
+        $response['errors']['content'] = 'Langage offensant non autorisé.';
+        exit(json_encode($response));
+    }
+
     $sentimentAnalysis = Review::analyzeSentimentText($content, $rating);
     $sentiment = $sentimentAnalysis['label'];
     $sentimentScore = $sentimentAnalysis['score'];
@@ -439,8 +446,8 @@ try {
         'content' => $content,
         'sentiment' => $sentiment,
         'sentiment_score' => $sentimentScore,
-        'has_profanity' => $hasProfanity ? 1 : 0,
-        'is_approved' => $hasProfanity ? 0 : 1  // Auto-modération
+        'has_profanity' => 0,
+        'is_approved' => 1
     ];
 
     $result = $reviewModel->create($reviewData);
@@ -461,17 +468,11 @@ try {
     }
 
     // ============= RÉPONSE SUCCÈS =============
-    http_response_code($hasProfanity ? 202 : 201);
+    http_response_code(201);
     $response['success'] = true;
     $response['review_id'] = $result['review_id'];
-    
-    if ($hasProfanity) {
-        $response['message'] = '⏳ Avis créé! En attente de modération...';
-        $response['requires_moderation'] = true;
-    } else {
-        $response['message'] = '✅ Avis publié avec succès!';
-        $response['requires_moderation'] = false;
-    }
+    $response['message'] = '✅ Avis publié avec succès!';
+    $response['requires_moderation'] = false;
 
     exit(json_encode($response));
 
