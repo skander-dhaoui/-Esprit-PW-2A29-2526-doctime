@@ -91,9 +91,9 @@ class EvenementRepository {
         try {
             $stmt = $this->getPdo()->prepare("
                 INSERT INTO evenement
-                    (titre, description, specialite, lieu, date_debut, date_fin, capacite, prix, statut)
+                    (titre, description, specialite, lieu, date_debut, date_fin, capacite, prix, image, statut)
                 VALUES
-                    (:titre, :description, :specialite, :lieu, :date_debut, :date_fin, :capacite, :prix, :statut)
+                    (:titre, :description, :specialite, :lieu, :date_debut, :date_fin, :capacite, :prix, :image, :statut)
             ");
             $stmt->execute([
                 ':titre'       => $evenement->getTitre(),
@@ -104,6 +104,7 @@ class EvenementRepository {
                 ':date_fin'    => $evenement->getDateFin(),
                 ':capacite'    => $evenement->getCapacite(),
                 ':prix'        => $evenement->getPrix(),
+                ':image'       => $evenement->getImage(),
                 ':statut'      => $evenement->getStatut(),
             ]);
 
@@ -139,6 +140,7 @@ class EvenementRepository {
                     date_fin    = :date_fin,
                     capacite    = :capacite,
                     prix        = :prix,
+                    image       = :image,
                     statut      = :statut
                 WHERE id = :id
             ");
@@ -152,6 +154,7 @@ class EvenementRepository {
                 ':date_fin'    => $evenement->getDateFin(),
                 ':capacite'    => $evenement->getCapacite(),
                 ':prix'        => $evenement->getPrix(),
+                ':image'       => $evenement->getImage(),
                 ':statut'      => $evenement->getStatut(),
             ]);
 

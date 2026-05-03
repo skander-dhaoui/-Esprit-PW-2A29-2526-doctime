@@ -34,7 +34,7 @@ $minDateEvenement = date('Y-m-d');
     </div>
     <div class="card-body">
         <form action="index.php?controller=evenement&action=store" method="POST"
-              id="form-evenement" novalidate>
+              id="form-evenement" novalidate enctype="multipart/form-data">
             <div class="row g-3">
 
                 <div class="col-12">
@@ -131,6 +131,14 @@ $minDateEvenement = date('Y-m-d');
                     <?php if (isset($errors['prix'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['prix']) ?></div>
                     <?php endif; ?>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="image">Image</label>
+                    <input type="file" id="image" name="image"
+                           class="form-control"
+                           accept="image/jpeg,image/png,image/gif,image/webp">
+                    <div class="form-text">Formats acceptés: JPEG, PNG, GIF, WebP. Max 2Mo.</div>
                 </div>
 
                 <div class="col-md-4">

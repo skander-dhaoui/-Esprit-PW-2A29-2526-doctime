@@ -70,7 +70,6 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
                         <th>Nom</th>
                         <th>Prénom</th>
                         <th>Email</th>
@@ -87,7 +86,6 @@
                 foreach ($participants as $i => $p):
                 ?>
                     <tr>
-                        <td class="text-muted"><?= $i+1 ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars($p['nom']) ?></td>
                         <td><?= htmlspecialchars($p['prenom']) ?></td>
                         <td><?= htmlspecialchars($p['email']) ?></td>

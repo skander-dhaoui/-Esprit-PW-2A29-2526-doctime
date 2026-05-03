@@ -15,6 +15,7 @@ class Evenement {
     private string $dateFin;
     private int $capacite;
     private float $prix;
+    private ?string $image;
     private string $statut;
     private string $createdAt;
     private array $sponsors;
@@ -32,6 +33,7 @@ class Evenement {
         string $dateFin = '',
         int $capacite = 0,
         float $prix = 0.0,
+        ?string $image = null,
         string $statut = 'planifie',
         string $createdAt = '',
         array $sponsors = []
@@ -45,6 +47,7 @@ class Evenement {
         $this->dateFin = $dateFin;
         $this->capacite = $capacite;
         $this->prix = $prix;
+        $this->image = $image;
         $this->statut = $statut;
         $this->createdAt = $createdAt ?: date('Y-m-d H:i:s');
         $this->sponsors = $sponsors;
@@ -95,6 +98,10 @@ class Evenement {
 
     public function getPrix(): float {
         return $this->prix;
+    }
+
+    public function getImage(): ?string {
+        return $this->image;
     }
 
     public function getStatut(): string {
@@ -158,6 +165,11 @@ class Evenement {
         return $this;
     }
 
+    public function setImage(?string $image): self {
+        $this->image = $image;
+        return $this;
+    }
+
     public function setStatut(string $statut): self {
         $statuts = ['planifie', 'en_cours', 'termine', 'annule'];
         $this->statut = in_array($statut, $statuts) ? $statut : 'planifie';
@@ -196,6 +208,7 @@ class Evenement {
             'date_fin'     => $this->dateFin,
             'capacite'     => $this->capacite,
             'prix'         => $this->prix,
+            'image'        => $this->image,
             'statut'       => $this->statut,
             'created_at'   => $this->createdAt,
             'sponsors'     => $this->sponsors,
@@ -216,6 +229,7 @@ class Evenement {
             $data['date_fin'] ?? '',
             (int)($data['capacite'] ?? 0),
             (float)($data['prix'] ?? 0),
+            $data['image'] ?? null,
             $data['statut'] ?? 'planifie',
             $data['created_at'] ?? '',
             $data['sponsors'] ?? []

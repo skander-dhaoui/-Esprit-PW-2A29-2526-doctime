@@ -100,9 +100,6 @@ class ParticipationRepository {
         return $this->hydrateAll($rows);
     }
 
-    /**
-     * Vérifie si un email est déjà inscrit à un événement (hors $excludeId)
-     */
     public function isAlreadyRegistered(string $email, int $evenementId, int $excludeId = 0): bool {
         $stmt = $this->getPdo()->prepare("
             SELECT COUNT(*) FROM participation
@@ -112,6 +109,22 @@ class ParticipationRepository {
             ':email' => $email,
             ':eid'   => $evenementId,
             ':id'    => $excludeId,
+        ]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Vérifie si un téléphone est déjà inscrit à un événement (hors $excludeId)
+     */
+    public function isPhoneAlreadyRegistered(string $telephone, int $evenementId, int $excludeId = 0): bool {
+        $stmt = $this->getPdo()->prepare("
+            SELECT COUNT(*) FROM participation
+            WHERE telephone = :telephone AND evenement_id = :eid AND id != :id
+        ");
+        $stmt->execute([
+            ':telephone' => $telephone,
+            ':eid'       => $evenementId,
+            ':id'        => $excludeId,
         ]);
         return $stmt->fetchColumn() > 0;
     }

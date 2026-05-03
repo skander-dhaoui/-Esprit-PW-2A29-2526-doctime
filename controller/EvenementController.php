@@ -46,6 +46,8 @@ class EvenementController {
     }
 
     public function store(): void {
+        $imagePath = $this->handleImageUpload('image');
+        
         $data = [
             'titre'       => $_POST['titre']       ?? '',
             'description' => $_POST['description'] ?? '',
@@ -55,6 +57,7 @@ class EvenementController {
             'date_fin'    => $_POST['date_fin']    ?? '',
             'capacite'    => $_POST['capacite']    ?? '',
             'prix'        => $_POST['prix']        ?? '0',
+            'image'       => $imagePath,
             'statut'      => $_POST['statut']      ?? '',
             'sponsors'    => $_POST['sponsor_ids'] ?? [],
         ];
@@ -97,6 +100,11 @@ class EvenementController {
         $evenement = $this->evenementRepo->findById($id);
         if (!$evenement) { $this->notFound(); return; }
 
+        $imagePath = $this->handleImageUpload('image');
+        if ($imagePath === null && !empty($_POST['existing_image'])) {
+            $imagePath = $_POST['existing_image'];
+        }
+
         $data = [
             'titre'       => $_POST['titre']       ?? '',
             'description' => $_POST['description'] ?? '',
@@ -106,6 +114,7 @@ class EvenementController {
             'date_fin'    => $_POST['date_fin']    ?? '',
             'capacite'    => $_POST['capacite']    ?? '',
             'prix'        => $_POST['prix']        ?? '0',
+            'image'       => $imagePath,
             'statut'      => $_POST['statut']      ?? '',
             'sponsors'    => $_POST['sponsor_ids'] ?? [],
         ];
@@ -130,6 +139,7 @@ class EvenementController {
                   ->setDateFin($data['date_fin'])
                   ->setCapacite((int)$data['capacite'])
                   ->setPrix((float)$data['prix'])
+                  ->setImage($data['image'])
                   ->setStatut($data['statut'])
                   ->setSponsors($data['sponsors']);
         $this->evenementRepo->update($evenement);
@@ -212,5 +222,43 @@ class EvenementController {
     private function notFound(): void {
         http_response_code(404);
         echo "<h1>404 – Événement introuvable</h1>";
+    }
+
+    /**
+     * Gère l'upload d'une image et retourne le chemin
+     */
+    private function handleImageUpload(string $fieldName): ?string {
+        if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        $file = $_FILES[$fieldName];
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+
+        if (!in_array($mimeType, $allowedTypes)) {
+            return null;
+        }
+
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $uploadDir = __DIR__ . '/../public/uploads/evenements/';
+        
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $newFilename = uniqid('evt_') . '.' . strtolower($extension);
+        $destination = $uploadDir . $newFilename;
+
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            return 'uploads/evenements/' . $newFilename;
+        }
+
+        return null;
     }
 }

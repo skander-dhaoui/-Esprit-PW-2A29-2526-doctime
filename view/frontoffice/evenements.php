@@ -93,7 +93,13 @@
                       style="font-size:.7rem;">
                     <?= $statutLabel ?>
                 </span>
-                <div class="card-body d-flex flex-column pt-4">
+                <?php if (!empty($e['image'])): ?>
+                    <img src="<?= ltrim(htmlspecialchars($e['image']), '/') ?>" 
+                         class="card-img-top" 
+                         alt="<?= htmlspecialchars($e['titre']) ?>"
+                         style="height:180px;object-fit:cover;">
+                <?php endif; ?>
+                <div class="card-body d-flex flex-column <?= empty($e['image']) ? 'pt-4' : '' ?>">
                     <div class="mb-2 d-flex flex-wrap gap-1">
                         <span class="badge badge-specialite">
                             <?= htmlspecialchars($e['specialite']) ?>

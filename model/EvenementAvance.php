@@ -335,7 +335,7 @@ class EvenementAvance {
 
     private function fetchAlertesSaturation(): array {
         return $this->getPdo()->query("
-            SELECT e.id, e.titre, e.date_debut, e.capacite,
+            SELECT e.id, e.titre, e.image, e.date_debut, e.capacite,
                    COUNT(p.id) AS nb_inscrits,
                    ROUND(COUNT(p.id) / e.capacite * 100, 1) AS taux
             FROM evenement e
@@ -349,7 +349,7 @@ class EvenementAvance {
 
     private function fetchTopEvenements(): array {
         return $this->getPdo()->query("
-            SELECT e.id, e.titre, e.specialite, e.statut,
+            SELECT e.id, e.titre, e.image, e.specialite, e.statut,
                    COUNT(p.id) AS nb_inscrits, e.capacite,
                    ROUND(COUNT(p.id) / e.capacite * 100, 1) AS taux
             FROM evenement e
@@ -384,7 +384,7 @@ class EvenementAvance {
 
     private function fetchProchains30j(): array {
         return $this->getPdo()->query("
-            SELECT e.id, e.titre, e.date_debut, e.lieu, e.statut,
+            SELECT e.id, e.titre, e.image, e.date_debut, e.lieu, e.statut,
                    COUNT(p.id) AS nb_inscrits, e.capacite
             FROM evenement e
             LEFT JOIN participation p ON p.evenement_id = e.id AND p.statut != 'annule'

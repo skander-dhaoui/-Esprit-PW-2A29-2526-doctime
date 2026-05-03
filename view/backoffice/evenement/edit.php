@@ -31,7 +31,7 @@
     </div>
     <div class="card-body">
         <form action="index.php?controller=evenement&action=update" method="POST"
-              id="form-evenement" novalidate>
+              id="form-evenement" novalidate enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?= (int)($old['id'] ?? 0) ?>">
 
             <div class="row g-3">
@@ -120,6 +120,23 @@
                            data-validate="numeric" data-label="Prix">
                     <?php if (isset($errors['prix'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['prix']) ?></div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label" for="image">Image</label>
+                    <input type="file" id="image" name="image"
+                           class="form-control"
+                           accept="image/jpeg,image/png,image/gif,image/webp">
+                    <input type="hidden" name="existing_image" value="<?= htmlspecialchars($old['image'] ?? '') ?>">
+                    <?php if (!empty($old['image'])): ?>
+                        <div class="mt-2">
+                            <img src="<?= htmlspecialchars($old['image']) ?>" 
+                                 alt="Image actuelle" 
+                                 class="rounded"
+                                 style="width:100px;height:100px;object-fit:cover;">
+                            <span class="text-muted small ms-2">Image actuelle</span>
+                        </div>
                     <?php endif; ?>
                 </div>
 

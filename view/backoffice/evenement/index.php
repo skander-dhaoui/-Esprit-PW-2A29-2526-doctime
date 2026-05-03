@@ -32,7 +32,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th>Image</th>
                         <th>Titre</th>
                         <th>Spécialité</th>
                         <th>Lieu</th>
@@ -60,7 +60,19 @@
                     ];
                     ?>
                     <tr>
-                        <td class="text-muted small"><?= $e['id'] ?></td>
+                        <td>
+                            <?php if (!empty($e['image'])): ?>
+                                <img src="<?= ltrim(htmlspecialchars($e['image']), '/') ?>" 
+                                     alt="Image" 
+                                     class="rounded"
+                                     style="width:50px;height:50px;object-fit:cover;">
+                            <?php else: ?>
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                     style="width:50px;height:50px;">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                            <?php endif; ?>
+                        </td>
                         <td class="fw-semibold" style="max-width:200px">
                             <?= htmlspecialchars($e['titre']) ?>
                         </td>

@@ -68,7 +68,12 @@ $prochains = $data['prochains_30j'];
                     $cls  = $taux >= 80 ? 'danger' : ($taux >= 50 ? 'warning' : 'success');
                 ?>
                     <tr>
-                        <td class="fw-semibold"><?= htmlspecialchars($p['titre']) ?></td>
+                        <td class="fw-semibold">
+                            <?php if (!empty($p['image'])): ?>
+                                <img src="<?= ltrim(htmlspecialchars($p['image']), '/') ?>" alt="" class="rounded me-2" style="width:30px;height:30px;object-fit:cover;">
+                            <?php endif; ?>
+                            <?= htmlspecialchars($p['titre']) ?>
+                        </td>
                         <td><?= date('d/m/Y', strtotime($p['date_debut'])) ?></td>
                         <td class="text-muted"><?= htmlspecialchars($p['lieu']) ?></td>
                         <td><?= $p['nb_inscrits'] ?> / <?= $p['capacite'] ?></td>
@@ -117,6 +122,9 @@ $prochains = $data['prochains_30j'];
                         ?>
                             <tr>
                                 <td class="fw-semibold" style="max-width:140px">
+                                    <?php if (!empty($t['image'])): ?>
+                                        <img src="<?= ltrim(htmlspecialchars($t['image']), '/') ?>" alt="" class="rounded me-2" style="width:30px;height:30px;object-fit:cover;">
+                                    <?php endif; ?>
                                     <?= htmlspecialchars($t['titre']) ?>
                                 </td>
                                 <td><span class="badge text-bg-light border text-dark"><?= htmlspecialchars($t['specialite']) ?></span></td>

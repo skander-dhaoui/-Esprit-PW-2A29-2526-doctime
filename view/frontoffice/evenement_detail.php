@@ -14,6 +14,12 @@
         <!-- Détail principal -->
         <div class="col-lg-8">
             <div class="card p-4">
+                <?php if (!empty($evenement['image'])): ?>
+                    <img src="<?= ltrim(htmlspecialchars($evenement['image']), '/') ?>" 
+                         class="card-img-top mb-3 rounded"
+                         alt="<?= htmlspecialchars($evenement['titre']) ?>"
+                         style="max-height:300px;object-fit:cover;">
+                <?php endif; ?>
                 <span class="badge badge-specialite mb-3 d-inline-block">
                     <?= htmlspecialchars($evenement['specialite']) ?>
                 </span>

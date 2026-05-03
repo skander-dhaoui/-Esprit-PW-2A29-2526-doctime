@@ -178,6 +178,9 @@
                 ?>
                     <tr>
                         <td class="fw-semibold" style="max-width:180px">
+                            <?php if (!empty($e['image'])): ?>
+                                <img src="<?= ltrim(htmlspecialchars($e['image']), '/') ?>" alt="" class="rounded me-2" style="width:30px;height:30px;object-fit:cover;">
+                            <?php endif; ?>
                             <?= htmlspecialchars($e['titre']) ?>
                         </td>
                         <td><span class="badge text-bg-light border text-dark"><?= htmlspecialchars($e['specialite']) ?></span></td>

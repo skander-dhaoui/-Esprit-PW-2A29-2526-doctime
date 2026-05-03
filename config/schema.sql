@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS evenement (
     date_fin        DATE            NOT NULL,
     capacite        INT UNSIGNED    NOT NULL,
     prix            DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+    image           VARCHAR(255)    DEFAULT NULL,
     statut          ENUM('planifie','en_cours','termine','annule') NOT NULL DEFAULT 'planifie',
     created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

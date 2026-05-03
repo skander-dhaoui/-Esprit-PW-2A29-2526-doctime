@@ -23,7 +23,6 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Participant</th>
                         <th>Email</th>
                         <th>Téléphone</th>
@@ -41,14 +40,18 @@
                     $labelMap = ['en_attente'=>'En attente','confirme'=>'Confirmé','annule'=>'Annulé'];
                     ?>
                     <tr>
-                        <td class="text-muted small"><?= $p['id'] ?></td>
                         <td class="fw-semibold">
                             <?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?>
                         </td>
                         <td><?= htmlspecialchars($p['email']) ?></td>
                         <td><?= htmlspecialchars($p['telephone']) ?></td>
                         <td><?= htmlspecialchars($p['profession']) ?></td>
-                        <td class="small"><?= htmlspecialchars($p['evenement_titre']) ?></td>
+                        <td class="small fw-semibold">
+                            <?php if (!empty($p['evenement_image'])): ?>
+                                <img src="<?= ltrim(htmlspecialchars($p['evenement_image']), '/') ?>" alt="" class="rounded me-2" style="width:30px;height:30px;object-fit:cover;">
+                            <?php endif; ?>
+                            <?= htmlspecialchars($p['evenement_titre']) ?>
+                        </td>
                         <td>
                             <span class="badge text-bg-<?= $badgeMap[$p['statut']] ?? 'secondary' ?>">
                                 <?= $labelMap[$p['statut']] ?? $p['statut'] ?>

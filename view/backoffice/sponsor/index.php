@@ -23,7 +23,6 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Nom</th>
                         <th>Email</th>
                         <th>Téléphone</th>
@@ -36,7 +35,6 @@
                 <tbody>
                 <?php foreach ($sponsors as $s): ?>
                     <tr>
-                        <td class="text-muted small"><?= $s['id'] ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars($s['nom']) ?></td>
                         <td><?= htmlspecialchars($s['email']) ?></td>
                         <td><?= htmlspecialchars($s['telephone']) ?></td>

@@ -23,13 +23,16 @@ class ParticipationController {
         
         $evenements = $this->evenementRepo->findAll();
         $titres = [];
+        $images = [];
         foreach ($evenements as $e) {
             $titres[$e->getId()] = $e->getTitre();
+            $images[$e->getId()] = $e->getImage();
         }
 
-        $participations = array_map(function($p) use ($titres) {
+        $participations = array_map(function($p) use ($titres, $images) {
             $arr = $p->toArray();
             $arr['evenement_titre'] = $titres[$p->getEvenementId()] ?? 'Événement #' . $p->getEvenementId();
+            $arr['evenement_image'] = $images[$p->getEvenementId()] ?? '';
             return $arr;
         }, $participations);
 
@@ -70,6 +73,9 @@ class ParticipationController {
         if (empty($errors)) {
             if ($this->participationRepo->isAlreadyRegistered($data['email'], (int)$data['evenement_id'])) {
                 $errors['email'] = "Cette adresse e-mail est déjà inscrite à cet événement.";
+            }
+            if ($this->participationRepo->isPhoneAlreadyRegistered($data['telephone'], (int)$data['evenement_id'])) {
+                $errors['telephone'] = "Ce numéro de téléphone est déjà utilisé pour cet événement.";
             }
         }
 
@@ -121,6 +127,9 @@ class ParticipationController {
         if (empty($errors)) {
             if ($this->participationRepo->isAlreadyRegistered($data['email'], (int)$data['evenement_id'], $id)) {
                 $errors['email'] = "Cette adresse e-mail est déjà inscrite à cet événement.";
+            }
+            if ($this->participationRepo->isPhoneAlreadyRegistered($data['telephone'], (int)$data['evenement_id'], $id)) {
+                $errors['telephone'] = "Ce numéro de téléphone est déjà utilisé pour cet événement.";
             }
         }
 
@@ -247,6 +256,12 @@ class ParticipationController {
 
         $errors = $this->validateParticipation($data);
 
+        if (empty($errors)) {
+            if ($this->participationRepo->isPhoneAlreadyRegistered($data['telephone'], $data['evenement_id'], $id)) {
+                $errors['telephone'] = "Ce numéro de téléphone est déjà utilisé pour cet événement.";
+            }
+        }
+
         if (!empty($errors)) {
             $evenements = $this->evenementRepo->findAll();
             $evenements = array_map(fn($e) => $e->toArray(), $evenements);
@@ -284,6 +299,8 @@ class ParticipationController {
         $evenementId = (int)($_GET['evenement_id'] ?? 0);
         $evenement   = $this->evenementRepo->findById($evenementId);
         if (!$evenement) { $this->notFound(); return; }
+        
+        $evenement = $evenement->toArray();
 
         $errors = [];
         $old    = ['evenement_id' => $evenementId];
@@ -294,6 +311,8 @@ class ParticipationController {
         $evenementId = (int)($_POST['evenement_id'] ?? 0);
         $evenement   = $this->evenementRepo->findById($evenementId);
         if (!$evenement) { $this->notFound(); return; }
+
+        $evenement = $evenement->toArray();
 
         $data = [
             'nom'          => $_POST['nom']        ?? '',
@@ -317,6 +336,9 @@ class ParticipationController {
         if (empty($errors)) {
             if ($this->participationRepo->isAlreadyRegistered($data['email'], $evenementId)) {
                 $errors['email'] = "Vous êtes déjà inscrit(e) à cet événement avec cette adresse e-mail.";
+            }
+            if ($this->participationRepo->isPhoneAlreadyRegistered($data['telephone'], $evenementId)) {
+                $errors['telephone'] = "Ce numéro de téléphone est déjà utilisé pour cet événement.";
             }
         }
 
