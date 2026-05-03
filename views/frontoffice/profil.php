@@ -383,6 +383,43 @@
             max-width: 100%;
             height: auto;
         }
+
+        /* Drag & Drop Avatar */
+        .avatar-drop-zone {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(42,127,170,0.8);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+            z-index: 5;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .profile-avatar-wrapper.drag-over .avatar-drop-zone,
+        body.dragging-global .profile-avatar-wrapper .avatar-drop-zone { opacity: 1; }
+        .profile-avatar-wrapper.drag-over { transform: scale(1.05); }
+
+        /* Password strength bar in profil */
+        .strength-bar { height: 5px; border-radius: 10px; background: #e9ecef; overflow: hidden; margin-top: 8px; }
+        .strength-fill { height: 100%; border-radius: 10px; transition: all 0.4s ease; width: 0%; }
+        .strength-fill.weak   { width: 33%; background: #dc3545; }
+        .strength-fill.medium { width: 66%; background: #f6c23e; }
+        .strength-fill.strong { width: 100%; background: #1cc88a; }
+        .strength-label-profil { font-size: 11px; font-weight: 600; margin-top: 3px; }
+        .strength-label-profil.weak   { color: #dc3545; }
+        .strength-label-profil.medium { color: #f6c23e; }
+        .strength-label-profil.strong { color: #1cc88a; }
+        .btn-gen-pwd { font-size: 11px; padding: 3px 9px; border-radius: 8px; border: 1px solid #4CAF50; color: #4CAF50; background: transparent; cursor: pointer; transition: all 0.2s; }
+        .btn-gen-pwd:hover { background: #4CAF50; color: white; }
+        .pwd-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     </style>
 </head>
 <body>
@@ -419,7 +456,7 @@
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="container text-center">
-            <div class="profile-avatar-wrapper">
+            <div class="profile-avatar-wrapper" id="avatarDropWrapper">
                 <?php
                     $prenom = $user['prenom'] ?? $_SESSION['user_name'] ?? '';
                     $nom    = $user['nom']    ?? '';
@@ -434,7 +471,12 @@
                         <span style="font-size: 52px;"><?= $initiales ?: '👤' ?></span>
                     <?php endif; ?>
                 </div>
-                <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()">
+                <!-- Zone drag & drop -->
+                <div class="avatar-drop-zone" onclick="document.getElementById('avatarInput').click()">
+                    <i class="fas fa-cloud-upload-alt" style="font-size:20px;"></i>
+                    <span>Déposer</span>
+                </div>
+                <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()" title="Changer la photo">
                     <i class="fas fa-camera"></i>
                 </div>
                 <form id="avatarForm" method="POST" action="index.php?page=profil" enctype="multipart/form-data">
@@ -570,9 +612,21 @@
                         <div class="error-container" id="currentPassword-error"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Entrez votre nouveau mot de passe">
-                        <div class="password-requirements">
+                        <div class="pwd-label-row">
+                            <label class="form-label mb-0">Nouveau mot de passe <span class="text-danger">*</span></label>
+                            <button type="button" class="btn-gen-pwd" onclick="generatePwdProfil()">
+                                <i class="fas fa-magic me-1"></i>Générer
+                            </button>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Entrez votre nouveau mot de passe" oninput="updateStrengthProfil()">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePwdVisibility('newPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="strength-bar"><div class="strength-fill" id="profilStrengthFill"></div></div>
+                        <div class="strength-label-profil" id="profilStrengthLabel"></div>
+                        <div class="password-requirements mt-1">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle"></i> 8 caractères</span>
                             <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle"></i> 1 majuscule</span>
                             <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle"></i> 1 chiffre</span>
@@ -581,7 +635,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Confirmer le mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Confirmez votre nouveau mot de passe">
+                        <div class="input-group">
+                            <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Confirmez votre nouveau mot de passe">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePwdVisibility('confirmPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                         <div class="error-container" id="confirmPassword-error"></div>
                     </div>
                     <div class="d-flex gap-3 mt-3">
@@ -801,6 +860,106 @@
             document.getElementById('currentPassword').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
+        }
+
+        // ═══ Drag & Drop Avatar ═══
+        const dropWrapper = document.getElementById('avatarDropWrapper');
+        if (dropWrapper) {
+            // Highlight on drag over anywhere on page
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                document.body.classList.add('dragging-global');
+            });
+            document.addEventListener('dragleave', (e) => {
+                if (e.relatedTarget === null) document.body.classList.remove('dragging-global');
+            });
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                document.body.classList.remove('dragging-global');
+            });
+
+            dropWrapper.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropWrapper.classList.add('drag-over');
+            });
+            dropWrapper.addEventListener('dragleave', () => {
+                dropWrapper.classList.remove('drag-over');
+            });
+            dropWrapper.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropWrapper.classList.remove('drag-over');
+                document.body.classList.remove('dragging-global');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('avatarInput').files = dt.files;
+                    uploadAvatarOnly();
+                }
+            });
+        }
+
+        // ═══ Password Strength on Profil Page ═══
+        function calcProfilScore(p) {
+            let s = 0;
+            if (p.length >= 8) s++;
+            if (p.length >= 12) s++;
+            if (/[A-Z]/.test(p)) s++;
+            if (/[0-9]/.test(p)) s++;
+            if (/[^A-Za-z0-9]/.test(p)) s++;
+            return s;
+        }
+        function updateStrengthProfil() {
+            const p = document.getElementById('newPassword').value;
+            const fill = document.getElementById('profilStrengthFill');
+            const lbl  = document.getElementById('profilStrengthLabel');
+            if (!fill || !lbl) return;
+            // requirements
+            const map = {
+                reqLength: p.length >= 8,
+                reqUpper:  /[A-Z]/.test(p),
+                reqNumber: /[0-9]/.test(p)
+            };
+            Object.entries(map).forEach(([id, ok]) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = ok ? 'requirement-valid' : 'requirement-invalid';
+                    el.querySelector('i').className = ok ? 'fas fa-check-circle' : 'fas fa-circle';
+                }
+            });
+            // strength bar
+            const score = calcProfilScore(p);
+            fill.className = 'strength-fill';
+            lbl.className  = 'strength-label-profil';
+            if (p.length === 0) { fill.style.width = '0'; lbl.textContent = ''; return; }
+            if (score <= 2) { fill.classList.add('weak');   lbl.classList.add('weak');   lbl.textContent = '🔴 Faible'; }
+            else if (score <= 3) { fill.classList.add('medium'); lbl.classList.add('medium'); lbl.textContent = '🟡 Moyen'; }
+            else { fill.classList.add('strong'); lbl.classList.add('strong'); lbl.textContent = '🟢 Fort'; }
+        }
+
+        function generatePwdProfil() {
+            const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ', lower = 'abcdefghjkmnpqrstuvwxyz', digits = '23456789', special = '@#$!%*?&';
+            let pwd = upper[Math.floor(Math.random()*upper.length)] + lower[Math.floor(Math.random()*lower.length)] + digits[Math.floor(Math.random()*digits.length)] + special[Math.floor(Math.random()*special.length)];
+            const all = upper+lower+digits+special;
+            for(let i=4;i<12;i++) pwd += all[Math.floor(Math.random()*all.length)];
+            pwd = pwd.split('').sort(()=>Math.random()-0.5).join('');
+            document.getElementById('newPassword').value = pwd;
+            document.getElementById('confirmPassword').value = pwd;
+            document.getElementById('newPassword').type = 'text';
+            updateStrengthProfil();
+            navigator.clipboard.writeText(pwd).catch(()=>{});
+            const btn = document.querySelector('.btn-gen-pwd');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copié !';
+            btn.style.cssText = 'background:#4CAF50;color:white;';
+            setTimeout(()=>{ btn.innerHTML=orig; btn.style.cssText=''; }, 2000);
+        }
+
+        function togglePwdVisibility(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+            else { inp.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
         }
 
         document.addEventListener('DOMContentLoaded', () => {

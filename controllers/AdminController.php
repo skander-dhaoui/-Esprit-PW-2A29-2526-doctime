@@ -124,20 +124,61 @@ class AdminController {
      * - Rendez-vous par mois
      */
     public function stats(): void {
-        // Vérifier que l'utilisateur est admin
         $this->auth->requireRole('admin');
 
-        // Récupérer toutes les statistiques avancées
         $statsData = [
-            'inscriptions_par_mois' => $this->getMonthlyRegistrations(),  // Inscriptions mensuelles
-            'repartition_roles'     => $this->getRepartitionByRole(),    // Répartition par rôle
-            'top_specialites'       => $this->getTopSpecialities(),       // Top spécialités
-            'rdv_par_mois'          => $this->getMonthlyAppointments(),   // Rendez-vous mensuels
+            'inscriptions_par_mois' => $this->getMonthlyRegistrations(),
+            'repartition_roles'     => $this->getRepartitionByRole(),
+            'top_specialites'       => $this->getTopSpecialities(),
+            'rdv_par_mois'          => $this->getMonthlyAppointments(),
+            'total_users'           => $this->getTotalCount('users'),
+            'total_rdv'             => $this->getTotalCount('rendez_vous'),
+            'total_articles'        => $this->getTotalCount('articles'),
+            'total_avis'            => $this->getTotalCount('avis')
         ];
 
-        // Afficher la vue des statistiques avancées
-        $viewPath = __DIR__ . '/../views/backoffice/stats.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        $this->renderAdminPage(
+            'Statistiques Globales',
+            __DIR__ . '/../views/backoffice/stats.php',
+            'stats',
+            ['statsData' => $statsData]
+        );
+    }
+
+    private function getMonthlyRegistrations(): array {
+        $db = $this->db();
+        $stmt = $db->query("SELECT MONTH(created_at) as mois, COUNT(*) as count FROM users WHERE YEAR(created_at) = YEAR(CURRENT_DATE()) GROUP BY MONTH(created_at) ORDER BY mois ASC");
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $months = array_fill(1, 12, 0);
+        foreach ($results as $row) {
+            $months[(int)$row['mois']] = (int)$row['count'];
+        }
+        return array_values($months);
+    }
+
+    private function getRepartitionByRole(): array {
+        $db = $this->db();
+        $stmt = $db->query("SELECT role, COUNT(*) as count FROM users GROUP BY role");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+
+    private function getTotalCount(string $table): int {
+        $db = $this->db();
+        try {
+            if ($table === 'rendez_vous') {
+                try {
+                    $stmt = $db->query("SELECT COUNT(*) FROM rendez_vous");
+                    return (int)$stmt->fetchColumn();
+                } catch (\PDOException $e) {
+                    $table = 'rendezvous';
+                }
+            }
+            $stmt = $db->query("SELECT COUNT(*) FROM " . preg_replace('/[^a-zA-Z0-9_]/', '', $table));
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            return 0;
+        }
     }
 
     // ─────────────────────────────────────────
@@ -3214,6 +3255,118 @@ private function logAction(string $action, string $description): void {
              ORDER BY mois ASC"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    // ─────────────────────────────────────────
+    //  HISTORIQUE DE CONNEXION
+    // ─────────────────────────────────────────
+
+    /**
+     * Affiche l'historique des connexions (succès et échecs)
+     */
+    public function loginHistory(): void {
+        // Vérifier que l'utilisateur est admin
+        $this->auth->requireRole('admin');
+
+        // Gérer la pagination
+        $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
+
+        // Requête pour l'historique
+        $db = Database::getInstance()->getConnection();
+        
+        // Count total
+        $countStmt = $db->query("SELECT COUNT(*) as total FROM login_history");
+        $totalItems = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $totalPages = ceil($totalItems / $limit);
+
+        // Fetch logs
+        $stmt = $db->prepare(
+            "SELECT lh.*, u.nom, u.prenom 
+             FROM login_history lh 
+             LEFT JOIN users u ON lh.user_id = u.id 
+             ORDER BY lh.created_at DESC 
+             LIMIT :limit OFFSET :offset"
+        );
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Vue
+        $this->renderAdminPage(
+            'Historique des connexions',
+            __DIR__ . '/../views/backoffice/login_history.php',
+            'login_history',
+            [
+                'history' => $history,
+                'page' => $page,
+                'totalPages' => $totalPages
+            ]
+        );
+    }
+    // ─────────────────────────────────────────
+    //  HISTORIQUE DES ACTIONS (LOGS)
+    // ─────────────────────────────────────────
+    public function logs(): void {
+        $this->auth->requireRole('admin');
+
+        $page = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
+
+        $db = Database::getInstance()->getConnection();
+        
+        $countStmt = $db->query("SELECT COUNT(*) as total FROM logs");
+        $totalItems = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $totalPages = ceil($totalItems / $limit);
+
+        $stmt = $db->prepare(
+            "SELECT l.*, u.nom, u.prenom, u.email 
+             FROM logs l 
+             LEFT JOIN users u ON l.user_id = u.id 
+             ORDER BY l.created_at DESC 
+             LIMIT :limit OFFSET :offset"
+        );
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $viewPath = __DIR__ . '/../views/backoffice/logs.php';
+        
+        $this->renderAdminPage(
+            'Historique des actions',
+            $viewPath,
+            'logs',
+            [
+                'logs' => $logs,
+                'page' => $page,
+                'totalPages' => $totalPages
+            ]
+        );
+    }
+
+    public function exportLogs(): void {
+        $this->auth->requireRole('admin');
+        // Implémentation basique de l'export
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="logs_export.csv"');
+        
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("SELECT l.*, u.nom, u.prenom FROM logs l LEFT JOIN users u ON l.user_id = u.id ORDER BY l.created_at DESC");
+        
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['ID', 'Date', 'Utilisateur', 'Action', 'Description', 'IP']);
+        
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $user = $row['nom'] ? $row['prenom'] . ' ' . $row['nom'] : 'Système';
+            fputcsv($output, [$row['id'], $row['created_at'], $user, $row['action'], $row['description'], $row['ip_address']]);
+        }
+        fclose($output);
+        exit;
     }
 }
 ?>

@@ -56,7 +56,10 @@ $current_page = $_GET['page'] ?? 'dashboard';
             <i class="fas fa-chart-bar"></i> Événements Avancé
         </a>
         <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
-            <i class="fas fa-history"></i> Historique
+            <i class="fas fa-history"></i> Historique Actions
+        </a>
+        <a href="index.php?page=login_history" class="<?= $current_page === 'login_history' ? 'active' : '' ?>">
+            <i class="fas fa-sign-in-alt"></i> Historique Connexions
         </a>
         <a href="index.php?page=settings" class="<?= $current_page === 'settings' ? 'active' : '' ?>">
             <i class="fas fa-cog"></i> Paramètres

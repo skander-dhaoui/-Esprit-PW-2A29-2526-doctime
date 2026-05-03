@@ -47,6 +47,23 @@
         .requirement-valid { color: #4CAF50; }
         .requirement-invalid { color: #dc3545; }
 
+        /* Password strength bar */
+        .strength-bar-container { margin-top: 8px; }
+        .strength-bar { height: 6px; border-radius: 10px; background: #e9ecef; overflow: hidden; transition: all 0.3s; }
+        .strength-fill { height: 100%; border-radius: 10px; transition: all 0.4s ease; width: 0%; }
+        .strength-fill.weak   { width: 33%; background: #dc3545; }
+        .strength-fill.medium { width: 66%; background: #f6c23e; }
+        .strength-fill.strong { width: 100%; background: #1cc88a; }
+        .strength-label { font-size: 11px; font-weight: 600; margin-top: 3px; }
+        .strength-label.weak   { color: #dc3545; }
+        .strength-label.medium { color: #f6c23e; }
+        .strength-label.strong { color: #1cc88a; }
+
+        /* Generate password button */
+        .btn-generate-pwd { font-size: 11px; padding: 4px 10px; border-radius: 8px; border: 1px solid #4CAF50; color: #4CAF50; background: transparent; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .btn-generate-pwd:hover { background: #4CAF50; color: white; }
+        .password-label-row { display: flex; align-items: center; justify-content: space-between; }
+
         /* Alert session PHP uniquement (succès) */
         .alert-session { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
         .alert-session-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
@@ -167,16 +184,30 @@
                 <div class="row">
                     <!-- Mot de passe -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label" for="password">Mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" name="password" id="password"
-                               class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
-                               placeholder="•••••••••"
-                               autocomplete="new-password">
+                        <div class="password-label-row">
+                            <label class="form-label mb-0" for="password">Mot de passe <span class="text-danger">*</span></label>
+                            <button type="button" class="btn-generate-pwd" onclick="generateStrongPassword()">
+                                <i class="fas fa-magic me-1"></i>Générer
+                            </button>
+                        </div>
+                        <div class="input-group mt-1">
+                            <input type="password" name="password" id="password"
+                                   class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
+                                   placeholder="•••••••••"
+                                   autocomplete="new-password">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('password', this)" title="Afficher/Masquer">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                         <div class="field-error <?= !empty($errors['password']) ? 'show' : '' ?>" id="passwordError">
                             <i class="fas fa-times-circle"></i>
                             <span id="passwordErrorText"><?= htmlspecialchars($errors['password'] ?? '') ?></span>
                         </div>
-                        <div class="password-requirements" id="passwordRequirements" style="<?= !empty($errors['password']) ? 'display:none' : '' ?>">
+                        <div id="strengthBarContainer" class="strength-bar-container" style="display:none;">
+                            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                            <div class="strength-label" id="strengthLabel"></div>
+                        </div>
+                        <div class="password-requirements mt-1" id="passwordRequirements" style="<?= !empty($errors['password']) ? 'display:none' : '' ?>">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                             <span id="reqUpper"  class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
                             <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins un chiffre</span>
@@ -382,6 +413,16 @@
             return { length: p.length >= 8, upper: /[A-Z]/.test(p), number: /[0-9]/.test(p) };
         }
 
+        function calcStrengthScore(p) {
+            let score = 0;
+            if (p.length >= 8)  score++;
+            if (p.length >= 12) score++;
+            if (/[A-Z]/.test(p)) score++;
+            if (/[0-9]/.test(p)) score++;
+            if (/[^A-Za-z0-9]/.test(p)) score++;
+            return score; // 0-5
+        }
+
         function updatePasswordRequirements() {
             const p = document.getElementById('password').value;
             const v = getPasswordStrength(p);
@@ -392,6 +433,80 @@
                 el.className = ok ? 'requirement-valid' : 'requirement-invalid';
                 el.innerHTML = `<i class="fas fa-${ok ? 'check-' : ''}circle me-1"></i> ${label}`;
             });
+
+            // Barre de force
+            const container = document.getElementById('strengthBarContainer');
+            const fill      = document.getElementById('strengthFill');
+            const label     = document.getElementById('strengthLabel');
+            if (p.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            const score = calcStrengthScore(p);
+            fill.className = 'strength-fill';
+            label.className = 'strength-label';
+            if (score <= 2) {
+                fill.classList.add('weak');
+                label.classList.add('weak');
+                label.textContent = '🔴 Faible';
+            } else if (score <= 3) {
+                fill.classList.add('medium');
+                label.classList.add('medium');
+                label.textContent = '🟡 Moyen';
+            } else {
+                fill.classList.add('strong');
+                label.classList.add('strong');
+                label.textContent = '🟢 Fort';
+            }
+        }
+
+        function generateStrongPassword() {
+            const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            const lower   = 'abcdefghjkmnpqrstuvwxyz';
+            const digits  = '23456789';
+            const special = '@#$!%*?&';
+            let pwd = '';
+            // Au moins un de chaque catégorie
+            pwd += upper[Math.floor(Math.random() * upper.length)];
+            pwd += lower[Math.floor(Math.random() * lower.length)];
+            pwd += digits[Math.floor(Math.random() * digits.length)];
+            pwd += special[Math.floor(Math.random() * special.length)];
+            // Compléter à 12 caractères
+            const all = upper + lower + digits + special;
+            for (let i = 4; i < 12; i++) {
+                pwd += all[Math.floor(Math.random() * all.length)];
+            }
+            // Mélanger
+            pwd = pwd.split('').sort(() => Math.random() - 0.5).join('');
+
+            const pwdInput     = document.getElementById('password');
+            const confirmInput = document.getElementById('passwordConfirm');
+            pwdInput.value     = pwd;
+            confirmInput.value = pwd;
+            pwdInput.type      = 'text'; // Afficher le MDP généré
+            updatePasswordRequirements();
+            document.getElementById('passwordRequirements').style.display = '';
+            // Auto-copier dans le presse-papier
+            navigator.clipboard.writeText(pwd).catch(() => {});
+            // Feedback visuel
+            const btn = document.querySelector('.btn-generate-pwd');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copié !';
+            btn.style.background = '#4CAF50'; btn.style.color = 'white';
+            setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                inp.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
         }
 
         document.getElementById('password').addEventListener('input', function () {

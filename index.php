@@ -742,6 +742,11 @@ switch ($page) {
         require __DIR__ . '/views/backoffice/avis_admin.php';
         break;
 
+    case 'login_history':
+        adminOnly();
+        $adminCtrl->loginHistory();
+        break;
+
     case 'medecins_admin':
         adminOnly();
         if ($action === 'add') {
