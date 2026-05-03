@@ -224,53 +224,11 @@ class ReviewController {
      * Analyse le sentiment du texte (positif, neutre, négatif)
      */
     private function analyzeSentiment(string $text): array {
-        $textLower = strtolower($text);
-
-        // Mots positifs
-        $positive = [
-            'bon', 'bonne', 'excellent', 'extraordinaire', 'fantastique',
-            'merveilleux', 'super', 'génial', 'formidable', 'parfait',
-            'love', 'love', 'wonderful', 'amazing', 'great', 'perfect',
-            'très bien', 'j\'aime', 'content', 'heureux', 'satisfait'
-        ];
-
-        // Mots négatifs
-        $negative = [
-            'mauvais', 'horrible', 'nul', 'débile', 'pourri', 'décevant',
-            'mauvaise', 'catastrophe', 'décalogue', 'problème',
-            'hate', 'terrible', 'awful', 'bad', 'disappointed', 'worst',
-            'très mal', 'pas content', 'mécontent', 'triste'
-        ];
-
-        $positiveCount = 0;
-        $negativeCount = 0;
-
-        foreach ($positive as $word) {
-            $positiveCount += substr_count($textLower, $word);
-        }
-
-        foreach ($negative as $word) {
-            $negativeCount += substr_count($textLower, $word);
-        }
-
-        // Calcul du score
-        $score = 0;
-        if ($positiveCount + $negativeCount > 0) {
-            $score = ($positiveCount - $negativeCount) / ($positiveCount + $negativeCount);
-        }
-
-        // Déterminer le label
-        if ($score > 0.2) {
-            $label = 'positive';
-        } elseif ($score < -0.2) {
-            $label = 'negative';
-        } else {
-            $label = 'neutral';
-        }
+        $sentiment = Review::analyzeSentimentText($text);
 
         return [
-            'label' => $label,
-            'score' => round($score, 2)
+            'label' => $sentiment['label'],
+            'score' => $sentiment['score'],
         ];
     }
 }

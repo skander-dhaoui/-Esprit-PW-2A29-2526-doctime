@@ -16,6 +16,96 @@ class Review {
     }
 
     /**
+     * Analyse le sentiment d'un avis en français.
+     */
+    public static function analyzeSentimentText(string $content, int $rating = 0): array {
+        $text = self::normalizeText($content);
+
+        $positiveWords = [
+            'super', 'superbe', 'genial', 'bien', 'bon', 'bonne', 'excellent', 'excellente',
+            'excellents', 'excellentes', 'experience', 'parfait', 'parfaite', 'merci',
+            'recommande', 'recommander', 'satisfait', 'satisfaite', 'top', 'incroyable',
+            'bravo', 'agreable', 'gentil', 'gentille', 'professionnel', 'professionnelle',
+            'rapide', 'efficace', 'magnifique', 'formidable', 'sympathique', 'merveilleux',
+            'merveilleuse', 'fantastique', 'extraordinaire', 'heureux', 'heureuse', 'content',
+            'contente', 'adore', 'aime', 'aimer', 'love', 'amazing', 'great', 'perfect'
+        ];
+
+        $negativeWords = [
+            'nul', 'nulle', 'mauvais', 'mauvaise', 'pire', 'decu', 'decue', 'horrible',
+            'lent', 'lente', 'catastrophe', 'eviter', 'froid', 'froide', 'incompetent',
+            'incompetente', 'desagreable', 'cher', 'chere', 'arnaque', 'decevant',
+            'decevante', 'mediocre', 'terrible', 'honteux', 'honteuse', 'probleme',
+            'triste', 'mecontent', 'mecontente', 'hate', 'awful', 'bad', 'worst'
+        ];
+
+        $negations = ['pas', 'ne', 'n', 'jamais', 'aucun', 'aucune', 'sans'];
+        $intensifiers = ['tres', 'très', 'vraiment', 'tellement', 'hyper', 'super'];
+
+        $score = 0;
+        $words = preg_split('/[\s\.,!?;:\-_\(\)\[\]\"\'\/]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $count = count($words);
+
+        for ($i = 0; $i < $count; $i++) {
+            $word = $words[$i];
+            $nextWord = $i < $count - 1 ? $words[$i + 1] : '';
+            $previousWord = $i > 0 ? $words[$i - 1] : '';
+            $weight = in_array($previousWord, $intensifiers, true) ? 3 : 2;
+
+            if (in_array($word, $negations, true) && $nextWord !== '') {
+                if (in_array($nextWord, $positiveWords, true)) {
+                    $score -= 4;
+                    $i++;
+                    continue;
+                }
+                if (in_array($nextWord, $negativeWords, true)) {
+                    $score += 2;
+                    $i++;
+                    continue;
+                }
+            }
+
+            if (in_array($word, $positiveWords, true)) {
+                $score += $weight;
+            } elseif (in_array($word, $negativeWords, true)) {
+                $score -= $weight;
+            }
+        }
+
+        if (abs($score) < 2) {
+            if ($rating >= 4) {
+                $score += 2;
+            } elseif ($rating > 0 && $rating <= 2) {
+                $score -= 2;
+            }
+        }
+
+        $label = $score >= 2 ? 'positive' : ($score <= -2 ? 'negative' : 'neutral');
+
+        return [
+            'label' => $label,
+            'score' => max(-1, min(1, round($score / 10, 2))),
+            'raw_score' => $score,
+        ];
+    }
+
+    private static function normalizeText(string $text): string {
+        $text = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+
+        return strtr($text, [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a',
+            'ç' => 'c',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ñ' => 'n',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ý' => 'y', 'ÿ' => 'y',
+            'œ' => 'oe', 'æ' => 'ae',
+        ]);
+    }
+
+    /**
      * Crée un nouvel avis
      */
     public function create(array $data): array {

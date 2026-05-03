@@ -196,40 +196,9 @@ try {
             exit(json_encode($response));
         }
         
-        // Analyser le sentiment (même logique que create)
-        $positiveWords = ['super', 'superbe', 'génial', 'bien', 'bon', 'excellent', 'parfait', 'merci', 'recommande', 'satisfait', 'top', 'incroyable', 'bravo', 'agréable', 'gentil', 'professionnel', 'rapide', 'efficace', 'magnifique', 'formidable', 'love', 'aimer', 'aimé', 'aime', 'intuitive', 'intuitif', 'intéressant', 'sympathique'];
-        $negativeWords = ['nul', 'mauvais', 'pire', 'déçu', 'horrible', 'lent', 'catastrophe', 'éviter', 'froid', 'incompétent', 'désagréable', 'cher', 'arnaque', 'décevant', 'médiocre', 'terrible', 'honteux', 'malade'];
-        
-        $score = 0;
-        $words = preg_split('/[\s\.,!?;:\-]+/', strtolower($content), -1, PREG_SPLIT_NO_EMPTY);
-        
-        for ($i = 0; $i < count($words); $i++) {
-            $word = $words[$i];
-            $nextWord = $i < count($words) - 1 ? $words[$i + 1] : '';
-            $isNegation = in_array($word, ['pas', 'ne', 'n']);
-            
-            if ($isNegation && $nextWord) {
-                if (in_array($nextWord, $positiveWords)) {
-                    $score -= 4;
-                    $i++;
-                } else if (in_array($nextWord, $negativeWords)) {
-                    $score += 2;
-                    $i++;
-                }
-            } else if (!$isNegation) {
-                if (in_array($word, $positiveWords)) $score += 2;
-                if (in_array($word, $negativeWords)) $score -= 2;
-            }
-        }
-        
-        // Le contenu prime sur la note
-        if (abs($score) < 2) {
-            if ($rating >= 4) $score += 2;
-            if ($rating <= 2) $score -= 2;
-        }
-        
-        $sentiment = $score > 2 ? 'positive' : ($score < -2 ? 'negative' : 'neutral');
-        $sentimentScore = max(-1, min(1, $score / 10));
+        $sentimentAnalysis = Review::analyzeSentimentText($content, $rating);
+        $sentiment = $sentimentAnalysis['label'];
+        $sentimentScore = $sentimentAnalysis['score'];
         
         // Mettre à jour l'avis
         $stmt = $reviewModel->getConnection()->prepare(
@@ -295,39 +264,9 @@ try {
             exit(json_encode($response));
         }
         
-        // Analyse sentiment (même logique)
-        $positiveWords = ['super', 'superbe', 'génial', 'bien', 'bon', 'excellent', 'parfait', 'merci', 'recommande', 'satisfait', 'top', 'incroyable', 'bravo', 'agréable', 'gentil', 'professionnel', 'rapide', 'efficace', 'magnifique', 'formidable', 'love', 'aimer', 'aimé', 'aime', 'intuitive', 'intuitif', 'intéressant', 'sympathique'];
-        $negativeWords = ['nul', 'mauvais', 'pire', 'déçu', 'horrible', 'lent', 'catastrophe', 'éviter', 'froid', 'incompétent', 'désagréable', 'cher', 'arnaque', 'décevant', 'médiocre', 'terrible', 'honteux', 'malade'];
-        
-        $score = 0;
-        $words = preg_split('/[\s\.,!?;:\-]+/', strtolower($content), -1, PREG_SPLIT_NO_EMPTY);
-        
-        for ($i = 0; $i < count($words); $i++) {
-            $word = $words[$i];
-            $nextWord = $i < count($words) - 1 ? $words[$i + 1] : '';
-            $isNegation = in_array($word, ['pas', 'ne', 'n']);
-            
-            if ($isNegation && $nextWord) {
-                if (in_array($nextWord, $positiveWords)) {
-                    $score -= 4;
-                    $i++;
-                } else if (in_array($nextWord, $negativeWords)) {
-                    $score += 2;
-                    $i++;
-                }
-            } else if (!$isNegation) {
-                if (in_array($word, $positiveWords)) $score += 2;
-                if (in_array($word, $negativeWords)) $score -= 2;
-            }
-        }
-        
-        if (abs($score) < 2) {
-            if ($rating >= 4) $score += 2;
-            if ($rating <= 2) $score -= 2;
-        }
-        
-        $sentiment = $score > 2 ? 'positive' : ($score < -2 ? 'negative' : 'neutral');
-        $sentimentScore = max(-1, min(1, $score / 10));
+        $sentimentAnalysis = Review::analyzeSentimentText($content, $rating);
+        $sentiment = $sentimentAnalysis['label'];
+        $sentimentScore = $sentimentAnalysis['score'];
         
         // Créer l'avis
         $reviewModel = new Review();
@@ -450,9 +389,6 @@ try {
 
     // ============= ANALYSE =============
     $badWords = ['merde', 'putain', 'con', 'connard', 'salope', 'bâtard', 'idiot', 'stupide', 'abruti', 'salaud', 'foutre', 'chier', 'gueule', 'enculé', 'débile'];
-    $positiveWords = ['super', 'superbe', 'génial', 'bien', 'bon', 'excellent', 'parfait', 'merci', 'recommande', 'satisfait', 'top', 'incroyable', 'bravo', 'agréable', 'gentil', 'professionnel', 'rapide', 'efficace', 'magnifique', 'formidable', 'love', 'aimer', 'aimé', 'aime', 'intuitive', 'intuitif', 'intéressant', 'sympathique'];
-    $negativeWords = ['nul', 'mauvais', 'pire', 'déçu', 'horrible', 'lent', 'catastrophe', 'éviter', 'froid', 'incompétent', 'désagréable', 'cher', 'arnaque', 'décevant', 'médiocre', 'terrible', 'honteux', 'malade'];
-
     // ===== Fonction détection insultes robuste =====
     $hasProfanity = false;
     $text = strtolower($content);
@@ -490,40 +426,9 @@ try {
         }
     }
 
-    // Analyse sentiment avec détection de négation
-    $score = 0;
-    $words = preg_split('/[\s\.,!?;:\-]+/', strtolower($content), -1, PREG_SPLIT_NO_EMPTY);
-    
-    for ($i = 0; $i < count($words); $i++) {
-        $word = $words[$i];
-        $nextWord = $i < count($words) - 1 ? $words[$i + 1] : '';
-        $isNegation = in_array($word, ['pas', 'ne', 'n']);
-        
-        if ($isNegation && $nextWord) {
-            // Si le mot suivant est positif, inverser
-            if (in_array($nextWord, $positiveWords)) {
-                $score -= 4;  // Pas bon = négatif
-                $i++;  // Sauter le mot suivant
-            } else if (in_array($nextWord, $negativeWords)) {
-                $score += 2;  // Pas mauvais = positif
-                $i++;  // Sauter le mot suivant
-            }
-        } else if (!$isNegation) {
-            // Analyse normale seulement si pas une négation
-            if (in_array($word, $positiveWords)) $score += 2;
-            if (in_array($word, $negativeWords)) $score -= 2;
-        }
-    }
-    
-    // Le contenu prime sur la note - ne boost que si neutre
-    if (abs($score) < 2) {
-        // Boost par rating seulement si sentiment neutre
-        if ($rating >= 4) $score += 2;
-        if ($rating <= 2) $score -= 2;
-    }
-
-    $sentiment = $score > 2 ? 'positive' : ($score < -2 ? 'negative' : 'neutral');
-    $sentimentScore = max(-1, min(1, $score / 10));
+    $sentimentAnalysis = Review::analyzeSentimentText($content, $rating);
+    $sentiment = $sentimentAnalysis['label'];
+    $sentimentScore = $sentimentAnalysis['score'];
 
     // ============= CRÉER L'AVIS =============
     $reviewModel = new Review();
