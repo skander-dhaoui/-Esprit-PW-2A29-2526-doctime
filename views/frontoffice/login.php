@@ -211,6 +211,19 @@
                         <i class="fas fa-times-circle"></i>
                         <span id="robotErrorText"></span>
                     </div>
+                    
+                    <!-- Boîte de défi de question -->
+                    <div id="robotChallengeBox" style="display: none; background: white; border: 1px solid #d3d3d3; border-radius: 3px; box-shadow: 0px 4px 8px rgba(0,0,0,0.1); width: 304px; padding: 15px; margin-top: 5px; text-align: left;">
+                        <p id="robotQuestion" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 10px;"></p>
+                        <input type="text" id="robotAnswer" class="form-control" placeholder="Votre réponse..." style="font-size: 14px; padding: 8px;">
+                        <div class="d-flex justify-content-end mt-2">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="verifyRobotAnswer()">Valider</button>
+                        </div>
+                        <div class="field-error mt-1" id="robotChallengeError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="robotChallengeErrorText"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Remember + Forgot -->
@@ -317,6 +330,72 @@
                     }
                 })
                 .catch(err => console.error('Erreur rafraîchissement captcha:', err));
+        }
+
+        // ── QUESTIONS ROBOT ──────────────────────────────────────────────
+        const robotQuestions = [
+            { q: "Combien font 3 + 4 ?", a: ["7", "sept"] },
+            { q: "Quelle est la couleur du ciel par temps clair ?", a: ["bleu", "bleue"] },
+            { q: "Quel est le contraire de chaud ?", a: ["froid"] },
+            { q: "Combien y a-t-il de jours dans une semaine ?", a: ["7", "sept"] },
+            { q: "Combien font 10 - 2 ?", a: ["8", "huit"] },
+            { q: "Quelle est la capitale de la France ?", a: ["paris"] },
+            { q: "Combien font 5 x 2 ?", a: ["10", "dix"] },
+            { q: "Quel animal miaule ?", a: ["chat", "un chat", "le chat"] },
+            { q: "Combien y a-t-il de mois dans une année ?", a: ["12", "douze"] },
+            { q: "Quelle est la couleur d'une tomate mûre ?", a: ["rouge"] },
+            { q: "Quel jour vient après lundi ?", a: ["mardi"] },
+            { q: "Combien font 15 - 5 ?", a: ["10", "dix"] },
+            { q: "Le feu est-il chaud ou froid ?", a: ["chaud"] },
+            { q: "Quel chiffre vient après 8 ?", a: ["9", "neuf"] },
+            { q: "L'eau gèle à quelle température (en °C) ?", a: ["0", "zero", "zéro"] },
+            { q: "Combien de pattes a un chien normal ?", a: ["4", "quatre"] },
+            { q: "Quel fruit jaune les singes aiment-ils manger ?", a: ["banane", "la banane", "des bananes"] },
+            { q: "Si j'ai 5 pommes et que j'en mange 2, combien m'en reste-t-il ?", a: ["3", "trois"] },
+            { q: "Le soleil se lève à l'est ou à l'ouest ?", a: ["est", "l'est", "a l'est", "à l'est"] },
+            { q: "Combien font 6 divisé par 2 ?", a: ["3", "trois"] }
+        ];
+        let currentRobotQuestion = null;
+
+        document.getElementById('notRobot').addEventListener('click', function(e) {
+            // Si déjà validé, on empêche de décocher
+            if (this.hasAttribute('data-validated')) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Empêche la case d'être cochée immédiatement
+            e.preventDefault();
+            
+            // Choisir une question aléatoire
+            currentRobotQuestion = robotQuestions[Math.floor(Math.random() * robotQuestions.length)];
+            document.getElementById('robotQuestion').innerText = currentRobotQuestion.q;
+            document.getElementById('robotAnswer').value = '';
+            clearFieldError('robotAnswer', 'robotChallengeError');
+            
+            // Afficher la boîte de défi
+            document.getElementById('robotChallengeBox').style.display = 'block';
+        });
+
+        function verifyRobotAnswer() {
+            const answer = document.getElementById('robotAnswer').value.trim().toLowerCase();
+            if (!answer) {
+                showFieldError('robotAnswer', 'robotChallengeError', 'robotChallengeErrorText', 'Veuillez saisir une réponse.');
+                return;
+            }
+
+            if (currentRobotQuestion.a.includes(answer)) {
+                // Réponse correcte
+                document.getElementById('robotChallengeBox').style.display = 'none';
+                const cb = document.getElementById('notRobot');
+                cb.checked = true;
+                cb.setAttribute('data-validated', 'true');
+                cb.style.accentColor = '#0f9d58'; // Vert Google
+                clearFieldError('notRobot', 'robotError');
+            } else {
+                // Réponse incorrecte
+                showFieldError('robotAnswer', 'robotChallengeError', 'robotChallengeErrorText', 'Réponse incorrecte, réessayez.');
+            }
         }
 
         // ── RÔLE ─────────────────────────────────────────────────────────────
