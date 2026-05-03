@@ -3,6 +3,9 @@
 // Initialize error handling and logging
 require_once __DIR__ . '/error_handler.php';
 
+// Load environment variables from .env
+require_once __DIR__ . '/config/env.php';
+
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
@@ -10,6 +13,29 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
     session_start();
 }
+
+ob_start(static function ($buffer) {
+    if (stripos($buffer, '</head>') === false) {
+        return $buffer;
+    }
+
+    $hasThemeScript = strpos($buffer, 'assets/js/theme-mode.js') !== false;
+    $hasThemeStyle = strpos($buffer, 'assets/css/theme-mode.css') !== false;
+
+    if ($hasThemeScript && $hasThemeStyle) {
+        return $buffer;
+    }
+
+    $themeAssets = '';
+    if (!$hasThemeScript) {
+        $themeAssets .= "    <script src=\"assets/js/theme-mode.js\"></script>\n";
+    }
+    if (!$hasThemeStyle) {
+        $themeAssets .= "    <link rel=\"stylesheet\" href=\"assets/css/theme-mode.css\">\n";
+    }
+
+    return preg_replace('/<\/head>/i', $themeAssets . '</head>', $buffer, 1);
+});
 
 define('DEBUG_MODE', false);
 

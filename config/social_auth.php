@@ -38,17 +38,16 @@ class SocialAuthConfig
                 'token_url'     => 'https://graph.facebook.com/oauth/access_token',
                 'user_url'      => 'https://graph.facebook.com/me?fields=id,first_name,last_name,name,email,picture.type(large)',
             ],
-            'instagram' => [
-                'label'         => 'Instagram',
-                'client_id'     => self::env('INSTAGRAM_CLIENT_ID'),
-                'client_secret' => self::env('INSTAGRAM_CLIENT_SECRET'),
-                'scope'         => self::env('INSTAGRAM_SCOPE', 'instagram_business_basic'),
-                'auth_url'      => 'https://www.instagram.com/oauth/authorize',
-                'token_url'     => 'https://api.instagram.com/oauth/access_token',
-                'user_url'      => 'https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,account_type',
+            'linkedin' => [
+                'label'         => 'LinkedIn',
+                'client_id'     => self::env('LINKEDIN_CLIENT_ID'),
+                'client_secret' => self::env('LINKEDIN_CLIENT_SECRET'),
+                'scope'         => self::env('LINKEDIN_SCOPE', 'profile email openid'),
+                'auth_url'      => 'https://www.linkedin.com/oauth/v2/authorization',
+                'token_url'     => 'https://www.linkedin.com/oauth/v2/accessToken',
+                'user_url'      => 'https://api.linkedin.com/v2/me',
                 'auth_params'   => [
-                    'enable_fb_login'      => self::env('INSTAGRAM_ENABLE_FB_LOGIN', '0'),
-                    'force_authentication' => self::env('INSTAGRAM_FORCE_AUTHENTICATION', '1'),
+                    'response_type' => 'code',
                 ],
             ],
         ];

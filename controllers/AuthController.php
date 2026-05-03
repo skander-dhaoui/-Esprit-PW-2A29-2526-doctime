@@ -1,5 +1,6 @@
 <?php
 if (class_exists('AuthController')) return;
+require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/social_auth.php';
 require_once __DIR__ . '/../models/User.php';
@@ -1152,8 +1153,8 @@ public function handleSocialCallback(string $provider): void {
             return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
         }
 
-        if ($provider === 'instagram') {
-            return $this->sendHttpRequest($config['user_url'] . '&access_token=' . urlencode($accessToken), 'GET');
+        if ($provider === 'linkedin') {
+            return $this->sendHttpRequest($config['user_url'], 'GET', ['Authorization: Bearer ' . $accessToken]);
         }
 
         if ($provider === 'github') {
@@ -1242,14 +1243,16 @@ public function handleSocialCallback(string $provider): void {
             ];
         }
 
-        if ($provider === 'instagram') {
-            $username = trim((string) ($profile['username'] ?? 'instagram_user'));
+        if ($provider === 'linkedin') {
+            $firstName = isset($profile['localizedFirstName']) ? trim((string) $profile['localizedFirstName']) : 'LinkedIn';
+            $lastName = isset($profile['localizedLastName']) ? trim((string) $profile['localizedLastName']) : 'User';
+            $email = trim((string) ($profile['email'] ?? ''));
 
             return [
                 'provider_id' => (string) ($profile['id'] ?? ''),
-                'email'       => 'instagram_' . preg_replace('/[^a-zA-Z0-9_]/', '', $username) . '@social.local',
-                'prenom'      => $username,
-                'nom'         => 'Instagram',
+                'email'       => !empty($email) ? $email : 'linkedin_' . time() . '@social.local',
+                'prenom'      => $firstName,
+                'nom'         => $lastName,
                 'avatar'      => '',
             ];
         }

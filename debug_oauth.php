@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+// Load environment variables
+require_once __DIR__ . '/config/env.php';
+
 // ============================================================================
 // OAuth Flow Debugging Script
 // ============================================================================

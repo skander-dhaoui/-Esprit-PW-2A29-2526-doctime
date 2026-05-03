@@ -344,6 +344,8 @@
             }
         }
     </style>
+    <script src="assets/js/theme-mode.js"></script>
+    <link rel="stylesheet" href="assets/css/theme-mode.css">
 </head>
 <body>
 <!-- Sidebar -->

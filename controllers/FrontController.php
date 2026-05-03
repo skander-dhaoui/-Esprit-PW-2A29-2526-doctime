@@ -125,9 +125,13 @@ class FrontController {
     }
 
     public function listeMedecins(): void {
-        require_once __DIR__ . '/../models/Medecin.php';
-        $medecinModel = new Medecin();
-        $medecins = $medecinModel->getAllWithUsers();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT m.*, u.prenom, u.nom, u.email FROM medecins m
+             JOIN users u ON m.user_id = u.id WHERE u.statut = 'actif' ORDER BY u.nom ASC"
+        );
+        $stmt->execute();
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         if (empty($medecins)) {
             $content = '<div class="alert alert-info py-5 text-center shadow-sm" style="border-radius: 15px;"><i class="fas fa-user-md fa-4x text-muted mb-3"></i><br><h4 class="text-muted">Aucun médecin disponible pour le moment.</h4></div>';
@@ -741,6 +745,8 @@ class FrontController {
                 .main-content { padding: 20px; }
                 .top-bar { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             </style>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <div class="container-fluid">
@@ -798,6 +804,8 @@ class FrontController {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -1686,9 +1694,12 @@ JS;
     // =============================================
 
     public function listeEvenements(): void {
-        require_once __DIR__ . '/../models/Event.php';
-        $eventModel = new Event();
-        $events = $eventModel->getAll();
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT * FROM events WHERE status = 'a venir' OR status = 'en cours' ORDER BY date_debut ASC"
+        );
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $upcomingEvents = $eventModel->getUpcoming();
         $featuredEvents = $eventModel->getFeatured();
         
@@ -3214,6 +3225,8 @@ public function monProfil(): void {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <?= $this->getPublicNavbar() ?>
@@ -3245,6 +3258,8 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -3312,6 +3327,8 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body class="bg-light">
             <div class="container mt-5">

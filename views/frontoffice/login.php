@@ -42,7 +42,6 @@
         .btn-google { background: #ffffff; color: #1f2937; }
         .btn-github { background: #111827; color: #ffffff; border-color: #111827; }
         .btn-facebook { background: #1877f2; color: #ffffff; border-color: #1877f2; }
-        .btn-instagram { color: #ffffff; border: none; background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4); }
         .social-hint { font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 18px; }
 
         .role-selector { display: flex; gap: 15px; margin-bottom: 25px; }
@@ -191,6 +190,29 @@
                     </div>
                 </div>
 
+                <!-- Je ne suis pas un robot (Style reCAPTCHA) -->
+                <div class="mb-3 d-flex justify-content-center align-items-center flex-column">
+                    <div style="background: #f9f9f9; border: 1px solid #d3d3d3; border-radius: 3px; box-shadow: 0px 0px 4px 1px rgba(0,0,0,0.08); width: 304px; height: 78px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-family: 'Roboto', 'Segoe UI', sans-serif;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="checkbox" id="notRobot" name="notRobot" style="width: 28px; height: 28px; cursor: pointer; margin: 0; border: 2px solid #c1c1c1; border-radius: 2px; accent-color: #4A90E2;">
+                            <label for="notRobot" style="font-size: 14px; font-weight: 400; color: #222; margin: 0; cursor: pointer;">Je ne suis pas un robot</label>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.8;">
+                            <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" style="width: 28px; height: 28px; margin-bottom: 4px;">
+                            <div style="font-size: 10px; color: #555; display: flex; flex-direction: column; align-items: center; line-height: 1;">
+                                <span style="font-weight: 500; margin-bottom: 2px; color: #555;">reCAPTCHA</span>
+                                <div style="display: flex; gap: 4px; font-size: 8px; color: #888;">
+                                    <span style="cursor: pointer;">Confidentialité</span> - <span style="cursor: pointer;">Conditions</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field-error mt-2" id="robotError" style="justify-content:center; width: 304px; text-align: left;">
+                        <i class="fas fa-times-circle"></i>
+                        <span id="robotErrorText"></span>
+                    </div>
+                </div>
+
                 <!-- Remember + Forgot -->
                 <div class="mb-3 form-check d-flex justify-content-between align-items-center">
                     <div>
@@ -214,10 +236,6 @@
                     <a class="btn-social btn-facebook" href="index.php?page=social_login&provider=facebook">
                         <i class="fab fa-facebook-f"></i>
                         <span>Continuer avec Facebook</span>
-                    </a>
-                    <a class="btn-social btn-instagram" href="index.php?page=social_login&provider=instagram">
-                        <i class="fab fa-instagram"></i>
-                        <span>Continuer avec Instagram</span>
                     </a>
                 </div>
                 <div class="social-hint">
@@ -341,6 +359,7 @@
             clearFieldError('email', 'emailError');
             clearFieldError('password', 'passwordError');
             clearFieldError('captchaInput', 'captchaError');
+            clearFieldError('notRobot', 'robotError');
         }
 
         // ── VALIDATION EN TEMPS RÉEL ─────────────────────────────────────────
@@ -374,6 +393,7 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const captchaInput = document.getElementById('captchaInput').value.toUpperCase().trim();
+            const notRobot = document.getElementById('notRobot').checked;
 
             // Email
             if (!email) {
@@ -401,6 +421,12 @@
                 showFieldError('captchaInput', 'captchaError', 'captchaErrorText', 'Code incorrect. Un nouveau code a été généré.');
                 generateCaptcha();
                 document.getElementById('captchaInput').value = '';
+                isValid = false;
+            }
+
+            // Robot Check
+            if (!notRobot) {
+                showFieldError('notRobot', 'robotError', 'robotErrorText', 'Veuillez confirmer que vous n\'êtes pas un robot.');
                 isValid = false;
             }
 

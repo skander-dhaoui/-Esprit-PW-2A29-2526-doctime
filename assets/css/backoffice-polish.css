@@ -2,10 +2,16 @@
     --bo-bg: #f5f7fb;
     --bo-panel: #ffffff;
     --bo-ink: #172033;
+    --bo-ink-light: #e8f0f7;
+    --bo-text-dark: #ffffff;
+    --bo-text-dark-secondary: #d1d9e6;
     --bo-muted: #657086;
+    --bo-muted-light: #b0b9cc;
     --bo-line: #e5e9f2;
+    --bo-line-dark: #2a3647;
     --bo-sidebar: #101827;
     --bo-sidebar-soft: #162033;
+    --bo-sidebar-bg: #0f1823;
     --bo-primary: #2563eb;
     --bo-primary-dark: #1d4ed8;
     --bo-success: #188b55;
@@ -316,6 +322,134 @@ body {
 
 .modal-content {
     border: 1px solid var(--bo-line) !important;
+}
+
+/* ===== DARK MODE TEXT IMPROVEMENTS ===== */
+/* Améliorer la lisibilité du texte en mode sombre */
+
+/* Texte sur fond sombre */
+.sidebar {
+    background-color: var(--bo-sidebar-bg) !important;
+}
+
+.sidebar h1, .sidebar h2, .sidebar h3, .sidebar h4, .sidebar h5, .sidebar p,
+.sidebar span, .sidebar a, .sidebar label {
+    color: var(--bo-text-dark) !important;
+}
+
+.sidebar-brand h4 {
+    color: var(--bo-text-dark) !important;
+}
+
+.sidebar-brand small {
+    color: var(--bo-text-dark-secondary) !important;
+}
+
+/* Panels et cartes en mode sombre */
+[style*="background: #0f1823"], [style*="background: #101827"], 
+[style*="background: #162033"], [class*="dark"] {
+    color: var(--bo-text-dark) !important;
+}
+
+[style*="background: #0f1823"] p, [style*="background: #0f1823"] span,
+[style*="background: #0f1823"] h1, [style*="background: #0f1823"] h2,
+[style*="background: #0f1823"] h3, [style*="background: #0f1823"] h4,
+[style*="background: #0f1823"] h5, [style*="background: #0f1823"] label {
+    color: var(--bo-text-dark) !important;
+}
+
+/* Texte dans les éléments semi-transparent */
+div[style*="background: rgba"], section[style*="background: rgba"],
+article[style*="background: rgba"] {
+    color: var(--bo-text-dark) !important;
+}
+
+/* Tables en mode sombre - ULTRA LISIBLE */
+.table tbody td { 
+    color: #ffffff !important;
+    background: #1a2332 !important;
+    border-color: #2a3647 !important;
+}
+
+.table tbody tr:hover { 
+    background: rgba(255,255,255,0.06) !important;
+}
+
+.table tbody strong, .table tbody b {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.table tbody small, .table tbody .text-muted {
+    color: #b0b9cc !important;
+}
+
+/* Formulaires en mode sombre */
+.form-control[style*="background"], .form-select[style*="background"] {
+    background: #1a2332 !important;
+    color: var(--bo-text-dark) !important;
+    border-color: var(--bo-line-dark) !important;
+}
+
+.form-label[style*="color"] {
+    color: var(--bo-text-dark-secondary) !important;
+}
+
+/* Modales et popups */
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.modal-content {
+    background: #1a2332 !important;
+    color: var(--bo-text-dark) !important;
+}
+
+.modal-header {
+    border-bottom-color: var(--bo-line-dark) !important;
+    color: var(--bo-text-dark) !important;
+}
+
+.modal-body {
+    color: var(--bo-text-dark) !important;
+}
+
+.modal-footer {
+    border-top-color: var(--bo-line-dark) !important;
+}
+
+/* Textes génériques en mode sombre */
+.bg-dark, [class*="bg-dark"], [style*="background: #"] {
+    color: var(--bo-text-dark) !important;
+}
+
+.text-dark, [class*="text-dark"] {
+    color: var(--bo-text-dark) !important;
+}
+
+/* Links en mode sombre */
+a[style*="color: #"], a.nav-link {
+    color: var(--bo-text-dark) !important;
+}
+
+a:not(.btn) {
+    color: #64b5f6 !important;
+}
+
+/* Éléments spécifiques de review/avis */
+.review-item, .avis-item, [class*="review"], [class*="avis"] {
+    color: var(--bo-text-dark) !important;
+}
+
+.review-item h5, .avis-item h5, 
+.review-item p, .avis-item p,
+.review-item span, .avis-item span {
+    color: var(--bo-text-dark) !important;
+}
+
+/* Text sur fond dégradé */
+[style*="linear-gradient"] {
+    color: var(--bo-text-dark) !important;
 }
 
 @media (max-width: 992px) {

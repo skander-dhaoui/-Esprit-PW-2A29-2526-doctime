@@ -29,6 +29,8 @@
         .alert { border-radius: 6px; padding: 12px 16px; }
     </style>
     <link rel="stylesheet" href="assets/css/backoffice-polish.css">
+    <script src="assets/js/theme-mode.js"></script>
+    <link rel="stylesheet" href="assets/css/theme-mode.css">
 </head>
 <body>
     <div class="admin-wrapper">

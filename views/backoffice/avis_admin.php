@@ -1,5 +1,5 @@
 <?php
-// VÃ©rification de l'authentification - Admin seulement
+// Verification de l'authentification - Admin seulement
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: index.php?page=login');
     exit;
@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../models/Review.php';
 
 $reviewModel = new Review();
 
-// RÃ©cupÃ©ration des paramÃ¨tres
+// Recuperation des parametres
 $search = trim($_GET['search'] ?? '');
 $filter = $_GET['filter'] ?? 'all'; // all, approved, pending, profanity
 $sort = $_GET['sort'] ?? 'newest'; // newest, oldest, rating_high, rating_low
@@ -143,24 +143,102 @@ try {
         .stat-card:hover { transform: translateY(-2px); }
         .stat-card p { font-size: 13px; color: #5b6475; margin-bottom: 8px; text-transform: uppercase; font-weight:600;}
         .stat-card h3 { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: #1a2035; }
+        
+        /* ===== DARK MODE TEXT IMPROVEMENTS ===== */
+        .stat-card { background: #1a2332; color: #ffffff; }
+        .stat-card p { color: #b0b9cc; }
+        .stat-card h3 { color: #ffffff; }
+        
+        /* Texte principal amélioré */
+        .page-header { background: #1a2332; color: #ffffff; }
+        .page-header h4 { color: #ffffff; }
+        .content-card { background: #1a2332; color: #e8e8e8; }
+        .card-title-row h5 { color: #ffffff; }
+        
+        /* Tables avec texte blanc */
+        .review-table { background: #1a2332; }
+        .review-table tbody td { color: #e8e8e8; background: transparent; border-color: #2a3647; }
+        .review-table thead th { background: #0f1823; color: #b0b9cc; border-color: #2a3647; }
+        .review-table tbody tr:hover { background: rgba(255,255,255,0.04) !important; }
+        
+        /* Formulaires */
+        .form-control, .form-select { background: #0f1823; color: #ffffff; border-color: #2a3647; }
+        .form-control:focus, .form-select:focus { background: #0f1823; color: #ffffff; border-color: #2563eb; }
+        .form-label { color: #b0b9cc; }
+        
+        /* Boutons */
+        .btn-primary { background: #2563eb; color: #ffffff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary { background: #5b6475; color: #ffffff; }
+        .btn-danger { background: #dc3545; color: #ffffff; }
+        
+        /* Modal */
+        .modal-content { background: #1a2332; color: #ffffff; border-color: #2a3647; }
+        .modal-header { background: #0f1823; color: #ffffff; border-color: #2a3647; }
+        .modal-body { color: #e8e8e8; }
+        .modal-footer { border-color: #2a3647; }
+        
+        /* Links */
+        a { color: #64b5f6; }
+        a:hover { color: #90caf9; }
+        
+        /* Badges améliorés en mode sombre */
+        .badge { color: #ffffff !important; font-weight: 600; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .badge-actif { background: #27ae60 !important; color: #ffffff !important; }
+        .badge-inactif { background: #e74c3c !important; color: #ffffff !important; }
+        .badge-validation { background: #f39c12 !important; color: #ffffff !important; }
+        .badge-approved { background: #27ae60 !important; color: #ffffff !important; }
+        .badge-pending { background: #f39c12 !important; color: #ffffff !important; }
+        .badge-profanity { background: #e74c3c !important; color: #ffffff !important; }
 
-        .badge-actif { background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight:600;}
-        .badge-inactif { background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight:600;}
-        .badge-validation { background: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight:600;}
-
-        .table thead th { background: #1a2035; color: white; font-weight: 600; font-size: 13px; padding: 12px 14px; border: none; }
-        .table tbody td { vertical-align: middle; font-size: 14px; padding: 13px 14px; color: #333; border-bottom: 1px solid #eee; }
-        .table tbody tr:hover { background: #f8f9ff; }
+        .table thead th { background: #0f1823; color: #b0b9cc; font-weight: 600; font-size: 13px; padding: 12px 14px; border: none; border-color: #2a3647; }
+        .table tbody td { vertical-align: middle; font-size: 14px; padding: 13px 14px; color: #ffffff !important; border-bottom: 1px solid #2a3647; background: #1a2332; }
+        .table tbody tr:hover { background: rgba(255,255,255,0.04) !important; }
+        .table tbody strong, .table tbody b { color: #ffffff !important; font-weight: 700 !important; }
+        .table tbody small, .table tbody .text-muted { color: #b0b9cc !important; }
+        .table tbody span { color: #ffffff !important; }
         .btn-sm { padding: 5px 10px; margin: 2px; }
 
-        .filter-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto auto; gap: 12px; margin-bottom: 20px; align-items: end; }
-        .filter-form .form-label { font-size: 13px; font-weight: 600; color: #1a2035; margin-bottom: 6px; }
+        .filter-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto auto; gap: 12px; margin-bottom: 20px; align-items: end; background: #0f1823; padding: 15px; border-radius: 8px; }
+        .filter-form .form-label { font-size: 13px; font-weight: 600; color: #b0b9cc; margin-bottom: 6px; }
         @media (max-width: 992px) { .filter-form { grid-template-columns: 1fr; } }
-        .pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
-        .pagination-info { font-size: 14px; color: #5b6475; }
+        .pagination-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; flex-wrap: wrap; color: #b0b9cc; }
+        .pagination-info { font-size: 14px; color: #b0b9cc; }
         .pagination-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        
+        /* === MODALES EN MODE SOMBRE === */
+        #avisFormModal > div, #viewAvisModal > div, #deleteConfirmModal > div {
+            background: #1a2332 !important;
+            color: #ffffff !important;
+        }
+        
+        #avisFormModal h2, #viewAvisModal h2, #deleteConfirmModal h3 {
+            color: #ffffff !important;
+        }
+        
+        #avisFormModal label, #avisFormModal input, #avisFormModal select, #avisFormModal textarea,
+        #viewAvisModal label, #viewAvisModal input, #viewAvisModal select, #viewAvisModal textarea,
+        #deleteConfirmModal label, #deleteConfirmModal input, #deleteConfirmModal select, #deleteConfirmModal textarea {
+            color: #ffffff !important;
+            background: #0f1823 !important;
+            border-color: #2a3647 !important;
+        }
+        
+        #avisFormModal::placeholder { color: #b0b9cc !important; }
+        #viewAvisModal::placeholder { color: #b0b9cc !important; }
+        #deleteConfirmModal p { color: #b0b9cc !important; }
+        
+        /* Boutons dans modales */
+        #avisFormModal button, #viewAvisModal button, #deleteConfirmModal button {
+            color: #ffffff !important;
+        }
+        
+        
     </style>
     <link rel="stylesheet" href="assets/css/backoffice-polish.css">
+    <script src="assets/js/theme-mode.js"></script>
+    <link rel="stylesheet" href="assets/css/theme-mode.css">
 </head>
 <body>
 
@@ -280,10 +358,12 @@ try {
                                     <i class="fas fa-user-<?= $review['role'] === 'medecin' ? 'md' : 'injured' ?>"></i> <?= ucfirst($review['role']) ?>
                                 </span>
                             </td>
-                            <td style="max-width: 300px; white-space: normal; word-break: break-word;">
-                                <?= substr(htmlspecialchars($review['content']), 0, 100) ?>...
+                            <td style="max-width: 300px; white-space: normal; word-break: break-word; color: #ffffff;">
+                                <span class="review-message" style="color: #ffffff !important;">
+                                    <?= substr(htmlspecialchars($review['content']), 0, 100) ?>...
+                                </span>
                                 <?php if (!empty($review['emojis'])): ?>
-                                    <div class="mt-1">
+                                    <div class="mt-1" style="color: #ffffff;">
                                         <?php foreach ($review['emojis'] as $emoji): ?>
                                             <span class="me-1"><?= $emoji ?></span>
                                         <?php endforeach; ?>

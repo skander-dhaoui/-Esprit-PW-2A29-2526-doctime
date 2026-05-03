@@ -18,7 +18,7 @@ $limit = 10;
 $offset = ($page - 1) * $limit;
 
 // Construire la requête de base
-$query = "SELECT r.*, u.prenom, u.nom, u.email, u.role FROM avis r JOIN users u ON r.user_id = u.id";
+$query = "SELECT r.*, u.prenom, u.nom, u.email, u.role FROM reviews r JOIN users u ON r.user_id = u.id";
 $params = [];
 
 // Appliquer le filtre
@@ -34,7 +34,7 @@ if ($filter === 'my_reviews') {
 
 // Appliquer la recherche
 if (!empty($search)) {
-    $query .= " AND (r.contenu LIKE ? OR u.prenom LIKE ? OR u.nom LIKE ? OR u.email LIKE ?)";
+    $query .= " AND (r.content LIKE ? OR u.prenom LIKE ? OR u.nom LIKE ? OR u.email LIKE ?)";
     $searchTerm = "%{$search}%";
     $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
 }
@@ -51,7 +51,7 @@ if ($sort === 'oldest') {
 }
 
 // Compter le total
-$countQuery = "SELECT COUNT(*) as total FROM avis r JOIN users u ON r.user_id = u.id";
+$countQuery = "SELECT COUNT(*) as total FROM reviews r JOIN users u ON r.user_id = u.id";
 if ($filter === 'my_reviews') {
     $countQuery .= " WHERE r.user_id = ?";
 } elseif ($filter === 'pending') {
@@ -62,7 +62,7 @@ if ($filter === 'my_reviews') {
 
 $whereClause = ($filter === 'my_reviews' || $filter === 'pending') ? " AND " : " AND ";
 if (!empty($search)) {
-    $countQuery .= $whereClause . "(r.contenu LIKE ? OR u.prenom LIKE ? OR u.nom LIKE ? OR u.email LIKE ?)";
+    $countQuery .= $whereClause . "(r.content LIKE ? OR u.prenom LIKE ? OR u.nom LIKE ? OR u.email LIKE ?)";
 }
 
 $db = $Review->getConnection();
@@ -271,6 +271,146 @@ foreach ($reviews as &$review) {
             border-radius: 4px;
             display: inline-block;
         }
+
+        /* === DARK MODE CSS === */
+        @media (prefers-color-scheme: dark) {
+            .main-content {
+                background: #0f1823;
+                color: #ffffff;
+            }
+
+            .review-card {
+                background: #1a2332 !important;
+                color: #ffffff !important;
+                border-color: #2a3647 !important;
+            }
+
+            .review-card h5 {
+                color: #ffffff !important;
+            }
+
+            .review-card p, .review-card small {
+                color: #b0b9cc !important;
+            }
+
+            .review-card .stars {
+                color: #ffc107 !important;
+            }
+
+            .filter-section {
+                background: #162033 !important;
+                color: #ffffff !important;
+            }
+
+            .filter-section .form-label {
+                color: #b0b9cc !important;
+            }
+
+            .filter-section .form-control, 
+            .filter-section .form-select {
+                background: #1a2332 !important;
+                color: #ffffff !important;
+                border-color: #2a3647 !important;
+            }
+
+            .filter-section .form-control::placeholder {
+                color: #7a8699 !important;
+            }
+
+            .stat-box {
+                background: #1a2332 !important;
+                color: #ffffff !important;
+                border-color: #2a3647 !important;
+            }
+
+            .stat-box h4 {
+                color: #ffffff !important;
+            }
+
+            .stat-box .text-muted {
+                color: #b0b9cc !important;
+            }
+
+            .btn-success {
+                background: #4CAF50 !important;
+                border-color: #4CAF50 !important;
+                color: #ffffff !important;
+            }
+
+            .btn-outline-secondary {
+                border-color: #2a3647 !important;
+                color: #ffffff !important;
+            }
+
+            .btn-outline-secondary:hover {
+                background: #2a3647 !important;
+                color: #ffffff !important;
+            }
+
+            h1, h2, h3, h4, h5 {
+                color: #ffffff !important;
+            }
+
+            .text-muted {
+                color: #b0b9cc !important;
+            }
+
+            .modal-content {
+                background: #1a2332 !important;
+                color: #ffffff !important;
+            }
+
+            .modal-header {
+                background: #4CAF50 !important;
+                color: #ffffff !important;
+                border-color: #2a3647 !important;
+            }
+
+            .modal-body {
+                background: #1a2332 !important;
+            }
+
+            .form-group label {
+                color: #b0b9cc !important;
+            }
+
+            .form-control, .form-select {
+                background: #0f1823 !important;
+                color: #ffffff !important;
+                border-color: #2a3647 !important;
+            }
+
+            .form-control::placeholder {
+                color: #7a8699 !important;
+            }
+
+            .emojis-display {
+                background: #0f1823 !important;
+                color: #ffffff !important;
+                border: 1px solid #2a3647 !important;
+            }
+
+            .char-count {
+                color: #b0b9cc !important;
+            }
+
+            .pagination-links a, .pagination-links span {
+                background: #1a2332 !important;
+                color: #4CAF50 !important;
+                border-color: #2a3647 !important;
+            }
+
+            .pagination-links a:hover {
+                background: #4CAF50 !important;
+                color: #ffffff !important;
+            }
+
+            .pagination-links span.active {
+                background: #4CAF50 !important;
+                color: #ffffff !important;
+                border-color: #4CAF50 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -295,7 +435,7 @@ foreach ($reviews as &$review) {
                     <div class="stat-box">
                         <h4 style="color: #4CAF50;"><?php
                             // Compter les avis de l'utilisateur
-                            $countMyQuery = "SELECT COUNT(*) as count FROM avis WHERE user_id = ?";
+                            $countMyQuery = "SELECT COUNT(*) as count FROM reviews WHERE user_id = ?";
                             $countMyStmt = $db->prepare($countMyQuery);
                             $countMyStmt->execute([$_SESSION['user_id']]);
                             $myCount = $countMyStmt->fetch(PDO::FETCH_ASSOC)['count'];
@@ -308,7 +448,7 @@ foreach ($reviews as &$review) {
                     <div class="stat-box">
                         <h4 style="color: #ffc107;"><i class="fas fa-star"></i> <?php
                             // Moyenne de mes avis
-                            $avgMyQuery = "SELECT AVG(rating) as avg FROM avis WHERE user_id = ?";
+                            $avgMyQuery = "SELECT AVG(rating) as avg FROM reviews WHERE user_id = ?";
                             $avgMyStmt = $db->prepare($avgMyQuery);
                             $avgMyStmt->execute([$_SESSION['user_id']]);
                             $myAvg = $avgMyStmt->fetch(PDO::FETCH_ASSOC)['avg'];
@@ -321,7 +461,7 @@ foreach ($reviews as &$review) {
                     <div class="stat-box">
                         <h4 style="color: #4CAF50;"><?php
                             // Mes avis approuvés
-                            $countApprovedQuery = "SELECT COUNT(*) as count FROM avis WHERE user_id = ? AND is_approved = 1";
+                            $countApprovedQuery = "SELECT COUNT(*) as count FROM reviews WHERE user_id = ? AND is_approved = 1";
                             $countApprovedStmt = $db->prepare($countApprovedQuery);
                             $countApprovedStmt->execute([$_SESSION['user_id']]);
                             $approvedCount = $countApprovedStmt->fetch(PDO::FETCH_ASSOC)['count'];
@@ -334,7 +474,7 @@ foreach ($reviews as &$review) {
                     <div class="stat-box">
                         <h4 style="color: #ff9800;"><?php
                             // Mes avis en attente
-                            $countPendingQuery = "SELECT COUNT(*) as count FROM avis WHERE user_id = ? AND is_approved = 0";
+                            $countPendingQuery = "SELECT COUNT(*) as count FROM reviews WHERE user_id = ? AND is_approved = 0";
                             $countPendingStmt = $db->prepare($countPendingQuery);
                             $countPendingStmt->execute([$_SESSION['user_id']]);
                             $pendingCount = $countPendingStmt->fetch(PDO::FETCH_ASSOC)['count'];
