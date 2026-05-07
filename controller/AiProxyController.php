@@ -2,10 +2,10 @@
 declare(strict_types=1);
 
 /**
- * AiProxyController — Proxy sécurisé vers l'API Anthropic
+ * AiProxyController — Proxy sécurisé vers l'API Groq
  *
  * Pourquoi un proxy ?
- * - Le navigateur bloque les appels directs à api.anthropic.com (CORS)
+ * - Le navigateur bloque les appels directs à l'API Groq (CORS)
  * - La clé API ne doit JAMAIS être exposée dans le code JavaScript client
  * - Toutes les requêtes passent par ce controller PHP côté serveur
  *
@@ -13,20 +13,18 @@ declare(strict_types=1);
  */
 class AiProxyController {
 
-    // ── Clé API Anthropic ─────────────────────────────────────────────────────
-    // Option 1 : variable d'environnement (recommandée en production)
-    //   Dans Apache : SetEnv ANTHROPIC_API_KEY sk-ant-...
-    //   Dans .env   : ANTHROPIC_API_KEY=sk-ant-...
-    // Option 2 : valeur directe ici (acceptable en développement local)
-    private string $apiKey = '';   // ← remplacer par votre clé sk-ant-...
+    // ── Clé API Groq ─────────────────────────────────────────────────────
+    // Obtenir la clé sur https://console.groq.com/keys
+    // L'API est gratuite et illimitée !
+    private string $apiKey = '';   // ← remplacer par votre clé Groq
 
-    private string $apiUrl  = 'https://api.anthropic.com/v1/messages';
-    private string $model   = 'claude-sonnet-4-20250514';
+    private string $apiUrl  = 'https://api.groq.com/openai/v1/chat/completions';
+    private string $model   = 'llama-3.3-70b-versatile';
     private int    $maxTokens = 1000;
 
     public function __construct() {
         // Priorité à la variable d'environnement (depuis .env chargé par helpers.php)
-        $env = $_ENV['ANTHROPIC_API_KEY'] ?? getenv('ANTHROPIC_API_KEY');
+        $env = $_ENV['GROQ_API_KEY'] ?? getenv('GROQ_API_KEY');
         if ($env) {
             $this->apiKey = $env;
         }
@@ -37,7 +35,70 @@ class AiProxyController {
      */
     private function demoMode(string $userMessage): array {
         $userMessage = strtolower($userMessage);
-        
+        $specialiteResponses = [
+            'coordinateur' => [
+                "📋 **Coordinateur événementiel médical** : Ce métier central consiste à orchestrer tous les aspects d'un événement médical, de la planification à l'exécution. Le coordinateur gère les intervenants, les sponsors, la logistique et assure la qualité scientifique des contenus.",
+                "🎯 **Coordinateur événementiel médical** : Un rôle polyvalent qui nécessite d'excellentes compétences en organisation, communication et gestion de projet. Le coordinateur est le chef d'orchestre qui fait le lien entre les médecins, les sponsors et l'équipe technique.",
+                "📅 **Coordinateur événementiel médical** : Responsable de la réussite globale d'un congrès médical, ce poste demande une parfaite maîtrise du timing, du budget et des relations avec tous les acteurs de l'événement."
+            ],
+            'coordinator' => [
+                "📋 **Coordinateur événementiel médical** : Ce métier central consiste à orchestrer tous les aspects d'un événement médical, de la planification à l'exécution. Le coordinateur gère les intervenants, les sponsors, la logistique et assure la qualité scientifique des contenus.",
+                "🎯 **Coordinateur événementiel médical** : Un rôle polyvalent qui nécessite d'excellentes compétences en organisation, communication et gestion de projet. Le coordinateur est le chef d'orchestre qui fait le lien entre les médecins, les sponsors et l'équipe technique.",
+                "📅 **Coordinateur événementiel médical** : Responsable de la réussite globale d'un congrès médical, ce poste demande une parfaite maîtrise du timing, du budget et des relations avec tous les acteurs de l'événement."
+            ],
+            'cardiologie' => [
+                "🫀 **Cardiologie** : Dans ce secteur, les métiers clés sont coordinateur de congrès cardiologiques, chargé de communication santé et chef de projet événementiel pour les symposiums cardiovasculaires. Ces postes demandent une bonne connaissance des acteurs hospitaliers, des conférences scientifiques et du parcours patient.",
+                "💼 **Cardiologie** : Les événements dans ce domaine nécessitent des professionnels capables de gérer la logistique de formations, l'accueil des médecins cardiologues et la promotion des innovations en cardiologie.",
+                "📊 **Cardiologie** : Un métier important est celui de responsable de programme pour des conférences cardio, en lien étroit avec les équipes médicales, sponsors pharmaceutiques et institutions de santé."
+            ],
+            'medecine generale' => [
+                "🩺 **Médecine générale** : Les métiers liés à cette spécialité incluent coordinateur de formations médicales généralistes, responsable d'événements de prévention santé et chef de projet pour des forums sur les soins primaires.",
+                "🌿 **Médecine générale** : Ce secteur requiert une excellente capacité de synthèse, une communication simple et claire, et la création d'événements qui rassemblent médecins de famille, infirmiers et acteurs de santé publique.",
+                "👨‍⚕️ **Médecine générale** : Un rôle pertinent est celui de responsable de programme pour des journées de sensibilisation à la santé de proximité, aux diagnostics précoces et à la prévention des maladies chroniques."
+            ],
+            'médecine générale' => [
+                "🩺 **Médecine générale** : Les métiers liés à cette spécialité incluent coordinateur de formations médicales généralistes, responsable d'événements de prévention santé et chef de projet pour des forums sur les soins primaires.",
+                "🌿 **Médecine générale** : Ce secteur requiert une excellente capacité de synthèse, une communication simple et claire, et la création d'événements qui rassemblent médecins de famille, infirmiers et acteurs de santé publique.",
+                "👨‍⚕️ **Médecine générale** : Un rôle pertinent est celui de responsable de programme pour des journées de sensibilisation à la santé de proximité, aux diagnostics précoces et à la prévention des maladies chroniques."
+            ],
+            'dermatologie' => [
+                "🧴 **Dermatologie** : Les métiers associés incluent organisateur de congrès dermatologiques, community manager santé peau et responsable de production de contenus cliniques. La dermatologie attire souvent un public mixte de praticiens et de laboratoires cosmétiques.",
+                "💡 **Dermatologie** : Pour cette spécialité, il faut créer des événements pédagogiques autour des traitements cutanés, en faisant le lien entre médecins, marques dermo-cosmétiques et patients.",
+                "🎤 **Dermatologie** : Le rôle de modérateur pour des ateliers pratiques et de gestionnaire de stands est très recherché dans les salons de dermatologie et médecine esthétique."
+            ],
+            'esthétique' => [
+                "💄 **Esthétique** : Les métiers ici sont organisateur d'événements beauté, chargé des partenariats avec les cliniques esthétiques, et coordinateur de workshops sur la médecine esthétique.",
+                "✨ **Esthétique** : Ce secteur doit combiner sens du design, gestion des intervenants médicaux et compréhension du marketing des soins esthétiques.",
+                "📸 **Esthétique** : Un métier pertinent est celui de responsable des démonstrations produits et de l'animation des stands lors de congrès esthétiques."
+            ],
+            'oncologie' => [
+                "🧬 **Oncologie** : Dans ce domaine, les métiers incluent chef de projet événements cliniques, coordinateur de symposiums sur le cancer et responsable des relations avec les centres oncologiques.",
+                "🎗 **Oncologie** : L'organisation d'événements oncologiques nécessite une grande rigueur, une sensibilité aux patients et une coordination avec des équipes de recherche médicale.",
+                "📚 **Oncologie** : Un poste utile est celui de gestionnaire de contenus pour conférences sur les nouvelles thérapies et les essais cliniques en oncologie."
+            ],
+            'urgence' => [
+                "🚑 **Urgence** : Les métiers liés à l'urgence médicale sont coordinateur de formations aux soins d'urgence, responsable de simulation clinique et organisateur de journées de préparation aux situations critiques.",
+                "⚡ **Urgence** : Ce secteur demande une réactivité élevée et une capacité à gérer des événements très techniques avec des intervenants urgentistes et sapeurs-pompiers.",
+                "🩺 **Urgence** : Un métier adapté est chef de projet pour des ateliers sur la gestion des crises médicales et l'amélioration des parcours d'accueil des urgences."
+            ],
+            'neurosciences' => [
+                "🧠 **Neurosciences** : Les métiers associés incluent organisateur de colloques sur le cerveau, coordinateur de conférences sur la neurologie et responsable de communication scientifique.",
+                "📍 **Neurosciences** : Il faut comprendre les enjeux des maladies neurologiques et savoir animer des échanges entre chercheurs, médecins neurologues et institutions académiques.",
+                "🔬 **Neurosciences** : Un rôle important est celui de gestionnaire de programme pour des journées de formation sur les avancées en neurochirurgie et neurosciences cliniques."
+            ],
+            'pédiatrie' => [
+                "👶 **Pédiatrie** : Les métiers dans ce secteur sont organisateur de congrès pédiatriques, responsable de programmes de formation et coordinateur d'ateliers pour parents et professionnels de santé.",
+                "🧸 **Pédiatrie** : La gestion d'événements pédiatriques nécessite une approche empathique et une bonne organisation pour des sessions pédagogiques adaptées aux besoins des enfants et des soignants.",
+                "🎈 **Pédiatrie** : Un poste clé est celui de chef de projet pour des journées thématiques sur la santé infantile et le développement des nouveaux soins pédiatriques."
+            ],
+        ];
+
+        foreach ($specialiteResponses as $keyword => $texts) {
+            if (strpos($userMessage, $keyword) !== false) {
+                return ['content' => [['text' => $texts[array_rand($texts)]]]];
+            }
+        }
+
         $responses = [
             [
                 'keywords' => ['métier', 'metier', 'profession', 'travail'], 
@@ -106,13 +167,57 @@ class AiProxyController {
             }
         }
         
-        $fallback = [
-            "🤖 **Note :** Je suis actuellement en mode démonstration car aucune clé API d'intelligence artificielle n'a été configurée.\n\nJe ne peux répondre qu'à certains mots-clés comme : métiers, carrière, Tunisie, événements, sponsors.\n\n*Pour une discussion naturelle, l'administrateur doit configurer une clé API Anthropic.*",
-            "Désolé, je suis en mode démo restreint 😅. Essayez de me poser une question avec l'un de ces mots : événement, tunisie, sponsor, carrière.",
-            "Je n'ai pas de vraie intelligence artificielle connectée pour le moment ! 🔌 Je ne réponds qu'à des questions spécifiques. Dites 'bonjour' ou demandez-moi les événements en cours."
-        ];
-        
-        return ['content' => [['text' => $fallback[array_rand($fallback)]]]];
+        $fallback = "❌ Erreur : Cette question ne concerne pas le projet DocTime. Je suis uniquement spécialisé dans les événements médicaux, sponsors et spécialités de la plateforme DocTime.";
+
+        return ['content' => [['text' => $fallback]]];
+    }
+
+    /**
+     * Récupère le contexte dynamique du projet (événements et sponsors depuis la BD)
+     */
+    private function getProjectContext(): string {
+        $context = "Tu es l'assistant virtuel intelligent de DocTime, une plateforme d'organisation d'événements médicaux en Tunisie. ";
+        $context .= "Ton rôle exclusif est d'aider les utilisateurs à trouver des informations pertinentes sur nos événements, nos sponsors, les spécialités médicales, et l'organisation de la plateforme DocTime. ";
+        $context .= "RÈGLE STRICTE : Tu dois IMPÉRATIVEMENT refuser de répondre à toute question qui n'est pas directement liée à DocTime, à l'événementiel médical, à nos sponsors, ou au domaine médical/santé en Tunisie. Si l'utilisateur te pose une question hors de ce cadre (informatique générale, politique, cuisine, blagues, etc.), réponds poliment que tu es spécialisé uniquement dans les événements médicaux DocTime et que tu ne peux pas l'aider sur d'autres sujets. ";
+        $context .= "Réponds toujours en français, de manière concise, professionnelle et amicale.\n\n";
+
+        try {
+            // Charger les événements à venir
+            require_once __DIR__ . '/../model/EvenementRepository.php';
+            $repo = new EvenementRepository();
+            $evenements = $repo->findUpcoming();
+
+            if (!empty($evenements)) {
+                $context .= "Voici la liste des événements médicaux à venir actuellement disponibles dans notre système :\n";
+                foreach ($evenements as $evt) {
+                    $titre = $evt->getTitre();
+                    $date = $evt->getDateDebut();
+                    $lieu = $evt->getLieu();
+                    $specialite = $evt->getSpecialite();
+                    $prix = $evt->getPrix();
+                    $context .= "- \"$titre\" (Spécialité: $specialite) prévu le $date à $lieu. Prix: $prix TND.\n";
+                }
+            } else {
+                $context .= "Il n'y a actuellement aucun événement à venir de programmé.\n";
+            }
+
+            // Charger les sponsors premium
+            require_once __DIR__ . '/../model/SponsorRepository.php';
+            $sponsorRepo = new SponsorRepository();
+            $sponsors = $sponsorRepo->findPremium();
+            
+            if (!empty($sponsors)) {
+                $context .= "\nVoici la liste de nos sponsors premium :\n";
+                foreach ($sponsors as $sponsor) {
+                    $context .= "- " . $sponsor->getNom() . " (Niveau: " . $sponsor->getNiveau() . ")\n";
+                }
+            }
+
+        } catch (Throwable $t) {
+            $context .= "(Note: impossible de charger les événements et sponsors en direct pour le moment).\n";
+        }
+
+        return $context;
     }
 
     /**
@@ -142,7 +247,7 @@ class AiProxyController {
         }
 
         // Vérifier la clé API - sinon utiliser le mode démonstration
-        if (empty($this->apiKey) || $this->apiKey === 'sk-ant-api03-placeholder-replace-me') {
+        if (empty($this->apiKey) || $this->apiKey === 'your-groq-api-key-here') {
             // Mode démonstration : répondre localement sans API externe
             $lastMessage = end($data['messages'])['content'] ?? '';
             $response = $this->demoMode($lastMessage);
@@ -150,20 +255,28 @@ class AiProxyController {
             exit;
         }
 
-        // Construire la requête vers Anthropic
-        $payload = [
-            'model'      => $this->model,
-            'max_tokens' => $this->maxTokens,
-            'messages'   => $data['messages'],
-        ];
-
-        // Prompt système optionnel
-        if (!empty($data['system'])) {
-            $payload['system'] = $data['system'];
+        // Préparer le contexte système dynamique avec les données de la BD
+        $contextMessage = $this->getProjectContext();
+        $messages = $data['messages'];
+        
+        if (count($messages) > 0 && $messages[0]['role'] !== 'system') {
+            // Insérer au début si pas de message system
+            array_unshift($messages, ['role' => 'system', 'content' => $contextMessage]);
+        } else if (count($messages) > 0 && $messages[0]['role'] === 'system') {
+            // Concaténer si déjà un message system
+            $messages[0]['content'] = $contextMessage . "\n\n" . $messages[0]['content'];
         }
 
-        // Appel cURL vers l'API Anthropic
-        $response = $this->callAnthropic($payload);
+        // Construire la requête vers Groq (format OpenAI compatible)
+        $payload = [
+            'model'      => $this->model,
+            'messages'   => $messages,
+            'temperature' => 0.7,
+            'max_tokens' => 1000
+        ];
+
+        // Appel cURL vers l'API Groq
+        $response = $this->callGroq($payload);
 
         // Retourner la réponse au client
         echo $response;
@@ -171,9 +284,9 @@ class AiProxyController {
     }
 
     /**
-     * Appel HTTP vers l'API Anthropic via cURL
+     * Appel HTTP vers l'API Groq via cURL
      */
-    private function callAnthropic(array $payload): string {
+    private function callGroq(array $payload): string {
         $ch = curl_init($this->apiUrl);
 
         curl_setopt_array($ch, [
@@ -182,8 +295,7 @@ class AiProxyController {
             CURLOPT_POSTFIELDS     => json_encode($payload),
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json',
-                'x-api-key: ' . $this->apiKey,
-                'anthropic-version: 2023-06-01',
+                'Authorization: Bearer ' . $this->apiKey,
             ],
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_SSL_VERIFYPEER => true,
@@ -199,8 +311,26 @@ class AiProxyController {
             return json_encode(['error' => 'Erreur réseau : ' . $curlErr]);
         }
 
-        // Transmettre le code HTTP de l'API Anthropic
-        http_response_code($httpCode);
-        return $result ?: json_encode(['error' => 'Réponse vide de l\'API']);
+        if ($httpCode !== 200) {
+            http_response_code($httpCode);
+            $errorData = json_decode($result, true);
+            $errorMsg = $errorData['error']['message'] ?? 'Erreur Groq (HTTP ' . $httpCode . ')';
+            return json_encode(['error' => $errorMsg]);
+        }
+
+        // Parser la réponse OpenAI-compatible de Groq
+        $groqResponse = json_decode($result, true);
+        
+        if (!$groqResponse) {
+            return json_encode(['error' => 'Réponse invalide de Groq']);
+        }
+
+        if (!isset($groqResponse['choices']) || !isset($groqResponse['choices'][0]['message']['content'])) {
+            return json_encode(['error' => 'Réponse Groq mal formée']);
+        }
+
+        $text = $groqResponse['choices'][0]['message']['content'];
+        // Retourner au format Anthropic pour compatibilité
+        return json_encode(['content' => [['text' => $text]]]);
     }
 }

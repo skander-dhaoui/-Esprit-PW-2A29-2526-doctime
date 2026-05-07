@@ -179,6 +179,25 @@
           <button class="quick-btn" onclick="quickAsk('Quelles compétences faut-il pour organiser un congrès médical ?')">🎓 Compétences</button>
           <button class="quick-btn" onclick="quickAsk('Quels sont les métiers émergents dans l\'événementiel médical en Tunisie ?')">🇹🇳 Tunisie</button>
           <button class="quick-btn" onclick="quickAsk('Donne-moi un plan de carrière pour devenir expert en événements médicaux')">📈 Carrière</button>
+          <?php
+            $seenSpecialites = [];
+            $specialiteButtons = [];
+            foreach ($specialites as $specialite) {
+                $name = trim($specialite['specialite']);
+                if ($name === '') {
+                    continue;
+                }
+                $lower = mb_strtolower($name, 'UTF-8');
+                if (in_array($lower, $seenSpecialites, true)) {
+                    continue;
+                }
+                $seenSpecialites[] = $lower;
+                $specialiteButtons[] = $name;
+            }
+          ?>
+          <?php foreach (array_slice($specialiteButtons, 0, 6) as $specialite): ?>
+            <button class="quick-btn" onclick="quickAsk('Quels métiers sont liés à la spécialité <?= htmlspecialchars($specialite, ENT_QUOTES, 'UTF-8') ?> ?')">🩺 <?= htmlspecialchars($specialite, ENT_QUOTES, 'UTF-8') ?></button>
+          <?php endforeach; ?>
         </div>
 
         <!-- Input -->
@@ -314,7 +333,7 @@ async function sendMessage() {
   } catch (err) {
     setTyping(false);
     const msg = err.message.includes('Clé API') 
-      ? '⚙️ Clé API non configurée. Ouvrez <code>controller/AiProxyController.php</code> et renseignez <code>$apiKey</code>.'
+      ? '⚙️ Clé API non configurée. Ouvrez <code>.env</code> et renseignez <code>GROQ_API_KEY</code> avec votre clé Groq.'
       : '❌ ' + (err.message || 'Erreur de connexion. Vérifiez votre serveur.');
     addMessage('ai', msg);
     console.error(err);
