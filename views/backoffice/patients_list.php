@@ -8,7 +8,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 $page_title = 'Gestion des patients';
 $current_page = 'patients';
 ?>
-<!DOCTYPE html>
+<?php
+// Vue déprécée - voir layout.php et patients_list_content.php
+?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -16,7 +18,6 @@ $current_page = 'patients';
     <title><?= $page_title ?> - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; min-height: 100vh; }
@@ -184,7 +185,51 @@ $current_page = 'patients';
             padding: 12px 14px;
             border: none;
         }
+
+        .filter-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        .filter-form .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a2035;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 992px) {
+            .filter-form {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #5b6475;
+        }
+
+        .pagination-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
     </style>
+    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
+    <script src="assets/js/theme-mode.js"></script>
+    <link rel="stylesheet" href="assets/css/theme-mode.css">
 </head>
 <body>
 
@@ -200,6 +245,7 @@ $current_page = 'patients';
         <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
         <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
         <a href="index.php?page=patients" class="active"><i class="fas fa-user-injured"></i> Patients</a>
+        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
         <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
         <a href="index.php?page=ordonnances"><i class="fas fa-prescription-bottle"></i> Ordonnances</a>
         <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
@@ -225,25 +271,55 @@ $current_page = 'patients';
 
     <div class="content-card">
         <div class="card-title-row">
-            <h5><i class="fas fa-list"></i> Liste des patients (<?= count($patients ?? []) ?>)</h5>
+            <h5><i class="fas fa-list"></i> Liste des patients (<?= (int) ($pagination['total_items'] ?? count($patients ?? [])) ?>)</h5>
             <a href="index.php?page=users&action=create" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Ajouter un patient
             </a>
         </div>
 
+        <form method="get" action="index.php" class="filter-form" data-dynamic-filter>
+            <input type="hidden" name="page" value="patients">
+            <div>
+                <label class="form-label" for="patients-q">Recherche</label>
+                <input id="patients-q" type="text" name="q" class="form-control" placeholder="Nom, email, téléphone, groupe sanguin..." value="<?= htmlspecialchars($filters['q'] ?? '') ?>">
+            </div>
+            <div>
+                <label class="form-label" for="patients-sort">Trier par</label>
+                <select id="patients-sort" name="sort" class="form-select">
+                    <option value="created_at" <?= ($filters['sort'] ?? '') === 'created_at' ? 'selected' : '' ?>>Date d'inscription</option>
+                    <option value="nom" <?= ($filters['sort'] ?? '') === 'nom' ? 'selected' : '' ?>>Nom</option>
+                    <option value="email" <?= ($filters['sort'] ?? '') === 'email' ? 'selected' : '' ?>>Email</option>
+                    <option value="telephone" <?= ($filters['sort'] ?? '') === 'telephone' ? 'selected' : '' ?>>Téléphone</option>
+                    <option value="groupe_sanguin" <?= ($filters['sort'] ?? '') === 'groupe_sanguin' ? 'selected' : '' ?>>Groupe sanguin</option>
+                    <option value="statut" <?= ($filters['sort'] ?? '') === 'statut' ? 'selected' : '' ?>>Statut</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="patients-direction">Ordre</label>
+                <select id="patients-direction" name="direction" class="form-select">
+                    <option value="asc" <?= ($filters['direction'] ?? '') === 'asc' ? 'selected' : '' ?>>Croissant</option>
+                    <option value="desc" <?= ($filters['direction'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Décroissant</option>
+                </select>
+            </div>
+            <a href="index.php?page=patients" class="btn btn-outline-secondary">Réinitialiser</a>
+        </form>
+
         <div class="table-responsive">
-            <table id="patientsTable" class="table table-hover align-middle">
+            <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Nom complet</th><th>Email</th>
+                        <th>Nom complet</th><th>Email</th>
                         <th>Téléphone</th><th>Groupe sanguin</th><th>Statut</th><th>Inscrit le</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php if (!empty($patients)): ?>
                     <?php foreach ($patients as $p): ?>
+                    <?php
+                        $patientName = trim(($p['prenom'] ?? '') . ' ' . ($p['nom'] ?? ''));
+                        $patientLabel = $patientName !== '' ? $patientName : ($p['email'] ?? 'ce patient');
+                    ?>
                     <tr>
-                        <td><?= htmlspecialchars($p['id']) ?></td>
                         <td><strong><?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($p['email']) ?></td>
                         <td><?= htmlspecialchars($p['telephone'] ?? '—') ?></td>
@@ -254,30 +330,52 @@ $current_page = 'patients';
                         <td><?= date('d/m/Y', strtotime($p['created_at'])) ?></td>
                         <td>
                             <a href="index.php?page=patients&action=edit&id=<?= $p['id'] ?>" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
-                            <a href="index.php?page=patients&action=delete&id=<?= $p['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ?')"><i class="fas fa-trash"></i></a>
+                            <a href="index.php?page=patients&action=delete&id=<?= $p['id'] ?>"
+                               class="btn btn-sm btn-danger"
+                               title="Supprimer"
+                               data-confirm-action
+                               data-confirm-title="Supprimer le patient"
+                               data-confirm-message="<?= htmlspecialchars('Supprimer définitivement le dossier de ' . $patientLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
+                               data-confirm-text="Supprimer"
+                               data-confirm-class="btn-danger"
+                               data-confirm-icon="fa-trash">
+                                <i class="fas fa-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="8" class="text-center">Aucun patient trouvé</td></tr>
+                    <tr><td colspan="7" class="text-center">Aucun patient trouvé</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
         </div>
+
+        <?php if (($pagination['total_pages'] ?? 1) > 1): ?>
+            <?php $patientsQuery = ['page' => 'patients', 'q' => $filters['q'] ?? '', 'sort' => $filters['sort'] ?? 'created_at', 'direction' => $filters['direction'] ?? 'desc']; ?>
+            <div class="pagination-bar">
+                <div class="pagination-info">
+                    Affichage de <?= (int) ($pagination['start_item'] ?? 0) ?> à <?= (int) ($pagination['end_item'] ?? 0) ?> sur <?= (int) ($pagination['total_items'] ?? 0) ?> patients
+                </div>
+                <div class="pagination-links">
+                    <?php if (!empty($pagination['has_previous'])): ?>
+                        <a class="btn btn-outline-primary btn-sm" href="index.php?<?= htmlspecialchars(http_build_query($patientsQuery + ['p' => $pagination['previous_page']])) ?>">Précédent</a>
+                    <?php endif; ?>
+                    <?php for ($i = 1; $i <= (int) $pagination['total_pages']; $i++): ?>
+                        <a class="btn btn-sm <?= $i === (int) $pagination['current_page'] ? 'btn-primary' : 'btn-outline-primary' ?>" href="index.php?<?= htmlspecialchars(http_build_query($patientsQuery + ['p' => $i])) ?>"><?= $i ?></a>
+                    <?php endfor; ?>
+                    <?php if (!empty($pagination['has_next'])): ?>
+                        <a class="btn btn-outline-primary btn-sm" href="index.php?<?= htmlspecialchars(http_build_query($patientsQuery + ['p' => $pagination['next_page']])) ?>">Suivant</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
+<?php include __DIR__ . '/components/dynamic_filter.php'; ?>
+<?php include __DIR__ . '/components/confirm_modal.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('#patientsTable').DataTable({
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
-        pageLength: 10,
-        order: [[0, 'desc']]
-    });
-});
-</script>
 </body>
 </html>

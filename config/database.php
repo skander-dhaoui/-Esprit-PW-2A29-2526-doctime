@@ -184,4 +184,3 @@ class Database {
         throw new Exception('Cannot unserialize a singleton');
     }
 }
-?>

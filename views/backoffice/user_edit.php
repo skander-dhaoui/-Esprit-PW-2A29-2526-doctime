@@ -80,25 +80,29 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Nom <span class="text-danger">*</span></label>
-                    <input type="text" name="nom" class="form-control"
+                    <input type="text" id="nom" name="nom" class="form-control"
                            value="<?= htmlspecialchars($v['nom'] ?? $user['nom'] ?? '') ?>">
+                    <div class="invalid-feedback" id="nom-error"></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                    <input type="text" name="prenom" class="form-control"
+                    <input type="text" id="prenom" name="prenom" class="form-control"
                            value="<?= htmlspecialchars($v['prenom'] ?? $user['prenom'] ?? '') ?>">
+                    <div class="invalid-feedback" id="prenom-error"></div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="text" name="email" class="form-control"
+                    <input type="text" id="email" name="email" class="form-control"
                            value="<?= htmlspecialchars($v['email'] ?? $user['email'] ?? '') ?>">
+                    <div class="invalid-feedback" id="email-error"></div>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Téléphone <span class="text-danger">*</span></label>
-                    <input type="text" name="telephone" class="form-control"
+                    <label class="form-label">Téléphone</label>
+                    <input type="text" id="telephone" name="telephone" class="form-control"
                            value="<?= htmlspecialchars($v['telephone'] ?? $user['telephone'] ?? '') ?>">
+                    <div class="invalid-feedback" id="telephone-error"></div>
                 </div>
             </div>
             <div class="row">
@@ -135,7 +139,8 @@
                 <?php if (!isset($user)): // Mot de passe seulement à la création ?>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
-                    <input type="password" name="password" class="form-control" placeholder="Min. 8 car., 1 maj., 1 chiffre">
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Min. 6 caractères">
+                    <div class="invalid-feedback" id="password-error"></div>
                 </div>
                 <?php endif; ?>
             </div>
@@ -220,10 +225,46 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Role toggle
     document.getElementById('roleSelect').addEventListener('change', function() {
         const role = this.value;
         document.getElementById('patientFields').style.display = role === 'patient' ? 'block' : 'none';
         document.getElementById('medecinFields').style.display = role === 'medecin' ? 'block' : 'none';
+    });
+
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        let valid = true;
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => { el.textContent = ''; el.style.display = 'none'; });
+
+        function err(id, inputId, msg) {
+            const inp = document.getElementById(inputId);
+            const div = document.getElementById(id);
+            if (inp) inp.classList.add('is-invalid');
+            if (div) { div.textContent = msg; div.style.display = 'block'; }
+            valid = false;
+        }
+
+        const nom = document.getElementById('nom').value.trim();
+        if (!nom || nom.length < 2) err('nom-error', 'nom', 'Le nom doit contenir au moins 2 caractères.');
+
+        const prenom = document.getElementById('prenom').value.trim();
+        if (!prenom || prenom.length < 2) err('prenom-error', 'prenom', 'Le prénom doit contenir au moins 2 caractères.');
+
+        const email = document.getElementById('email').value.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) err('email-error', 'email', 'Veuillez entrer un email valide.');
+
+        const pwdEl = document.getElementById('password');
+        if (pwdEl) {
+            const pwd = pwdEl.value;
+            if (!pwd || pwd.length < 6) err('password-error', 'password', 'Le mot de passe doit contenir au moins 6 caractères.');
+        }
+
+        if (!valid) {
+            e.preventDefault();
+            document.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     });
 </script>
 </body>
