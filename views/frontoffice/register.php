@@ -118,7 +118,7 @@
                 </div>
             </div>
 
-            <form id="registerForm" method="POST" action="index.php?page=register" novalidate>
+            <form id="registerForm" method="POST" action="/valorys_Copie/index.php?page=register" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="<?= htmlspecialchars($old['role'] ?? 'patient') ?>">
 
                 <div class="section-title"><i class="fas fa-user-circle me-1"></i> Informations personnelles</div>
@@ -306,7 +306,7 @@
 
             <hr>
             <div class="text-center">
-                <p class="mb-0">Déjà un compte ? <a href="index.php?page=login" class="login-link">Se connecter</a></p>
+                <p class="mb-0">Déjà un compte ? <a href="/valorys_Copie/index.php?page=login" class="login-link">Se connecter</a></p>
             </div>
         </div>
     </div>

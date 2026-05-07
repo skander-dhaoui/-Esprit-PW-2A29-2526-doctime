@@ -5,7 +5,7 @@
         <div class="col-lg-7">
 
             <div class="mb-4">
-                <a href="index.php?controller=evenement&action=detail&id=<?= $evenement['id'] ?>"
+                <a href="/valorys_Copie/index.php?controller=evenement&action=detail&id=<?= $evenement['id'] ?>"
                    class="text-muted small">
                     <i class="bi bi-arrow-left me-1"></i>Retour à l'événement
                 </a>
@@ -31,7 +31,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <form action="index.php?controller=participation&action=inscrireStore"
+                    <form action="/valorys_Copie/index.php?controller=participation&action=inscrireStore"
                           method="POST" id="form-inscription" novalidate>
                         <input type="hidden" name="evenement_id" value="<?= $evenement['id'] ?>">
 

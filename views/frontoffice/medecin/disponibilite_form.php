@@ -75,12 +75,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
             <h5><i class="fas fa-user-md me-2"></i>Dr. <?= htmlspecialchars($_SESSION['user_name'] ?? 'Médecin') ?></h5>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="index.php?page=medecin_dashboard"><i class="fas fa-home me-2"></i>Tableau de bord</a></li>
-            <li><a href="index.php?page=disponibilites" class="active"><i class="fas fa-clock me-2"></i>Disponibilités</a></li>
-            <li><a href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar me-2"></i>Rendez-vous</a></li>
-            <li><a href="index.php?page=mes_ordonnances"><i class="fas fa-prescription-bottle me-2"></i>Ordonnances</a></li>
+            <li><a href="/valorys_Copie/index.php?page=medecin_dashboard"><i class="fas fa-home me-2"></i>Tableau de bord</a></li>
+            <li><a href="/valorys_Copie/index.php?page=disponibilites" class="active"><i class="fas fa-clock me-2"></i>Disponibilités</a></li>
+            <li><a href="/valorys_Copie/index.php?page=mes_rendez_vous"><i class="fas fa-calendar me-2"></i>Rendez-vous</a></li>
+            <li><a href="/valorys_Copie/index.php?page=mes_ordonnances"><i class="fas fa-prescription-bottle me-2"></i>Ordonnances</a></li>
             <li><hr style="margin: 15px 0; border-color: #2a3f5f;"></li>
-            <li><a href="index.php?page=logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+            <li><a href="/valorys_Copie/index.php?page=logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
         </ul>
     </div>
 
@@ -103,7 +103,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="index.php?page=disponibilites&action=store" novalidate>
+            <form method="POST" action="/valorys_Copie/index.php?page=disponibilites&action=store" novalidate>
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
 

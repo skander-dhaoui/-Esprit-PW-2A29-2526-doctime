@@ -72,7 +72,7 @@
             </div>
 
             <?php if ($placesRestantes > 0 && $evenement['statut'] === 'planifie'): ?>
-            <a href="index.php?controller=participation&action=inscrire&evenement_id=<?= $evenement['id'] ?>"
+            <a href="/valorys_Copie/index.php?controller=participation&action=inscrire&evenement_id=<?= $evenement['id'] ?>"
                class="btn btn-green w-100 btn-lg">
                 <i class="bi bi-person-plus me-2"></i>S'inscrire
             </a>
@@ -82,7 +82,7 @@
             </button>
             <?php endif; ?>
 
-            <a href="index.php?controller=evenement&action=list" class="btn btn-outline-secondary w-100 mt-2">
+            <a href="/valorys_Copie/index.php?controller=evenement&action=list" class="btn btn-outline-secondary w-100 mt-2">
                 <i class="bi bi-arrow-left me-1"></i>Retour aux événements
             </a>
         </div>

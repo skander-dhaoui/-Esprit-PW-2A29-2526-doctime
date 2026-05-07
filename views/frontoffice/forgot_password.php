@@ -55,7 +55,7 @@ unset($_SESSION['error'], $_SESSION['success']);
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="index.php?page=forgot_password">
+            <form method="POST" action="/valorys_Copie/index.php?page=forgot_password">
                 <div class="mb-4">
                     <label class="form-label">Votre adresse email</label>
                     <input type="email" name="email" class="form-control" placeholder="exemple@email.com" required>
@@ -67,7 +67,7 @@ unset($_SESSION['error'], $_SESSION['success']);
 
             <hr>
             <div class="text-center">
-                <a href="index.php?page=login" class="back-link">
+                <a href="/valorys_Copie/index.php?page=login" class="back-link">
                     <i class="fas fa-arrow-left me-1"></i> Retour à la connexion
                 </a>
             </div>

@@ -145,7 +145,7 @@
 
             </div>
 
-            <form id="loginForm" method="POST" action="index.php?page=login" novalidate>
+            <form id="loginForm" method="POST" action="/valorys_Copie/index.php?page=login" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="patient">
                 <input type="hidden" name="captcha_response" id="captchaResponse" value="">
 
@@ -232,21 +232,21 @@
                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
                         <label class="form-check-label" for="remember">Se souvenir de moi</label>
                     </div>
-                    <a href="index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
+                    <a href="/valorys_Copie/index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
                 </div>
 
                 <div class="text-center mb-3 mt-3"><span class="text-muted">ou continuer avec</span></div>
 
                 <div class="social-login">
-                    <a class="btn-social btn-google" href="index.php?page=social_login&provider=google">
+                    <a class="btn-social btn-google" href="/valorys_Copie/index.php?page=social_login&provider=google">
                         <i class="fab fa-google"></i>
                         <span>Continuer avec Google</span>
                     </a>
-                    <a class="btn-social btn-github" href="index.php?page=social_login&provider=github">
+                    <a class="btn-social btn-github" href="/valorys_Copie/index.php?page=social_login&provider=github">
                         <i class="fab fa-github"></i>
                         <span>Continuer avec GitHub</span>
                     </a>
-                    <a class="btn-social btn-facebook" href="index.php?page=social_login&provider=facebook">
+                    <a class="btn-social btn-facebook" href="/valorys_Copie/index.php?page=social_login&provider=facebook">
                         <i class="fab fa-facebook-f"></i>
                         <span>Continuer avec Facebook</span>
                     </a>
@@ -264,7 +264,7 @@
             <div class="text-center">
                 <p class="mb-0">
                     Pas encore de compte ?
-                    <a href="index.php?page=register" class="register-link">S'inscrire</a>
+                    <a href="/valorys_Copie/index.php?page=register" class="register-link">S'inscrire</a>
                 </p>
             </div>
         </div>

@@ -135,13 +135,13 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 
         <?php unset($_SESSION['errors'], $_SESSION['success']); ?>
 
-        <form method="POST" action="index.php?page=verify_2fa" autocomplete="one-time-code">
+        <form method="POST" action="/valorys_Copie/index.php?page=verify_2fa" autocomplete="one-time-code">
             <label for="verification_code">Code de verification</label>
             <input id="verification_code" name="verification_code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
 
             <div class="actions">
                 <button class="btn btn-primary" type="submit">Valider</button>
-                <a class="btn btn-secondary" href="index.php?page=resend_2fa">Renvoyer</a>
+                <a class="btn btn-secondary" href="/valorys_Copie/index.php?page=resend_2fa">Renvoyer</a>
             </div>
         </form>
 

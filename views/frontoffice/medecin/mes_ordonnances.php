@@ -24,16 +24,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendez_vous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=disponibilites">Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=disponibilites">Disponibilités</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -110,7 +110,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                 <h5 class="modal-title"><i class="fas fa-prescription-bottle me-2"></i>Nouvelle ordonnance</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="index.php?page=ordonnances&action=store">
+            <form method="POST" action="/valorys_Copie/index.php?page=ordonnances&action=store">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Patient *</label>

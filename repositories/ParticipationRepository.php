@@ -15,6 +15,17 @@ class ParticipationRepository
         $this->db = Database::getInstance()->getConnection();
     }
 
+    public function getAll(): array
+    {
+        $sql = "SELECT p.*, e.titre as event_titre, u.nom, u.prenom, u.email 
+                FROM participations p 
+                JOIN events e ON p.event_id = e.id 
+                JOIN users u ON p.user_id = u.id 
+                ORDER BY p.date_inscription DESC";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function create(array $data): bool
     {
         $sql = "INSERT INTO participations (event_id, user_id, statut, date_inscription) 

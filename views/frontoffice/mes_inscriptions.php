@@ -28,7 +28,7 @@
             <!-- Formulaire de recherche par email -->
             <div class="card mb-4">
                 <div class="card-body p-4">
-                    <form method="GET" action="index.php" class="row g-3 align-items-end">
+                    <form method="GET" action="/valorys_Copie/index.php" class="row g-3 align-items-end">
                         <input type="hidden" name="controller" value="mesinscriptions">
                         <input type="hidden" name="action" value="search">
                         <div class="col-md-8">
@@ -56,7 +56,7 @@
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-inbox display-4 d-block mb-3"></i>
                     <p>Aucune inscription trouvée pour <strong><?= htmlspecialchars($email) ?></strong>.</p>
-                    <a href="index.php?controller=evenements&action=list" class="btn btn-green btn-sm mt-2">
+                    <a href="/valorys_Copie/index.php?controller=evenements&action=list" class="btn btn-green btn-sm mt-2">
                         <i class="bi bi-calendar2-event me-1"></i>Voir les événements
                     </a>
                 </div>
@@ -121,7 +121,7 @@
                                     <!-- Actions -->
                                     <div class="col-md-5 d-flex flex-column gap-2 align-items-md-end">
                                         <?php if ($p['statut'] !== 'annule' && $p['evenement_statut'] !== 'annule'): ?>
-                                        <a href="index.php?controller=mesinscriptions&action=frontEdit&id=<?= $p['id'] ?>&email=<?= urlencode($email) ?>"
+                                        <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=frontEdit&id=<?= $p['id'] ?>&email=<?= urlencode($email) ?>"
                                            class="btn btn-outline-primary btn-sm w-100" style="max-width:200px;">
                                             <i class="bi bi-pencil me-1"></i>Modifier
                                         </a>
@@ -150,7 +150,7 @@
                                                     </div>
                                                     <div class="modal-footer gap-2">
                                                         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
-                                                        <a href="index.php?controller=mesinscriptions&action=frontDelete&id=<?= $p['id'] ?>&email=<?= urlencode($email) ?>"
+                                                        <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=frontDelete&id=<?= $p['id'] ?>&email=<?= urlencode($email) ?>"
                                                            class="btn btn-danger btn-sm">Supprimer</a>
                                                     </div>
                                                 </div>
