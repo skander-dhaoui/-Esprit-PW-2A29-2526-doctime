@@ -301,7 +301,7 @@
         
         // Si pas de captcha en session, le charger du serveur
         if (!currentCaptcha || currentCaptcha === '') {
-            fetch('index.php?action=get_captcha', { method: 'POST' })
+            fetch('/valorys_Copie/index.php?action=get_captcha', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.captcha) {
@@ -319,7 +319,7 @@
 
         function generateCaptcha() {
             // Au clic sur rafraîchir, on demande un nouveau captcha côté serveur via AJAX
-            fetch('index.php?action=generate_captcha', { method: 'POST' })
+            fetch('/valorys_Copie/index.php?action=generate_captcha', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.captcha) {
@@ -724,7 +724,7 @@
                 const fetchTimeout = setTimeout(() => controller.abort(), 15000);
                 let response;
                 try {
-                    response = await fetch('index.php?page=face_login', {
+                    response = await fetch('/valorys_Copie/index.php?page=face_login', {
                         method: 'POST',
                         body: payload,
                         signal: controller.signal
