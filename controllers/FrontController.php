@@ -2170,7 +2170,7 @@ JS;
     public function listSponsors(): void {
         require_once __DIR__ . '/../models/Sponsor.php';
         $sponsorModel = new Sponsor();
-        $sponsors = $sponsorModel->getAll(0, 100, 'actif');
+        $sponsors = $sponsorModel->findAll();
         
         // Map niveau enum values to French display names
         $levelMap = [

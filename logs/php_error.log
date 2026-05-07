@@ -260,3 +260,56 @@ Stack trace:
 #2 {main}
   thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
 [07-May-2026 21:58:47 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mon_profil] ===
+[07-May-2026 21:59:30 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=modifier_profil] ===
+[07-May-2026 21:59:42 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=register_face] ===
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] registerFace called at 2026-05-07 21:59:42
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] registerFace userId=3
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] registerFace payload keys=image, descriptor
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] descriptor array found, elements=128
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] descriptor encoded, array_count=128, json_length=2637
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] Image data size: 39811 bytes
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] Image binary size after decode: 29841 bytes
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] Face photo saved to C:\4xampp\htdocs\valorys_Copie\controllers/../uploads/faces/face_3_1778183982.jpg
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] About to save: descriptor=[-0.0896824523806572,0.09808047860860825,0.0943252295255661,-0.025411291047930717,-0.115893214941024...
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] DB update SUCCESS
+[07-May-2026 21:59:42 Europe/Berlin] [FACE] Verification - descriptors in DB: [-0.0896824523806572,0.09808047860860825,0.0943252295255661,-0.025411291047930717,-0.115893214941024...
+[07-May-2026 21:59:44 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=modifier_profil] ===
+[07-May-2026 21:59:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[07-May-2026 21:59:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[07-May-2026 21:59:50 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] faceLogin called at 2026-05-07 21:59:50
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Found 2 users with face data
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.48706003877125
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] New best match: afnengorai@gmail.com at distance=0.48706003877125
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Comparing with admin@mediconnect.tn: distance=0.42468844329999
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] New best match: admin@mediconnect.tn at distance=0.42468844329999
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] MATCH FOUND: admin@mediconnect.tn at distance=0.42468844329999
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] User account status: actif
+[07-May-2026 21:59:50 Europe/Berlin] [FACE] Session started for user: admin@mediconnect.tn (ID: 3)
+[07-May-2026 21:59:52 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[07-May-2026 21:59:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=evenements] ===
+[07-May-2026 21:59:59 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=sponsors] ===
+[07-May-2026 21:59:59 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method Sponsor::getAll() in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2173
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(417): FrontController->listSponsors()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2173
+[07-May-2026 22:00:02 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=sponsors] ===
+[07-May-2026 22:00:02 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method Sponsor::getAll() in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2173
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(417): FrontController->listSponsors()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2173
+[07-May-2026 22:00:57 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=sponsors] ===
+[07-May-2026 22:00:57 Europe/Berlin] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'doctime_db.sponsor' doesn't exist in C:\4xampp\htdocs\valorys_Copie\models\Sponsor.php:13
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\models\Sponsor.php(13): PDO->query('SELECT * FROM s...')
+#1 C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php(2173): Sponsor->findAll()
+#2 C:\4xampp\htdocs\valorys_Copie\index.php(417): FrontController->listSponsors()
+#3 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\models\Sponsor.php on line 13
+[07-May-2026 22:01:29 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=sponsors] ===
