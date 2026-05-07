@@ -193,3 +193,70 @@ Stack trace:
 #1 C:\4xampp\htdocs\valorys_Copie\index.php(530): UserController->showProfil()
 #2 {main}
   thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
+[07-May-2026 21:54:59 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=modifier_profil] ===
+[07-May-2026 21:54:59 Europe/Berlin] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'valorys.patients' doesn't exist in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php:92
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php(92): PDO->prepare('SELECT groupe_s...')
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(530): UserController->showProfil()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
+[07-May-2026 21:55:00 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=modifier_profil] ===
+[07-May-2026 21:55:01 Europe/Berlin] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'valorys.patients' doesn't exist in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php:92
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php(92): PDO->prepare('SELECT groupe_s...')
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(530): UserController->showProfil()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
+[07-May-2026 21:55:28 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login] ===
+[07-May-2026 21:55:32 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_login&provider=google] ===
+[07-May-2026 21:55:38 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_callback&provider=google&state=aa0090f00a97ab350461f35530bec531&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0AeoWuM_Iw7uO4ZvOPaR9qWV70UuE2I5vL9f4JAtPnkwws0ww4v7Rxgcd43Jo0VAO44hsOg&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&authuser=0&prompt=consent] ===
+[07-May-2026 21:55:38 Europe/Berlin] === SOCIAL CALLBACK START ===
+[07-May-2026 21:55:38 Europe/Berlin] Provider: google
+[07-May-2026 21:55:38 Europe/Berlin] GET params: {"page":"social_callback","provider":"google","state":"aa0090f00a97ab350461f35530bec531","iss":"https:\/\/accounts.google.com","code":"4\/0AeoWuM_Iw7uO4ZvOPaR9qWV70UuE2I5vL9f4JAtPnkwws0ww4v7Rxgcd43Jo0VAO44hsOg","scope":"email profile openid https:\/\/www.googleapis.com\/auth\/userinfo.email https:\/\/www.googleapis.com\/auth\/userinfo.profile","authuser":"0","prompt":"consent"}
+[07-May-2026 21:55:38 Europe/Berlin] Session state: aa0090f00a97ab350461f35530bec531
+[07-May-2026 21:55:38 Europe/Berlin] State validation: expected=aa0090f00a97ab350461f35530bec531 | received=aa0090f00a97ab350461f35530bec531
+[07-May-2026 21:55:38 Europe/Berlin] Attempting to exchange code for token...
+[07-May-2026 21:55:38 Europe/Berlin] === OAUTH TOKEN EXCHANGE START ===
+[07-May-2026 21:55:38 Europe/Berlin] Provider: google
+[07-May-2026 21:55:38 Europe/Berlin] Code: 4/0AeoWuM_Iw7uO4ZvOP...
+[07-May-2026 21:55:38 Europe/Berlin] Callback URL: http://localhost/valorys_Copie/index.php?page=social_callback&provider=google
+[07-May-2026 21:55:38 Europe/Berlin] Payload: {"client_id":"1072884902221-848u5vreq5su3dsqjc3n8ai2ofvtp4b9.apps.googleusercontent.com","client_secret":"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","redirect_uri":"http:\/\/localhost\/valorys_Copie\/index.php?page=social_callback&provider=google","code":"4\/0AeoWuM_Iw7uO4ZvOPaR9qWV70UuE2I5vL9f4JAtPnkwws0ww4v7Rxgcd43Jo0VAO44hsOg","grant_type":"authorization_code"}
+[07-May-2026 21:55:39 Europe/Berlin] HTTP Response [200]: {
+  "access_token": "ya29.a0AQvPyINjsrnq9Q0WliUJgec8vYJRYZtAvA3KRp85nz0COy7jHYh2KRY322GHzoqcB72TsE1zia42xRSip9QpXxzH5qtFF1lL0-1rxwzU3eNvwWrkSVH0jAg8yuZSWeLrlgQERM4ki5kIndhBYSIU98ZiVPUlPchGTUy5k7F3_NomfxmkZ6jh4AE8xc6r-rcDpZxqyYEaCgYKAaoSARASFQHGX2MiwmSJ-4fujxAcQpx_4zc8uA0206",
+  "expires_in": 3599,
+  "scope": "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid",
+  "token_type": "Bearer",
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjgwNzZkZGJhYjQ
+[07-May-2026 21:55:39 Europe/Berlin] Token response: {"access_token":"ya29.a0AQvPyINjsrnq9Q0WliUJgec8vYJRYZtAvA3KRp85nz0COy7jHYh2KRY322GHzoqcB72TsE1zia42xRSip9QpXxzH5qtFF1lL0-1rxwzU3eNvwWrkSVH0jAg8yuZSWeLrlgQERM4ki5kIndhBYSIU98ZiVPUlPchGTUy5k7F3_NomfxmkZ6jh4AE8xc6r-rcDpZxqyYEaCgYKAaoSARASFQHGX2MiwmSJ-4fujxAcQpx_4zc8uA0206","expires_in":3599,"scope":"https:\/\/www.googleapis.com\/auth\/userinfo.email https:\/\/www.googleapis.com\/auth\/userinfo.profile openid","token_type":"Bearer","id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjgwNzZkZGJhYjQxNTU1NmUxNjkxNTRjNmE0YTBiZGJkNDQ2OWI3OWMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDcyODg0OTAyMjIxLTg0OHU1dnJlcTVzdTNkc3FqYzNuOGFpMm9mdnRwNGI5LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3Mjg4NDkwMjIyMS04NDh1NXZyZXE1c3UzZHNxamMzbjhhaTJvZnZ0cDRiOS5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExNjMxNjc4MDYwMTMyNDkxMTEyOCIsImVtYWlsIjoiYWZuZW5nb3JhaTA3QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdF9oYXNoIjoiZk5FRWFTd2xnM0NVMkFWMmVKNUgwdyIsIm5hbWUiOiJBZm5lbiBHb3JhaSIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NJVjcwS0t1RWRzWFNYTW1yNGJ5LVFaMHJyU0I1czFaVmFnM1dKVUdqUzV4Uktfdnc9czk2LWMiLCJnaXZlbl9uYW1lIjoiQWZuZW4iLCJmYW1pbHlfbmFtZSI6IkdvcmFpIiwiaWF0IjoxNzc4MTgzNzM5LCJleHAiOjE3NzgxODczMzl9.Hn95GuttvzIfWhghsWpvXAlatuanBfUHhdZlvXOjLtGOlh03p3nqLV6drd_io3dSE3jA5ziSP1fO8DJ7zNp_hPcsAuv5bJE72J_RNy1M7ACC00B9kSUcHixbJICTBQWFhmQcjePIL9_ih18YCaMXGIQrHtonYG-Gz9B1IZEwitntrgp5csyeC_NgdJxMxfmoh7cZDkpT_GHE9InJbC_JwoGjZc6xr1xeU7GTMxDwe-2SNNvSqKKOgEPSCv16KlWZay6Sc7yTMqUHuAPul7tGq_fFdYcTns2BXbkIHgm12-F8i-4HzRaiNdhlMesxzDtiEJChnpY2RCwyAIw5TQ7eEw"}
+[07-May-2026 21:55:39 Europe/Berlin] === OAUTH TOKEN EXCHANGE SUCCESS ===
+[07-May-2026 21:55:39 Europe/Berlin] Successfully got token data
+[07-May-2026 21:55:39 Europe/Berlin] HTTP Response [200]: {
+  "sub": "116316780601324911128",
+  "name": "Afnen Gorai",
+  "given_name": "Afnen",
+  "family_name": "Gorai",
+  "picture": "https://lh3.googleusercontent.com/a/ACg8ocIV70KKuEdsXSXMmr4by-QZ0rrSB5s1ZVag3WJUGjS5xRK_vw\u003ds96-c",
+  "email": "afnengorai07@gmail.com",
+  "email_verified": true
+}
+[07-May-2026 21:55:39 Europe/Berlin] Successfully fetched profile: {"sub":"116316780601324911128","name":"Afnen Gorai","given_name":"Afnen","family_name":"Gorai","picture":"https:\/\/lh3.googleusercontent.com\/a\/ACg8ocIV70KKuEdsXSXMmr4by-QZ0rrSB5s1ZVag3WJUGjS5xRK_vw=s96-c","email":"afnengorai07@gmail.com","email_verified":true}
+[07-May-2026 21:55:39 Europe/Berlin] User found/created: id=1
+[07-May-2026 21:55:39 Europe/Berlin] === SOCIAL CALLBACK SUCCESS ===
+[07-May-2026 21:55:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[07-May-2026 21:55:44 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=modifier_profil] ===
+[07-May-2026 21:55:44 Europe/Berlin] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'valorys.patients' doesn't exist in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php:92
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php(92): PDO->prepare('SELECT groupe_s...')
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(530): UserController->showProfil()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
+[07-May-2026 21:55:50 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login] ===
+[07-May-2026 21:55:50 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[07-May-2026 21:55:58 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mon_profil] ===
+[07-May-2026 21:55:58 Europe/Berlin] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'valorys.patients' doesn't exist in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php:92
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php(92): PDO->prepare('SELECT groupe_s...')
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(530): UserController->showProfil()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\UserController.php on line 92
+[07-May-2026 21:58:47 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mon_profil] ===
