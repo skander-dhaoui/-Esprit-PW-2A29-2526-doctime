@@ -1,161 +1,86 @@
 <?php
-declare(strict_types=1);
+require_once __DIR__ . '/../config/database.php';
 
-namespace App\Models;
+class Sponsor {
+    private PDO $pdo;
 
-final class Sponsor
-{
-    private int $id;
-    private string $nom;
-    private string $niveau;
-    private string $email;
-    private ?string $telephone;
-    private ?string $secteur;
-    private float $budget;
-    private ?string $description;
-    private ?string $logo;
-    private ?string $siteWeb;
-    private string $statut;
-    private string $createdAt;
-
-    public function __construct(array $data = [])
-    {
-        $this->id = (int) ($data['id'] ?? 0);
-        $this->nom = (string) ($data['nom'] ?? '');
-        $this->niveau = (string) ($data['niveau'] ?? 'bronze');
-        $this->email = (string) ($data['email'] ?? '');
-        $this->telephone = $data['telephone'] ?? null;
-        $this->secteur = $data['secteur'] ?? null;
-        $this->budget = (float) ($data['budget'] ?? 0.0);
-        $this->description = $data['description'] ?? null;
-        $this->logo = $data['logo'] ?? null;
-        $this->siteWeb = $data['site_web'] ?? null;
-        $this->statut = (string) ($data['statut'] ?? 'actif');
-        $this->createdAt = (string) ($data['created_at'] ?? '');
+    public function __construct() {
+        $this->pdo = Database::getInstance()->getConnection();
     }
 
-    public function __destruct()
-    {
-        // Nettoyage des ressources si nécessaire
+    /** Récupère tous les sponsors */
+    public function findAll(): array {
+        $stmt = $this->pdo->query("SELECT * FROM sponsor ORDER BY nom ASC");
+        return $stmt->fetchAll();
     }
 
-    public function getId(): int
-    {
-        return $this->id;
+    /** Récupère un sponsor par son ID */
+    public function findById(int $id): array|false {
+        $stmt = $this->pdo->prepare("SELECT * FROM sponsor WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch();
     }
 
-    public function getNom(): string
-    {
-        return $this->nom;
+    /** Vérifie si un email existe déjà (hors l'ID courant pour l'édition) */
+    public function emailExists(string $email, int $excludeId = 0): bool {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM sponsor WHERE email = :email AND id != :id"
+        );
+        $stmt->execute([':email' => $email, ':id' => $excludeId]);
+        return $stmt->fetchColumn() > 0;
     }
 
-    public function getNiveau(): string
-    {
-        return $this->niveau;
+    /** Crée un nouveau sponsor */
+    public function create(array $data): bool {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO sponsor (nom, email, telephone, site_web, niveau, montant)
+            VALUES (:nom, :email, :telephone, :site_web, :niveau, :montant)
+        ");
+        return $stmt->execute([
+            ':nom'       => trim($data['nom']),
+            ':email'     => trim($data['email']),
+            ':telephone' => trim($data['telephone']),
+            ':site_web'  => !empty($data['site_web']) ? trim($data['site_web']) : null,
+            ':niveau'    => $data['niveau'],
+            ':montant'   => $data['montant'],
+        ]);
     }
 
-    public function getEmail(): string
-    {
-        return $this->email;
+    /** Met à jour un sponsor existant */
+    public function update(int $id, array $data): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE sponsor
+            SET nom = :nom,
+                email = :email,
+                telephone = :telephone,
+                site_web = :site_web,
+                niveau = :niveau,
+                montant = :montant
+            WHERE id = :id
+        ");
+        return $stmt->execute([
+            ':id'        => $id,
+            ':nom'       => trim($data['nom']),
+            ':email'     => trim($data['email']),
+            ':telephone' => trim($data['telephone']),
+            ':site_web'  => !empty($data['site_web']) ? trim($data['site_web']) : null,
+            ':niveau'    => $data['niveau'],
+            ':montant'   => $data['montant'],
+        ]);
     }
 
-    public function getTelephone(): ?string
-    {
-        return $this->telephone;
+    /** Supprime un sponsor */
+    public function delete(int $id): bool {
+        $stmt = $this->pdo->prepare("DELETE FROM sponsor WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
     }
 
-    public function getSecteur(): ?string
-    {
-        return $this->secteur;
-    }
-
-    public function getBudget(): float
-    {
-        return $this->budget;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function getLogo(): ?string
-    {
-        return $this->logo;
-    }
-
-    public function getSiteWeb(): ?string
-    {
-        return $this->siteWeb;
-    }
-
-    public function getStatut(): string
-    {
-        return $this->statut;
-    }
-
-    public function getCreatedAt(): string
-    {
-        return $this->createdAt;
-    }
-
-    public function setId(int $id): void
-    {
-        $this->id = $id;
-    }
-
-    public function setNom(string $nom): void
-    {
-        $this->nom = $nom;
-    }
-
-    public function setNiveau(string $niveau): void
-    {
-        $this->niveau = $niveau;
-    }
-
-    public function setEmail(string $email): void
-    {
-        $this->email = $email;
-    }
-
-    public function setTelephone(?string $telephone): void
-    {
-        $this->telephone = $telephone;
-    }
-
-    public function setSecteur(?string $secteur): void
-    {
-        $this->secteur = $secteur;
-    }
-
-    public function setBudget(float $budget): void
-    {
-        $this->budget = $budget;
-    }
-
-    public function setDescription(?string $description): void
-    {
-        $this->description = $description;
-    }
-
-    public function setLogo(?string $logo): void
-    {
-        $this->logo = $logo;
-    }
-
-    public function setSiteWeb(?string $siteWeb): void
-    {
-        $this->siteWeb = $siteWeb;
-    }
-
-    public function setStatut(string $statut): void
-    {
-        $this->statut = $statut;
-    }
-
-    public function setCreatedAt(string $createdAt): void
-    {
-        $this->createdAt = $createdAt;
+    /** Compte les événements liés à ce sponsor */
+    public function countEvenements(int $id): int {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM evenement WHERE sponsor_id = :id"
+        );
+        $stmt->execute([':id' => $id]);
+        return (int)$stmt->fetchColumn();
     }
 }

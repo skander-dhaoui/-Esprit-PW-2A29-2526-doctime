@@ -1,89 +1,110 @@
 <?php
-declare(strict_types=1);
+require_once __DIR__ . '/../config/database.php';
 
-namespace App\Models;
+class Participation {
+    private PDO $pdo;
 
-final class Participation
-{
-    private int $id;
-    private int $eventId;
-    private int $userId;
-    private string $statut;
-    private ?string $codeQr;
-    private string $dateInscription;
-
-    public function __construct(array $data = [])
-    {
-        $this->id = (int) ($data['id'] ?? 0);
-        $this->eventId = (int) ($data['event_id'] ?? $data['evenement_id'] ?? 0);
-        $this->userId = (int) ($data['user_id'] ?? 0);
-        $this->statut = (string) ($data['statut'] ?? 'inscrit');
-        $this->codeQr = $data['code_qr'] ?? null;
-        $this->dateInscription = (string) ($data['date_inscription'] ?? '');
+    public function __construct() {
+        $this->pdo = Database::getInstance()->getConnection();
     }
 
-    public function __destruct()
-    {
-        // Nettoyage des ressources si nécessaire
+    public function findAll(): array {
+        $stmt = $this->pdo->query("
+            SELECT p.*, e.titre AS evenement_titre
+            FROM participation p
+            JOIN evenement e ON p.evenement_id = e.id
+            ORDER BY p.date_inscription DESC
+        ");
+        return $stmt->fetchAll();
     }
 
-    public function getId(): int
-    {
-        return $this->id;
+    public function findById(int $id): array|false {
+        $stmt = $this->pdo->prepare("
+            SELECT p.*, e.titre AS evenement_titre
+            FROM participation p
+            JOIN evenement e ON p.evenement_id = e.id
+            WHERE p.id = :id
+        ");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch();
     }
 
-    public function getEventId(): int
-    {
-        return $this->eventId;
+    public function findByEvenement(int $evenementId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM participation
+            WHERE evenement_id = :eid
+            ORDER BY date_inscription DESC
+        ");
+        $stmt->execute([':eid' => $evenementId]);
+        return $stmt->fetchAll();
     }
 
-    public function getUserId(): int
-    {
-        return $this->userId;
+    /** Vérifie si un participant est déjà inscrit à cet événement */
+    public function alreadyRegistered(string $email, int $evenementId, int $excludeId = 0): bool {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) FROM participation
+            WHERE email = :email AND evenement_id = :eid AND id != :id
+        ");
+        $stmt->execute([':email' => $email, ':eid' => $evenementId, ':id' => $excludeId]);
+        return $stmt->fetchColumn() > 0;
     }
 
-    public function getStatut(): string
-    {
-        return $this->statut;
+    public function create(array $data): bool {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO participation (nom, prenom, email, telephone, profession, evenement_id, statut)
+            VALUES (:nom, :prenom, :email, :telephone, :profession, :evenement_id, :statut)
+        ");
+        return $stmt->execute([
+            ':nom'          => trim($data['nom']),
+            ':prenom'       => trim($data['prenom']),
+            ':email'        => trim($data['email']),
+            ':telephone'    => trim($data['telephone']),
+            ':profession'   => trim($data['profession']),
+            ':evenement_id' => (int)$data['evenement_id'],
+            ':statut'       => $data['statut'] ?? 'en_attente',
+        ]);
     }
 
-    public function getCodeQr(): ?string
-    {
-        return $this->codeQr;
+    public function update(int $id, array $data): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE participation
+            SET nom          = :nom,
+                prenom       = :prenom,
+                email        = :email,
+                telephone    = :telephone,
+                profession   = :profession,
+                evenement_id = :evenement_id,
+                statut       = :statut
+            WHERE id = :id
+        ");
+        return $stmt->execute([
+            ':id'           => $id,
+            ':nom'          => trim($data['nom']),
+            ':prenom'       => trim($data['prenom']),
+            ':email'        => trim($data['email']),
+            ':telephone'    => trim($data['telephone']),
+            ':profession'   => trim($data['profession']),
+            ':evenement_id' => (int)$data['evenement_id'],
+            ':statut'       => $data['statut'],
+        ]);
     }
 
-    public function getDateInscription(): string
-    {
-        return $this->dateInscription;
+    public function delete(int $id): bool {
+        $stmt = $this->pdo->prepare("DELETE FROM participation WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
     }
 
-    public function setId(int $id): void
-    {
-        $this->id = $id;
-    }
-
-    public function setEventId(int $eventId): void
-    {
-        $this->eventId = $eventId;
-    }
-
-    public function setUserId(int $userId): void
-    {
-        $this->userId = $userId;
-    }
-
-    public function setStatut(string $statut): void
-    {
-        $this->statut = $statut;
-    }
-
-    public function setCodeQr(?string $codeQr): void
-    {
-        $this->codeQr = $codeQr;
-    }
-
-    public function setDateInscription(string $dateInscription): void
-    {
-        $this->dateInscription = $dateInscription;
+    /** Récupère toutes les inscriptions d'un email (frontoffice) */
+    public function findByEmail(string $email): array {
+        $stmt = $this->pdo->prepare("
+            SELECT p.*, e.titre AS evenement_titre, e.date_debut, e.date_fin,
+                   e.lieu, e.specialite, e.prix, e.statut AS evenement_statut
+            FROM participation p
+            JOIN evenement e ON p.evenement_id = e.id
+            WHERE p.email = :email
+            ORDER BY p.date_inscription DESC
+        ");
+        $stmt->execute([':email' => $email]);
+        return $stmt->fetchAll();
     }
 }
