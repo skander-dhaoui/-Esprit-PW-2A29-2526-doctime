@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../model/Sponsor.php';
+require_once __DIR__ . '/../models/Sponsor.php';
 require_once __DIR__ . '/../config/Validator.php';
 
 class SponsorController {
