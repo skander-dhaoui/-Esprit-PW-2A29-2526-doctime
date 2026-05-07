@@ -21,6 +21,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=patients" class="<?= $current_page === 'patients' ? 'active' : '' ?>">
             <i class="fas fa-user-injured"></i> Patients
         </a>
+        <a href="index.php?page=avis_admin" class="<?= $current_page === 'avis_admin' ? 'active' : '' ?>">
+            <i class="fas fa-star"></i> Avis
+        </a>
         <a href="index.php?page=rendez_vous_admin" class="<?= $current_page === 'rendez_vous_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-check"></i> Rendez-vous
         </a>
@@ -30,18 +33,33 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=produits_admin" class="<?= $current_page === 'produits_admin' ? 'active' : '' ?>">
             <i class="fas fa-box"></i> Produits
         </a>
+        <a href="index.php?page=categories_admin" class="<?= $current_page === 'categories_admin' ? 'active' : '' ?>">
+            <i class="fas fa-tags"></i> Catégories
+        </a>
         <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
             <i class="fas fa-blog"></i> Blog
         </a>
         <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-day"></i> Événements
         </a>
+        <a href="index.php?page=participations" class="<?= $current_page === 'participations' ? 'active' : '' ?>">
+            <i class="fas fa-handshake"></i> Participations
+        </a>
+        <a href="index.php?page=sponsors_admin" class="<?= $current_page === 'sponsors_admin' ? 'active' : '' ?>">
+            <i class="fas fa-hand-holding-usd"></i> Sponsors
+        </a>
         <div class="nav-divider"></div>
         <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
             <i class="fas fa-chart-line"></i> Statistiques
         </a>
+        <a href="index.php?page=evenements_admin&action=advanced" class="<?= ($current_page === 'evenements_admin' && ($_GET['action'] ?? '') === 'advanced') ? 'active' : '' ?>">
+            <i class="fas fa-chart-bar"></i> Événements Avancé
+        </a>
         <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
-            <i class="fas fa-history"></i> Historique
+            <i class="fas fa-history"></i> Historique Actions
+        </a>
+        <a href="index.php?page=login_history" class="<?= $current_page === 'login_history' ? 'active' : '' ?>">
+            <i class="fas fa-sign-in-alt"></i> Historique Connexions
         </a>
         <a href="index.php?page=settings" class="<?= $current_page === 'settings' ? 'active' : '' ?>">
             <i class="fas fa-cog"></i> Paramètres

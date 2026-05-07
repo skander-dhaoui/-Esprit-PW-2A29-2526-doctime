@@ -1,243 +1,235 @@
 <?php
+declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
+namespace App\Models;
 
-class User {
+final class User
+{
+    private int $id;
+    private string $nom;
+    private string $prenom;
+    private string $email;
+    private string $telephone;
+    private string $password;
+    private string $role;
+    private string $statut;
+    private ?string $adresse;
+    private ?string $dateNaissance;
+    private ?string $avatar;
+    private ?string $facePhoto;
+    private ?string $faceEncoding;
+    private ?string $faceDescriptor;
+    private string $createdAt;
+    private string $derniereConnexion;
 
-    private PDO $db;
-
-    public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+    public function __construct(array $data = [])
+    {
+        $this->id = (int) ($data['id'] ?? 0);
+        $this->nom = (string) ($data['nom'] ?? '');
+        $this->prenom = (string) ($data['prenom'] ?? '');
+        $this->email = (string) ($data['email'] ?? '');
+        $this->telephone = (string) ($data['telephone'] ?? '');
+        $this->password = (string) ($data['password'] ?? '');
+        $this->role = (string) ($data['role'] ?? 'patient');
+        $this->statut = (string) ($data['statut'] ?? 'actif');
+        $this->adresse = $data['adresse'] ?? null;
+        $this->dateNaissance = $data['date_naissance'] ?? null;
+        $this->avatar = $data['avatar'] ?? null;
+        $this->facePhoto = $data['face_photo'] ?? null;
+        $this->faceEncoding = $data['face_encoding'] ?? null;
+        $this->faceDescriptor = $data['face_descriptor'] ?? null;
+        $this->createdAt = (string) ($data['created_at'] ?? '');
+        $this->derniereConnexion = (string) ($data['derniere_connexion'] ?? '');
     }
 
-    // ─────────────────────────────────────────
-    //  Lecture
-    // ─────────────────────────────────────────
-
-    public function getAll(): array {
-        $stmt = $this->db->query(
-            "SELECT id, nom, prenom, email, telephone, role, statut, created_at
-             FROM users
-             ORDER BY created_at DESC"
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function __destruct()
+    {
+        // Nettoyage des ressources si nécessaire
     }
 
-    public function getRecent(int $limit = 5): array {
-        $stmt = $this->db->prepare(
-            "SELECT id, nom, prenom, email, role, statut, created_at
-             FROM users
-             ORDER BY created_at DESC
-             LIMIT :limit"
-        );
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Getters
+    public function getId(): int
+    {
+        return $this->id;
     }
 
-    public function findById(int $id): array|false {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM users WHERE id = :id LIMIT 1"
-        );
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function getNom(): string
+    {
+        return $this->nom;
     }
 
-    public function findByEmail(string $email): array|false {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM users WHERE email = :email LIMIT 1"
-        );
-        $stmt->execute([':email' => $email]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+    public function getPrenom(): string
+    {
+        return $this->prenom;
     }
 
-    public function getExtras(int $userId, string $role): array {
-        return match ($role) {
-            'patient' => $this->getPatientExtras($userId),
-            'medecin' => $this->getMedecinExtras($userId),
-            default   => [],
-        };
+    public function getEmail(): string
+    {
+        return $this->email;
     }
 
-    private function getPatientExtras(int $userId): array {
-        $stmt = $this->db->prepare(
-            "SELECT groupe_sanguin FROM patients WHERE user_id = :uid LIMIT 1"
-        );
-        $stmt->execute([':uid' => $userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    public function getTelephone(): string
+    {
+        return $this->telephone;
     }
 
-    private function getMedecinExtras(int $userId): array {
-        $stmt = $this->db->prepare(
-            "SELECT specialite, numero_ordre, cabinet_adresse, description, statut_validation
-             FROM medecins WHERE user_id = :uid LIMIT 1"
-        );
-        $stmt->execute([':uid' => $userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    public function getPassword(): string
+    {
+        return $this->password;
     }
 
-    // ─────────────────────────────────────────
-    //  Compteurs
-    // ─────────────────────────────────────────
-
-    public function count(): int {
-        return (int) $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn();
+    public function getRole(): string
+    {
+        return $this->role;
     }
 
-    public function countByRole(string $role): int {
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM users WHERE role = :role");
-        $stmt->execute([':role' => $role]);
-        return (int) $stmt->fetchColumn();
+    public function getStatut(): string
+    {
+        return $this->statut;
     }
 
-    public function countByStatus(string $status): int {
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM users WHERE statut = :statut");
-        $stmt->execute([':statut' => $status]);
-        return (int) $stmt->fetchColumn();
+    public function getAdresse(): ?string
+    {
+        return $this->adresse;
     }
 
-    // ─────────────────────────────────────────
-    //  Statistiques
-    // ─────────────────────────────────────────
-
-    public function getMonthlyRegistrations(): array {
-        $stmt = $this->db->query(
-            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS mois,
-                    COUNT(*) AS total
-             FROM users
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-             GROUP BY mois
-             ORDER BY mois ASC"
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function getDateNaissance(): ?string
+    {
+        return $this->dateNaissance;
     }
 
-    public function getRepartitionByRole(): array {
-        $stmt = $this->db->query(
-            "SELECT role, COUNT(*) AS total
-             FROM users
-             GROUP BY role"
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function getAvatar(): ?string
+    {
+        return $this->avatar;
     }
 
-    // ─────────────────────────────────────────
-    //  Écriture
-    // ─────────────────────────────────────────
-
-    public function create(array $data): int {
-        $sql = "INSERT INTO users
-                    (nom, prenom, email, telephone, password, role, statut, adresse, date_naissance, created_at)
-                VALUES
-                    (:nom, :prenom, :email, :telephone, :password, :role, :statut, :adresse, :date_naissance, NOW())";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':nom'            => $data['nom'],
-            ':prenom'         => $data['prenom'],
-            ':email'          => $data['email'],
-            ':telephone'      => $data['telephone'] ?? '',
-            ':password'       => $data['password'],
-            ':role'           => $data['role']   ?? 'patient',
-            ':statut'         => $data['statut'] ?? 'actif',
-            ':adresse'        => $data['adresse']        ?? null,
-            ':date_naissance' => $data['date_naissance'] ?? null,
-        ]);
-
-        return (int) $this->db->lastInsertId();
+    public function getFacePhoto(): ?string
+    {
+        return $this->facePhoto;
     }
 
-    public function update(int $id, array $data): bool {
-        if (empty($data)) return false;
+    public function getFaceEncoding(): ?string
+    {
+        return $this->faceEncoding;
+    }
 
-        $allowed = [
-            'nom', 'prenom', 'email', 'telephone', 'adresse',
-            'date_naissance', 'role', 'statut', 'password', 'derniere_connexion',
+    public function getFaceDescriptor(): ?string
+    {
+        return $this->faceDescriptor;
+    }
+
+    public function getCreatedAt(): string
+    {
+        return $this->createdAt;
+    }
+
+    public function getDerniereConnexion(): string
+    {
+        return $this->derniereConnexion;
+    }
+
+    public function getNomComplet(): string
+    {
+        return trim($this->prenom . ' ' . $this->nom);
+    }
+
+    // Setters
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
+
+    public function setNom(string $nom): void
+    {
+        $this->nom = $nom;
+    }
+
+    public function setPrenom(string $prenom): void
+    {
+        $this->prenom = $prenom;
+    }
+
+    public function setEmail(string $email): void
+    {
+        $this->email = $email;
+    }
+
+    public function setTelephone(string $telephone): void
+    {
+        $this->telephone = $telephone;
+    }
+
+    public function setPassword(string $password): void
+    {
+        $this->password = $password;
+    }
+
+    public function setRole(string $role): void
+    {
+        $this->role = $role;
+    }
+
+    public function setStatut(string $statut): void
+    {
+        $this->statut = $statut;
+    }
+
+    public function setAdresse(?string $adresse): void
+    {
+        $this->adresse = $adresse;
+    }
+
+    public function setDateNaissance(?string $dateNaissance): void
+    {
+        $this->dateNaissance = $dateNaissance;
+    }
+
+    public function setAvatar(?string $avatar): void
+    {
+        $this->avatar = $avatar;
+    }
+
+    public function setFacePhoto(?string $facePhoto): void
+    {
+        $this->facePhoto = $facePhoto;
+    }
+
+    public function setFaceEncoding(?string $faceEncoding): void
+    {
+        $this->faceEncoding = $faceEncoding;
+    }
+
+    public function setFaceDescriptor(?string $faceDescriptor): void
+    {
+        $this->faceDescriptor = $faceDescriptor;
+    }
+
+    public function setCreatedAt(string $createdAt): void
+    {
+        $this->createdAt = $createdAt;
+    }
+
+    public function setDerniereConnexion(string $derniereConnexion): void
+    {
+        $this->derniereConnexion = $derniereConnexion;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'nom' => $this->nom,
+            'prenom' => $this->prenom,
+            'email' => $this->email,
+            'telephone' => $this->telephone,
+            'role' => $this->role,
+            'statut' => $this->statut,
+            'adresse' => $this->adresse,
+            'date_naissance' => $this->dateNaissance,
+            'avatar' => $this->avatar,
+            'face_photo' => $this->facePhoto,
+            'created_at' => $this->createdAt,
+            'derniere_connexion' => $this->derniereConnexion,
         ];
-
-        $fields = [];
-        $params = [':id' => $id];
-
-        foreach ($data as $key => $value) {
-            if (in_array($key, $allowed, true)) {
-                $fields[]    = "$key = :$key";
-                $params[":$key"] = $value;
-            }
-        }
-
-        if (empty($fields)) return false;
-
-        $stmt = $this->db->prepare(
-            "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id"
-        );
-        return $stmt->execute($params);
-    }
-
-    public function delete(int $id): bool {
-        $stmt = $this->db->prepare("DELETE FROM users WHERE id = :id");
-        return $stmt->execute([':id' => $id]);
-    }
-
-    // ─────────────────────────────────────────
-    //  Données liées patient / médecin
-    // ─────────────────────────────────────────
-
-    public function createPatient(array $data): int {
-        $stmt = $this->db->prepare(
-            "INSERT INTO patients (user_id, groupe_sanguin)
-             VALUES (:user_id, :groupe_sanguin)"
-        );
-        $stmt->execute([
-            ':user_id'        => $data['user_id'],
-            ':groupe_sanguin' => $data['groupe_sanguin'] ?? null,
-        ]);
-        return (int) $this->db->lastInsertId();
-    }
-
-    public function upsertPatient(int $userId, array $data): void {
-        $stmt = $this->db->prepare(
-            "INSERT INTO patients (user_id, groupe_sanguin)
-             VALUES (:user_id, :groupe_sanguin)
-             ON DUPLICATE KEY UPDATE groupe_sanguin = VALUES(groupe_sanguin)"
-        );
-        $stmt->execute([
-            ':user_id'        => $userId,
-            ':groupe_sanguin' => $data['groupe_sanguin'] ?? null,
-        ]);
-    }
-
-    public function createMedecin(array $data): int {
-        $stmt = $this->db->prepare(
-            "INSERT INTO medecins
-                (user_id, specialite, numero_ordre, cabinet_adresse, statut_validation)
-             VALUES
-                (:user_id, :specialite, :numero_ordre, :cabinet_adresse, 'en_attente')"
-        );
-        $stmt->execute([
-            ':user_id'          => $data['user_id'],
-            ':specialite'       => $data['specialite']      ?? '',
-            ':numero_ordre'     => $data['numero_ordre']    ?? '',
-            ':cabinet_adresse'  => $data['adresse_cabinet'] ?? '',
-        ]);
-        return (int) $this->db->lastInsertId();
-    }
-
-    public function upsertMedecin(int $userId, array $data): void {
-        $stmt = $this->db->prepare(
-            "INSERT INTO medecins
-                (user_id, specialite, numero_ordre, cabinet_adresse)
-             VALUES
-                (:user_id, :specialite, :numero_ordre, :cabinet_adresse)
-             ON DUPLICATE KEY UPDATE
-                specialite      = VALUES(specialite),
-                numero_ordre    = VALUES(numero_ordre),
-                cabinet_adresse = VALUES(cabinet_adresse)"
-        );
-        $stmt->execute([
-            ':user_id'          => $userId,
-            ':specialite'       => $data['specialite']      ?? '',
-            ':numero_ordre'     => $data['numero_ordre']    ?? '',
-            ':cabinet_adresse'  => $data['adresse_cabinet'] ?? '',
-        ]);
     }
 }
