@@ -1700,8 +1700,9 @@ JS;
         );
         $stmt->execute();
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $upcomingEvents = $eventModel->getUpcoming();
-        $featuredEvents = $eventModel->getFeatured();
+        $eventRepo = new \App\Repositories\EventRepository();
+        $upcomingEvents = $eventRepo->getUpcoming();
+        $featuredEvents = $eventRepo->getFeatured();
         
         $isLoggedIn = isset($_SESSION['user_id']);
         
@@ -1837,8 +1838,7 @@ JS;
     }
     
     public function detailEvenement($id = null): void {
-        require_once __DIR__ . '/../models/Event.php';
-        $eventModel = new Event();
+        $eventRepo = new \App\Repositories\EventRepository();
         
         // Get slug from URL parameter
         $slug = isset($_GET['slug']) ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
@@ -1846,9 +1846,9 @@ JS;
         // Try to fetch event by slug first, then by ID
         $event = null;
         if ($slug) {
-            $event = $eventModel->getBySlug($slug);
+            $event = $eventRepo->getBySlug($slug);
         } elseif ($id) {
-            $event = $eventModel->getById($id);
+            $event = $eventRepo->getById((int)$id);
         }
         
         if (!$event) {
@@ -2128,14 +2128,11 @@ JS;
             exit;
         }
         
-        require_once __DIR__ . '/../models/Event.php';
-        require_once __DIR__ . '/../models/Participation.php';
-        
-        $eventModel = new Event();
-        $participationModel = new Participation();
+        $eventRepo = new \App\Repositories\EventRepository();
+        $participationRepo = new \App\Repositories\ParticipationRepository();
         
         // Check if event exists
-        $event = $eventModel->getById($eventId);
+        $event = $eventRepo->getById($eventId);
         if (!$event) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
@@ -2143,7 +2140,7 @@ JS;
         }
         
         // Check if user is already registered
-        $alreadyRegistered = $participationModel->checkUserEvent($userId, $eventId);
+        $alreadyRegistered = $participationRepo->checkUserEvent($userId, $eventId);
         if ($alreadyRegistered) {
             http_response_code(409);
             echo json_encode(['success' => false, 'message' => 'Vous êtes déjà inscrit à cet événement.']);
@@ -2151,7 +2148,7 @@ JS;
         }
         
         // Register user
-        $result = $participationModel->create([
+        $result = $participationRepo->create([
             'event_id' => $eventId,
             'user_id' => $userId,
             'statut' => 'inscrit'

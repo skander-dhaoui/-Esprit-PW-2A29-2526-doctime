@@ -53,6 +53,8 @@ require_once __DIR__ . '/models/Article.php';
 require_once __DIR__ . '/models/Reply.php';
 require_once __DIR__ . '/repositories/ArticleRepository.php';
 require_once __DIR__ . '/repositories/UserRepository.php';
+require_once __DIR__ . '/repositories/EventRepository.php';
+require_once __DIR__ . '/repositories/ParticipationRepository.php';
 
 // Modèles optionnels
 $optionalModels = [

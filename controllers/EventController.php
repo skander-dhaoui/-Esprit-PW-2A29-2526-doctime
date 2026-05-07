@@ -5,15 +5,16 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
 use App\Models\Event;
+use App\Repositories\EventRepository;
 
 class EventController {
 
-    private Event $eventModel;
+    private EventRepository $eventRepo;
     private AuthController $auth;
     private Database $db;
 
     public function __construct() {
-        $this->eventModel = new Event();
+        $this->eventRepo = new EventRepository();
         $this->auth = new AuthController();
         $this->db = Database::getInstance();
     }
@@ -26,17 +27,17 @@ class EventController {
             $userRole = $_SESSION['user_role'];
 
             $events = match ($filter) {
-                'upcoming' => $this->eventModel->getUpcomingEvents($category),
-                'past'     => $this->eventModel->getPastEvents($category),
-                'all'      => $this->eventModel->getAllEvents($category),
-                default    => $this->eventModel->getUpcomingEvents($category),
+                'upcoming' => $this->eventRepo->getUpcomingEvents($category),
+                'past'     => $this->eventRepo->getPastEvents($category),
+                'all'      => $this->eventRepo->getAllEvents($category),
+                default    => $this->eventRepo->getUpcomingEvents($category),
             };
 
             if ($userRole === 'patient') {
                 $events = array_filter($events, fn($e) => in_array($e['type'], ['webinaire', 'atelier', 'sensibilisation']));
             }
 
-            $categories = $this->eventModel->getCategories();
+            $categories = $this->eventRepo->getCategories();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
@@ -52,15 +53,15 @@ class EventController {
     public function show(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventModel->getById($id);
+            $event = $this->eventRepo->getById($id);
             if (!$event) {
                 http_response_code(404);
                 require_once __DIR__ . '/../views/errors/404.php';
                 exit;
             }
 
-            $participants     = $this->eventModel->getParticipants($id);
-            $isParticipating  = $this->eventModel->isUserParticipant($id, (int)$_SESSION['user_id']);
+            $participants     = $this->eventRepo->getParticipants($id);
+            $isParticipating  = $this->eventRepo->isUserParticipant($id, (int)$_SESSION['user_id']);
             $participantCount = count($participants);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
@@ -77,7 +78,7 @@ class EventController {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
             $csrfToken  = $this->generateCsrfToken();
-            $categories = $this->eventModel->getCategories();
+            $categories = $this->eventRepo->getCategories();
             $old   = $_SESSION['old']   ?? null;
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
@@ -142,7 +143,7 @@ class EventController {
                 $data['image'] = $imageData;
             }
 
-            $eventId = $this->eventModel->create($data);
+            $eventId = $this->eventRepo->create($data);
             if (!$eventId) throw new Exception('Erreur lors de la creation.');
 
             $this->logAction($_SESSION['user_id'], 'Creation evenement', "Evenement #$eventId cree - {$data['titre']}");
@@ -161,12 +162,12 @@ class EventController {
     public function edit(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventModel->getById($id);
+            $event = $this->eventRepo->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canEditEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
             $csrfToken  = $this->generateCsrfToken();
-            $categories = $this->eventModel->getCategories();
+            $categories = $this->eventRepo->getCategories();
             $old   = $_SESSION['old']   ?? null;
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
@@ -195,7 +196,7 @@ class EventController {
         }
 
         try {
-            $event = $this->eventModel->getById($id);
+            $event = $this->eventRepo->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canEditEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
@@ -235,7 +236,7 @@ class EventController {
                 }
             }
 
-            $this->eventModel->update($id, $data);
+            $this->eventRepo->update($id, $data);
             $this->logAction($_SESSION['user_id'], 'Modification evenement', "Evenement #$id modifie");
             $this->setFlash('success', 'Evenement mis a jour.');
             header('Location: index.php?page=evenements_admin&action=show&id=' . $id);
@@ -251,7 +252,7 @@ class EventController {
     public function delete(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventModel->getById($id);
+            $event = $this->eventRepo->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canDeleteEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
@@ -259,7 +260,7 @@ class EventController {
                 @unlink(__DIR__ . '/../../public/uploads/events/' . $event['image']);
             }
 
-            $this->eventModel->delete($id);
+            $this->eventRepo->delete($id);
             $this->logAction($_SESSION['user_id'], 'Suppression evenement', "Evenement #$id supprime");
             $this->setFlash('success', 'Evenement supprime.');
             header('Location: index.php?page=evenements_admin');
@@ -275,7 +276,7 @@ class EventController {
     public function listAdmin(): void {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
-            $events = $this->eventModel->getAll();
+            $events = $this->eventRepo->getAll();
             $flash  = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
             require_once __DIR__ . '/../views/backoffice/evenements/list.php';
@@ -290,9 +291,9 @@ class EventController {
     public function showAdmin(int $id): void {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
-            $event = $this->eventModel->getById($id);
+            $event = $this->eventRepo->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
-            $participants = $this->eventModel->getParticipants($id);
+            $participants = $this->eventRepo->getParticipants($id);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
             require_once __DIR__ . '/../views/backoffice/evenements/show.php';
@@ -310,10 +311,10 @@ class EventController {
             $filter = $_GET['filter'] ?? 'upcoming';
 
             $events = match ($filter) {
-                'upcoming' => $this->eventModel->getUpcomingEventsByParticipant($userId),
-                'past'     => $this->eventModel->getPastEventsByParticipant($userId),
-                'all'      => $this->eventModel->getAllEventsByParticipant($userId),
-                default    => $this->eventModel->getUpcomingEventsByParticipant($userId),
+                'upcoming' => $this->eventRepo->getUpcomingEventsByParticipant($userId),
+                'past'     => $this->eventRepo->getPastEventsByParticipant($userId),
+                'all'      => $this->eventRepo->getAllEventsByParticipant($userId),
+                default    => $this->eventRepo->getUpcomingEventsByParticipant($userId),
             };
 
             $flash = $_SESSION['flash'] ?? null;
@@ -336,10 +337,10 @@ class EventController {
             $filter   = $_GET['filter'] ?? 'all';
 
             $events = match ($filter) {
-                'publie'    => $this->eventModel->getEventsByCreator($userId, $userRole, 'publie'),
-                'brouillon' => $this->eventModel->getEventsByCreator($userId, $userRole, 'brouillon'),
-                'annule'    => $this->eventModel->getEventsByCreator($userId, $userRole, 'annule'),
-                default     => $this->eventModel->getEventsByCreator($userId, $userRole),
+                'publie'    => $this->eventRepo->getEventsByCreator($userId, $userRole, 'publie'),
+                'brouillon' => $this->eventRepo->getEventsByCreator($userId, $userRole, 'brouillon'),
+                'annule'    => $this->eventRepo->getEventsByCreator($userId, $userRole, 'annule'),
+                default     => $this->eventRepo->getEventsByCreator($userId, $userRole),
             };
 
             $flash = $_SESSION['flash'] ?? null;
@@ -386,9 +387,9 @@ class EventController {
             $statuts      = $eventAvance->getStatuts();
 
             // Stats classiques
-            $topEvents               = $this->eventModel->getTopEventsByParticipants(5);
-            $revenueEvents           = $this->eventModel->getRevenueEvents();
-            $specialtiesDistribution = $this->eventModel->getSpecialtyDistribution();
+            $topEvents               = $this->eventRepo->getTopEventsByParticipants(5);
+            $revenueEvents           = $this->eventRepo->getRevenueEvents();
+            $specialtiesDistribution = $this->eventRepo->getSpecialtyDistribution();
 
             // Export CSV
             if (isset($_GET['export']) && $_GET['export'] === 'csv' && !empty($_GET['event_id'])) {
