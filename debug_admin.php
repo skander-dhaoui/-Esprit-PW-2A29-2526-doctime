@@ -6,7 +6,7 @@
 
 // Configuration
 $host = 'localhost';
-$dbname = 'doctime_db';
+$dbname = 'valorys';
 $user = 'root';
 $pass = '';
 

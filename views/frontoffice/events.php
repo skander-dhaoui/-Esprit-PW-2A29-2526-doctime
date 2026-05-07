@@ -60,7 +60,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil">
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
             <i class="fas fa-stethoscope me-2"></i>Valorys
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -68,16 +68,16 @@ $isLoggedIn = isset($_SESSION['user_id']);
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=evenements">Événements</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=contact">Contact</a></li>
                 <?php if ($isLoggedIn): ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
                 <?php else: ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=login">Connexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=register">Inscription</a></li>
                 <?php endif; ?>
             </ul>
         </div>
@@ -91,7 +91,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
         <p class="lead">Conférences, ateliers et rencontres médicales</p>
         <?php if ($isLoggedIn): ?>
             <!-- Bouton créer → route FRONT -->
-            <a href="index.php?page=evenement_create" class="btn btn-light mt-3">
+            <a href="/valorys_Copie/index.php?page=evenement_create" class="btn btn-light mt-3">
                 <i class="fas fa-plus me-2"></i>Créer un événement
             </a>
         <?php endif; ?>
@@ -130,11 +130,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
                             <!-- Boutons CRUD → routes FRONT (plus admin_evenements) -->
                             <?php if ($isLoggedIn): ?>
                             <div class="admin-actions">
-                                <a href="index.php?page=evenement_edit&id=<?= $event['id'] ?>"
+                                <a href="/valorys_Copie/index.php?page=evenement_edit&id=<?= $event['id'] ?>"
                                    class="btn btn-warning btn-sm" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="index.php?page=evenement_delete&id=<?= $event['id'] ?>"
+                                <a href="/valorys_Copie/index.php?page=evenement_delete&id=<?= $event['id'] ?>"
                                    class="btn btn-danger btn-sm" title="Supprimer"
                                    onclick="return confirm('Supprimer cet événement ?')">
                                     <i class="fas fa-trash"></i>
@@ -147,7 +147,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
 
                             <div class="event-body">
                                 <h3 class="event-title">
-                                    <a href="index.php?page=detail_evenement&slug=<?= $event['slug'] ?>">
+                                    <a href="/valorys_Copie/index.php?page=detail_evenement&slug=<?= $event['slug'] ?>">
                                         <?= htmlspecialchars($event['titre']) ?>
                                     </a>
                                 </h3>
@@ -166,7 +166,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
                                     <span class="event-price">
                                         <?= $event['prix'] > 0 ? $event['prix'] . ' €' : 'Gratuit' ?>
                                     </span>
-                                    <a href="index.php?page=detail_evenement&slug=<?= $event['slug'] ?>"
+                                    <a href="/valorys_Copie/index.php?page=detail_evenement&slug=<?= $event['slug'] ?>"
                                        class="btn-register">Voir détails</a>
                                 </div>
                             </div>
@@ -186,11 +186,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
 
                         <?php if ($isLoggedIn): ?>
                         <div class="admin-actions">
-                            <a href="index.php?page=evenement_edit&id=<?= $event['id'] ?>"
+                            <a href="/valorys_Copie/index.php?page=evenement_edit&id=<?= $event['id'] ?>"
                                class="btn btn-warning btn-sm" title="Modifier">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <a href="index.php?page=evenement_delete&id=<?= $event['id'] ?>"
+                            <a href="/valorys_Copie/index.php?page=evenement_delete&id=<?= $event['id'] ?>"
                                class="btn btn-danger btn-sm" title="Supprimer"
                                onclick="return confirm('Supprimer cet événement ?')">
                                 <i class="fas fa-trash"></i>
@@ -214,7 +214,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
                             <div class="event-excerpt">
                                 <?= htmlspecialchars(substr($event['description'] ?? $event['contenu'] ?? '', 0, 100)) ?>...
                             </div>
-                            <a href="index.php?page=detail_evenement&slug=<?= $event['slug'] ?>"
+                            <a href="/valorys_Copie/index.php?page=detail_evenement&slug=<?= $event['slug'] ?>"
                                class="btn btn-outline-secondary btn-sm">Voir détails</a>
                         </div>
                     </div>
@@ -235,13 +235,13 @@ $isLoggedIn = isset($_SESSION['user_id']);
             <?php if ($isLoggedIn): ?>
             <div class="sidebar-card">
                 <h5><i class="fas fa-ticket-alt me-2"></i>Mes inscriptions</h5>
-                <a href="index.php?page=mes_inscriptions" class="btn btn-primary w-100">
+                <a href="/valorys_Copie/index.php?page=mes_inscriptions" class="btn btn-primary w-100">
                     Voir mes événements
                 </a>
             </div>
             <div class="sidebar-card">
                 <h5><i class="fas fa-plus-circle me-2"></i>Organiser</h5>
-                <a href="index.php?page=evenement_create" class="btn btn-success w-100">
+                <a href="/valorys_Copie/index.php?page=evenement_create" class="btn btn-success w-100">
                     <i class="fas fa-plus me-1"></i>Créer un événement
                 </a>
             </div>

@@ -5,7 +5,7 @@
         <div class="col-lg-7">
 
             <div class="mb-4">
-                <a href="index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
+                <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
                    class="text-muted small">
                     <i class="bi bi-arrow-left me-1"></i>Retour à mes inscriptions
                 </a>
@@ -31,7 +31,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <form action="index.php?controller=mesinscriptions&action=frontUpdate" method="POST" novalidate>
+                    <form action="/valorys_Copie/index.php?controller=mesinscriptions&action=frontUpdate" method="POST" novalidate>
                         <input type="hidden" name="id" value="<?= (int)$old['id'] ?>">
                         <input type="hidden" name="email_original" value="<?= htmlspecialchars($participation['email']) ?>">
 
@@ -106,7 +106,7 @@
                             <button type="submit" class="btn btn-green flex-grow-1 py-2 fw-semibold">
                                 <i class="bi bi-check-circle me-2"></i>Enregistrer les modifications
                             </button>
-                            <a href="index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
+                            <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
                                class="btn btn-outline-secondary px-4">
                                 Annuler
                             </a>

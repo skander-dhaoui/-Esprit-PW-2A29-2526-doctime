@@ -6,7 +6,7 @@ class Database {
     private ?PDO $conn = null;
     
     private string $host = "localhost";
-    private string $db_name = "doctime_db";
+    private string $db_name = "valorys";
     private string $username = "root";
     private string $password = "";
 
@@ -44,7 +44,7 @@ class Database {
             );
         } catch (PDOException $e) {
             error_log("Erreur de connexion : " . $e->getMessage());
-            die("Erreur de connexion à la base de données");
+            die("Erreur de connexion � la base de donn�es");
         }
     }
 

@@ -8,7 +8,7 @@
         <p class="lead mt-3 mb-4 opacity-75">
             Congrès, symposiums et journées scientifiques dédiés aux professionnels de santé.
         </p>
-        <a href="index.php?controller=evenement&action=list" class="btn btn-light btn-lg fw-semibold px-5">
+        <a href="/valorys_Copie/index.php?controller=evenement&action=list" class="btn btn-light btn-lg fw-semibold px-5">
             <i class="bi bi-calendar-event me-2"></i>Voir les événements
         </a>
     </div>
@@ -74,7 +74,7 @@
     <div class="container">
         <h3 class="fw-bold">Prêt à vous inscrire ?</h3>
         <p class="text-muted mt-2 mb-4">Consultez les prochains événements et réservez votre place.</p>
-        <a href="index.php?controller=evenement&action=list" class="btn btn-green btn-lg px-5">
+        <a href="/valorys_Copie/index.php?controller=evenement&action=list" class="btn btn-green btn-lg px-5">
             S'inscrire à un événement
         </a>
     </div>

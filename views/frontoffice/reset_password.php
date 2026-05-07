@@ -47,11 +47,11 @@ $token = $token ?? null;
                 <div class="alert-error-custom">
                     <i class="fas fa-exclamation-circle me-2"></i> Ce lien est invalide ou a expiré.
                 </div>
-                <a href="index.php?page=forgot_password" class="btn btn-primary w-100">
+                <a href="/valorys_Copie/index.php?page=forgot_password" class="btn btn-primary w-100">
                     Demander un nouveau lien
                 </a>
             <?php else: ?>
-            <form method="POST" action="index.php?page=reset_password">
+            <form method="POST" action="/valorys_Copie/index.php?page=reset_password">
                 <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
                 <div class="mb-3">
                     <label class="form-label">Nouveau mot de passe</label>

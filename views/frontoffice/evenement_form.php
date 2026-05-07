@@ -52,7 +52,7 @@ $formAction = $isEdit
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil">
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
             <i class="fas fa-stethoscope me-2"></i>Valorys
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -60,12 +60,12 @@ $formAction = $isEdit
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=evenements">Événements</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">
                     <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
                 </a></li>
             </ul>
@@ -210,7 +210,7 @@ $formAction = $isEdit
                         <!-- BOUTONS -->
                         <hr>
                         <div class="d-flex gap-2 justify-content-end">
-                            <a href="index.php?page=evenements" class="btn btn-outline-secondary btn-cancel">
+                            <a href="/valorys_Copie/index.php?page=evenements" class="btn btn-outline-secondary btn-cancel">
                                 <i class="fas fa-times me-1"></i>Annuler
                             </a>
                             <button type="submit" class="btn btn-save">
