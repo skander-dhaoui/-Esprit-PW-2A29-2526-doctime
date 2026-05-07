@@ -1,844 +1,297 @@
 <?php
-
-require_once __DIR__ . '/../models/Participation.php';
-require_once __DIR__ . '/../models/Event.php';
-require_once __DIR__ . '/../models/Patient.php';
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/AuthController.php';
-
-use App\Models\Participation;
-use App\Models\Event;
-use App\Models\Patient;
+require_once __DIR__ . '/../model/Participation.php';
+require_once __DIR__ . '/../model/Evenement.php';
+require_once __DIR__ . '/../config/Validator.php';
 
 class ParticipationController {
-
-    private Participation $participationModel;
-    private Event $eventModel;
-    private Patient $patientModel;
-    private AuthController $auth;
-    private Database $db;
+    private Participation $model;
+    private Evenement     $evenementModel;
 
     public function __construct() {
-        $this->participationModel = new Participation();
-        $this->eventModel = new Event();
-        $this->patientModel = new Patient();
-        $this->auth = new AuthController();
-        $this->db = Database::getInstance();
+        $this->model          = new Participation();
+        $this->evenementModel = new Evenement();
     }
 
-    // ─────────────────────────────────────────
-    //  Liste des participations (admin)
-    // ─────────────────────────────────────────
-    public function indexAdmin(): void {
-        $this->auth->requireRole('admin');
+    private const STATUTS = ['en_attente','confirme','annule'];
 
-        try {
-            $filter = $_GET['filter'] ?? 'tous'; 
-            if ($filter === 'all') $filter = 'tous';
-            $eventId = isset($_GET['event']) ? (int)$_GET['event'] : null;
-            $search = $_GET['search'] ?? '';
+    // ─── BackOffice ────────────────────────────────────────────────────
 
-            if ($eventId) {
-                $participations = $this->participationModel->getByEvenement($eventId, 0, 1000, $filter);
-            } else {
-                $participations = $this->participationModel->getAll(0, 1000, $filter, $search);
-            }
-
-            $events = $this->eventModel->getAll();
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/participations/list.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::indexAdmin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement des participations.');
-            header('Location: /admin/dashboard');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Liste des participations (médecin)
-    // ─────────────────────────────────────────
-    public function indexMedecin(): void {
-        $this->auth->requireRole('medecin');
-
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $filter = $_GET['filter'] ?? 'all';
-            $eventId = $_GET['event'] ?? null;
-
-            // Récupérer les événements du médecin
-            $medecinEvents = $this->eventModel->getEventsByCreator($medecinId, 'medecin');
-            $eventIds = array_column($medecinEvents, 'id');
-
-            if (empty($eventIds)) {
-                $participations = [];
-            } else {
-                $participations = $this->participationModel->getByEvents($eventIds, $filter);
-            }
-
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/backoffice/participation_list_medecin.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::indexMedecin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: /medecin/dashboard');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Créer une participation (patient s'inscrit)
-    // ─────────────────────────────────────────
-    public function register(int $eventId): void {
-        $this->auth->requireRole('patient');
-
-        try {
-            $event = $this->eventModel->getById($eventId);
-
-            if (!$event) {
-                $this->setFlash('error', 'Événement introuvable.');
-                header('Location: /events');
-                exit;
-            }
-
-            $patientId = (int)$_SESSION['user_id'];
-
-            // Vérifier si déjà inscrit
-            $existing = $this->participationModel->getByEventAndPatient($eventId, $patientId);
-            if ($existing) {
-                $this->setFlash('error', 'Vous êtes déjà inscrit à cet événement.');
-                header("Location: /events/$eventId");
-                exit;
-            }
-
-            // Vérifier les places disponibles
-            $participants = $this->participationModel->countByEvent($eventId);
-            if ($event['nombre_places_max'] > 0 && $participants >= $event['nombre_places_max']) {
-                $this->setFlash('error', 'Cet événement est complet.');
-                header("Location: /events/$eventId");
-                exit;
-            }
-
-            // Vérifier que l'événement n'est pas passé
-            $eventDateTime = new DateTime($event['date_debut'] . ' ' . $event['heure_debut']);
-            if ($eventDateTime < new DateTime()) {
-                $this->setFlash('error', 'Cet événement est déjà passé.');
-                header("Location: /events/$eventId");
-                exit;
-            }
-
-            // Récupérer les informations patient
-            $patient = $this->patientModel->findByUserId($patientId);
-
-            $data = [
-                'event_id' => $eventId,
-                'patient_id' => $patientId,
-                'date_inscription' => date('Y-m-d H:i:s'),
-                'statut' => 'confirmé',
-                'email' => $patient['email'] ?? '',
-                'telephone' => $patient['telephone'] ?? '',
-                'notes' => '',
-            ];
-
-            $participationId = $this->participationModel->create($data);
-
-            if (!$participationId) {
-                throw new Exception('Erreur lors de l\'inscription.');
-            }
-
-            $this->logAction($patientId, 'Inscription événement', "Inscription à l'événement #$eventId - {$event['titre']}");
-
-            // Envoyer email de confirmation
-            $this->sendConfirmationEmail($patient, $event);
-
-            $this->setFlash('success', 'Vous êtes inscrit à l\'événement. Un email de confirmation a été envoyé.');
-            header("Location: /events/$eventId");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::register - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de l\'inscription.');
-            header("Location: /events/$eventId");
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Afficher les détails d'une participation
-    // ─────────────────────────────────────────
-    public function show(int $id): void {
-        $this->auth->requireAuth();
-
-        try {
-            $participation = $this->participationModel->getById($id);
-
-            if (!$participation) {
-                http_response_code(404);
-                die('Participation introuvable.');
-            }
-
-            $userId = (int)$_SESSION['user_id'];
-            $userRole = $_SESSION['user_role'];
-
-            // Vérifier les permissions
-            if (!$this->canViewParticipation($participation, $userId, $userRole)) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-
-            $event = $this->eventModel->getById($participation['event_id']);
-            $patient = $this->patientModel->findByUserId($participation['patient_id']);
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/participation_show.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::show - ' . $e->getMessage());
-            http_response_code(500);
-            die('Erreur lors du chargement.');
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Modifier une participation (notes)
-    // ─────────────────────────────────────────
-    public function edit(int $id): void {
-        $this->auth->requireRole(['admin', 'medecin']);
-
-        try {
-            $participation = $this->participationModel->getById($id);
-
-            if (!$participation) {
-                http_response_code(404);
-                die('Participation introuvable.');
-            }
-
-            $csrfToken = $this->generateCsrfToken();
-            $event = $this->eventModel->getById($participation['event_id']);
-            $old = $_SESSION['old'] ?? null;
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
-            $isEdit = true;
-            $events = $this->eventModel->getAll();
-            $users = Database::getInstance()->query("SELECT id, nom, prenom FROM users");
-            
-            require_once __DIR__ . '/../views/backoffice/participations/form.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::edit - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: index.php?page=participations');
-            exit;
-        }
+    public function index(): void {
+        $participations = $this->model->findAll();
+        require __DIR__ . '/../view/backoffice/participation/index.php';
     }
 
     public function create(): void {
-        $this->auth->requireRole(['admin', 'medecin']);
-        $csrfToken = $this->generateCsrfToken();
-        $old = $_SESSION['old'] ?? null;
-        $flash = $_SESSION['flash'] ?? null;
-        unset($_SESSION['old'], $_SESSION['flash']);
-        $isEdit = false;
-        $participation = null;
-        $events = $this->eventModel->getAll();
-        $users = Database::getInstance()->query("SELECT id, nom, prenom FROM users");
-
-        require_once __DIR__ . '/../views/backoffice/participations/form.php';
+        $evenements = $this->evenementModel->findAll();
+        $errors     = [];
+        $old        = [];
+        $statuts    = self::STATUTS;
+        require __DIR__ . '/../view/backoffice/participation/create.php';
     }
 
     public function store(): void {
-        $this->auth->requireRole(['admin', 'medecin']);
+        $data = [
+            'nom'          => $_POST['nom']          ?? '',
+            'prenom'       => $_POST['prenom']       ?? '',
+            'email'        => $_POST['email']        ?? '',
+            'telephone'    => $_POST['telephone']    ?? '',
+            'profession'   => $_POST['profession']   ?? '',
+            'evenement_id' => $_POST['evenement_id'] ?? '',
+            'statut'       => $_POST['statut']       ?? 'en_attente',
+        ];
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: index.php?page=participations&action=create");
-            exit;
+        $errors = $this->validateParticipation($data);
+
+        // Vérifier les places restantes
+        if (empty($errors) && !empty($data['evenement_id'])) {
+            $places = $this->evenementModel->getPlacesRestantes((int)$data['evenement_id']);
+            if ($places <= 0) {
+                $errors['evenement_id'] = "Cet événement est complet, il n'y a plus de places disponibles.";
+            }
         }
 
-        try {
-            $nom = trim($_POST['nom'] ?? '');
-            $prenom = trim($_POST['prenom'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $tel = trim($_POST['telephone'] ?? '');
-            $eventId = $_POST['event_id'] ?? null;
-
-            if (empty($eventId) || empty($nom) || empty($prenom) || empty($email)) {
-                $this->setFlash('error', 'L\'événement, nom, prénom et email sont obligatoires.');
-                $_SESSION['old'] = $_POST;
-                header("Location: index.php?page=participations&action=create");
-                exit;
+        // Vérifier doublon
+        if (empty($errors)) {
+            if ($this->model->alreadyRegistered($data['email'], (int)$data['evenement_id'])) {
+                $errors['email'] = "Cette adresse e-mail est déjà inscrite à cet événement.";
             }
-
-            $db = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT id FROM users WHERE email = :email");
-            $stmt->execute(['email' => $email]);
-            $userId = $stmt->fetchColumn();
-
-            if (!$userId) {
-                // Auto create user
-                $stmt = $db->prepare("INSERT INTO users (nom, prenom, email, telephone, role, password) VALUES (:nom, :prenom, :email, :tel, 'patient', :pw)");
-                $stmt->execute([
-                    'nom' => $nom, 
-                    'prenom' => $prenom, 
-                    'email' => $email, 
-                    'tel' => $tel, 
-                    'pw' => password_hash('password123', PASSWORD_DEFAULT)
-                ]);
-                $userId = $db->lastInsertId();
-            }
-
-            $data = [
-                'event_id' => $eventId,
-                'user_id' => $userId,
-                'statut' => $_POST['statut'] ?? 'confirmé',
-                'notes_supplementaires' => trim($_POST['notes_supplementaires'] ?? ''),
-                'date_inscription' => date('Y-m-d H:i:s'),
-                'code_qr' => 'QR' . rand(1000, 9999) 
-            ];
-
-            $this->participationModel->create($data);
-            $this->setFlash('success', 'Participation ajoutée avec succès.');
-            header("Location: index.php?page=participations");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::store - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la création.');
-            $_SESSION['old'] = $_POST;
-            header("Location: index.php?page=participations&action=create");
-            exit;
         }
+
+        if (!empty($errors)) {
+            $old        = $data;
+            $evenements = $this->evenementModel->findAll();
+            $statuts    = self::STATUTS;
+            require __DIR__ . '/../view/backoffice/participation/create.php';
+            return;
+        }
+
+        $this->model->create($data);
+        header('Location: index.php?controller=participation&action=index&success=create');
+        exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Mettre à jour une participation
-    // ─────────────────────────────────────────
-    public function update(int $id): void {
-        $this->auth->requireRole(['admin', 'medecin']);
+    public function edit(): void {
+        $id            = (int)($_GET['id'] ?? 0);
+        $participation = $this->model->findById($id);
+        if (!$participation) { $this->notFound(); return; }
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: /participations/$id/edit");
-            exit;
-        }
-
-        if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->setFlash('error', 'Erreur de sécurité.');
-            header("Location: /participations/$id/edit");
-            exit;
-        }
-
-        try {
-            $participation = $this->participationModel->getById($id);
-
-            if (!$participation) {
-                http_response_code(404);
-                die('Participation introuvable.');
-            }
-
-            $data = [
-                'event_id' => $_POST['event_id'] ?? null,
-                'user_id' => $_POST['user_id'] ?? null,
-                'statut' => $_POST['statut'] ?? 'confirmé',
-                'notes_supplementaires' => trim($_POST['notes_supplementaires'] ?? ''),
-            ];
-
-            if (empty($data['event_id']) || empty($data['user_id'])) {
-                $this->setFlash('error', 'L\'événement et l\'utilisateur sont obligatoires.');
-                $_SESSION['old'] = $_POST;
-                header("Location: index.php?page=participations&action=edit&id=$id");
-                exit;
-            }
-
-            $this->participationModel->update($id, $data);
-
-            $this->logAction($_SESSION['user_id'], 'Modification participation', "Participation #$id modifiée");
-
-            $this->setFlash('success', 'Participation mise à jour.');
-            header("Location: index.php?page=participations");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::update - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la mise à jour.');
-            header("Location: index.php?page=participations&action=edit&id=$id");
-            exit;
-        }
+        $evenements = $this->evenementModel->findAll();
+        $errors     = [];
+        $old        = $participation;
+        $statuts    = self::STATUTS;
+        require __DIR__ . '/../view/backoffice/participation/edit.php';
     }
 
-    // ─────────────────────────────────────────
-    //  Annuler une participation
-    // ─────────────────────────────────────────
-    public function cancel(int $id): void {
-        $this->auth->requireAuth();
+    public function update(): void {
+        $id            = (int)($_POST['id'] ?? 0);
+        $participation = $this->model->findById($id);
+        if (!$participation) { $this->notFound(); return; }
 
-        try {
-            $participation = $this->participationModel->getById($id);
+        $data = [
+            'nom'          => $_POST['nom']          ?? '',
+            'prenom'       => $_POST['prenom']       ?? '',
+            'email'        => $_POST['email']        ?? '',
+            'telephone'    => $_POST['telephone']    ?? '',
+            'profession'   => $_POST['profession']   ?? '',
+            'evenement_id' => $_POST['evenement_id'] ?? '',
+            'statut'       => $_POST['statut']       ?? '',
+        ];
 
-            if (!$participation) {
-                http_response_code(404);
-                die('Participation introuvable.');
+        $errors = $this->validateParticipation($data);
+
+        if (empty($errors)) {
+            if ($this->model->alreadyRegistered($data['email'], (int)$data['evenement_id'], $id)) {
+                $errors['email'] = "Cette adresse e-mail est déjà inscrite à cet événement.";
             }
-
-            $userId = (int)$_SESSION['user_id'];
-            $userRole = $_SESSION['user_role'];
-
-            // Vérifier les permissions
-            if ($userRole === 'patient' && $participation['patient_id'] !== $userId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-
-            if ($participation['statut'] === 'annulé') {
-                $this->setFlash('error', 'Cette participation est déjà annulée.');
-                header("Location: /participations/$id");
-                exit;
-            }
-
-            $event = $this->eventModel->getById($participation['event_id']);
-
-            // Vérifier le délai d'annulation (24h avant)
-            $eventDateTime = new DateTime($event['date_debut'] . ' ' . $event['heure_debut']);
-            $now = new DateTime();
-            $diff = $eventDateTime->diff($now);
-
-            if ($userRole === 'patient' && $diff->h <= 24 && $eventDateTime > $now) {
-                $this->setFlash('error', 'Annulation impossible : moins de 24h avant l\'événement.');
-                header("Location: /participations/$id");
-                exit;
-            }
-
-            $raison = htmlspecialchars(trim($_POST['raison'] ?? ''), ENT_QUOTES, 'UTF-8');
-
-            $this->participationModel->update($id, [
-                'statut' => 'annulé',
-                'raison_annulation' => $raison,
-                'date_annulation' => date('Y-m-d H:i:s'),
-            ]);
-
-            $this->logAction($userId, 'Annulation participation', "Participation #$id annulée - Raison: $raison");
-
-            // Envoyer email d'annulation
-            $patient = $this->patientModel->findByUserId($participation['patient_id']);
-            $this->sendCancellationEmail($patient, $event);
-
-            $this->setFlash('success', 'Votre inscription a été annulée.');
-            header("Location: /events/$participation[event_id]");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::cancel - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de l\'annulation.');
-            header("Location: /participations/$id");
-            exit;
         }
+
+        if (!empty($errors)) {
+            $old        = array_merge($participation, $data, ['id' => $id]);
+            $evenements = $this->evenementModel->findAll();
+            $statuts    = self::STATUTS;
+            require __DIR__ . '/../view/backoffice/participation/edit.php';
+            return;
+        }
+
+        $this->model->update($id, $data);
+        header('Location: index.php?controller=participation&action=index&success=update');
+        exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Marquer présent/absent (médecin)
-    // ─────────────────────────────────────────
-    public function markAttendance(int $id): void {
-        $this->auth->requireRole(['admin', 'medecin']);
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            die('Méthode non autorisée.');
+    public function delete(): void {
+        $id = (int)($_GET['id'] ?? 0);
+        if ($this->model->findById($id)) {
+            $this->model->delete($id);
         }
-
-        try {
-            $participation = $this->participationModel->getById($id);
-
-            if (!$participation) {
-                echo json_encode(['error' => 'Participation introuvable']);
-                exit;
-            }
-
-            $presence = $_POST['presence'] ?? null; // 'présent' ou 'absent'
-
-            if (!in_array($presence, ['présent', 'absent'])) {
-                echo json_encode(['error' => 'Valeur invalide']);
-                exit;
-            }
-
-            $this->participationModel->update($id, [
-                'presence' => $presence,
-                'date_presence' => date('Y-m-d H:i:s'),
-            ]);
-
-            $this->logAction($_SESSION['user_id'], 'Marque de présence', "Participation #$id - $presence");
-
-            echo json_encode([
-                'success' => true,
-                'message' => 'Présence enregistrée',
-                'presence' => $presence,
-            ]);
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur markAttendance - ' . $e->getMessage());
-            echo json_encode(['error' => 'Erreur serveur']);
-            exit;
-        }
+        header('Location: index.php?controller=participation&action=index&success=delete');
+        exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Supprimer une participation (admin)
-    // ─────────────────────────────────────────
-    public function delete(int $id): void {
-        $this->auth->requireRole('admin');
+    // ─── FrontOffice : Mes Inscriptions (CRUD public) ─────────────────
 
-        try {
-            $participation = $this->participationModel->getById($id);
+    /** Étape 1 : formulaire de recherche par email */
+    public function search(): void {
+        $email          = trim($_GET['email'] ?? $_POST['email'] ?? '');
+        $participations = [];
+        $searched       = false;
 
-            if (!$participation) {
-                http_response_code(404);
-                die('Participation introuvable.');
-            }
-
-            $this->participationModel->delete($id);
-
-            $this->logAction($_SESSION['user_id'], 'Suppression participation', "Participation #$id supprimée");
-
-            $this->setFlash('success', 'Participation supprimée.');
-            header('Location: index.php?page=participations');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::delete - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la suppression.');
-            header('Location: index.php?page=participations');
-            exit;
+        if ($email !== '') {
+            $searched       = true;
+            $participations = $this->model->findByEmail($email);
         }
+
+        require __DIR__ . '/../view/frontoffice/mes_inscriptions.php';
     }
 
-    // ─────────────────────────────────────────
-    //  Liste des participants (événement)
-    // ─────────────────────────────────────────
-    public function eventParticipants(int $eventId): void {
-        $this->auth->requireAuth();
+    /** Formulaire de modification d'une inscription (frontoffice) */
+    public function frontEdit(): void {
+        $id    = (int)($_GET['id'] ?? 0);
+        $email = trim($_GET['email'] ?? '');
 
-        try {
-            $event = $this->eventModel->getById($eventId);
-
-            if (!$event) {
-                http_response_code(404);
-                die('Événement introuvable.');
-            }
-
-            $userId = (int)$_SESSION['user_id'];
-            $userRole = $_SESSION['user_role'];
-
-            // Vérifier les permissions
-            if ($userRole !== 'admin' && (int)$event['createur_id'] !== $userId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-
-            $filter = $_GET['filter'] ?? 'confirmé'; // confirmé, en attente, annulé, présent, absent
-            $participants = $this->participationModel->getByEvent($eventId, $filter);
-
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/event_participants.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::eventParticipants - ' . $e->getMessage());
-            http_response_code(500);
-            die('Erreur lors du chargement.');
+        $participation = $this->model->findById($id);
+        if (!$participation || strtolower($participation['email']) !== strtolower($email)) {
+            http_response_code(403);
+            echo "<h1>Accès refusé – email incorrect ou inscription introuvable</h1>";
+            return;
         }
+
+        $evenements = $this->evenementModel->findAll();
+        $errors     = [];
+        $old        = $participation;
+        require __DIR__ . '/../view/frontoffice/inscription_edit.php';
     }
 
-    // ─────────────────────────────────────────
-    //  Exporter les participants (CSV)
-    // ─────────────────────────────────────────
-    public function exportParticipants(int $eventId): void {
-        $this->auth->requireAuth();
+    /** Traitement de la modification (frontoffice) */
+    public function frontUpdate(): void {
+        $id    = (int)($_POST['id'] ?? 0);
+        $email = trim($_POST['email_original'] ?? '');
 
-        try {
-            $event = $this->eventModel->getById($eventId);
-
-            if (!$event) {
-                http_response_code(404);
-                die('Événement introuvable.');
-            }
-
-            $userId = (int)$_SESSION['user_id'];
-            $userRole = $_SESSION['user_role'];
-
-            if ($userRole !== 'admin' && (int)$event['createur_id'] !== $userId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-
-            $participants = $this->participationModel->getByEvent($eventId, 'confirmé');
-
-            header('Content-Type: text/csv; charset=utf-8');
-            header('Content-Disposition: attachment; filename="participants_' . $eventId . '_' . date('Y-m-d') . '.csv"');
-
-            $output = fopen('php://output', 'w');
-            
-            // En-têtes
-            fputcsv($output, [
-                'ID',
-                'Nom',
-                'Prénom',
-                'Email',
-                'Téléphone',
-                'Date inscription',
-                'Statut',
-                'Présence',
-            ], ';');
-
-            // Données
-            foreach ($participants as $p) {
-                $patient = $this->patientModel->findByUserId($p['patient_id']);
-                fputcsv($output, [
-                    $p['id'],
-                    $patient['nom'] ?? '',
-                    $patient['prenom'] ?? '',
-                    $p['email'],
-                    $p['telephone'],
-                    $p['date_inscription'],
-                    ucfirst($p['statut']),
-                    ucfirst($p['presence'] ?? 'Non marqué'),
-                ], ';');
-            }
-
-            fclose($output);
-
-            $this->logAction($_SESSION['user_id'], 'Export participants', "Export événement #$eventId");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur exportParticipants - ' . $e->getMessage());
-            http_response_code(500);
-            die('Erreur lors de l\'export.');
+        $participation = $this->model->findById($id);
+        if (!$participation || strtolower($participation['email']) !== strtolower($email)) {
+            http_response_code(403);
+            echo "<h1>Accès refusé</h1>";
+            return;
         }
+
+        $data = [
+            'nom'          => $_POST['nom']          ?? '',
+            'prenom'       => $_POST['prenom']       ?? '',
+            'email'        => $participation['email'],   // email non modifiable
+            'telephone'    => $_POST['telephone']    ?? '',
+            'profession'   => $_POST['profession']   ?? '',
+            'evenement_id' => $participation['evenement_id'], // événement non modifiable
+            'statut'       => $participation['statut'],       // statut non modifiable
+        ];
+
+        $errors = $this->validateParticipation($data);
+
+        if (!empty($errors)) {
+            $evenements = $this->evenementModel->findAll();
+            $old        = array_merge($participation, $data, ['id' => $id]);
+            require __DIR__ . '/../view/frontoffice/inscription_edit.php';
+            return;
+        }
+
+        $this->model->update($id, $data);
+        header('Location: index.php?controller=mesinscriptions&action=search&email=' . urlencode($email) . '&success=update');
+        exit;
     }
 
-    // ─────────────────────────────────────────
-    //  API - Statistiques de participation
-    // ─────────────────────────────────────────
-    public function apiStats(int $eventId): void {
-        header('Content-Type: application/json');
-        $this->auth->requireAuth();
+    /** Suppression d'une inscription (frontoffice) */
+    public function frontDelete(): void {
+        $id    = (int)($_GET['id'] ?? 0);
+        $email = trim($_GET['email'] ?? '');
 
-        try {
-            $event = $this->eventModel->getById($eventId);
-
-            if (!$event) {
-                echo json_encode(['error' => 'Événement introuvable']);
-                exit;
-            }
-
-            $stats = $this->participationModel->getStats($eventId);
-
-            echo json_encode([
-                'success' => true,
-                'stats' => $stats,
-                'event_capacity' => $event['nombre_places_max'],
-            ]);
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur apiStats - ' . $e->getMessage());
-            echo json_encode(['error' => 'Erreur serveur']);
-            exit;
+        $participation = $this->model->findById($id);
+        if ($participation && strtolower($participation['email']) === strtolower($email)) {
+            $this->model->delete($id);
         }
+
+        header('Location: index.php?controller=mesinscriptions&action=search&email=' . urlencode($email) . '&success=delete');
+        exit;
     }
 
-    // ─────────────────────────────────────────
-    //  Bulk update - Marquer présents
-    // ─────────────────────────────────────────
-    public function bulkMarkAttendance(): void {
-        $this->auth->requireRole(['admin', 'medecin']);
+    // ─── FrontOffice : inscription publique ────────────────────────────
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            die('Méthode non autorisée.');
-        }
+    public function inscrire(): void {
+        $evenementId = (int)($_GET['evenement_id'] ?? 0);
+        $evenement   = $this->evenementModel->findById($evenementId);
+        if (!$evenement) { $this->notFound(); return; }
 
-        try {
-            $ids = $_POST['ids'] ?? [];
-            $presence = $_POST['presence'] ?? 'présent'; // présent ou absent
-
-            if (empty($ids) || !is_array($ids)) {
-                echo json_encode(['error' => 'Aucune participation sélectionnée']);
-                exit;
-            }
-
-            if (!in_array($presence, ['présent', 'absent'])) {
-                echo json_encode(['error' => 'Valeur invalide']);
-                exit;
-            }
-
-            $count = 0;
-            foreach ($ids as $id) {
-                $participation = $this->participationModel->getById((int)$id);
-                if ($participation) {
-                    $this->participationModel->update((int)$id, [
-                        'presence' => $presence,
-                        'date_presence' => date('Y-m-d H:i:s'),
-                    ]);
-                    $count++;
-                }
-            }
-
-            $this->logAction($_SESSION['user_id'], 'Bulk marque présence', "$count participation(s) marquées $presence");
-
-            echo json_encode([
-                'success' => true,
-                'message' => "$count participation(s) mise(s) à jour",
-                'count' => $count,
-            ]);
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur bulkMarkAttendance - ' . $e->getMessage());
-            echo json_encode(['error' => 'Erreur serveur']);
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Mes événements (patient)
-    // ─────────────────────────────────────────
-    public function myEvents(): void {
-        $this->auth->requireRole('patient');
-
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $filter = $_GET['filter'] ?? 'upcoming'; // upcoming, past, all
-
-            $participations = match ($filter) {
-                'upcoming' => $this->participationModel->getUpcomingByPatient($patientId),
-                'past' => $this->participationModel->getPastByPatient($patientId),
-                'all' => $this->participationModel->getAllByPatient($patientId),
-                default => $this->participationModel->getUpcomingByPatient($patientId),
-            };
-
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-
-            require_once __DIR__ . '/../views/frontoffice/my_participations.php';
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::myEvents - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: /patient/dashboard');
-            exit;
-        }
-    }
-
-    // ─────────────────────────────────────────
-    //  Helpers privés
-    // ─────────────────────────────────────────
-    private function validateParticipation(array $data): array {
         $errors = [];
-
-        if (!in_array($data['statut'], ['confirmé', 'en attente', 'annulé'])) {
-            $errors[] = 'Statut invalide.';
-        }
-
-        if (!empty($data['presence']) && !in_array($data['presence'], ['présent', 'absent'])) {
-            $errors[] = 'Valeur de présence invalide.';
-        }
-
-        return $errors;
+        $old    = ['evenement_id' => $evenementId];
+        require __DIR__ . '/../view/frontoffice/inscrire.php';
     }
 
-    private function canViewParticipation($participation, $userId, $userRole): bool {
-        if ($userRole === 'admin') {
-            return true;
+    public function inscrireStore(): void {
+        $evenementId = (int)($_POST['evenement_id'] ?? 0);
+        $evenement   = $this->evenementModel->findById($evenementId);
+        if (!$evenement) { $this->notFound(); return; }
+
+        $data = [
+            'nom'          => $_POST['nom']        ?? '',
+            'prenom'       => $_POST['prenom']     ?? '',
+            'email'        => $_POST['email']      ?? '',
+            'telephone'    => $_POST['telephone']  ?? '',
+            'profession'   => $_POST['profession'] ?? '',
+            'evenement_id' => $evenementId,
+            'statut'       => 'en_attente',
+        ];
+
+        $errors = $this->validateParticipation($data);
+
+        if (empty($errors)) {
+            $places = $this->evenementModel->getPlacesRestantes($evenementId);
+            if ($places <= 0) {
+                $errors['evenement_id'] = "Désolé, cet événement est complet.";
+            }
         }
 
-        if ($userRole === 'patient') {
-            return $participation['patient_id'] === $userId;
+        if (empty($errors)) {
+            if ($this->model->alreadyRegistered($data['email'], $evenementId)) {
+                $errors['email'] = "Vous êtes déjà inscrit(e) à cet événement avec cette adresse e-mail.";
+            }
         }
 
-        if ($userRole === 'medecin') {
-            $event = $this->eventModel->getById($participation['event_id']);
-            return (int)$event['createur_id'] === $userId;
+        if (!empty($errors)) {
+            $old = $data;
+            require __DIR__ . '/../view/frontoffice/inscrire.php';
+            return;
         }
 
-        return false;
+        $this->model->create($data);
+        header('Location: index.php?controller=evenement&action=detail&id=' . $evenementId . '&success=inscrit');
+        exit;
     }
 
-    private function sendConfirmationEmail($patient, $event): void {
-        try {
-            $to = $patient['email'] ?? '';
-            $subject = "Confirmation d'inscription - " . $event['titre'];
-            
-            $message = <<<HTML
-<h2>Confirmation d'inscription</h2>
-<p>Bonjour {$patient['prenom']} {$patient['nom']},</p>
-<p>Vous êtes maintenant inscrit à l'événement <strong>{$event['titre']}</strong></p>
+    // ─── Validation interne ────────────────────────────────────────────
 
-<h3>Détails de l'événement :</h3>
-<ul>
-    <li><strong>Date :</strong> {$event['date_debut']} à {$event['heure_debut']}</li>
-    <li><strong>Lieu :</strong> {$event['lieu']}</li>
-    <li><strong>Type :</strong> {$event['type']}</li>
-</ul>
+    private function validateParticipation(array $data): array {
+        $v = new Validator();
+        $v->required('nom', $data['nom'], 'Nom')
+          ->minLength('nom', $data['nom'], 2, 'Nom')
+          ->maxLength('nom', $data['nom'], 100, 'Nom')
+          ->required('prenom', $data['prenom'], 'Prénom')
+          ->minLength('prenom', $data['prenom'], 2, 'Prénom')
+          ->maxLength('prenom', $data['prenom'], 100, 'Prénom')
+          ->required('email', $data['email'], 'Email')
+          ->email('email', $data['email'], 'Email')
+          ->required('telephone', $data['telephone'], 'Téléphone')
+          ->phone('telephone', $data['telephone'], 'Téléphone')
+          ->required('profession', $data['profession'], 'Profession')
+          ->minLength('profession', $data['profession'], 2, 'Profession')
+          ->required('evenement_id', $data['evenement_id'], 'Événement')
+          ->integer('evenement_id', $data['evenement_id'], 'Événement');
 
-<p>{$event['description']}</p>
-
-<p>Cordialement,<br>L'équipe Valorys</p>
-HTML;
-
-            // Configuration email (à adapter selon votre système)
-            $headers = "MIME-Version: 1.0\r\n";
-            $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-            
-            // mail($to, $subject, $message, $headers);
-        } catch (Exception $e) {
-            error_log('Erreur sendConfirmationEmail: ' . $e->getMessage());
+        if (isset($data['statut'])) {
+            $v->inArray('statut', $data['statut'], self::STATUTS, 'Statut');
         }
+
+        return $v->getErrors();
     }
 
-    private function sendCancellationEmail($patient, $event): void {
-        try {
-            $to = $patient['email'] ?? '';
-            $subject = "Annulation d'inscription - " . $event['titre'];
-            
-            $message = <<<HTML
-<h2>Annulation d'inscription</h2>
-<p>Bonjour {$patient['prenom']} {$patient['nom']},</p>
-<p>Votre inscription à l'événement <strong>{$event['titre']}</strong> a été annulée.</p>
-
-<p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
-
-<p>Cordialement,<br>L'équipe Valorys</p>
-HTML;
-
-            $headers = "MIME-Version: 1.0\r\n";
-            $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-            
-            // mail($to, $subject, $message, $headers);
-        } catch (Exception $e) {
-            error_log('Erreur sendCancellationEmail: ' . $e->getMessage());
-        }
-    }
-
-    private function generateCsrfToken(): string {
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
-    }
-
-    private function verifyCsrfToken(string $token): bool {
-        return !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
-    }
-
-    private function setFlash(string $type, string $message): void {
-        $_SESSION['flash'] = ['type' => $type, 'message' => $message];
-    }
-
-    private function logAction(int $userId, string $action, string $description): void {
-        try {
-            $sql = "INSERT INTO logs (user_id, action, description, ip_address, created_at)
-                    VALUES (:user_id, :action, :description, :ip, NOW())";
-            $this->db->execute($sql, [
-                'user_id' => $userId,
-                'action' => $action,
-                'description' => $description,
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-            ]);
-        } catch (Exception $e) {
-            error_log('Erreur logAction: ' . $e->getMessage());
-        }
+    private function notFound(): void {
+        http_response_code(404);
+        echo "<h1>404 – Participation introuvable</h1>";
     }
 }
-?>
