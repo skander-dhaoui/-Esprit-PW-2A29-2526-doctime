@@ -134,84 +134,100 @@ final class User
     }
 
     // Setters
-    public function setId(int $id): void
+    public function setId(int $id): self
     {
         $this->id = $id;
+        return $this;
     }
 
-    public function setNom(string $nom): void
+    public function setNom(string $nom): self
     {
         $this->nom = $nom;
+        return $this;
     }
 
-    public function setPrenom(string $prenom): void
+    public function setPrenom(string $prenom): self
     {
         $this->prenom = $prenom;
+        return $this;
     }
 
-    public function setEmail(string $email): void
+    public function setEmail(string $email): self
     {
         $this->email = $email;
+        return $this;
     }
 
-    public function setTelephone(string $telephone): void
+    public function setTelephone(string $telephone): self
     {
         $this->telephone = $telephone;
+        return $this;
     }
 
-    public function setPassword(string $password): void
+    public function setPassword(string $password): self
     {
         $this->password = $password;
+        return $this;
     }
 
-    public function setRole(string $role): void
+    public function setRole(string $role): self
     {
         $this->role = $role;
+        return $this;
     }
 
-    public function setStatut(string $statut): void
+    public function setStatut(string $statut): self
     {
         $this->statut = $statut;
+        return $this;
     }
 
-    public function setAdresse(?string $adresse): void
+    public function setAdresse(?string $adresse): self
     {
         $this->adresse = $adresse;
+        return $this;
     }
 
-    public function setDateNaissance(?string $dateNaissance): void
+    public function setDateNaissance(?string $dateNaissance): self
     {
         $this->dateNaissance = $dateNaissance;
+        return $this;
     }
 
-    public function setAvatar(?string $avatar): void
+    public function setAvatar(?string $avatar): self
     {
         $this->avatar = $avatar;
+        return $this;
     }
 
-    public function setFacePhoto(?string $facePhoto): void
+    public function setFacePhoto(?string $facePhoto): self
     {
         $this->facePhoto = $facePhoto;
+        return $this;
     }
 
-    public function setFaceEncoding(?string $faceEncoding): void
+    public function setFaceEncoding(?string $faceEncoding): self
     {
         $this->faceEncoding = $faceEncoding;
+        return $this;
     }
 
-    public function setFaceDescriptor(?string $faceDescriptor): void
+    public function setFaceDescriptor(?string $faceDescriptor): self
     {
         $this->faceDescriptor = $faceDescriptor;
+        return $this;
     }
 
-    public function setCreatedAt(string $createdAt): void
+    public function setCreatedAt(string $createdAt): self
     {
         $this->createdAt = $createdAt;
+        return $this;
     }
 
-    public function setDerniereConnexion(string $derniereConnexion): void
+    public function setDerniereConnexion(string $derniereConnexion): self
     {
         $this->derniereConnexion = $derniereConnexion;
+        return $this;
     }
 
     public function toArray(): array
