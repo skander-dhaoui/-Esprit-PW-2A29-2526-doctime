@@ -6,7 +6,7 @@ class Database {
     private ?PDO $conn = null;
     
     private string $host = "localhost";
-    private string $db_name = "valorys";
+    private string $db_name = "doctime_db";
     private string $username = "root";
     private string $password = "";
 
