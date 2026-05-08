@@ -188,7 +188,7 @@ $participation = $participation ?? null;
             <div class="form-row">
                 <div class="form-group">
                     <label>Email *</label>
-                    <input type="email" name="email" id="email" placeholder="Email">
+                    <input type="text" name="email" id="email" placeholder="Email">
                 </div>
                 <div class="form-group">
                     <label>Téléphone</label>
@@ -289,3 +289,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </body>
 </html>
+
+

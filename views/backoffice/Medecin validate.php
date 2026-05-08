@@ -32,20 +32,7 @@
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-header">
-        <i class="fas fa-stethoscope"></i>
-        <h3>MediConnect</h3>
-        <small>Back Office</small>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <a href="index.php?page=medecins" class="active"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </div>
-</div>
-
+<?php include __DIR__ . '/sidebar.php'; ?>
 <div class="main-content">
     <div class="navbar-top">
         <h4><i class="fas fa-user-check me-2"></i> Validation du médecin</h4>

@@ -55,3 +55,4 @@ class FaceRecognition {
         return $stmt->fetch() !== false;
     }
 }
+

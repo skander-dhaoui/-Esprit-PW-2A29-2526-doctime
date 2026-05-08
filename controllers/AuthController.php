@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/social_auth.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/../models/FaceRecognition.php';
+require_once __DIR__ . '/../config/Validator.php';
 
 use App\Models\User;
 use App\Models\FaceRecognition;
@@ -141,33 +142,22 @@ class AuthController {
             exit;
         }
 
+        // ========== NETTOYAGE DES DONNÉES ==========
         $email    = trim($_POST['email']    ?? '');
         $password = trim($_POST['password'] ?? '');
         $captchaResponse = trim($_POST['captcha_response'] ?? '');
         
-        // DEBUG
-        error_log('LOGIN ATTEMPT - Email: ' . $email . ' | CaptchaResponse empty: ' . (empty($captchaResponse) ? 'YES' : 'NO'));
-        error_log('SESSION captcha_code: ' . ($_SESSION['captcha_code'] ?? 'EMPTY'));
-        error_log('POST data: ' . json_encode($_POST));
-        
-        $loginErrors = [];
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('email', $email, 'Email')
+            ->email('email', $email, 'Email')
+            ->required('password', $password, 'Mot de passe')
+            ->required('captcha_response', $captchaResponse, 'Code de vérification');
 
-        if (empty($email)) {
-            $loginErrors['email'] = 'L\'email est requis.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $loginErrors['email'] = 'Adresse email invalide.';
-        }
-        if (empty($password)) {
-            $loginErrors['password'] = 'Le mot de passe est requis.';
-        }
-        if (empty($captchaResponse)) {
-            $loginErrors['captcha_response'] = 'Le code de vÃ©rification est requis.';
-        }
-
-        if (!empty($loginErrors)) {
-            error_log('Validation errors: ' . json_encode($loginErrors));
-            $_SESSION['errors'] = $loginErrors;
-            $_SESSION['old']    = $_POST;
+        if ($validator->hasErrors()) {
+            $_SESSION['errors'] = $validator->getErrors();
+            $_SESSION['old']    = ['email' => $email];
             header('Location: ' . $this->getBaseUrl() . 'index.php?page=login');
             exit;
         }
@@ -292,6 +282,7 @@ public function register(): void {
         exit;
     }
 
+    // ========== NETTOYAGE DES DONNÉES ==========
     $nom             = trim($_POST['nom']               ?? '');
     $prenom          = trim($_POST['prenom']            ?? '');
     $email           = trim($_POST['email']             ?? '');
@@ -299,49 +290,50 @@ public function register(): void {
     $password        = trim($_POST['password']          ?? '');
     $passwordConfirm = trim($_POST['password_confirm'] ?? '');
     $role            = $_POST['role']                  ?? 'patient';
-
     $specialite     = trim($_POST['specialite']      ?? '');
     $numeroOrdre    = trim($_POST['numero_ordre']    ?? '');
 
-    $errors = [];
+    // ========== VALIDATION AVEC VALIDATOR ==========
+    $validator = new Validator();
+    $validator
+        ->required('nom', $nom, 'Nom')
+        ->required('prenom', $prenom, 'Prénom')
+        ->required('email', $email, 'Email')
+        ->email('email', $email, 'Email')
+        ->required('telephone', $telephone, 'Téléphone')
+        ->required('password', $password, 'Mot de passe')
+        ->minLength('password', $password, 8, 'Mot de passe');
 
-    if ($nom === '') {
-        $errors['nom'] = 'Le nom est requis.';
+    // Vérifications personnalisées après les validations de base
+    $errors = $validator->getErrors();
+    
+    // Vérifier force du mot de passe
+    if (empty($errors['password']) && !preg_match('/[A-Z]/', $password)) {
+        $errors['password'] = 'Le mot de passe doit contenir au moins une majuscule.';
     }
-    if ($prenom === '') {
-        $errors['prenom'] = 'Le prÃ©nom est requis.';
+    if (empty($errors['password']) && !preg_match('/[0-9]/', $password)) {
+        $errors['password'] = 'Le mot de passe doit contenir au moins un chiffre.';
     }
-    if ($email === '') {
-        $errors['email'] = 'L\'email est requis.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Adresse email invalide.';
-    }
-    if ($telephone === '') {
-        $errors['telephone'] = 'Le tÃ©lÃ©phone est requis.';
-    }
-    if ($password === '') {
-        $errors['password'] = 'Le mot de passe est requis.';
-    } elseif (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
-        $errors['password'] = 'Au moins 8 caractÃ¨res, une majuscule et un chiffre.';
-    }
-    if ($passwordConfirm === '') {
-        $errors['password_confirm'] = 'Veuillez confirmer le mot de passe.';
-    } elseif ($password !== '' && $password !== $passwordConfirm) {
+    
+    // Vérifier confirmation password
+    if (empty($errors['password']) && $password !== $passwordConfirm) {
         $errors['password_confirm'] = 'Les mots de passe ne correspondent pas.';
     }
 
+    // Vérifications spécifiques au rôle
     if (!in_array($role, ['patient', 'medecin'], true)) {
         $role = 'patient';
     }
     if ($role === 'medecin') {
-        if ($specialite === '') {
-            $errors['specialite'] = 'Veuillez sÃ©lectionner une spÃ©cialitÃ©.';
+        if (empty($specialite)) {
+            $errors['specialite'] = 'Le champ « Spécialité » est obligatoire.';
         }
-        if ($numeroOrdre === '') {
-            $errors['numero_ordre'] = 'Le numÃ©ro d\'ordre est requis.';
+        if (empty($numeroOrdre)) {
+            $errors['numero_ordre'] = 'Le champ « Numéro d\'ordre » est obligatoire.';
         }
     }
 
+    // Acceptation des conditions d'utilisation
     if (empty($_POST['terms'])) {
         $errors['terms'] = "Vous devez accepter les conditions d'utilisation.";
     }
@@ -1412,6 +1404,7 @@ public function handleSocialCallback(string $provider): void {
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 20,
                 CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_SSL_VERIFYPEER => false,
             ]);
 
             if ($method === 'POST') {
@@ -1464,6 +1457,10 @@ public function handleSocialCallback(string $provider): void {
                 'content'       => $method === 'POST' ? http_build_query($data) : '',
                 'ignore_errors' => true,
                 'timeout'       => 20,
+            ],
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false,
             ],
         ]);
 

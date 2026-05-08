@@ -10,13 +10,13 @@ class Sponsor {
 
     /** Récupère tous les sponsors */
     public function findAll(): array {
-        $stmt = $this->pdo->query("SELECT * FROM sponsor ORDER BY nom ASC");
+        $stmt = $this->pdo->query("SELECT * FROM sponsors ORDER BY nom ASC");
         return $stmt->fetchAll();
     }
 
     /** Récupère un sponsor par son ID */
     public function findById(int $id): array|false {
-        $stmt = $this->pdo->prepare("SELECT * FROM sponsor WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT * FROM sponsors WHERE id = :id");
         $stmt->execute([':id' => $id]);
         return $stmt->fetch();
     }
@@ -24,7 +24,7 @@ class Sponsor {
     /** Vérifie si un email existe déjà (hors l'ID courant pour l'édition) */
     public function emailExists(string $email, int $excludeId = 0): bool {
         $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM sponsor WHERE email = :email AND id != :id"
+            "SELECT COUNT(*) FROM sponsors WHERE email = :email AND id != :id"
         );
         $stmt->execute([':email' => $email, ':id' => $excludeId]);
         return $stmt->fetchColumn() > 0;
@@ -33,7 +33,7 @@ class Sponsor {
     /** Crée un nouveau sponsor */
     public function create(array $data): bool {
         $stmt = $this->pdo->prepare("
-            INSERT INTO sponsor (nom, email, telephone, site_web, niveau, montant)
+            INSERT INTO sponsors (nom, email, telephone, site_web, niveau, montant)
             VALUES (:nom, :email, :telephone, :site_web, :niveau, :montant)
         ");
         return $stmt->execute([
@@ -49,7 +49,7 @@ class Sponsor {
     /** Met à jour un sponsor existant */
     public function update(int $id, array $data): bool {
         $stmt = $this->pdo->prepare("
-            UPDATE sponsor
+            UPDATE sponsors
             SET nom = :nom,
                 email = :email,
                 telephone = :telephone,
@@ -71,7 +71,7 @@ class Sponsor {
 
     /** Supprime un sponsor */
     public function delete(int $id): bool {
-        $stmt = $this->pdo->prepare("DELETE FROM sponsor WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM sponsors WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 

@@ -1,50 +1,83 @@
 <?php
-require_once __DIR__ . '/../model/Participation.php';
-require_once __DIR__ . '/../model/Evenement.php';
+require_once __DIR__ . '/../models/Participation.php';
+require_once __DIR__ . '/../models/Evenement.php';
 require_once __DIR__ . '/../config/Validator.php';
 
 class ParticipationController {
     private Participation $model;
-    private Evenement     $evenementModel;
+    private Evenement $eventModel;
 
     public function __construct() {
-        $this->model          = new Participation();
-        $this->evenementModel = new Evenement();
+        $this->model      = new Participation();
+        $this->eventModel = new Evenement();
     }
 
-    private const STATUTS = ['en_attente','confirme','annule'];
+    private const STATUTS = ['en_attente', 'confirme', 'annule'];
 
     // ─── BackOffice ────────────────────────────────────────────────────
 
     public function index(): void {
         $participations = $this->model->findAll();
-        require __DIR__ . '/../view/backoffice/participation/index.php';
+        require __DIR__ . '/../views/backoffice/participation/index.php';
+    }
+
+    public function indexAdmin(): void {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->query("
+            SELECT
+                p.id,
+                u.nom,
+                u.prenom,
+                u.email,
+                COALESCE(u.telephone, '') AS telephone,
+                '' AS profession,
+                e.titre AS evenement_titre,
+                CASE
+                    WHEN p.statut IN ('présent', 'present', 'inscrit') THEN 'confirme'
+                    WHEN p.statut = 'absent' THEN 'annule'
+                    ELSE 'en_attente'
+                END AS statut,
+                p.date_inscription
+            FROM participations p
+            JOIN users u ON p.user_id = u.id
+            JOIN events e ON p.event_id = e.id
+            ORDER BY p.date_inscription DESC
+        ");
+        $participations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        require __DIR__ . '/../views/backoffice/participation/index.php';
     }
 
     public function create(): void {
-        $evenements = $this->evenementModel->findAll();
-        $errors     = [];
-        $old        = [];
-        $statuts    = self::STATUTS;
-        require __DIR__ . '/../view/backoffice/participation/create.php';
+        $events = $this->eventModel->findAll();
+        $errors = $_SESSION['errors'] ?? [];
+        $old    = $_SESSION['old']    ?? [];
+        $statuts = self::STATUTS;
+        unset($_SESSION['errors'], $_SESSION['old']);
+        require __DIR__ . '/../views/backoffice/participation/create.php';
     }
 
     public function store(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=participations&action=create');
+            exit;
+        }
+
         $data = [
-            'nom'          => $_POST['nom']          ?? '',
-            'prenom'       => $_POST['prenom']       ?? '',
-            'email'        => $_POST['email']        ?? '',
-            'telephone'    => $_POST['telephone']    ?? '',
-            'profession'   => $_POST['profession']   ?? '',
-            'evenement_id' => $_POST['evenement_id'] ?? '',
-            'statut'       => $_POST['statut']       ?? 'en_attente',
+            'nom'          => trim($_POST['nom']          ?? ''),
+            'prenom'       => trim($_POST['prenom']       ?? ''),
+            'email'        => trim($_POST['email']        ?? ''),
+            'telephone'    => trim($_POST['telephone']    ?? ''),
+            'profession'   => trim($_POST['profession']   ?? ''),
+            'evenement_id' => trim($_POST['evenement_id'] ?? ''),
+            'statut'       => trim($_POST['statut']       ?? 'en_attente'),
         ];
 
+        // ========== VALIDATIONS SERVEUR ==========
         $errors = $this->validateParticipation($data);
 
         // Vérifier les places restantes
         if (empty($errors) && !empty($data['evenement_id'])) {
-            $places = $this->evenementModel->getPlacesRestantes((int)$data['evenement_id']);
+            $places = $this->eventModel->getPlacesRestantes((int)$data['evenement_id']);
             if ($places <= 0) {
                 $errors['evenement_id'] = "Cet événement est complet, il n'y a plus de places disponibles.";
             }
@@ -57,64 +90,84 @@ class ParticipationController {
             }
         }
 
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $old        = $data;
-            $evenements = $this->evenementModel->findAll();
-            $statuts    = self::STATUTS;
-            require __DIR__ . '/../view/backoffice/participation/create.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $data;
+            header('Location: index.php?page=participations&action=create');
+            exit;
         }
 
+        // ========== CRÉATION PARTICIPATION ==========
         $this->model->create($data);
-        header('Location: index.php?controller=participation&action=index&success=create');
+        $_SESSION['success'] = "Participation créée avec succès.";
+        header('Location: index.php?page=participations');
         exit;
     }
 
     public function edit(): void {
         $id            = (int)($_GET['id'] ?? 0);
         $participation = $this->model->findById($id);
-        if (!$participation) { $this->notFound(); return; }
+        if (!$participation) {
+            http_response_code(404);
+            echo "<h1>404 – Participation introuvable</h1>";
+            return;
+        }
 
-        $evenements = $this->evenementModel->findAll();
-        $errors     = [];
-        $old        = $participation;
-        $statuts    = self::STATUTS;
-        require __DIR__ . '/../view/backoffice/participation/edit.php';
+        $events = $this->eventModel->findAll();
+        $errors = $_SESSION['errors'] ?? [];
+        $old    = $_SESSION['old']    ?? $participation;
+        unset($_SESSION['errors'], $_SESSION['old']);
+        $statuts = self::STATUTS;
+        require __DIR__ . '/../views/backoffice/participation/edit.php';
     }
 
     public function update(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=participations');
+            exit;
+        }
+
         $id            = (int)($_POST['id'] ?? 0);
         $participation = $this->model->findById($id);
-        if (!$participation) { $this->notFound(); return; }
+        if (!$participation) {
+            http_response_code(404);
+            echo "<h1>404 – Participation introuvable</h1>";
+            return;
+        }
 
         $data = [
-            'nom'          => $_POST['nom']          ?? '',
-            'prenom'       => $_POST['prenom']       ?? '',
-            'email'        => $_POST['email']        ?? '',
-            'telephone'    => $_POST['telephone']    ?? '',
-            'profession'   => $_POST['profession']   ?? '',
-            'evenement_id' => $_POST['evenement_id'] ?? '',
-            'statut'       => $_POST['statut']       ?? '',
+            'nom'          => trim($_POST['nom']          ?? ''),
+            'prenom'       => trim($_POST['prenom']       ?? ''),
+            'email'        => trim($_POST['email']        ?? ''),
+            'telephone'    => trim($_POST['telephone']    ?? ''),
+            'profession'   => trim($_POST['profession']   ?? ''),
+            'evenement_id' => trim($_POST['evenement_id'] ?? ''),
+            'statut'       => trim($_POST['statut']       ?? ''),
         ];
 
+        // ========== VALIDATIONS SERVEUR ==========
         $errors = $this->validateParticipation($data);
 
+        // Vérifier doublon
         if (empty($errors)) {
             if ($this->model->alreadyRegistered($data['email'], (int)$data['evenement_id'], $id)) {
                 $errors['email'] = "Cette adresse e-mail est déjà inscrite à cet événement.";
             }
         }
 
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $old        = array_merge($participation, $data, ['id' => $id]);
-            $evenements = $this->evenementModel->findAll();
-            $statuts    = self::STATUTS;
-            require __DIR__ . '/../view/backoffice/participation/edit.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = array_merge($participation, $data, ['id' => $id]);
+            header('Location: index.php?page=participations&action=edit&id=' . $id);
+            exit;
         }
 
+        // ========== MISE À JOUR PARTICIPATION ==========
         $this->model->update($id, $data);
-        header('Location: index.php?controller=participation&action=index&success=update');
+        $_SESSION['success'] = "Participation mise à jour avec succès.";
+        header('Location: index.php?page=participations');
         exit;
     }
 
@@ -122,8 +175,9 @@ class ParticipationController {
         $id = (int)($_GET['id'] ?? 0);
         if ($this->model->findById($id)) {
             $this->model->delete($id);
+            $_SESSION['success'] = "Participation supprimée avec succès.";
         }
-        header('Location: index.php?controller=participation&action=index&success=delete');
+        header('Location: index.php?page=participations');
         exit;
     }
 
@@ -140,7 +194,7 @@ class ParticipationController {
             $participations = $this->model->findByEmail($email);
         }
 
-        require __DIR__ . '/../view/frontoffice/mes_inscriptions.php';
+        require __DIR__ . '/../views/frontoffice/mes_inscriptions.php';
     }
 
     /** Formulaire de modification d'une inscription (frontoffice) */
@@ -155,14 +209,19 @@ class ParticipationController {
             return;
         }
 
-        $evenements = $this->evenementModel->findAll();
-        $errors     = [];
-        $old        = $participation;
-        require __DIR__ . '/../view/frontoffice/inscription_edit.php';
+        $events = $this->eventModel->findAll();
+        $errors = [];
+        $old    = $participation;
+        require __DIR__ . '/../views/frontoffice/inscription_edit.php';
     }
 
     /** Traitement de la modification (frontoffice) */
     public function frontUpdate(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=mes_inscriptions');
+            exit;
+        }
+
         $id    = (int)($_POST['id'] ?? 0);
         $email = trim($_POST['email_original'] ?? '');
 
@@ -174,26 +233,30 @@ class ParticipationController {
         }
 
         $data = [
-            'nom'          => $_POST['nom']          ?? '',
-            'prenom'       => $_POST['prenom']       ?? '',
+            'nom'          => trim($_POST['nom']       ?? ''),
+            'prenom'       => trim($_POST['prenom']    ?? ''),
             'email'        => $participation['email'],   // email non modifiable
-            'telephone'    => $_POST['telephone']    ?? '',
-            'profession'   => $_POST['profession']   ?? '',
+            'telephone'    => trim($_POST['telephone'] ?? ''),
+            'profession'   => trim($_POST['profession'] ?? ''),
             'evenement_id' => $participation['evenement_id'], // événement non modifiable
             'statut'       => $participation['statut'],       // statut non modifiable
         ];
 
+        // ========== VALIDATIONS SERVEUR ==========
         $errors = $this->validateParticipation($data);
 
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $evenements = $this->evenementModel->findAll();
-            $old        = array_merge($participation, $data, ['id' => $id]);
-            require __DIR__ . '/../view/frontoffice/inscription_edit.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = array_merge($participation, $data, ['id' => $id]);
+            header('Location: index.php?page=inscription_edit&id=' . $id . '&email=' . urlencode($email));
+            exit;
         }
 
+        // ========== MISE À JOUR PARTICIPATION ==========
         $this->model->update($id, $data);
-        header('Location: index.php?controller=mesinscriptions&action=search&email=' . urlencode($email) . '&success=update');
+        $_SESSION['success'] = "Inscription mise à jour avec succès.";
+        header('Location: index.php?page=mes_inscriptions&email=' . urlencode($email));
         exit;
     }
 
@@ -205,9 +268,10 @@ class ParticipationController {
         $participation = $this->model->findById($id);
         if ($participation && strtolower($participation['email']) === strtolower($email)) {
             $this->model->delete($id);
+            $_SESSION['success'] = "Inscription supprimée avec succès.";
         }
 
-        header('Location: index.php?controller=mesinscriptions&action=search&email=' . urlencode($email) . '&success=delete');
+        header('Location: index.php?page=mes_inscriptions&email=' . urlencode($email));
         exit;
     }
 
@@ -215,33 +279,47 @@ class ParticipationController {
 
     public function inscrire(): void {
         $evenementId = (int)($_GET['evenement_id'] ?? 0);
-        $evenement   = $this->evenementModel->findById($evenementId);
-        if (!$evenement) { $this->notFound(); return; }
+        $evenement   = $this->eventModel->findById($evenementId);
+        if (!$evenement) {
+            http_response_code(404);
+            echo "<h1>404 – Événement introuvable</h1>";
+            return;
+        }
 
         $errors = [];
         $old    = ['evenement_id' => $evenementId];
-        require __DIR__ . '/../view/frontoffice/inscrire.php';
+        require __DIR__ . '/../views/frontoffice/inscrire.php';
     }
 
     public function inscrireStore(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=events');
+            exit;
+        }
+
         $evenementId = (int)($_POST['evenement_id'] ?? 0);
-        $evenement   = $this->evenementModel->findById($evenementId);
-        if (!$evenement) { $this->notFound(); return; }
+        $evenement   = $this->eventModel->findById($evenementId);
+        if (!$evenement) {
+            http_response_code(404);
+            echo "<h1>404 – Événement introuvable</h1>";
+            return;
+        }
 
         $data = [
-            'nom'          => $_POST['nom']        ?? '',
-            'prenom'       => $_POST['prenom']     ?? '',
-            'email'        => $_POST['email']      ?? '',
-            'telephone'    => $_POST['telephone']  ?? '',
-            'profession'   => $_POST['profession'] ?? '',
+            'nom'          => trim($_POST['nom']        ?? ''),
+            'prenom'       => trim($_POST['prenom']     ?? ''),
+            'email'        => trim($_POST['email']      ?? ''),
+            'telephone'    => trim($_POST['telephone']  ?? ''),
+            'profession'   => trim($_POST['profession'] ?? ''),
             'evenement_id' => $evenementId,
             'statut'       => 'en_attente',
         ];
 
+        // ========== VALIDATIONS SERVEUR ==========
         $errors = $this->validateParticipation($data);
 
         if (empty($errors)) {
-            $places = $this->evenementModel->getPlacesRestantes($evenementId);
+            $places = $this->eventModel->getPlacesRestantes($evenementId);
             if ($places <= 0) {
                 $errors['evenement_id'] = "Désolé, cet événement est complet.";
             }
@@ -253,45 +331,45 @@ class ParticipationController {
             }
         }
 
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $old = $data;
-            require __DIR__ . '/../view/frontoffice/inscrire.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $data;
+            header('Location: index.php?page=inscrire&evenement_id=' . $evenementId);
+            exit;
         }
 
+        // ========== CRÉATION PARTICIPATION ==========
         $this->model->create($data);
-        header('Location: index.php?controller=evenement&action=detail&id=' . $evenementId . '&success=inscrit');
+        $_SESSION['success'] = "Inscription confirmée! Vous recevrez un email de confirmation.";
+        header('Location: index.php?page=event&id=' . $evenementId);
         exit;
     }
 
     // ─── Validation interne ────────────────────────────────────────────
 
     private function validateParticipation(array $data): array {
-        $v = new Validator();
-        $v->required('nom', $data['nom'], 'Nom')
-          ->minLength('nom', $data['nom'], 2, 'Nom')
-          ->maxLength('nom', $data['nom'], 100, 'Nom')
-          ->required('prenom', $data['prenom'], 'Prénom')
-          ->minLength('prenom', $data['prenom'], 2, 'Prénom')
-          ->maxLength('prenom', $data['prenom'], 100, 'Prénom')
-          ->required('email', $data['email'], 'Email')
-          ->email('email', $data['email'], 'Email')
-          ->required('telephone', $data['telephone'], 'Téléphone')
-          ->phone('telephone', $data['telephone'], 'Téléphone')
-          ->required('profession', $data['profession'], 'Profession')
-          ->minLength('profession', $data['profession'], 2, 'Profession')
-          ->required('evenement_id', $data['evenement_id'], 'Événement')
-          ->integer('evenement_id', $data['evenement_id'], 'Événement');
+        $validator = new Validator();
+        $validator->required('nom', $data['nom'], 'Nom')
+                  ->minLength('nom', $data['nom'], 2, 'Nom')
+                  ->maxLength('nom', $data['nom'], 100, 'Nom')
+                  ->required('prenom', $data['prenom'], 'Prénom')
+                  ->minLength('prenom', $data['prenom'], 2, 'Prénom')
+                  ->maxLength('prenom', $data['prenom'], 100, 'Prénom')
+                  ->required('email', $data['email'], 'Email')
+                  ->email('email', $data['email'], 'Email')
+                  ->required('telephone', $data['telephone'], 'Téléphone')
+                  ->numeric('telephone', $data['telephone'], 'Téléphone')
+                  ->minLength('telephone', $data['telephone'], 10, 'Téléphone')
+                  ->required('profession', $data['profession'], 'Profession')
+                  ->minLength('profession', $data['profession'], 2, 'Profession')
+                  ->required('evenement_id', $data['evenement_id'], 'Événement')
+                  ->integer('evenement_id', $data['evenement_id'], 'Événement');
 
-        if (isset($data['statut'])) {
-            $v->inArray('statut', $data['statut'], self::STATUTS, 'Statut');
+        if (!empty($data['statut'])) {
+            $validator->inArray('statut', $data['statut'], self::STATUTS, 'Statut');
         }
 
-        return $v->getErrors();
-    }
-
-    private function notFound(): void {
-        http_response_code(404);
-        echo "<h1>404 – Participation introuvable</h1>";
+        return $validator->getErrors();
     }
 }

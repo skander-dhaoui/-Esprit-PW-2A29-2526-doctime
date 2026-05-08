@@ -44,23 +44,23 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=evenements">Événements</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=contact">Contact</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
                 <?php else: ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=login">Connexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=register">Inscription</a></li>
                 <?php endif; ?>
             </ul>
         </div>
@@ -69,7 +69,7 @@
 
 <div class="event-header">
     <div class="container">
-        <a href="index.php?page=evenements" class="btn btn-light mb-3">
+        <a href="/valorys_Copie/index.php?page=evenements" class="btn btn-light mb-3">
             <i class="fas fa-arrow-left me-2"></i>Retour aux événements
         </a>
         <h1 class="event-title"><?= htmlspecialchars($event['titre']) ?></h1>
@@ -149,7 +149,7 @@
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <?php if ($event['status'] === 'à venir'): ?>
                         <?php if ($isParticipant): ?>
-                            <form method="POST" action="index.php?page=evenement_desinscrire" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler votre inscription ?')">
+                            <form method="POST" action="/valorys_Copie/index.php?page=evenement_desinscrire" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler votre inscription ?')">
                                 <input type="hidden" name="event_id" value="<?= $event['id'] ?>">
                                 <button type="submit" class="btn-unregister">
                                     <i class="fas fa-times me-2"></i>Se désinscrire
@@ -160,7 +160,7 @@
                                 Vous êtes déjà inscrit à cet événement.
                             </div>
                         <?php else: ?>
-                            <form method="POST" action="index.php?page=evenement_inscrire">
+                            <form method="POST" action="/valorys_Copie/index.php?page=evenement_inscrire">
                                 <input type="hidden" name="event_id" value="<?= $event['id'] ?>">
                                 <button type="submit" class="btn-register" <?= ($event['places_restantes'] ?? 0) <= 0 ? 'disabled' : '' ?>>
                                     <i class="fas fa-check-circle me-2"></i>
@@ -183,7 +183,7 @@
                 <?php else: ?>
                     <div class="alert alert-info mb-0">
                         <i class="fas fa-info-circle me-2"></i>
-                        <a href="index.php?page=login" class="alert-link">Connectez-vous</a> pour vous inscrire à cet événement.
+                        <a href="/valorys_Copie/index.php?page=login" class="alert-link">Connectez-vous</a> pour vous inscrire à cet événement.
                     </div>
                 <?php endif; ?>
             </div>
@@ -224,3 +224,4 @@
 </script>
 </body>
 </html>
+

@@ -26,15 +26,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendez_vous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=disponibilites">Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=disponibilites">Disponibilités</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -56,10 +56,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                         <?php unset($_SESSION['flash']); ?>
                     <?php endif; ?>
 
-                    <form method="POST" action="index.php?page=ordonnances&action=store">
+                    <form method="POST" action="/valorys_Copie/index.php?page=ordonnances&action=store">
                         <div class="mb-3">
                             <label class="form-label">Patient *</label>
-                            <select name="patient_id" class="form-select" required>
+                            <select name="patient_id" class="form-select">
                                 <option value="">Sélectionner un patient</option>
                                 <?php if (isset($patients) && !empty($patients)): ?>
                                     <?php foreach ($patients as $patient): ?>
@@ -70,11 +70,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Diagnostic *</label>
-                            <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..." required></textarea>
+                            <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..."></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Prescription *</label>
-                            <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..." required></textarea>
+                            <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..."></textarea>
                         </div>
                         <?php if (isset($rdv_id) && $rdv_id): ?>
                             <input type="hidden" name="rdv_id" value="<?= $rdv_id ?>">
@@ -84,7 +84,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>Créer l'ordonnance
                             </button>
-                            <a href="index.php?page=ordonnances" class="btn btn-secondary">Annuler</a>
+                            <a href="/valorys_Copie/index.php?page=ordonnances" class="btn btn-secondary">Annuler</a>
                         </div>
                     </form>
                 </div>
@@ -96,3 +96,5 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

@@ -142,3 +142,4 @@ $getPaginationUrl = function (int $page_num) use ($page_param): string {
     background-color: transparent;
 }
 </style>
+

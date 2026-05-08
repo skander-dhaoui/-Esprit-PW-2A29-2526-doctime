@@ -145,14 +145,14 @@
 
             </div>
 
-            <form id="loginForm" method="POST" action="index.php?page=login" novalidate>
+            <form id="loginForm" method="POST" action="/valorys_Copie/index.php?page=login" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="patient">
                 <input type="hidden" name="captcha_response" id="captchaResponse" value="">
 
                 <!-- Email -->
                 <div class="mb-3">
                     <label class="form-label" for="email">Email</label>
-                    <input type="email" name="email" id="email" class="form-control"
+                    <input type="text" name="email" id="email" class="form-control"
                            placeholder="exemple@email.com"
                            value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
                            autocomplete="email">
@@ -232,21 +232,21 @@
                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
                         <label class="form-check-label" for="remember">Se souvenir de moi</label>
                     </div>
-                    <a href="index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
+                    <a href="/valorys_Copie/index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
                 </div>
 
                 <div class="text-center mb-3 mt-3"><span class="text-muted">ou continuer avec</span></div>
 
                 <div class="social-login">
-                    <a class="btn-social btn-google" href="index.php?page=social_login&provider=google">
+                    <a class="btn-social btn-google" href="/valorys_Copie/index.php?page=social_login&provider=google">
                         <i class="fab fa-google"></i>
                         <span>Continuer avec Google</span>
                     </a>
-                    <a class="btn-social btn-github" href="index.php?page=social_login&provider=github">
+                    <a class="btn-social btn-github" href="/valorys_Copie/index.php?page=social_login&provider=github">
                         <i class="fab fa-github"></i>
                         <span>Continuer avec GitHub</span>
                     </a>
-                    <a class="btn-social btn-facebook" href="index.php?page=social_login&provider=facebook">
+                    <a class="btn-social btn-facebook" href="/valorys_Copie/index.php?page=social_login&provider=facebook">
                         <i class="fab fa-facebook-f"></i>
                         <span>Continuer avec Facebook</span>
                     </a>
@@ -264,7 +264,7 @@
             <div class="text-center">
                 <p class="mb-0">
                     Pas encore de compte ?
-                    <a href="index.php?page=register" class="register-link">S'inscrire</a>
+                    <a href="/valorys_Copie/index.php?page=register" class="register-link">S'inscrire</a>
                 </p>
             </div>
         </div>
@@ -301,7 +301,7 @@
         
         // Si pas de captcha en session, le charger du serveur
         if (!currentCaptcha || currentCaptcha === '') {
-            fetch('index.php?action=get_captcha', { method: 'POST' })
+            fetch('/valorys_Copie/index.php?action=get_captcha', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.captcha) {
@@ -319,7 +319,7 @@
 
         function generateCaptcha() {
             // Au clic sur rafraîchir, on demande un nouveau captcha côté serveur via AJAX
-            fetch('index.php?action=generate_captcha', { method: 'POST' })
+            fetch('/valorys_Copie/index.php?action=generate_captcha', { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
                     if (data.captcha) {
@@ -724,7 +724,7 @@
                 const fetchTimeout = setTimeout(() => controller.abort(), 15000);
                 let response;
                 try {
-                    response = await fetch('index.php?page=face_login', {
+                    response = await fetch('/valorys_Copie/index.php?page=face_login', {
                         method: 'POST',
                         body: payload,
                         signal: controller.signal
@@ -783,3 +783,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

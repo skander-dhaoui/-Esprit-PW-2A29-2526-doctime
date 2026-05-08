@@ -36,7 +36,7 @@ final class Event
         $this->image = $data['image'] ?? null;
         $this->prix = (float) ($data['prix'] ?? 0.0);
         $this->status = (string) ($data['status'] ?? 'à venir');
-        $this->sponsorId = ($data['sponsor_id'] !== null ? (int) $data['sponsor_id'] : null);
+        $this->sponsorId = ((($data['sponsor_id'] ?? null) !== null) ? (int) $data['sponsor_id'] : null);
         $this->createdAt = (string) ($data['created_at'] ?? '');
     }
 

@@ -269,3 +269,4 @@ document.addEventListener('DOMContentLoaded', function() {
 .text-gray-300 { color: #dddfeb !important; }
 .text-gray-800 { color: #5a5c69 !important; }
 </style>
+

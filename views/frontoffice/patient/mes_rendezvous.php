@@ -42,19 +42,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=mes_rendezvous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -63,7 +63,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-calendar-check me-2"></i>Mes rendez-vous</h2>
-        <a href="index.php?page=prendre_rendezvous" class="btn-primary-custom">
+        <a href="/valorys_Copie/index.php?page=prendre_rendezvous" class="btn-primary-custom">
             <i class="fas fa-plus me-2"></i>Prendre un rendez-vous
         </a>
     </div>
@@ -104,7 +104,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                             <button class="btn-edit" onclick="openEditModal(<?= $rdv['id'] ?>, '<?= $rdv['date_rendezvous'] ?>', '<?= $rdv['heure_rendezvous'] ?>', '<?= addslashes($rdv['motif'] ?? '') ?>', <?= $rdv['medecin_id'] ?>)">
                                 <i class="fas fa-edit me-1"></i>Modifier
                             </button>
-                            <a href="index.php?page=annuler_rendezvous&id=<?= $rdv['id'] ?>" class="btn-cancel" onclick="return confirm('Annuler ce rendez-vous ?')">
+                            <a href="/valorys_Copie/index.php?page=annuler_rendezvous&id=<?= $rdv['id'] ?>" class="btn-cancel" onclick="return confirm('Annuler ce rendez-vous ?')">
                                 <i class="fas fa-times me-1"></i>Annuler
                             </a>
                         </div>
@@ -179,11 +179,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                     <input type="hidden" name="rdv_id" id="edit_rdv_id">
                     <div class="mb-3">
                         <label class="form-label">Date</label>
-                        <input type="date" name="date_rendezvous" id="edit_date" class="form-control" required>
+                        <input type="date" name="date_rendezvous" id="edit_date" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Heure</label>
-                        <select name="heure_rendezvous" id="edit_heure" class="form-select" required>
+                        <select name="heure_rendezvous" id="edit_heure" class="form-select">
                             <option value="">Sélectionner une heure</option>
                             <option value="08:00">08:00</option>
                             <option value="09:00">09:00</option>
@@ -241,3 +241,5 @@ function openEditModal(id, date, heure, motif, medecinId) {
 </script>
 </body>
 </html>
+
+

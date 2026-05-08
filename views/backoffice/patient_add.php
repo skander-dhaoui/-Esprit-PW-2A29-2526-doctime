@@ -56,24 +56,27 @@ $csrf = $_SESSION['csrf_token'];
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
-        <h4>MediConnect</h4><small>Back Office</small>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="index.php?page=dashboard"><i class="fas fa-th-large"></i> Tableau de bord</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=patients" class="active"><i class="fas fa-user-injured"></i> Patients</a>
-        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
-        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </nav>
-</div>
+<?php 
+// Messages d'erreur par défaut
+$fieldErrors = [
+    'nom' => 'Le nom est obligatoire',
+    'prenom' => 'Le prénom est obligatoire', 
+    'email' => 'L\'email est obligatoire et doit être valide',
+    'password' => 'Le mot de passe est obligatoire (minimum 6 caractères)'
+];
 
+// Convertir flash en errors si c'est une erreur
+$errors = [];
+if ($flash && $flash['type'] === 'error') {
+    // Parser le message d'erreur pour extraire les champs
+    $msg = $flash['message'];
+    if (strpos($msg, 'nom') !== false) $errors['nom'] = true;
+    if (strpos($msg, 'prénom') !== false) $errors['prenom'] = true;
+    if (strpos($msg, 'email') !== false) $errors['email'] = true;
+    if (strpos($msg, 'mot de passe') !== false) $errors['password'] = true;
+}
+
+require_once __DIR__ . '/layout_header_simple.php'; ?>
 <div class="main-content">
     <div class="page-header">
         <h4><i class="fas fa-user-plus"></i> Ajouter un patient</h4>
@@ -82,12 +85,12 @@ $csrf = $_SESSION['csrf_token'];
         </a>
     </div>
 
-    <?php if ($flash): ?>
+    <?php /* if ($flash): ?>
         <div class="flash-box flash-<?= $flash['type'] ?>">
             <i class="fas fa-<?= $flash['type'] === 'success' ? 'check-circle' : 'exclamation-circle' ?>"></i>
             <?= htmlspecialchars($flash['message']) ?>
         </div>
-    <?php endif; ?>
+    <?php endif; */ ?>
 
     <div class="content-card">
         <form method="POST" action="index.php?page=patients&action=add" novalidate id="patientAddForm">
@@ -98,41 +101,41 @@ $csrf = $_SESSION['csrf_token'];
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Nom <span class="required">*</span></label>
-                    <input type="text" id="nom" name="nom" class="form-control"
+                    <input type="text" id="nom" name="nom" class="form-control <?= !empty($errors['nom']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
                            placeholder="Dupont">
-                    <div class="invalid-feedback" id="nom-error"></div>
+                    <div class="invalid-feedback" id="nom-error"><?= !empty($errors['nom']) ? $fieldErrors['nom'] : '' ?></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Prénom <span class="required">*</span></label>
-                    <input type="text" id="prenom" name="prenom" class="form-control"
+                    <input type="text" id="prenom" name="prenom" class="form-control <?= !empty($errors['prenom']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['prenom'] ?? '') ?>"
                            placeholder="Jean">
-                    <div class="invalid-feedback" id="prenom-error"></div>
+                    <div class="invalid-feedback" id="prenom-error"><?= !empty($errors['prenom']) ? $fieldErrors['prenom'] : '' ?></div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Email <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" class="form-control"
+                    <input type="text" id="email" name="email" class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['email'] ?? '') ?>"
                            placeholder="jean.dupont@email.com">
-                    <div class="invalid-feedback" id="email-error"></div>
+                    <div class="invalid-feedback" id="email-error"><?= !empty($errors['email']) ? $fieldErrors['email'] : '' ?></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Téléphone</label>
                     <input type="tel" id="telephone" name="telephone" class="form-control"
                            value="<?= htmlspecialchars($old['telephone'] ?? '') ?>"
                            placeholder="+216 XX XXX XXX">
-                    <div class="invalid-feedback" id="telephone-error"></div>
+                    <div class="invalid-feedback" id="telephone-error"><?= !empty($errors['telephone']) ? $fieldErrors['telephone'] : '' ?></div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Mot de passe <span class="required">*</span></label>
-                    <input type="password" id="password" name="password" class="form-control"
+                    <input type="password" id="password" name="password" class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
                            placeholder="Minimum 6 caractères">
-                    <div class="invalid-feedback" id="password-error"></div>
+                    <div class="invalid-feedback" id="password-error"><?= !empty($errors['password']) ? $fieldErrors['password'] : '' ?></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Groupe sanguin</label>

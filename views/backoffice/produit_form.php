@@ -141,7 +141,7 @@ $current_page = 'produits_admin';
                 <div class="form-row">
                     <div class="form-group">
                         <label>Nom du produit <span class="req">*</span></label>
-                        <input type="text" id="nom" name="nom" maxlength="255"
+                        <input type="text" id="nom" name="nom"
                                value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
                                placeholder="Ex: Doliprane 1000mg">
                         <div class="error-text" id="nom-error"></div>
@@ -168,8 +168,7 @@ $current_page = 'produits_admin';
                     <div class="form-group">
                         <label>Description <span class="req">*</span></label>
                         <textarea id="description" name="description"
-                                  placeholder="Description détaillée du produit (min. 10 caractères)…"
-                                  maxlength="2000"><?= htmlspecialchars($old['description'] ?? '') ?></textarea>
+                                  placeholder="Description détaillée du produit (min. 10 caractères)…"><?= htmlspecialchars($old['description'] ?? '') ?></textarea>
                         <div class="char-counter" id="desc-counter">0 / 2000</div>
                         <div class="error-text" id="description-error"></div>
                     </div>
@@ -182,21 +181,21 @@ $current_page = 'produits_admin';
                 <div class="form-row three">
                     <div class="form-group">
                         <label>Prix d'achat (TND)</label>
-                        <input type="number" id="prix_achat" name="prix_achat" step="0.01" min="0"
+                        <input type="text" id="prix_achat" name="prix_achat" step="0.01" min="0"
                                value="<?= htmlspecialchars($old['prix_achat'] ?? '0') ?>"
                                placeholder="0.00">
                         <div class="error-text" id="prix_achat-error"></div>
                     </div>
                     <div class="form-group">
                         <label>Prix de vente (TND) <span class="req">*</span></label>
-                        <input type="number" id="prix_vente" name="prix_vente" step="0.01" min="0.01"
+                        <input type="text" id="prix_vente" name="prix_vente" step="0.01" min="0.01"
                                value="<?= htmlspecialchars($old['prix_vente'] ?? '') ?>"
                                placeholder="0.00">
                         <div class="error-text" id="prix_vente-error"></div>
                     </div>
                     <div class="form-group">
                         <label>Stock initial <span class="req">*</span></label>
-                        <input type="number" id="stock" name="stock" min="0" step="1"
+                        <input type="text" id="stock" name="stock" min="0" step="1"
                                value="<?= htmlspecialchars($old['stock'] ?? '0') ?>"
                                placeholder="0">
                         <div class="error-text" id="stock-error"></div>
@@ -309,3 +308,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 </body>
 </html>
+
+

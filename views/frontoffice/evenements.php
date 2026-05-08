@@ -8,7 +8,7 @@
             <h2 class="fw-bold mb-0">Événements médicaux</h2>
             <p class="text-muted mb-0"><?= count($evenements) ?> événement(s) disponible(s)</p>
         </div>
-        <form class="d-flex gap-2" method="GET" action="index.php">
+        <form class="d-flex gap-2" method="GET" action="/valorys_Copie/index.php">
             <input type="hidden" name="controller" value="evenements">
             <input type="hidden" name="action" value="list">
             <input type="text" name="q" class="form-control form-control-sm"
@@ -28,12 +28,12 @@
     ?>
     <?php if (!empty($specialites)): ?>
     <div class="mb-4 d-flex flex-wrap gap-2">
-        <a href="index.php?controller=evenements&action=list"
+        <a href="/valorys_Copie/index.php?controller=evenements&action=list"
            class="btn btn-sm <?= $filtreActif === '' ? 'btn-green' : 'btn-outline-secondary' ?>">
             Toutes
         </a>
         <?php foreach ($specialites as $sp): ?>
-        <a href="index.php?controller=evenements&action=list&specialite=<?= urlencode($sp) ?>"
+        <a href="/valorys_Copie/index.php?controller=evenements&action=list&specialite=<?= urlencode($sp) ?>"
            class="btn btn-sm <?= $filtreActif === $sp ? 'btn-green' : 'btn-outline-secondary' ?>">
             <?= htmlspecialchars($sp) ?>
         </a>
@@ -49,7 +49,7 @@
             <strong>Déjà inscrit(e) à un événement ?</strong>
             Consultez, modifiez ou annulez vos inscriptions depuis votre espace personnel.
         </div>
-        <a href="index.php?controller=mesinscriptions&action=search"
+        <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=search"
            class="btn btn-green btn-sm px-4 text-nowrap">
             Mes Inscriptions <i class="bi bi-arrow-right ms-1"></i>
         </a>
@@ -67,7 +67,7 @@
         <div class="text-center py-5 text-muted">
             <i class="bi bi-calendar-x display-4 d-block mb-3"></i>
             <p>Aucun événement pour cette spécialité.</p>
-            <a href="index.php?controller=evenements&action=list" class="btn btn-outline-secondary btn-sm">
+            <a href="/valorys_Copie/index.php?controller=evenements&action=list" class="btn btn-outline-secondary btn-sm">
                 Voir tous les événements
             </a>
         </div>
@@ -129,7 +129,7 @@
                         </li>
                         <?php endif; ?>
                     </ul>
-                    <a href="index.php?controller=evenement&action=detail&id=<?= $e['id'] ?>"
+                    <a href="/valorys_Copie/index.php?controller=evenement&action=detail&id=<?= $e['id'] ?>"
                        class="btn btn-green mt-auto <?= $e['statut'] === 'annule' ? 'disabled' : '' ?>">
                         Voir les détails <i class="bi bi-arrow-right ms-1"></i>
                     </a>
@@ -143,3 +143,4 @@
 </div>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+

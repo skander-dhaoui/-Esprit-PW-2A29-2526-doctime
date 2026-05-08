@@ -40,19 +40,19 @@ unset($_SESSION['errors'], $_SESSION['old']);
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendez_vous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=disponibilites">Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=disponibilites">Disponibilités</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -102,11 +102,11 @@ unset($_SESSION['errors'], $_SESSION['old']);
                             <?= date('H:i', strtotime($dispo['heure_debut'])) ?> - <?= date('H:i', strtotime($dispo['heure_fin'])) ?>
                         </p>
                         <div class="mt-3">
-                            <a href="index.php?page=disponibilites&action=toggle&id=<?= $dispo['id'] ?>" class="btn-toggle">
+                            <a href="/valorys_Copie/index.php?page=disponibilites&action=toggle&id=<?= $dispo['id'] ?>" class="btn-toggle">
                                 <i class="fas <?= $dispo['actif'] ? 'fa-ban' : 'fa-check' ?> me-1"></i>
                                 <?= $dispo['actif'] ? 'Désactiver' : 'Activer' ?>
                             </a>
-                            <a href="index.php?page=disponibilites&action=delete&id=<?= $dispo['id'] ?>" class="btn-delete" onclick="confirmDelete(event, this.href)">
+                            <a href="/valorys_Copie/index.php?page=disponibilites&action=delete&id=<?= $dispo['id'] ?>" class="btn-delete" onclick="confirmDelete(event, this.href)">
                                 <i class="fas fa-trash me-1"></i>Supprimer
                             </a>
                         </div>
@@ -126,7 +126,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
                 <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Ajouter une disponibilité</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="index.php?page=disponibilites&action=store">
+            <form method="POST" action="/valorys_Copie/index.php?page=disponibilites&action=store">
                 <input type="hidden" name="actif" value="1">
                 <div class="modal-body">
                     <!-- Jour -->
@@ -308,3 +308,4 @@ function confirmDelete(event, url) {
 </script>
 </body>
 </html>
+

@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../model/Evenement.php';
-require_once __DIR__ . '/../model/Sponsor.php';
+require_once __DIR__ . '/../models/Evenement.php';
+require_once __DIR__ . '/../models/Sponsor.php';
 require_once __DIR__ . '/../config/Validator.php';
 
 class EvenementController {
@@ -23,7 +23,7 @@ class EvenementController {
 
     public function index(): void {
         $evenements = $this->model->findAll();
-        require __DIR__ . '/../view/backoffice/evenement/index.php';
+        require __DIR__ . '/../views/backoffice/evenement/index.php';
     }
 
     public function create(): void {
@@ -32,7 +32,7 @@ class EvenementController {
         $old      = [];
         $statuts  = self::STATUTS;
         $specialites = self::SPECIALITES;
-        require __DIR__ . '/../view/backoffice/evenement/create.php';
+        require __DIR__ . '/../views/backoffice/evenement/create.php';
     }
 
     public function store(): void {
@@ -56,7 +56,7 @@ class EvenementController {
             $sponsors    = $this->sponsorModel->findAll();
             $statuts     = self::STATUTS;
             $specialites = self::SPECIALITES;
-            require __DIR__ . '/../view/backoffice/evenement/create.php';
+            require __DIR__ . '/../views/backoffice/evenement/create.php';
             return;
         }
 
@@ -75,7 +75,7 @@ class EvenementController {
         $old         = $evenement;
         $statuts     = self::STATUTS;
         $specialites = self::SPECIALITES;
-        require __DIR__ . '/../view/backoffice/evenement/edit.php';
+        require __DIR__ . '/../views/backoffice/evenement/edit.php';
     }
 
     public function update(): void {
@@ -103,7 +103,7 @@ class EvenementController {
             $sponsors    = $this->sponsorModel->findAll();
             $statuts     = self::STATUTS;
             $specialites = self::SPECIALITES;
-            require __DIR__ . '/../view/backoffice/evenement/edit.php';
+            require __DIR__ . '/../views/backoffice/evenement/edit.php';
             return;
         }
 
@@ -125,7 +125,7 @@ class EvenementController {
 
     public function list(): void {
         $evenements = $this->model->findUpcoming();
-        require __DIR__ . '/../view/frontoffice/evenements.php';
+        require __DIR__ . '/../views/frontoffice/evenements.php';
     }
 
     public function detail(): void {
@@ -134,7 +134,7 @@ class EvenementController {
         if (!$evenement) { $this->notFound(); return; }
 
         $placesRestantes = $this->model->getPlacesRestantes($id);
-        require __DIR__ . '/../view/frontoffice/evenement_detail.php';
+        require __DIR__ . '/../views/frontoffice/evenement_detail.php';
     }
 
     // ─── Validation interne ────────────────────────────────────────────

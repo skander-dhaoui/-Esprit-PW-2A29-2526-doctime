@@ -1,5 +1,19 @@
 <?php $pageTitle = 'Tableau de bord'; ?>
-<?php require __DIR__ . '/layout_header.php'; ?>
+<?php 
+// Charger les données directement pour éviter les erreurs de variables
+require_once __DIR__ . '/../../config/database.php';
+$db = Database::getInstance()->getConnection();
+
+$totalSponsors = $db->query("SELECT COUNT(*) FROM sponsors")->fetchColumn() ?? 0;
+$totalMontant = $db->query("SELECT COALESCE(SUM(montant), 0) FROM sponsors")->fetchColumn() ?? 0;
+$totalEvenements = $db->query("SELECT COUNT(*) FROM events")->fetchColumn() ?? 0;
+$totalParticipations = $db->query("SELECT COUNT(*) FROM participations")->fetchColumn() ?? 0;
+$sponsorsData = $db->query("SELECT nom, montant FROM sponsors ORDER BY montant DESC LIMIT 10")->fetchAll() ?? [];
+$participStatut = $db->query("SELECT statut, COUNT(*) as total FROM participations GROUP BY statut")->fetchAll() ?? [];
+$participEvenement = $db->query("SELECT e.titre, COUNT(p.id) as total FROM events e LEFT JOIN participations p ON p.event_id = e.id GROUP BY e.id, e.titre ORDER BY total DESC LIMIT 8")->fetchAll() ?? [];
+$montantNiveau = $db->query("SELECT niveau, SUM(montant) as total FROM sponsors GROUP BY niveau ORDER BY total DESC")->fetchAll() ?? [];
+?>
+<?php require __DIR__ . '/layout_header_simple.php'; ?>
 
 <!-- ── Stat cards ── -->
 <div class="row g-3 mb-4">
@@ -123,3 +137,4 @@ const niveauData   = <?= json_encode(array_map('floatval', array_column($montant
 </script>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+

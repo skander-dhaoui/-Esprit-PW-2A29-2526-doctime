@@ -5,7 +5,7 @@
         <div class="col-lg-7">
 
             <div class="mb-4">
-                <a href="index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
+                <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
                    class="text-muted small">
                     <i class="bi bi-arrow-left me-1"></i>Retour à mes inscriptions
                 </a>
@@ -31,7 +31,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <form action="index.php?controller=mesinscriptions&action=frontUpdate" method="POST" novalidate>
+                    <form action="/valorys_Copie/index.php?controller=mesinscriptions&action=frontUpdate" method="POST" novalidate>
                         <input type="hidden" name="id" value="<?= (int)$old['id'] ?>">
                         <input type="hidden" name="email_original" value="<?= htmlspecialchars($participation['email']) ?>">
 
@@ -42,7 +42,7 @@
                                 <input type="text" id="nom" name="nom"
                                        class="form-control <?= isset($errors['nom']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
-                                       data-validate="required|minlength:2" data-label="Nom">
+                                      >
                                 <?php if (isset($errors['nom'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['nom']) ?></div>
                                 <?php endif; ?>
@@ -53,7 +53,7 @@
                                 <input type="text" id="prenom" name="prenom"
                                        class="form-control <?= isset($errors['prenom']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['prenom'] ?? '') ?>"
-                                       data-validate="required|minlength:2" data-label="Prénom">
+                                      >
                                 <?php if (isset($errors['prenom'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['prenom']) ?></div>
                                 <?php endif; ?>
@@ -72,7 +72,7 @@
                                 <input type="text" id="telephone" name="telephone"
                                        class="form-control <?= isset($errors['telephone']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['telephone'] ?? '') ?>"
-                                       data-validate="required|phone" data-label="Téléphone"
+                                      
                                        placeholder="20 123 456">
                                 <?php if (isset($errors['telephone'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['telephone']) ?></div>
@@ -84,7 +84,7 @@
                                 <input type="text" id="profession" name="profession"
                                        class="form-control <?= isset($errors['profession']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['profession'] ?? '') ?>"
-                                       data-validate="required|minlength:2" data-label="Profession"
+                                      
                                        placeholder="Ex : Médecin cardiologue">
                                 <?php if (isset($errors['profession'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['profession']) ?></div>
@@ -106,7 +106,7 @@
                             <button type="submit" class="btn btn-green flex-grow-1 py-2 fw-semibold">
                                 <i class="bi bi-check-circle me-2"></i>Enregistrer les modifications
                             </button>
-                            <a href="index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
+                            <a href="/valorys_Copie/index.php?controller=mesinscriptions&action=search&email=<?= urlencode($participation['email']) ?>"
                                class="btn btn-outline-secondary px-4">
                                 Annuler
                             </a>
@@ -122,3 +122,4 @@
 <script src="<?= str_repeat('../', 2) ?>public/js/validation.js"></script>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+

@@ -403,12 +403,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="capacite_max">Capacité Maximale</label>
-                            <input type="number" id="capacite_max" name="capacite_max" min="0" 
+                            <input type="text" id="capacite_max" name="capacite_max" min="0" 
                                 value="<?= $event['capacite_max'] ?? '' ?>">
                         </div>
                         <div class="form-group">
                             <label for="prix">Prix (TND)</label>
-                            <input type="number" id="prix" name="prix" step="0.01" min="0" 
+                            <input type="text" id="prix" name="prix" step="0.01" min="0" 
                                 value="<?= $event['prix'] ?? '' ?>">
                         </div>
                         <div class="form-group">
@@ -538,3 +538,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 </body>
 </html>
+
+

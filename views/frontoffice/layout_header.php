@@ -26,7 +26,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php">
+        <a class="navbar-brand" href="/valorys_Copie/index.php">
             <i class="bi bi-activity me-2"></i>DocTime
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
@@ -36,25 +36,25 @@
             <ul class="navbar-nav ms-auto gap-1">
                 <li class="nav-item">
                     <a class="nav-link <?= ($_GET['controller'] ?? 'home') === 'home' ? 'active fw-semibold' : '' ?>"
-                       href="index.php">Accueil</a>
+                       href="/valorys_Copie/index.php">Accueil</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= ($_GET['controller'] ?? '') === 'evenement' ? 'active fw-semibold' : '' ?>"
-                       href="index.php?controller=evenement&action=list">Événements</a>
+                       href="/valorys_Copie/index.php?controller=evenement&action=list">Événements</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= ($_GET['controller'] ?? '') === 'sponsor' ? 'active fw-semibold' : '' ?>"
-                       href="index.php?controller=sponsor&action=list">Sponsors</a>
+                       href="/valorys_Copie/index.php?controller=sponsor&action=list">Sponsors</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= ($_GET['controller'] ?? '') === 'mesinscriptions' ? 'active fw-semibold' : '' ?>"
-                       href="index.php?controller=mesinscriptions&action=search">
+                       href="/valorys_Copie/index.php?controller=mesinscriptions&action=search">
                         <i class="bi bi-calendar-check me-1"></i>Mes Inscriptions
                     </a>
                 </li>
                 <li class="nav-item ms-2">
                     <a class="nav-link btn btn-outline-light btn-sm px-3"
-                       href="index.php?controller=evenement&action=index">
+                       href="/valorys_Copie/index.php?controller=evenement&action=index">
                         <i class="bi bi-gear me-1"></i>Admin
                     </a>
                 </li>
@@ -62,3 +62,4 @@
         </div>
     </div>
 </nav>
+

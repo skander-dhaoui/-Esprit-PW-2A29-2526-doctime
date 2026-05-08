@@ -364,7 +364,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                 pour que PHP reçoive correctement $_POST quand un fichier est uploadé
             -->
             <form method="POST"
-                  action="index.php?page=modifier_profil"
+                  action="/valorys_Copie/index.php?page=modifier_profil"
                   id="profileForm"
                   enctype="multipart/form-data">
 
@@ -393,8 +393,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                name="nom"
                                class="form-control"
                                value="<?= htmlspecialchars($user['nom'] ?? '') ?>"
-                               placeholder="Votre nom"
-                               required>
+                               placeholder="Votre nom">
                     </div>
                 </div>
 
@@ -409,8 +408,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                name="prenom"
                                class="form-control"
                                value="<?= htmlspecialchars($user['prenom'] ?? '') ?>"
-                               placeholder="Votre prénom"
-                               required>
+                               placeholder="Votre prénom">
                     </div>
                 </div>
 
@@ -420,13 +418,12 @@ unset($_SESSION['success'], $_SESSION['error']);
                     </label>
                     <div class="input-icon">
                         <i class="fas fa-envelope field-icon"></i>
-                        <input type="email"
+                        <input type="text"
                                id="email"
                                name="email"
                                class="form-control"
                                value="<?= htmlspecialchars($user['email'] ?? '') ?>"
-                               placeholder="exemple@email.com"
-                               required>
+                               placeholder="exemple@email.com">
                     </div>
                 </div>
 
@@ -518,7 +515,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     </label>
                     <div class="input-icon">
                         <i class="fas fa-euro-sign field-icon"></i>
-                        <input type="number"
+                        <input type="text"
                                id="tarif"
                                name="tarif"
                                class="form-control"
@@ -590,7 +587,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <i class="fas fa-save me-2"></i>Enregistrer les modifications
                 </button>
 
-                <a href="index.php?page=profil" class="btn-cancel">
+                <a href="/valorys_Copie/index.php?page=profil" class="btn-cancel">
                     <i class="fas fa-times me-2"></i>Annuler
                 </a>
 
@@ -599,7 +596,7 @@ unset($_SESSION['success'], $_SESSION['error']);
     </div>
 
     <div class="back-link">
-        <a href="index.php?page=profil">
+        <a href="/valorys_Copie/index.php?page=profil">
             <i class="fas fa-arrow-left me-2"></i>Retour à mon profil
         </a>
     </div>
@@ -675,3 +672,5 @@ unset($_SESSION['success'], $_SESSION['error']);
 </script>
 </body>
 </html>
+
+
