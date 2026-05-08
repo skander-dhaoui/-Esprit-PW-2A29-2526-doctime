@@ -118,7 +118,7 @@
                 </div>
             </div>
 
-            <form id="registerForm" method="POST" action="index.php?page=register" novalidate>
+            <form id="registerForm" method="POST" action="/valorys_Copie/index.php?page=register" novalidate>
                 <input type="hidden" name="role" id="selectedRole" value="<?= htmlspecialchars($old['role'] ?? 'patient') ?>">
 
                 <div class="section-title"><i class="fas fa-user-circle me-1"></i> Informations personnelles</div>
@@ -266,13 +266,13 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label" for="tarif">Tarif de consultation (DT)</label>
-                            <input type="number" name="tarif" id="tarif" class="form-control"
+                            <input type="text" name="tarif" id="tarif" class="form-control"
                                    placeholder="50" step="5"
                                    value="<?= htmlspecialchars($old['tarif'] ?? '') ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label" for="experience">Années d'expérience</label>
-                            <input type="number" name="experience" id="experience" class="form-control"
+                            <input type="text" name="experience" id="experience" class="form-control"
                                    placeholder="5"
                                    value="<?= htmlspecialchars($old['experience'] ?? '') ?>">
                         </div>
@@ -306,7 +306,7 @@
 
             <hr>
             <div class="text-center">
-                <p class="mb-0">Déjà un compte ? <a href="index.php?page=login" class="login-link">Se connecter</a></p>
+                <p class="mb-0">Déjà un compte ? <a href="/valorys_Copie/index.php?page=login" class="login-link">Se connecter</a></p>
             </div>
         </div>
     </div>
@@ -666,3 +666,5 @@
     </script>
 </body>
 </html>
+
+

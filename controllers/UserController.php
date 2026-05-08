@@ -19,6 +19,7 @@
 if (class_exists('UserController')) return;
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/Validator.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Medecin.php';
@@ -245,13 +246,27 @@ class UserController {
             exit;
         }
 
-        $errors = [];
-
-        if ($nom    === '') $errors[] = 'Le nom est obligatoire.';
-        if ($prenom === '') $errors[] = 'Le prénom est obligatoire.';
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email invalide.';
-        if ($password !== '' && $password !== $confirm) $errors[] = 'Les mots de passe ne correspondent pas.';
-        if ($password !== '' && strlen($password) < 6)  $errors[] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('nom', $nom, 'Nom')
+            ->required('prenom', $prenom, 'Prénom')
+            ->required('email', $email, 'Email')
+            ->email('email', $email, 'Email');
+        
+        // Validation mot de passe si fourni
+        if (!empty($password)) {
+            $validator
+                ->minLength('password', $password, 6, 'Mot de passe')
+                ->required('confirm_password', $confirm, 'Confirmation mot de passe');
+            
+            // Vérifier que les passwords correspondent
+            if ($password !== $confirm) {
+                $validator->addError('confirm_password', 'Les mots de passe ne correspondent pas.');
+            }
+        }
+        
+        $errors = $validator->getErrors();
 
         // Email déjà utilisé par un autre compte
         $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email AND id != :id LIMIT 1");
@@ -262,9 +277,8 @@ class UserController {
         }
 
         if (!empty($errors)) {
-            // FIX BUG 1 : on échappe chaque message INDIVIDUELLEMENT,
-            // puis on joint avec <br>. La vue affiche $error sans htmlspecialchars().
-            $_SESSION['error_profil'] = implode('<br>', array_map('htmlspecialchars', $errors));
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
             header('Location: index.php?page=modifier_profil');
             exit;
         }
@@ -440,9 +454,9 @@ class UserController {
         }
 
         $userId          = (int)$_SESSION['user_id'];
-        $currentPassword = $_POST['current_password'] ?? '';
-        $newPassword     = $_POST['new_password']      ?? '';
-        $confirmPassword = $_POST['confirm_password']  ?? '';
+        $currentPassword = trim($_POST['current_password'] ?? '');
+        $newPassword     = trim($_POST['new_password']      ?? '');
+        $confirmPassword = trim($_POST['confirm_password']  ?? '');
 
         $user = $this->findUserById($userId);
         if (!$user) {
@@ -451,34 +465,45 @@ class UserController {
             exit;
         }
 
-        if (!password_verify($currentPassword, $user['password'])) {
-            $_SESSION['error_password_profil'] = 'Mot de passe actuel incorrect.';
-            header('Location: index.php?page=profil');
-            exit;
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('current_password', $currentPassword, 'Mot de passe actuel')
+            ->required('new_password', $newPassword, 'Nouveau mot de passe')
+            ->minLength('new_password', $newPassword, 8, 'Nouveau mot de passe')
+            ->required('confirm_password', $confirmPassword, 'Confirmation mot de passe');
+
+        $errors = $validator->getErrors();
+
+        // ========== VÉRIFICATIONS PERSONNALISÉES ==========
+        // Vérifier le mot de passe actuel
+        if (empty($errors['current_password']) && !password_verify($currentPassword, $user['password'])) {
+            $errors['current_password'] = 'Mot de passe actuel incorrect.';
         }
 
-        if (strlen($newPassword) < 8) {
-            $_SESSION['error_password_profil'] = 'Le nouveau mot de passe doit contenir au moins 8 caractères.';
-            header('Location: index.php?page=profil');
-            exit;
+        // Vérifier que les passwords correspondent
+        if (empty($errors['new_password']) && $newPassword !== $confirmPassword) {
+            $errors['confirm_password'] = 'Les mots de passe ne correspondent pas.';
         }
-        if (!preg_match('/[A-Z]/', $newPassword)) {
-            $_SESSION['error_password_profil'] = 'Le nouveau mot de passe doit contenir au moins une majuscule.';
-            header('Location: index.php?page=profil');
-            exit;
+
+        // Vérifier que nouveau != ancien
+        if (empty($errors['new_password']) && $newPassword === $currentPassword) {
+            $errors['new_password'] = "Le nouveau mot de passe doit être différent de l'ancien.";
         }
-        if (!preg_match('/[0-9]/', $newPassword)) {
-            $_SESSION['error_password_profil'] = 'Le nouveau mot de passe doit contenir au moins un chiffre.';
-            header('Location: index.php?page=profil');
-            exit;
+
+        // Vérifier majuscule et chiffre
+        if (empty($errors['new_password'])) {
+            if (!preg_match('/[A-Z]/', $newPassword)) {
+                $errors['new_password'] = 'Au moins une majuscule requise.';
+            } elseif (!preg_match('/[0-9]/', $newPassword)) {
+                $errors['new_password'] = 'Au moins un chiffre requis.';
+            }
         }
-        if ($newPassword !== $confirmPassword) {
-            $_SESSION['error_password_profil'] = 'Les mots de passe ne correspondent pas.';
-            header('Location: index.php?page=profil');
-            exit;
-        }
-        if ($newPassword === $currentPassword) {
-            $_SESSION['error_password_profil'] = "Le nouveau mot de passe doit être différent de l'ancien.";
+
+        // Si erreurs
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
             header('Location: index.php?page=profil');
             exit;
         }

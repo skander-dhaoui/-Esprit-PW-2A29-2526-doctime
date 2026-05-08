@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../model/Sponsor.php';
+require_once __DIR__ . '/../models/Sponsor.php';
 require_once __DIR__ . '/../config/Validator.php';
 
 class SponsorController {
@@ -14,56 +14,72 @@ class SponsorController {
     /** Liste tous les sponsors (backoffice) */
     public function index(): void {
         $sponsors = $this->model->findAll();
-        require __DIR__ . '/../view/backoffice/sponsor/index.php';
+        require __DIR__ . '/../views/backoffice/sponsor/index.php';
     }
 
     /** Affiche le formulaire de création */
     public function create(): void {
-        $errors = [];
-        $old    = [];
-        require __DIR__ . '/../view/backoffice/sponsor/create.php';
+        $errors = $_SESSION['errors'] ?? [];
+        $old    = $_SESSION['old']    ?? [];
+        unset($_SESSION['errors'], $_SESSION['old']);
+        require __DIR__ . '/../views/backoffice/sponsor/create.php';
     }
 
     /** Traite la soumission du formulaire de création */
     public function store(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=sponsors_admin&action=create');
+            exit;
+        }
+
         $data = [
-            'nom'       => $_POST['nom']      ?? '',
-            'email'     => $_POST['email']    ?? '',
-            'telephone' => $_POST['telephone'] ?? '',
-            'site_web'  => $_POST['site_web'] ?? '',
-            'niveau'    => $_POST['niveau']   ?? '',
-            'montant'   => $_POST['montant']  ?? '',
+            'nom'       => trim($_POST['nom']       ?? ''),
+            'email'     => trim($_POST['email']     ?? ''),
+            'telephone' => trim($_POST['telephone'] ?? ''),
+            'site_web'  => trim($_POST['site_web']  ?? ''),
+            'niveau'    => trim($_POST['niveau']    ?? ''),
+            'montant'   => trim($_POST['montant']   ?? ''),
         ];
 
-        $v = new Validator();
-        $v->required('nom', $data['nom'], 'Nom')
-          ->minLength('nom', $data['nom'], 2, 'Nom')
-          ->maxLength('nom', $data['nom'], 100, 'Nom')
-          ->required('email', $data['email'], 'Email')
-          ->email('email', $data['email'], 'Email')
-          ->required('telephone', $data['telephone'], 'Téléphone')
-          ->phone('telephone', $data['telephone'], 'Téléphone')
-          ->url('site_web', $data['site_web'], 'Site web')
-          ->required('niveau', $data['niveau'], 'Niveau')
-          ->inArray('niveau', $data['niveau'], ['bronze','argent','or','platine'], 'Niveau')
-          ->required('montant', $data['montant'], 'Montant')
-          ->positiveNumber('montant', $data['montant'], 'Montant');
+        // ========== VALIDATIONS SERVEUR ==========
+        $validator = new Validator();
+        $validator->required('nom', $data['nom'], 'Nom')
+                  ->minLength('nom', $data['nom'], 2, 'Nom')
+                  ->maxLength('nom', $data['nom'], 100, 'Nom')
+                  ->required('email', $data['email'], 'Email')
+                  ->email('email', $data['email'], 'Email')
+                  ->required('telephone', $data['telephone'], 'Téléphone')
+                  ->numeric('telephone', $data['telephone'], 'Téléphone')
+                  ->minLength('telephone', $data['telephone'], 10, 'Téléphone')
+                  ->required('niveau', $data['niveau'], 'Niveau')
+                  ->inArray('niveau', $data['niveau'], ['bronze', 'argent', 'or', 'platine'], 'Niveau')
+                  ->required('montant', $data['montant'], 'Montant')
+                  ->positiveNumber('montant', $data['montant'], 'Montant');
 
-        // Unicité email
-        if (!$v->hasErrors() && $this->model->emailExists($data['email'])) {
-            $errors = ['email' => "Cet email est déjà utilisé par un autre sponsor."];
-        } else {
-            $errors = $v->getErrors();
+        // Site web optionnel mais valide s'il est fourni
+        if (!empty($data['site_web'])) {
+            $validator->url('site_web', $data['site_web'], 'Site web');
         }
 
+        $errors = $validator->getErrors();
+
+        // ========== VÉRIFICATION UNICITÉ EMAIL ==========
+        if (empty($errors['email']) && $this->model->emailExists($data['email'])) {
+            $errors['email'] = "Cet email est déjà utilisé par un autre sponsor.";
+        }
+
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $old = $data;
-            require __DIR__ . '/../view/backoffice/sponsor/create.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $data;
+            header('Location: index.php?page=sponsors_admin&action=create');
+            exit;
         }
 
+        // ========== CRÉATION SPONSOR ==========
         $this->model->create($data);
-        header('Location: index.php?controller=sponsor&action=index&success=create');
+        $_SESSION['success'] = "Sponsor créé avec succès.";
+        header('Location: index.php?page=sponsors_admin');
         exit;
     }
 
@@ -75,13 +91,19 @@ class SponsorController {
             $this->notFound();
             return;
         }
-        $errors = [];
-        $old    = $sponsor;
-        require __DIR__ . '/../view/backoffice/sponsor/edit.php';
+        $errors = $_SESSION['errors'] ?? [];
+        $old    = $_SESSION['old']    ?? $sponsor;
+        unset($_SESSION['errors'], $_SESSION['old']);
+        require __DIR__ . '/../views/backoffice/sponsor/edit.php';
     }
 
     /** Traite la soumission du formulaire d'édition */
     public function update(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=sponsors_admin');
+            exit;
+        }
+
         $id      = (int)($_POST['id'] ?? 0);
         $sponsor = $this->model->findById($id);
         if (!$sponsor) {
@@ -90,42 +112,53 @@ class SponsorController {
         }
 
         $data = [
-            'nom'       => $_POST['nom']       ?? '',
-            'email'     => $_POST['email']     ?? '',
-            'telephone' => $_POST['telephone'] ?? '',
-            'site_web'  => $_POST['site_web']  ?? '',
-            'niveau'    => $_POST['niveau']    ?? '',
-            'montant'   => $_POST['montant']   ?? '',
+            'nom'       => trim($_POST['nom']       ?? ''),
+            'email'     => trim($_POST['email']     ?? ''),
+            'telephone' => trim($_POST['telephone'] ?? ''),
+            'site_web'  => trim($_POST['site_web']  ?? ''),
+            'niveau'    => trim($_POST['niveau']    ?? ''),
+            'montant'   => trim($_POST['montant']   ?? ''),
         ];
 
-        $v = new Validator();
-        $v->required('nom', $data['nom'], 'Nom')
-          ->minLength('nom', $data['nom'], 2, 'Nom')
-          ->maxLength('nom', $data['nom'], 100, 'Nom')
-          ->required('email', $data['email'], 'Email')
-          ->email('email', $data['email'], 'Email')
-          ->required('telephone', $data['telephone'], 'Téléphone')
-          ->phone('telephone', $data['telephone'], 'Téléphone')
-          ->url('site_web', $data['site_web'], 'Site web')
-          ->required('niveau', $data['niveau'], 'Niveau')
-          ->inArray('niveau', $data['niveau'], ['bronze','argent','or','platine'], 'Niveau')
-          ->required('montant', $data['montant'], 'Montant')
-          ->positiveNumber('montant', $data['montant'], 'Montant');
+        // ========== VALIDATIONS SERVEUR ==========
+        $validator = new Validator();
+        $validator->required('nom', $data['nom'], 'Nom')
+                  ->minLength('nom', $data['nom'], 2, 'Nom')
+                  ->maxLength('nom', $data['nom'], 100, 'Nom')
+                  ->required('email', $data['email'], 'Email')
+                  ->email('email', $data['email'], 'Email')
+                  ->required('telephone', $data['telephone'], 'Téléphone')
+                  ->numeric('telephone', $data['telephone'], 'Téléphone')
+                  ->minLength('telephone', $data['telephone'], 10, 'Téléphone')
+                  ->required('niveau', $data['niveau'], 'Niveau')
+                  ->inArray('niveau', $data['niveau'], ['bronze', 'argent', 'or', 'platine'], 'Niveau')
+                  ->required('montant', $data['montant'], 'Montant')
+                  ->positiveNumber('montant', $data['montant'], 'Montant');
 
-        if (!$v->hasErrors() && $this->model->emailExists($data['email'], $id)) {
-            $errors = ['email' => "Cet email est déjà utilisé par un autre sponsor."];
-        } else {
-            $errors = $v->getErrors();
+        // Site web optionnel mais valide s'il est fourni
+        if (!empty($data['site_web'])) {
+            $validator->url('site_web', $data['site_web'], 'Site web');
         }
 
+        $errors = $validator->getErrors();
+
+        // ========== VÉRIFICATION UNICITÉ EMAIL ==========
+        if (empty($errors['email']) && $this->model->emailExists($data['email'], $id)) {
+            $errors['email'] = "Cet email est déjà utilisé par un autre sponsor.";
+        }
+
+        // ========== STOCKAGE ERREURS ET REDIRECTION ==========
         if (!empty($errors)) {
-            $old = array_merge($sponsor, $data, ['id' => $id]);
-            require __DIR__ . '/../view/backoffice/sponsor/edit.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = array_merge($sponsor, $data, ['id' => $id]);
+            header('Location: index.php?page=sponsors_admin&action=edit&id=' . $id);
+            exit;
         }
 
+        // ========== MISE À JOUR SPONSOR ==========
         $this->model->update($id, $data);
-        header('Location: index.php?controller=sponsor&action=index&success=update');
+        $_SESSION['success'] = "Sponsor mis à jour avec succès.";
+        header('Location: index.php?page=sponsors_admin');
         exit;
     }
 
@@ -135,12 +168,14 @@ class SponsorController {
         if ($this->model->findById($id)) {
             // Vérifier s'il a des événements liés
             if ($this->model->countEvenements($id) > 0) {
-                header('Location: index.php?controller=sponsor&action=index&error=has_evenements');
+                $_SESSION['error'] = "Ce sponsor a des événements liés. Impossible de le supprimer.";
+                header('Location: index.php?page=sponsors_admin');
                 exit;
             }
             $this->model->delete($id);
+            $_SESSION['success'] = "Sponsor supprimé avec succès.";
         }
-        header('Location: index.php?controller=sponsor&action=index&success=delete');
+        header('Location: index.php?page=sponsors_admin');
         exit;
     }
 
@@ -149,7 +184,7 @@ class SponsorController {
     /** Liste des sponsors (frontoffice) */
     public function list(): void {
         $sponsors = $this->model->findAll();
-        require __DIR__ . '/../view/frontoffice/sponsors.php';
+        require __DIR__ . '/../views/frontoffice/sponsors.php';
     }
 
     private function notFound(): void {

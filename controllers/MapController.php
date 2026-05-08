@@ -43,18 +43,13 @@ class MapController {
      * Page carte interactive
      */
     public function carte(): void {
-        $evenements = $this->pdo->query("
-            SELECT e.*,
-                   COUNT(p.id) as nb_participants,
-                   SUM(p.nombre_participants) as total_part_declarees,
-                   s.nom as sponsor_nom,
-                   s.secteur as specialite
+        $stmt = $this->pdo->query("SELECT e.*, COUNT(p.id) AS nb_participants
             FROM events e
             LEFT JOIN participations p ON p.event_id = e.id
-            LEFT JOIN sponsors s ON s.id = e.sponsor_id
             GROUP BY e.id
-            ORDER BY e.date_debut ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
+            ORDER BY e.date_debut ASC");
+
+        $evenements = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
         // Enrichir avec coordonnées GPS
         $evenementsGeo = [];
@@ -85,33 +80,20 @@ class MapController {
         // Afficher la page métiers créatifs (backoffice avec navbar)
         $pageTitle = 'Métiers Créatifs – Assistant IA';
 
-        // Récupérer les spécialités depuis les sponsors
+        // Récupérer des informations de sponsors pour l'affichage
         try {
             $specialites = $this->pdo->query("
-                SELECT s.secteur AS specialite, COUNT(e.id) AS total
-                FROM sponsors s
-                LEFT JOIN events e ON e.sponsor_id = s.id
-                WHERE s.secteur IS NOT NULL AND s.secteur != ''
-                GROUP BY s.secteur
+                SELECT niveau AS specialite, COUNT(*) AS total
+                FROM sponsors
+                GROUP BY niveau
                 ORDER BY total DESC
             ")->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
             $specialites = [];
         }
 
-        // Récupérer les professions depuis les participations
-        try {
-            $professions = $this->pdo->query("
-                SELECT p.profession, COUNT(*) AS total
-                FROM participations p
-                WHERE p.profession IS NOT NULL AND p.profession != ''
-                GROUP BY p.profession
-                ORDER BY total DESC
-                LIMIT 20
-            ")->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {
-            $professions = [];
-        }
+        // La table participations ne contient pas de profession dans ce schéma
+        $professions = [];
 
         require __DIR__ . '/../views/backoffice/map/metiers.php';
     }
@@ -122,17 +104,12 @@ class MapController {
     public function apiCarte(): void {
         header('Content-Type: application/json; charset=utf-8');
 
-        $evenements = $this->pdo->query("
-            SELECT e.*, 
-                   COUNT(p.id) as nb_participants,
-                   SUM(p.nombre_participants) as total_part,
-                   s.nom as sponsor_nom
+        $stmt = $this->pdo->query("SELECT e.*, COUNT(p.id) AS nb_participants
             FROM events e
             LEFT JOIN participations p ON p.event_id = e.id
-            LEFT JOIN sponsors s ON s.id = e.sponsor_id
-            GROUP BY e.id
-        ")->fetchAll(PDO::FETCH_ASSOC);
+            GROUP BY e.id");
 
+        $evenements = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         $result = [];
         foreach ($evenements as $ev) {
             $coords = $this->resolveCoords($ev['lieu']);

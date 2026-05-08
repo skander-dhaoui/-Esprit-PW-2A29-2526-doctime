@@ -110,7 +110,7 @@ $csrf_token = $_SESSION['csrf_token'];
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Email *</label>
-                            <input type="email" id="email" name="email" class="form-control"
+                            <input type="text" id="email" name="email" class="form-control"
                                    value="<?= htmlspecialchars($old['email'] ?? '') ?>" placeholder="jean@email.com">
                             <div class="invalid-feedback" id="email-error"></div>
                         </div>
@@ -196,11 +196,11 @@ $csrf_token = $_SESSION['csrf_token'];
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Tarif consultation (€)</label>
-                                <input type="number" name="tarif" class="form-control" step="1" value="50">
+                                <input type="text" name="tarif" class="form-control" step="1" value="50">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Années d'expérience</label>
-                                <input type="number" name="experience" class="form-control" value="0">
+                                <input type="text" name="experience" class="form-control" value="0">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -270,3 +270,4 @@ $csrf_token = $_SESSION['csrf_token'];
     </script>
 </body>
 </html>
+

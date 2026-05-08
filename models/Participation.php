@@ -11,8 +11,8 @@ class Participation {
     public function findAll(): array {
         $stmt = $this->pdo->query("
             SELECT p.*, e.titre AS evenement_titre
-            FROM participation p
-            JOIN evenement e ON p.evenement_id = e.id
+            FROM participations p
+            JOIN events e ON p.event_id = e.id
             ORDER BY p.date_inscription DESC
         ");
         return $stmt->fetchAll();
@@ -21,8 +21,8 @@ class Participation {
     public function findById(int $id): array|false {
         $stmt = $this->pdo->prepare("
             SELECT p.*, e.titre AS evenement_titre
-            FROM participation p
-            JOIN evenement e ON p.evenement_id = e.id
+            FROM participations p
+            JOIN events e ON p.event_id = e.id
             WHERE p.id = :id
         ");
         $stmt->execute([':id' => $id]);
@@ -31,8 +31,8 @@ class Participation {
 
     public function findByEvenement(int $evenementId): array {
         $stmt = $this->pdo->prepare("
-            SELECT * FROM participation
-            WHERE evenement_id = :eid
+            SELECT * FROM participations
+            WHERE event_id = :eid
             ORDER BY date_inscription DESC
         ");
         $stmt->execute([':eid' => $evenementId]);
@@ -42,8 +42,8 @@ class Participation {
     /** Vérifie si un participant est déjà inscrit à cet événement */
     public function alreadyRegistered(string $email, int $evenementId, int $excludeId = 0): bool {
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM participation
-            WHERE email = :email AND evenement_id = :eid AND id != :id
+            SELECT COUNT(*) FROM participations
+            WHERE email = :email AND event_id = :eid AND id != :id
         ");
         $stmt->execute([':email' => $email, ':eid' => $evenementId, ':id' => $excludeId]);
         return $stmt->fetchColumn() > 0;
@@ -51,7 +51,7 @@ class Participation {
 
     public function create(array $data): bool {
         $stmt = $this->pdo->prepare("
-            INSERT INTO participation (nom, prenom, email, telephone, profession, evenement_id, statut)
+            INSERT INTO participations (nom, prenom, email, telephone, profession, event_id, statut)
             VALUES (:nom, :prenom, :email, :telephone, :profession, :evenement_id, :statut)
         ");
         return $stmt->execute([
@@ -67,13 +67,13 @@ class Participation {
 
     public function update(int $id, array $data): bool {
         $stmt = $this->pdo->prepare("
-            UPDATE participation
+            UPDATE participations
             SET nom          = :nom,
                 prenom       = :prenom,
                 email        = :email,
                 telephone    = :telephone,
                 profession   = :profession,
-                evenement_id = :evenement_id,
+                event_id     = :evenement_id,
                 statut       = :statut
             WHERE id = :id
         ");
@@ -90,7 +90,7 @@ class Participation {
     }
 
     public function delete(int $id): bool {
-        $stmt = $this->pdo->prepare("DELETE FROM participation WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM participations WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 
@@ -99,8 +99,8 @@ class Participation {
         $stmt = $this->pdo->prepare("
             SELECT p.*, e.titre AS evenement_titre, e.date_debut, e.date_fin,
                    e.lieu, e.specialite, e.prix, e.statut AS evenement_statut
-            FROM participation p
-            JOIN evenement e ON p.evenement_id = e.id
+            FROM participations p
+            JOIN events e ON p.event_id = e.id
             WHERE p.email = :email
             ORDER BY p.date_inscription DESC
         ");

@@ -144,88 +144,88 @@ $currentPage = $_GET['page'] ?? '';
         <li class="nav-section">Navigation</li>
         <li class="nav-item">
             <a class="nav-link <?= ($currentPage === 'dashboard' || $currentPage === '') ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=dashboard">
+               href="index.php?page=dashboard">
                 <i class="bi bi-speedometer2"></i> Tableau de bord
             </a>
         </li>
         <li class="nav-section">Gestion</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=users">
+               href="index.php?page=users">
                 <i class="bi bi-people-fill"></i> Utilisateurs
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'medecins_admin' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=medecins_admin">
+               href="index.php?page=medecins_admin">
                 <i class="bi bi-person-vcard"></i> Médecins
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'patients' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=patients">
+               href="index.php?page=patients">
                 <i class="bi bi-person-heart"></i> Patients
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'evenements_admin' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=evenements_admin">
+               href="index.php?page=evenements_admin">
                 <i class="bi bi-calendar-event"></i> Événements
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'sponsors_admin' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=sponsors_admin">
+               href="index.php?page=sponsors_admin">
                 <i class="bi bi-building"></i> Sponsors
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'participations' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=participations">
+               href="index.php?page=participations">
                 <i class="bi bi-people"></i> Participations
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'carte' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=carte">
+               href="index.php?page=carte">
                 <i class="bi bi-map"></i> Carte Tunisie
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'carte' && ($_GET['action'] ?? '') === 'metiers' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=carte&action=metiers">
+               href="index.php?page=carte&action=metiers">
                 <i class="bi bi-brain"></i> IA Métiers Créatifs
             </a>
         </li>
         <li class="nav-section">Analytique</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'stats' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=stats">
+               href="index.php?page=stats">
                 <i class="bi bi-bar-chart-line"></i> Statistiques
             </a>
         </li>
         <li class="nav-section">Historique</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'login_history' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=login_history">
+               href="index.php?page=login_history">
                 <i class="bi bi-clock-history"></i> Historique connexions
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'logs' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=logs">
+               href="index.php?page=logs">
                 <i class="bi bi-journal-text"></i> Logs
             </a>
         </li>
         <li class="nav-section">Site public</li>
         <li class="nav-item">
-            <a class="nav-link" href="/valorys_Copie/index.php?page=accueil" target="_blank">
+            <a class="nav-link" href="index.php?page=accueil" target="_blank">
                 <i class="bi bi-globe"></i> Voir le site
             </a>
         </li>
         <li class="nav-section">Session</li>
         <li class="nav-item">
-            <a class="nav-link nav-logout" href="/valorys_Copie/index.php?page=logout">
+            <a class="nav-link nav-logout" href="index.php?page=logout">
                 <i class="bi bi-box-arrow-right"></i> Déconnexion
             </a>
         </li>
@@ -238,7 +238,7 @@ $currentPage = $_GET['page'] ?? '';
         <h4><i class="bi bi-activity me-2" style="color:var(--grad-end)"></i><?= $pageTitle ?? 'Administration' ?></h4>
         <div class="topbar-actions">
             <span class="badge-time"><i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i') ?></span>
-            <a href="/valorys_Copie/index.php?page=logout" class="btn-logout-top">
+            <a href="index.php?page=logout" class="btn-logout-top">
                 <i class="bi bi-box-arrow-right"></i> Déconnexion
             </a>
         </div>

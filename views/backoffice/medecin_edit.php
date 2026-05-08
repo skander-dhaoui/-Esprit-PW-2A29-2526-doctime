@@ -63,24 +63,7 @@ $csrf = $_SESSION['csrf_token'];
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
-        <h4>MediConnect</h4><small>Back Office</small>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="index.php?page=dashboard"><i class="fas fa-th-large"></i> Tableau de bord</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <a href="index.php?page=medecins_admin" class="active"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
-        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </nav>
-</div>
-
+<?php include __DIR__ . '/sidebar.php'; ?>
 <div class="main-content">
     <div class="page-header">
         <h4><i class="fas fa-user-edit"></i> Modifier le médecin</h4>
@@ -128,7 +111,7 @@ $csrf = $_SESSION['csrf_token'];
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Email <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" class="form-control"
+                    <input type="text" id="email" name="email" class="form-control"
                            value="<?= htmlspecialchars($old['email'] ?? $medecin['email'] ?? '') ?>">
                     <div class="invalid-feedback" id="email-error"></div>
                 </div>
@@ -167,7 +150,7 @@ $csrf = $_SESSION['csrf_token'];
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Tarif consultation (DT)</label>
-                    <input type="number" id="consultation_prix" name="consultation_prix" class="form-control"
+                    <input type="text" id="consultation_prix" name="consultation_prix" class="form-control"
                            step="1" min="0"
                            value="<?= htmlspecialchars($old['consultation_prix'] ?? $medecin['consultation_prix'] ?? '') ?>"
                            placeholder="50">
@@ -175,7 +158,7 @@ $csrf = $_SESSION['csrf_token'];
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Années d'expérience</label>
-                    <input type="number" id="annee_experience" name="annee_experience" class="form-control"
+                    <input type="text" id="annee_experience" name="annee_experience" class="form-control"
                            min="0"
                            value="<?= htmlspecialchars($old['annee_experience'] ?? $medecin['annee_experience'] ?? '') ?>"
                            placeholder="0">
