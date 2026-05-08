@@ -18,6 +18,11 @@ class MailConfig {
     private static $smtpSecure = 'tls';
     private static $fromEmail = 'afnengorai@gmail.com';
     private static $fromName = 'DocTime';
+
+    private static function env(string $key, string $default): string {
+        $value = getenv($key);
+        return $value !== false && $value !== '' ? $value : $default;
+    }
     
     public static function send($to, $toName, $subject, $body, $altBody = ''): bool {
         $mail = new PHPMailer(true);
@@ -25,14 +30,15 @@ class MailConfig {
         try {
             $mail->SMTPDebug = SMTP::DEBUG_OFF;  // Désactiver en production
             $mail->isSMTP();
-            $mail->Host       = self::$smtpHost;
+            $mail->Host       = self::env('MAIL_HOST', self::$smtpHost);
             $mail->SMTPAuth   = true;
-            $mail->Username   = self::$smtpUser;
-            $mail->Password   = self::$smtpPass;
-            $mail->SMTPSecure = self::$smtpSecure;
-            $mail->Port       = self::$smtpPort;
+            $mail->Username   = self::env('MAIL_USERNAME', self::$smtpUser);
+            $mail->Password   = self::env('MAIL_PASSWORD', self::$smtpPass);
+            $mail->SMTPSecure = self::env('MAIL_ENCRYPTION', self::$smtpSecure);
+            $mail->Port       = (int)self::env('MAIL_PORT', (string)self::$smtpPort);
+            $mail->CharSet    = 'UTF-8';
             
-            $mail->setFrom(self::$fromEmail, self::$fromName);
+            $mail->setFrom(self::env('MAIL_FROM_ADDRESS', self::$fromEmail), self::env('MAIL_FROM_NAME', self::$fromName));
             $mail->addAddress($to, $toName);
             
             $mail->isHTML(true);

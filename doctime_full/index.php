@@ -218,6 +218,18 @@ if ($page === 'api_reply') {
 // =============================================
 
 // Redirection si page protégée et non connecté
+if ($page === 'api_rdv_chatbot') {
+    if (!$rendezVousCtrl) {
+        http_response_code(501);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'reply' => 'Le module rendez-vous est indisponible.']);
+        exit;
+    }
+
+    $rendezVousCtrl->apiRendezVousChatbot();
+    exit;
+}
+
 if (!in_array($page, $publicPages) && !$isLoggedIn) {
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     $_SESSION['error'] = 'Veuillez vous connecter pour accéder à cette page.';

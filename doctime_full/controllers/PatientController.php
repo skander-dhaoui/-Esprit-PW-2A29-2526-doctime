@@ -4,6 +4,7 @@ require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/RendezVous.php';
+require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/AuthController.php';
 
 class PatientController {
@@ -504,6 +505,7 @@ public function createAppointment(): void {
         ]);
         
         if ($result) {
+            $this->sendNewAppointmentEmail((int)$db->lastInsertId());
             $_SESSION['success'] = 'Votre rendez-vous a été demandé avec succès. En attente de confirmation.';
             header('Location: index.php?page=mes_rendez_vous');
             exit;
@@ -516,6 +518,72 @@ public function createAppointment(): void {
         $_SESSION['old'] = $old;
         header('Location: index.php?page=prendre_rendez_vous');
         exit;
+    }
+}
+
+private function sendNewAppointmentEmail(int $rdvId): void {
+    try {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT rv.id, rv.date_rendezvous, rv.heure_rendezvous, rv.motif, rv.statut,
+                    up.nom AS patient_nom, up.prenom AS patient_prenom, up.email AS patient_email, up.telephone AS patient_telephone,
+                    um.nom AS medecin_nom, um.prenom AS medecin_prenom, um.email AS medecin_email,
+                    m.specialite
+             FROM rendez_vous rv
+             JOIN users up ON rv.patient_id = up.id
+             JOIN users um ON rv.medecin_id = um.id
+             LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+             WHERE rv.id = :id"
+        );
+        $stmt->execute([':id' => $rdvId]);
+        $rdv = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rdv) {
+            return;
+        }
+
+        $patientName = trim(($rdv['patient_prenom'] ?? '') . ' ' . ($rdv['patient_nom'] ?? ''));
+        $doctorName = 'Dr. ' . trim(($rdv['medecin_prenom'] ?? '') . ' ' . ($rdv['medecin_nom'] ?? ''));
+        $dateLabel = !empty($rdv['date_rendezvous']) ? date('d/m/Y', strtotime((string)$rdv['date_rendezvous'])) : '-';
+        $timeLabel = (string)($rdv['heure_rendezvous'] ?? '-');
+        $motif = trim((string)($rdv['motif'] ?? ''));
+        $specialite = trim((string)($rdv['specialite'] ?? 'Generaliste'));
+
+        $body = '
+            <div style="font-family:Arial,sans-serif;color:#1f2937;">
+                <h2 style="color:#2A7FAA;">Nouveau rendez-vous demande</h2>
+                <p>Un patient vient de demander un rendez-vous sur DocTime.</p>
+                <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:620px;">
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($patientName) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Email patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['patient_email'] ?? '-')) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Telephone patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['patient_telephone'] ?? '-')) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Medecin</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($doctorName) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Specialite</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($specialite) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Email medecin</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['medecin_email'] ?? '-')) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Date</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($dateLabel) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Heure</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($timeLabel) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Statut</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['statut'] ?? 'en_attente')) . '</td></tr>
+                    <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Motif</td><td style="border:1px solid #e5e7eb;">' . nl2br(htmlspecialchars($motif !== '' ? $motif : '-')) . '</td></tr>
+                </table>
+            </div>';
+
+        $altBody = "Nouveau rendez-vous demande\n"
+            . "Patient: " . $patientName . "\n"
+            . "Email patient: " . ($rdv['patient_email'] ?? '-') . "\n"
+            . "Telephone patient: " . ($rdv['patient_telephone'] ?? '-') . "\n"
+            . "Medecin: " . $doctorName . "\n"
+            . "Specialite: " . $specialite . "\n"
+            . "Email medecin: " . ($rdv['medecin_email'] ?? '-') . "\n"
+            . "Date: " . $dateLabel . "\n"
+            . "Heure: " . $timeLabel . "\n"
+            . "Statut: " . ($rdv['statut'] ?? 'en_attente') . "\n"
+            . "Motif: " . ($motif !== '' ? $motif : '-');
+
+        if (!MailConfig::send('skanderdhaoui77@gmail.com', 'Skander Dhaoui', 'Nouveau rendez-vous demande - DocTime', $body, $altBody)) {
+            error_log('Notification RDV non envoyee pour le rendez-vous #' . $rdvId);
+        }
+    } catch (Throwable $e) {
+        error_log('Erreur sendNewAppointmentEmail - ' . $e->getMessage());
     }
 }
 

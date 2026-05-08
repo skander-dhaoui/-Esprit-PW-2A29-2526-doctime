@@ -116,6 +116,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
     </div>
 </footer>
 
+<?php require_once __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
+
 <script>
 // Charger les créneaux disponibles dynamiquement
 const medecinSelect = document.getElementById('medecin_id');

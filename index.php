@@ -50,7 +50,7 @@ $action = isset($_GET['action']) ? preg_replace('/[^a-z0-9_]/', '', trim($_GET['
 $id     = isset($_GET['id'])     ? (int)$_GET['id'] : null;
 $slug   = isset($_GET['slug'])   ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
 
-$isApiRoute = in_array($page, ['api_article', 'api_reply', 'api', 'api_slots', 'api_ordonnance']);
+$isApiRoute = in_array($page, ['api_article', 'api_reply', 'api', 'api_slots', 'api_ordonnance', 'api_rdv_chatbot']);
 
 if (DEBUG_MODE && !$isApiRoute) {
     echo "<!-- DEBUG: page=$page action=$action id=$id slug=$slug -->\n";
@@ -499,6 +499,10 @@ switch ($page) {
     // ════════════════════════════════════════════════════════
     case 'api_slots':
         $rdvCtrl->apiGetSlots();
+        break;
+
+    case 'api_rdv_chatbot':
+        $rdvCtrl->apiRendezVousChatbot();
         break;
 
     case 'api_ordonnance':

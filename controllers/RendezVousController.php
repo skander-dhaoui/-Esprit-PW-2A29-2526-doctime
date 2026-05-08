@@ -508,6 +508,50 @@ class RendezVousController {
         exit;
     }
 
+    public function apiRendezVousChatbot(): void {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'reply' => 'Veuillez vous connecter pour utiliser le chatbot.']);
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'reply' => 'Methode non autorisee.']);
+            exit;
+        }
+
+        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+        $message = trim((string)($payload['message'] ?? ''));
+
+        if ($message === '') {
+            echo json_encode(['success' => false, 'reply' => 'Posez-moi une question sur les rendez-vous.']);
+            exit;
+        }
+
+        if (strlen($message) > 600) {
+            echo json_encode(['success' => false, 'reply' => 'Votre question est trop longue. Merci de la raccourcir.']);
+            exit;
+        }
+
+        $context = $this->buildRendezVousChatContext();
+        $action = $this->detectRendezVousChatAction($message, $context);
+        $reply = $this->askFreeLocalAi($message, $context);
+
+        if ($reply === null) {
+            $reply = $this->fallbackRendezVousReply($message, $context);
+        }
+
+        echo json_encode(['success' => true, 'reply' => $reply, 'action' => $action], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  HELPERS PRIVÉS
     // ═══════════════════════════════════════════════════════════
@@ -525,6 +569,189 @@ class RendezVousController {
         }
 
         return $errors;
+    }
+
+    private function buildRendezVousChatContext(): array {
+        $role = $_SESSION['user_role'] ?? 'patient';
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $context = [
+            'role' => $role,
+            'today' => date('Y-m-d'),
+            'summary' => [],
+            'actions' => [
+                'patient' => 'prendre, modifier ou annuler un rendez-vous depuis Mes RDV',
+                'medecin' => 'creer, confirmer, annuler, terminer et noter un rendez-vous',
+                'admin' => 'filtrer, creer, modifier, voir ou supprimer les rendez-vous',
+            ],
+        ];
+
+        if ($role === 'patient') {
+            $upcoming = $this->rdvModel->getUpcomingByPatient($userId);
+            $context['summary'][] = 'Prochains rendez-vous patient: ' . count($upcoming);
+            foreach (array_slice($upcoming, 0, 3) as $rdv) {
+                $context['summary'][] = sprintf(
+                    '%s a %s avec Dr. %s %s, statut %s',
+                    $rdv['date_rendezvous'] ?? '-',
+                    $rdv['heure_rendezvous'] ?? '-',
+                    $rdv['medecin_prenom'] ?? '',
+                    $rdv['medecin_nom'] ?? '',
+                    $rdv['statut'] ?? '-'
+                );
+            }
+        } elseif ($role === 'medecin') {
+            $today = $this->rdvModel->getTodayByMedecin($userId);
+            $upcoming = $this->rdvModel->getUpcomingByMedecin($userId);
+            $context['summary'][] = 'Rendez-vous aujourd hui: ' . count($today);
+            $context['summary'][] = 'Rendez-vous a venir: ' . count($upcoming);
+            foreach (array_slice($today, 0, 3) as $rdv) {
+                $context['summary'][] = sprintf(
+                    'Aujourd hui %s avec %s %s, statut %s',
+                    $rdv['heure_rendezvous'] ?? '-',
+                    $rdv['patient_prenom'] ?? '',
+                    $rdv['patient_nom'] ?? '',
+                    $rdv['statut'] ?? '-'
+                );
+            }
+        } elseif ($role === 'admin') {
+            $context['summary'][] = 'Total rendez-vous: ' . $this->rdvModel->countAll();
+            $context['summary'][] = 'En attente: ' . $this->rdvModel->countByStatus('en_attente');
+            $context['summary'][] = 'Confirmes: ' . $this->rdvModel->countByStatus('confirmÃ©');
+            $context['summary'][] = 'Termines: ' . $this->rdvModel->countByStatus('terminÃ©');
+        }
+
+        return $context;
+    }
+
+    private function askFreeLocalAi(string $message, array $context): ?string {
+        if (!function_exists('curl_init')) {
+            return null;
+        }
+
+        $model = getenv('OLLAMA_MODEL') ?: 'llama3.2';
+        $prompt = "Tu es l assistant gratuit de gestion des rendez-vous Valorys. "
+            . "Reponds en francais, en 2 a 5 phrases, sans diagnostic medical. "
+            . "Pour urgence medicale, conseille de contacter les urgences. "
+            . "Contexte: " . implode(' | ', $context['summary'])
+            . " | Role: " . ($context['role'] ?? 'utilisateur')
+            . " | Action disponible: " . ($context['actions'][$context['role']] ?? 'gestion rendez-vous')
+            . "\nQuestion: " . $message;
+
+        $ch = curl_init('http://127.0.0.1:11434/api/generate');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'prompt' => $prompt,
+                'stream' => false,
+                'options' => ['temperature' => 0.3],
+            ]),
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 8,
+        ]);
+
+        $response = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $status < 200 || $status >= 300) {
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        $reply = trim((string)($data['response'] ?? ''));
+
+        return $reply !== '' ? $reply : null;
+    }
+
+    private function detectRendezVousChatAction(string $message, array $context): ?array {
+        $text = strtolower($message);
+        $role = $context['role'] ?? 'patient';
+        preg_match('/\b(\d+)\b/', $text, $matches);
+        $rdvId = isset($matches[1]) ? (int)$matches[1] : 0;
+
+        if ($role === 'patient' && (str_contains($text, 'prendre') || str_contains($text, 'nouveau') || str_contains($text, 'reserver'))) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=prendre_rendez_vous',
+                'label' => 'J ouvre la page pour prendre rendez-vous.',
+            ];
+        }
+
+        if (str_contains($text, 'mes rdv') || str_contains($text, 'mes rendez') || str_contains($text, 'liste')) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=mes_rendez_vous',
+                'label' => 'J ouvre vos rendez-vous.',
+            ];
+        }
+
+        if ($role === 'patient' && (str_contains($text, 'annul') || str_contains($text, 'supprim')) && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=annuler_rendez_vous&id=' . $rdvId,
+                'label' => 'Confirmer l annulation du RDV #' . $rdvId,
+            ];
+        }
+
+        if ((str_contains($text, 'detail') || str_contains($text, 'voir') || str_contains($text, 'modifier') || str_contains($text, 'deplacer')) && $rdvId > 0) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=detail_rendez_vous&id=' . $rdvId,
+                'label' => 'J ouvre le rendez-vous #' . $rdvId . '.',
+            ];
+        }
+
+        if ($role === 'medecin' && str_contains($text, 'confirmer') && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=confirmer_rendez_vous&id=' . $rdvId,
+                'label' => 'Confirmer le RDV #' . $rdvId,
+            ];
+        }
+
+        if ($role === 'medecin' && str_contains($text, 'terminer') && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=terminer_rendez_vous&id=' . $rdvId,
+                'label' => 'Marquer le RDV #' . $rdvId . ' comme termine',
+            ];
+        }
+
+        return null;
+    }
+
+    private function fallbackRendezVousReply(string $message, array $context): string {
+        $text = strtolower($message);
+        $role = $context['role'] ?? 'patient';
+        $summary = !empty($context['summary']) ? "\n\nResume actuel: " . implode(' | ', $context['summary']) : '';
+
+        if (str_contains($text, 'annul')) {
+            return "Pour annuler, ouvrez le rendez-vous concerne puis utilisez le bouton Annuler. Verifiez bien la date et le patient avant de confirmer." . $summary;
+        }
+
+        if (str_contains($text, 'modif') || str_contains($text, 'changer') || str_contains($text, 'deplacer')) {
+            return "Pour modifier un rendez-vous, utilisez l action Modifier, choisissez une nouvelle date et un creneau disponible, puis enregistrez." . $summary;
+        }
+
+        if (str_contains($text, 'dispo') || str_contains($text, 'creneau') || str_contains($text, 'heure')) {
+            return "Les creneaux se chargent automatiquement apres le choix du medecin et de la date. Si aucun horaire n apparait, essayez une autre date ou verifiez les disponibilites du medecin." . $summary;
+        }
+
+        if (str_contains($text, 'statut') || str_contains($text, 'confirm')) {
+            return "Les statuts principaux sont en attente, confirme, termine et annule. Un medecin peut confirmer ou terminer une consultation, et l admin peut suivre l ensemble des statuts." . $summary;
+        }
+
+        if ($role === 'admin') {
+            return "Je peux vous aider a analyser la liste, filtrer par statut, retrouver un rendez-vous ou preparer une modification. Dites-moi ce que vous cherchez exactement." . $summary;
+        }
+
+        if ($role === 'medecin') {
+            return "Je peux vous aider a organiser la journee, confirmer les rendez-vous en attente, terminer une consultation ou retrouver les prochaines visites." . $summary;
+        }
+
+        return "Je peux vous guider pour prendre, modifier ou annuler un rendez-vous. Pour une urgence medicale, contactez directement les services d urgence." . $summary;
     }
 
     private function notFound(): void {

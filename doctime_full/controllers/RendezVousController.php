@@ -1,583 +1,900 @@
 <?php
-
-require_once __DIR__ . '/../models/Article.php';
+require_once __DIR__ . '/../models/RendezVous.php';
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../models/Medecin.php';
+require_once __DIR__ . '/../models/Patient.php';
+require_once __DIR__ . '/../models/Disponibilite.php';
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/mail.php';
 require_once __DIR__ . '/AuthController.php';
 
 class RendezVousController {
-
     private RendezVous $rdvModel;
     private Medecin $medecinModel;
     private Patient $patientModel;
+    private Disponibilite $dispoModel;
     private AuthController $auth;
-    private Database $db;
+    private PDO $db;
 
     public function __construct() {
         $this->rdvModel     = new RendezVous();
         $this->medecinModel = new Medecin();
         $this->patientModel = new Patient();
+        $this->dispoModel   = new Disponibilite();
         $this->auth         = new AuthController();
-        $this->db           = Database::getInstance();
+        $this->db           = Database::getInstance()->getConnection();
     }
 
-    public function __destruct() {
-        unset($this->rdvModel, $this->medecinModel, $this->patientModel, $this->auth, $this->db);
+    // ═══════════════════════════════════════════════════════════
+    //  HELPER PRIVÉ : récupérer les utilisateurs par rôle
+    //  User::getByRole() n'existe pas dans le modèle —
+    //  on interroge directement la BDD.
+    // ═══════════════════════════════════════════════════════════
+
+    private function getUsersByRole(string $role): array {
+        $stmt = $this->db->prepare(
+            "SELECT id, nom, prenom, email, telephone
+             FROM users
+             WHERE role = :role AND statut = 'actif'
+             ORDER BY nom, prenom"
+        );
+        $stmt->execute([':role' => $role]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function indexPatient(): void {
-        $this->auth->requireRole('patient');
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $filter    = $_GET['filter'] ?? 'all';
-            $rdvs = match ($filter) {
-                'upcoming'  => $this->rdvModel->getUpcomingByPatient($patientId),
-                'past'      => $this->rdvModel->getPastByPatient($patientId),
-                'cancelled' => $this->rdvModel->getCancelledByPatient($patientId),
-                default     => $this->rdvModel->getAllByPatient($patientId),
-            };
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/frontoffice/rdv_list_patient.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::indexPatient - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement des rendez-vous.');
-            header('Location: /patient/dashboard');
-            exit;
-        }
-    }
+    // ═══════════════════════════════════════════════════════════
+    //  FRONTOFFICE - MÉDECIN (MES RENDEZ-VOUS)
+    // ═══════════════════════════════════════════════════════════
 
-    public function indexMedecin(): void {
+    public function medecinMesRendezVous(): void {
         $this->auth->requireRole('medecin');
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $filter    = $_GET['filter'] ?? 'all';
-            $rdvs = match ($filter) {
-                'today'    => $this->rdvModel->getTodayByMedecin($medecinId),
-                'upcoming' => $this->rdvModel->getUpcomingByMedecin($medecinId),
-                'past'     => $this->rdvModel->getPastByMedecin($medecinId),
-                default    => $this->rdvModel->getAllByMedecin($medecinId),
-            };
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/backoffice/rdv_list_medecin.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::indexMedecin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement des rendez-vous.');
-            header('Location: /medecin/dashboard');
+
+        $medecinId   = (int)$_SESSION['user_id'];
+        $todayRdv    = $this->rdvModel->getTodayByMedecin($medecinId);
+        $upcomingRdv = $this->rdvModel->getUpcomingByMedecin($medecinId);
+        $historyRdv  = $this->rdvModel->getHistoryByMedecin($medecinId);
+
+        // ✅ Utilise le helper privé au lieu de User::getByRole()
+        $patients = $this->getUsersByRole('patient');
+
+        $stats = [
+            'total'     => $this->rdvModel->countByMedecin($medecinId),
+            'today'     => count($todayRdv),
+            'upcoming'  => count($upcomingRdv),
+            'completed' => $this->rdvModel->countByMedecinAndStatus($medecinId, 'terminé'),
+        ];
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/medecin/mes_rendezvous.php';
+    }
+
+    public function medecinCreate(): void {
+        $this->auth->requireRole('medecin');
+
+        $patients = $this->getUsersByRole('patient');
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/medecin/creer_rendezvous.php';
+    }
+
+    public function medecinStore(): void {
+        $this->auth->requireRole('medecin');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=medecin_rendezvous');
             exit;
+        }
+
+        $data = [
+            'patient_id'       => (int)($_POST['patient_id'] ?? 0),
+            'medecin_id'       => (int)$_SESSION['user_id'],
+            'date_rendezvous'  => $_POST['date_rendezvous']  ?? '',
+            'heure_rendezvous' => $_POST['heure_rendezvous'] ?? '',
+            'motif'            => trim($_POST['motif'] ?? ''),
+            'statut'           => $_POST['statut'] ?? 'en_attente',
+        ];
+
+        $errors = $this->validate($data);
+
+        if (!empty($errors)) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+            header('Location: index.php?page=medecin_rendezvous&action=create');
+            exit;
+        }
+
+        $this->rdvModel->create($data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous créé avec succès.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    public function medecinEdit(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $patients = $this->getUsersByRole('patient');
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/medecin/modifier_rendezvous.php';
+    }
+
+    public function medecinUpdate(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header("Location: index.php?page=medecin_rendezvous&action=edit&id=$id");
+            exit;
+        }
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $data = [
+            'patient_id'       => (int)($_POST['patient_id'] ?? 0),
+            'date_rendezvous'  => $_POST['date_rendezvous']  ?? '',
+            'heure_rendezvous' => $_POST['heure_rendezvous'] ?? '',
+            'motif'            => trim($_POST['motif'] ?? ''),
+            'statut'           => $_POST['statut'] ?? 'en_attente',
+        ];
+
+        $this->rdvModel->update($id, $data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous mis à jour.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    public function medecinDelete(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->delete($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous supprimé.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    public function medecinConfirmerRendezVous(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->updateStatus($id, 'confirmé');
+
+        // ✉️ Envoi d'un e-mail de notification à la confirmation du RDV
+        $this->sendConfirmationEmail($rdv);
+
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous confirmé. Un e-mail de confirmation a été envoyé.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    /**
+     * Envoie un e-mail de confirmation de rendez-vous via PHPMailer + Gmail SMTP.
+     * L'e-mail est envoyé à : skanderdhaoui77@gmail.com
+     */
+    private function sendConfirmationEmail(array $rdv): void {
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/Exception.php';
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/PHPMailer.php';
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/SMTP.php';
+
+        $patientNom   = htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']);
+        $medecinNom   = 'Dr. ' . htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']);
+        $specialite   = htmlspecialchars($rdv['specialite'] ?? 'Médecin généraliste');
+        $date         = date('d/m/Y', strtotime($rdv['date_rendezvous']));
+        $heure        = htmlspecialchars($rdv['heure_rendezvous']);
+        $motif        = htmlspecialchars($rdv['motif'] ?? 'Non précisé');
+        $adresse      = htmlspecialchars($rdv['cabinet_adresse'] ?? 'Non précisée');
+        $patientEmail = htmlspecialchars($rdv['patient_email'] ?? '');
+
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'skanderdhaoui77@gmail.com';
+            $mail->Password   = 'fuld tydv xzka ztxb';
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = 587;
+            $mail->CharSet    = 'UTF-8';
+            // Désactiver vérification SSL (nécessaire en local XAMPP)
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
+
+            $mail->setFrom('skanderdhaoui77@gmail.com', 'DocTime');
+            $mail->addAddress('skanderdhaoui77@gmail.com', 'DocTime Admin');
+            $mail->addAddress($patientEmail, $patientNom);
+
+            $mail->isHTML(true);
+            $mail->Subject = '✅ Confirmation de rendez-vous - DocTime';
+            $mail->Body    = "
+            <html>
+            <head><meta charset='UTF-8'></head>
+            <body style='font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0;'>
+              <div style='max-width:600px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);'>
+                <div style='background:#2563eb;padding:24px;text-align:center;'>
+                  <h1 style='color:#fff;margin:0;font-size:22px;'>DocTime — Confirmation de Rendez-vous</h1>
+                </div>
+                <div style='padding:30px;'>
+                  <p style='color:#374151;font-size:15px;'>Bonjour,</p>
+                  <p style='color:#374151;font-size:15px;'>Le rendez-vous suivant a ete <strong>confirme</strong> par le medecin :</p>
+                  <div style='background:#eff6ff;border-left:4px solid #2563eb;border-radius:4px;padding:16px 20px;margin:20px 0;'>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Patient :</strong> $patientNom</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Email patient :</strong> $patientEmail</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Medecin :</strong> $medecinNom</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Specialite :</strong> $specialite</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Date :</strong> $date</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Heure :</strong> $heure</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Motif :</strong> $motif</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Adresse cabinet :</strong> $adresse</p>
+                  </div>
+                  <p style='color:#374151;font-size:15px;'>Cordialement,<br><strong>L equipe DocTime</strong></p>
+                </div>
+                <div style='background:#f9fafb;padding:16px;text-align:center;font-size:12px;color:#9ca3af;'>
+                  Cet e-mail est envoye automatiquement par DocTime.
+                </div>
+              </div>
+            </body>
+            </html>";
+
+            $mail->send();
+
+        } catch (\Exception $e) {
+            // Log l'erreur dans un fichier pour déboguer
+            $logMsg = date('[Y-m-d H:i:s]') . ' Erreur email RDV : ' . $mail->ErrorInfo . PHP_EOL;
+            file_put_contents(__DIR__ . '/../mail_error.log', $logMsg, FILE_APPEND);
+            error_log('DocTime - Erreur envoi email : ' . $mail->ErrorInfo);
         }
     }
 
-    public function indexAdmin(): void {
+
+
+    public function medecinTerminerRendezVous(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->updateStatus($id, 'terminé');
+
+        if (!empty($_POST['notes'])) {
+            $this->rdvModel->update($id, ['notes_medecin' => trim($_POST['notes'])]);
+        }
+
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Consultation terminée.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    public function medecinAnnulerRendezVous(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->updateStatus($id, 'annulé');
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous annulé.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    public function medecinAjouterNote(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/medecin/ajouter_note.php';
+    }
+
+    public function medecinSaveNote(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header("Location: index.php?page=medecin_rendezvous");
+            exit;
+        }
+
+        $rdv       = $this->rdvModel->getById($id);
+        $medecinId = (int)$_SESSION['user_id'];
+
+        if (!$rdv || $rdv['medecin_id'] != $medecinId) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=medecin_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->update($id, ['notes_medecin' => trim($_POST['notes'] ?? '')]);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Note ajoutée avec succès.'];
+        header('Location: index.php?page=medecin_rendezvous');
+        exit;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  FRONTOFFICE - PATIENT
+    // ═══════════════════════════════════════════════════════════
+
+    public function patientMesRendezVous(): void {
+        $this->auth->requireRole('patient');
+
+        $patientId = (int)$_SESSION['user_id'];
+        $rdvs      = $this->rdvModel->getByPatient($patientId);
+        $upcoming  = $this->rdvModel->getUpcomingByPatient($patientId);
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/patient/mes_rendezvous.php';
+    }
+
+    public function patientPrendreRendezVous(): void {
+        $this->auth->requireRole('patient');
+
+        $medecins  = $this->getUsersByRole('medecin');
+        $date      = $_GET['date'] ?? date('Y-m-d');
+        $medecinId = (int)($_GET['medecin_id'] ?? 0);
+
+        $slots = [];
+        if ($medecinId > 0) {
+            $slots = $this->dispoModel->getAvailableSlots($medecinId, $date);
+        }
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/frontoffice/patient/prendre_rendezvous.php';
+    }
+
+    public function patientStoreRendezVous(): void {
+        $this->auth->requireRole('patient');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?page=prendre_rendezvous');
+            exit;
+        }
+
+        $data = [
+            'patient_id'       => (int)$_SESSION['user_id'],
+            'medecin_id'       => (int)($_POST['medecin_id'] ?? 0),
+            'date_rendezvous'  => $_POST['date_rendezvous']  ?? '',
+            'heure_rendezvous' => $_POST['heure_rendezvous'] ?? '',
+            'motif'            => trim($_POST['motif'] ?? ''),
+            'statut'           => 'en_attente',
+        ];
+
+        $errors = $this->validate($data);
+
+        if (!empty($errors)) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+            header('Location: index.php?page=prendre_rendezvous&medecin_id=' . $data['medecin_id']);
+            exit;
+        }
+
+        $this->rdvModel->create($data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous demandé avec succès.'];
+        header('Location: index.php?page=mes_rendezvous');
+        exit;
+    }
+
+    public function patientAnnulerRendezVous(int $id): void {
+        $this->auth->requireRole('patient');
+
+        $rdv = $this->rdvModel->getById($id);
+
+        if (!$rdv || $rdv['patient_id'] != $_SESSION['user_id']) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=mes_rendezvous');
+            exit;
+        }
+
+        $this->rdvModel->updateStatus($id, 'annulé');
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous annulé.'];
+        header('Location: index.php?page=mes_rendezvous');
+        exit;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  BACKOFFICE - ADMIN
+    // ═══════════════════════════════════════════════════════════
+
+    public function adminIndex(): void {
         $this->auth->requireRole('admin');
-        try {
-            $filter  = $_GET['filter']  ?? 'all';
-            $medecin = $_GET['medecin'] ?? null;
-            $patient = $_GET['patient'] ?? null;
-            $rdvs     = $this->rdvModel->getAll($filter, $medecin, $patient);
-            $medecins = $this->medecinModel->getAllWithUsers();
-            $patients = $this->patientModel->getAll();
-            $flash    = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/backoffice/rdv_list_admin.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::indexAdmin - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement des rendez-vous.');
-            header('Location: /admin/dashboard');
-            exit;
-        }
+
+        $filter  = $_GET['filter']  ?? 'all';
+        $medecin = $_GET['medecin'] ?? null;
+        $patient = $_GET['patient'] ?? null;
+
+        $rdvs     = $this->rdvModel->getAll($filter, $medecin, $patient);
+        $medecins = $this->getUsersByRole('medecin');
+        $patients = $this->getUsersByRole('patient');
+
+        $stats = [
+            'total'      => $this->rdvModel->countAll(),
+            'en_attente' => $this->rdvModel->countByStatus('en_attente'),
+            'confirmes'  => $this->rdvModel->countByStatus('confirmé'),
+            'termines'   => $this->rdvModel->countByStatus('terminé'),
+        ];
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/backoffice/rendezvous/list.php';
     }
 
-    public function createPatient(): void {
-        $this->auth->requireRole('patient');
-        try {
-            $csrfToken = $this->generateCsrfToken();
-            $medecinId = $_GET['medecin'] ?? null;
-            $medecin   = null;
-            if ($medecinId) {
-                $medecin = $this->medecinModel->findByUserId((int)$medecinId);
-            }
-            $medecins = $this->medecinModel->getAllWithUsers();
-            $old      = $_SESSION['old']   ?? null;
-            $flash    = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
-            require_once __DIR__ . '/../views/frontoffice/rdv_create_patient.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::createPatient - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
-            header('Location: /patient/rdv');
-            exit;
-        }
+    public function adminCreate(): void {
+        $this->auth->requireRole('admin');
+
+        $medecins = $this->getUsersByRole('medecin');
+        $patients = $this->getUsersByRole('patient');
+
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
+        require_once __DIR__ . '/../views/backoffice/rendezvous/form.php';
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  storePatient — envoie un email de confirmation après création du RDV
-    // ─────────────────────────────────────────────────────────────────────────
-    public function storePatient(): void {
-        $this->auth->requireRole('patient');
+    public function adminStore(): void {
+        $this->auth->requireRole('admin');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: /patient/rdv/create');
+            header('Location: index.php?page=admin_rendezvous');
             exit;
         }
 
-        if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->setFlash('error', 'Erreur de sécurité. Veuillez réessayer.');
-            header('Location: /patient/rdv/create');
+        $data = [
+            'patient_id'       => (int)($_POST['patient_id'] ?? 0),
+            'medecin_id'       => (int)($_POST['medecin_id'] ?? 0),
+            'date_rendezvous'  => $_POST['date_rendezvous']  ?? '',
+            'heure_rendezvous' => $_POST['heure_rendezvous'] ?? '',
+            'motif'            => trim($_POST['motif'] ?? ''),
+            'statut'           => $_POST['statut'] ?? 'en_attente',
+        ];
+
+        $errors = $this->validate($data);
+
+        if (!empty($errors)) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+            header('Location: index.php?page=admin_rendezvous&action=create');
             exit;
         }
 
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-
-            $data = [
-                'patient_id'        => $patientId,
-                'medecin_id'        => (int)($_POST['medecin_id'] ?? 0),
-                'date_rdv'          => $_POST['date_rdv'] ?? '',
-                'heure_rdv'         => $_POST['heure_rdv'] ?? '',
-                'motif'             => htmlspecialchars(trim($_POST['motif'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'type_consultation' => $_POST['type_consultation'] ?? 'consultation',
-                'statut'            => 'confirmé',
-            ];
-
-            $errors = $this->validateRendezVous($data);
-            if (!empty($errors)) {
-                $this->setFlash('error', implode('<br>', $errors));
-                $_SESSION['old'] = $data;
-                header('Location: /patient/rdv/create');
-                exit;
-            }
-
-            $medecin = $this->medecinModel->findByUserId($data['medecin_id']);
-            if (!$medecin) {
-                throw new Exception('Médecin introuvable.');
-            }
-
-            if (!$this->rdvModel->isAvailable($data['medecin_id'], $data['date_rdv'], $data['heure_rdv'])) {
-                $this->setFlash('error', "Ce créneau n'est pas disponible.");
-                $_SESSION['old'] = $data;
-                header('Location: /patient/rdv/create');
-                exit;
-            }
-
-            $rdvId = $this->rdvModel->create($data);
-            if (!$rdvId) {
-                throw new Exception('Erreur lors de la création du rendez-vous.');
-            }
-
-            $this->logAction($_SESSION['user_id'], 'Création RDV', "Rendez-vous #$rdvId créé avec le médecin #" . $data['medecin_id']);
-
-            // ── EMAIL DE CONFIRMATION ─────────────────────────────────────
-            $patient     = $this->patientModel->findByUserId($patientId);
-            $nomPatient  = trim(($patient['prenom'] ?? '') . ' ' . ($patient['nom'] ?? ''));
-            $nomMedecin  = 'Dr ' . trim(($medecin['prenom'] ?? '') . ' ' . ($medecin['nom'] ?? ''));
-            $specialite  = $medecin['specialite'] ?? 'Médecin';
-            $dateFormate = (new DateTime($data['date_rdv']))->format('d/m/Y');
-            $heure       = substr($data['heure_rdv'], 0, 5);
-            $adresse     = $medecin['cabinet_adresse'] ?? 'Non précisée';
-            $sujet       = "DocTime - Confirmation RDV du {$dateFormate} à {$heure}";
-            $corps       = $this->buildEmailHtml($nomPatient, $nomMedecin, $specialite, $dateFormate, $heure, $data['motif'], $adresse, $rdvId);
-
-            // Email au patient
-            if (!empty($patient['email'])) {
-                MailConfig::send($patient['email'], $nomPatient, $sujet, $corps);
-            }
-
-            // Email de suivi à toi (admin)
-            MailConfig::send('skanderdhaoui77@gmail.com', 'Skander', $sujet, $corps);
-            // ─────────────────────────────────────────────────────────────
-
-            $this->setFlash('success', 'Rendez-vous créé avec succès. Un email de confirmation a été envoyé.');
-            header('Location: /patient/rdv');
-            exit;
-
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::storePatient - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la création du rendez-vous.');
-            $_SESSION['old'] = $data ?? [];
-            header('Location: /patient/rdv/create');
-            exit;
-        }
+        $this->rdvModel->create($data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous créé.'];
+        header('Location: index.php?page=admin_rendezvous');
+        exit;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  Template email HTML
-    // ─────────────────────────────────────────────────────────────────────────
-    private function buildEmailHtml(
-        string $nomPatient,
-        string $nomMedecin,
-        string $specialite,
-        string $date,
-        string $heure,
-        string $motif,
-        string $adresse,
-        int    $rdvId
-    ): string {
-        return <<<HTML
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-        <body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0;">
-            <tr><td align="center">
-              <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+    public function adminEdit(int $id): void {
+        $this->auth->requireRole('admin');
 
-                <tr>
-                  <td style="background:#1D9E75;padding:28px 32px;text-align:center;">
-                    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:700;letter-spacing:1px;">DocTime</h1>
-                    <p style="color:#a8f0d8;margin:6px 0 0;font-size:14px;">Plateforme de gestion médicale</p>
-                  </td>
-                </tr>
+        $rdv = $this->rdvModel->getById($id);
+        if (!$rdv) $this->notFound();
 
-                <tr>
-                  <td style="padding:32px 32px 0;">
-                    <h2 style="margin:0 0 8px;font-size:20px;color:#1a1a1a;">Rendez-vous confirmé</h2>
-                    <p style="margin:0;color:#666;font-size:15px;">Bonjour <strong>{$nomPatient}</strong>, votre rendez-vous a bien été enregistré.</p>
-                  </td>
-                </tr>
+        $medecins = $this->getUsersByRole('medecin');
+        $patients = $this->getUsersByRole('patient');
 
-                <tr>
-                  <td style="padding:24px 32px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fbf6;border-radius:10px;border:1px solid #9FE1CB;">
-                      <tr><td style="padding:20px 24px;">
-                        <table width="100%" cellpadding="0" cellspacing="0">
-                          <tr><td style="padding:8px 0;border-bottom:1px solid #d0f0e4;">
-                            <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">Médecin</span>
-                            <span style="font-size:15px;font-weight:600;color:#1a1a1a;">{$nomMedecin}</span>
-                            <span style="font-size:13px;color:#0F6E56;margin-left:8px;">— {$specialite}</span>
-                          </td></tr>
-                          <tr><td style="padding:8px 0;border-bottom:1px solid #d0f0e4;">
-                            <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">Date &amp; heure</span>
-                            <span style="font-size:15px;font-weight:600;color:#1a1a1a;">{$date} à {$heure}</span>
-                          </td></tr>
-                          <tr><td style="padding:8px 0;border-bottom:1px solid #d0f0e4;">
-                            <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">Motif</span>
-                            <span style="font-size:14px;color:#1a1a1a;">{$motif}</span>
-                          </td></tr>
-                          <tr><td style="padding:8px 0;">
-                            <span style="font-size:12px;color:#888;display:block;margin-bottom:2px;">Adresse du cabinet</span>
-                            <span style="font-size:14px;color:#1a1a1a;">{$adresse}</span>
-                          </td></tr>
-                        </table>
-                      </td></tr>
-                    </table>
-                  </td>
-                </tr>
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
 
-                <tr>
-                  <td style="padding:0 32px 24px;text-align:center;">
-                    <p style="margin:0;font-size:13px;color:#999;">
-                      Référence : <strong style="color:#1D9E75;">#RDV-{$rdvId}</strong>
-                    </p>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style="background:#f9f9f9;padding:20px 32px;text-align:center;border-top:1px solid #eee;">
-                    <p style="margin:0;font-size:12px;color:#aaa;">
-                      Email automatique — DocTime.<br>
-                      Pour annuler, connectez-vous sur la plateforme.
-                    </p>
-                  </td>
-                </tr>
-
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-        HTML;
+        require_once __DIR__ . '/../views/backoffice/rendezvous/form.php';
     }
 
-    public function cancelPatient(int $id): void {
-        $this->auth->requireRole('patient');
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['patient_id'] !== $patientId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $dateRdv = new DateTime($rdv['date_rdv'] . ' ' . $rdv['heure_rdv']);
-            $now     = new DateTime();
-            if ($dateRdv->diff($now)->h <= 24 && $dateRdv > $now) {
-                $this->setFlash('error', 'Vous ne pouvez pas annuler un RDV à moins de 24h.');
-                header("Location: /patient/rdv/$id");
-                exit;
-            }
-            $raison = htmlspecialchars(trim($_POST['raison'] ?? ''), ENT_QUOTES, 'UTF-8');
-            $this->rdvModel->update($id, ['statut' => 'annulé', 'raison_annulation' => $raison]);
-            $this->logAction($_SESSION['user_id'], 'Annulation RDV', "Rendez-vous #$id annulé");
-            $this->setFlash('success', 'Rendez-vous annulé.');
-            header('Location: /patient/rdv');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::cancelPatient - ' . $e->getMessage());
-            $this->setFlash('error', "Erreur lors de l'annulation.");
-            header("Location: /patient/rdv/$id");
-            exit;
-        }
-    }
+    public function adminUpdate(int $id): void {
+        $this->auth->requireRole('admin');
 
-    public function showPatient(int $id): void {
-        $this->auth->requireRole('patient');
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['patient_id'] !== $patientId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $medecin = $this->medecinModel->findByUserId((int)$rdv['medecin_id']);
-            $flash   = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/frontoffice/rdv_show_patient.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::showPatient - ' . $e->getMessage());
-            http_response_code(500);
-            die('Erreur lors du chargement du rendez-vous.');
-        }
-    }
-
-    public function showMedecin(int $id): void {
-        $this->auth->requireRole('medecin');
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['medecin_id'] !== $medecinId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $patient = $this->patientModel->findByUserId((int)$rdv['patient_id']);
-            $flash   = $_SESSION['flash'] ?? null;
-            unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/backoffice/rdv_show_medecin.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::showMedecin - ' . $e->getMessage());
-            http_response_code(500);
-            die('Erreur lors du chargement du rendez-vous.');
-        }
-    }
-
-    public function editPatient(int $id): void {
-        $this->auth->requireRole('patient');
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['patient_id'] !== $patientId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $dateRdv = new DateTime($rdv['date_rdv'] . ' ' . $rdv['heure_rdv']);
-            $now     = new DateTime();
-            if ($dateRdv->diff($now)->days < 2 && $dateRdv > $now) {
-                $this->setFlash('error', 'Vous ne pouvez pas modifier un RDV à moins de 48h.');
-                header("Location: /patient/rdv/$id");
-                exit;
-            }
-            $csrfToken = $this->generateCsrfToken();
-            $medecins  = $this->medecinModel->getAllWithUsers();
-            $old       = $_SESSION['old']   ?? null;
-            $flash     = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
-            require_once __DIR__ . '/../views/frontoffice/rdv_edit_patient.php';
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::editPatient - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
-            header('Location: /patient/rdv');
-            exit;
-        }
-    }
-
-    public function updatePatient(int $id): void {
-        $this->auth->requireRole('patient');
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: /patient/rdv/$id/edit");
+            header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
             exit;
         }
-        if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
-            $this->setFlash('error', 'Erreur de sécurité.');
-            header("Location: /patient/rdv/$id/edit");
-            exit;
-        }
-        try {
-            $patientId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['patient_id'] !== $patientId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $data = [
-                'date_rdv'          => $_POST['date_rdv']  ?? '',
-                'heure_rdv'         => $_POST['heure_rdv'] ?? '',
-                'motif'             => htmlspecialchars(trim($_POST['motif'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'type_consultation' => $_POST['type_consultation'] ?? 'consultation',
-            ];
-            $errors = $this->validateRendezVousUpdate($data);
-            if (!empty($errors)) {
-                $this->setFlash('error', implode('<br>', $errors));
-                $_SESSION['old'] = $data;
-                header("Location: /patient/rdv/$id/edit");
-                exit;
-            }
-            if (!$this->rdvModel->isAvailable((int)$rdv['medecin_id'], $data['date_rdv'], $data['heure_rdv'], $id)) {
-                $this->setFlash('error', "Ce créneau n'est pas disponible.");
-                $_SESSION['old'] = $data;
-                header("Location: /patient/rdv/$id/edit");
-                exit;
-            }
-            $this->rdvModel->update($id, $data);
-            $this->logAction($_SESSION['user_id'], 'Modification RDV', "Rendez-vous #$id modifié");
-            $this->setFlash('success', 'Rendez-vous mis à jour avec succès.');
-            header('Location: /patient/rdv');
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::updatePatient - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la mise à jour.');
-            header("Location: /patient/rdv/$id/edit");
-            exit;
-        }
+
+        $data = [
+            'date_rendezvous'  => $_POST['date_rendezvous']  ?? '',
+            'heure_rendezvous' => $_POST['heure_rendezvous'] ?? '',
+            'motif'            => trim($_POST['motif'] ?? ''),
+            'statut'           => $_POST['statut'] ?? 'en_attente',
+        ];
+
+        $this->rdvModel->update($id, $data);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous mis à jour.'];
+        header('Location: index.php?page=admin_rendezvous');
+        exit;
     }
 
-    public function confirmPresence(int $id): void {
-        $this->auth->requireRole('medecin');
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['medecin_id'] !== $medecinId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $this->rdvModel->update($id, ['statut' => 'effectué', 'date_effet' => date('Y-m-d H:i:s')]);
-            $this->logAction($_SESSION['user_id'], 'Confirmation présence RDV', "RDV #$id confirmé");
-            $this->setFlash('success', 'Présence confirmée.');
-            header("Location: /medecin/rdv/$id");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::confirmPresence - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la confirmation.');
-            header("Location: /medecin/rdv/$id");
-            exit;
-        }
+    public function adminDelete(int $id): void {
+        $this->auth->requireRole('admin');
+
+        $this->rdvModel->delete($id);
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous supprimé.'];
+        header('Location: index.php?page=admin_rendezvous');
+        exit;
     }
 
-    public function addNote(int $id): void {
-        $this->auth->requireRole('medecin');
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: /medecin/rdv/$id");
-            exit;
-        }
-        try {
-            $medecinId = (int)$_SESSION['user_id'];
-            $rdv       = $this->rdvModel->getById($id);
-            if (!$rdv || (int)$rdv['medecin_id'] !== $medecinId) {
-                http_response_code(403);
-                die('Accès refusé.');
-            }
-            $note = htmlspecialchars(trim($_POST['note'] ?? ''), ENT_QUOTES, 'UTF-8');
-            if (empty($note) || strlen($note) < 10) {
-                $this->setFlash('error', 'La note doit contenir au moins 10 caractères.');
-                header("Location: /medecin/rdv/$id");
-                exit;
-            }
-            $this->rdvModel->addNote($id, $note);
-            $this->logAction($_SESSION['user_id'], 'Ajout note RDV', "Note ajoutée au RDV #$id");
-            $this->setFlash('success', 'Note ajoutée avec succès.');
-            header("Location: /medecin/rdv/$id");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur RendezVousController::addNote - ' . $e->getMessage());
-            $this->setFlash('error', "Erreur lors de l'ajout de la note.");
-            header("Location: /medecin/rdv/$id");
-            exit;
-        }
+    public function adminShow(int $id): void {
+        $this->auth->requireRole('admin');
+
+        $rdv = $this->rdvModel->getById($id);
+        if (!$rdv) $this->notFound();
+
+        require_once __DIR__ . '/../views/backoffice/rendezvous/show.php';
     }
 
-    public function getAvailabilities(): void {
+    // ═══════════════════════════════════════════════════════════
+    //  API
+    // ═══════════════════════════════════════════════════════════
+
+    public function apiGetSlots(): void {
         header('Content-Type: application/json');
-        try {
-            $medecinId = (int)($_GET['medecin_id'] ?? 0);
-            $date      = $_GET['date'] ?? '';
-            if (!$medecinId || !$date) {
-                echo json_encode(['error' => 'Paramètres invalides']);
-                exit;
-            }
-            $availabilities = $this->rdvModel->getAvailabilitiesByMedecin($medecinId, $date);
-            echo json_encode(['success' => true, 'availabilities' => $availabilities]);
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur getAvailabilities - ' . $e->getMessage());
-            echo json_encode(['error' => 'Erreur serveur']);
+
+        $medecinId = (int)($_GET['medecin_id'] ?? 0);
+        $date      = $_GET['date'] ?? date('Y-m-d');
+
+        if (!$medecinId) {
+            echo json_encode(['error' => 'Médecin non spécifié']);
             exit;
         }
+
+        $slots = $this->dispoModel->getAvailableSlots($medecinId, $date);
+        echo json_encode(['success' => true, 'slots' => $slots]);
+        exit;
     }
 
-    // ── Méthodes privées ──────────────────────────────────────────────────────
+    public function apiRendezVousChatbot(): void {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
 
-    private function validateRendezVous(array $data): array {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'reply' => 'Veuillez vous connecter pour utiliser le chatbot.']);
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'reply' => 'Methode non autorisee.']);
+            exit;
+        }
+
+        $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+        $message = trim((string)($payload['message'] ?? ''));
+
+        if ($message === '') {
+            echo json_encode(['success' => false, 'reply' => 'Posez-moi une question sur les rendez-vous.']);
+            exit;
+        }
+
+        if (strlen($message) > 600) {
+            echo json_encode(['success' => false, 'reply' => 'Votre question est trop longue. Merci de la raccourcir.']);
+            exit;
+        }
+
+        $context = $this->buildRendezVousChatContext();
+        $action = $this->detectRendezVousChatAction($message, $context);
+        $reply = $this->askFreeLocalAi($message, $context);
+
+        if ($reply === null) {
+            $reply = $this->fallbackRendezVousReply($message, $context);
+        }
+
+        echo json_encode(['success' => true, 'reply' => $reply, 'action' => $action], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  HELPERS PRIVÉS
+    // ═══════════════════════════════════════════════════════════
+
+    private function validate(array $data): array {
         $errors = [];
-        if (empty($data['date_rdv'])) {
-            $errors[] = 'La date est obligatoire.';
-        } else {
-            $date = DateTime::createFromFormat('Y-m-d', $data['date_rdv']);
-            if (!$date || $date->format('Y-m-d') !== $data['date_rdv']) {
-                $errors[] = 'Format de date invalide.';
-            } elseif ($date < new DateTime('today')) {
-                $errors[] = 'La date doit être dans le futur.';
-            }
+
+        if (empty($data['patient_id']))       $errors[] = 'Le patient est obligatoire.';
+        if (empty($data['medecin_id']))        $errors[] = 'Le médecin est obligatoire.';
+        if (empty($data['date_rendezvous']))   $errors[] = 'La date est obligatoire.';
+        if (empty($data['heure_rendezvous']))  $errors[] = "L'heure est obligatoire.";
+
+        if (!empty($data['date_rendezvous']) && $data['date_rendezvous'] < date('Y-m-d')) {
+            $errors[] = 'La date ne peut pas être dans le passé.';
         }
-        if (empty($data['heure_rdv'])) {
-            $errors[] = "L'heure est obligatoire.";
-        } elseif (!preg_match('/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/', $data['heure_rdv'])) {
-            $errors[] = "Format d'heure invalide.";
-        }
-        if (empty($data['motif']) || strlen($data['motif']) < 5) {
-            $errors[] = 'Le motif doit contenir au moins 5 caractères.';
-        }
-        if (empty($data['medecin_id']) || $data['medecin_id'] <= 0) {
-            $errors[] = 'Médecin invalide.';
-        }
+
         return $errors;
     }
 
-    private function validateRendezVousUpdate(array $data): array {
-        return $this->validateRendezVous([
-            'date_rdv'   => $data['date_rdv']  ?? '',
-            'heure_rdv'  => $data['heure_rdv'] ?? '',
-            'motif'      => $data['motif']      ?? '',
-            'medecin_id' => 1,
-        ]);
-    }
+    private function buildRendezVousChatContext(): array {
+        $role = $_SESSION['user_role'] ?? 'patient';
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $context = [
+            'role' => $role,
+            'today' => date('Y-m-d'),
+            'summary' => [],
+            'actions' => [
+                'patient' => 'prendre, modifier ou annuler un rendez-vous depuis Mes RDV',
+                'medecin' => 'creer, confirmer, annuler, terminer et noter un rendez-vous',
+                'admin' => 'filtrer, creer, modifier, voir ou supprimer les rendez-vous',
+            ],
+        ];
 
-    private function generateCsrfToken(): string {
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        if ($role === 'patient') {
+            $upcoming = $this->rdvModel->getUpcomingByPatient($userId);
+            $context['summary'][] = 'Prochains rendez-vous patient: ' . count($upcoming);
+            foreach (array_slice($upcoming, 0, 3) as $rdv) {
+                $context['summary'][] = sprintf(
+                    '%s a %s avec Dr. %s %s, statut %s',
+                    $rdv['date_rendezvous'] ?? '-',
+                    $rdv['heure_rendezvous'] ?? '-',
+                    $rdv['medecin_prenom'] ?? '',
+                    $rdv['medecin_nom'] ?? '',
+                    $rdv['statut'] ?? '-'
+                );
+            }
+        } elseif ($role === 'medecin') {
+            $today = $this->rdvModel->getTodayByMedecin($userId);
+            $upcoming = $this->rdvModel->getUpcomingByMedecin($userId);
+            $context['summary'][] = 'Rendez-vous aujourd hui: ' . count($today);
+            $context['summary'][] = 'Rendez-vous a venir: ' . count($upcoming);
+            foreach (array_slice($today, 0, 3) as $rdv) {
+                $context['summary'][] = sprintf(
+                    'Aujourd hui %s avec %s %s, statut %s',
+                    $rdv['heure_rendezvous'] ?? '-',
+                    $rdv['patient_prenom'] ?? '',
+                    $rdv['patient_nom'] ?? '',
+                    $rdv['statut'] ?? '-'
+                );
+            }
+        } elseif ($role === 'admin') {
+            $context['summary'][] = 'Total rendez-vous: ' . $this->rdvModel->countAll();
+            $context['summary'][] = 'En attente: ' . $this->countRendezVousByStatusForChat('en_attente');
+            $context['summary'][] = 'Confirmes: ' . $this->countRendezVousByStatusForChat('confirmÃ©');
+            $context['summary'][] = 'Termines: ' . $this->countRendezVousByStatusForChat('terminÃ©');
         }
-        return $_SESSION['csrf_token'];
+
+        return $context;
     }
 
-    private function verifyCsrfToken(string $token): bool {
-        return !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    private function countRendezVousByStatusForChat(string $status): int {
+        if (method_exists($this->rdvModel, 'countByStatus')) {
+            return (int)$this->rdvModel->countByStatus($status);
+        }
+
+        if (method_exists($this->rdvModel, 'countByStatut')) {
+            return (int)$this->rdvModel->countByStatut($status);
+        }
+
+        return 0;
     }
 
-    private function setFlash(string $type, string $message): void {
-        $_SESSION['flash'] = ['type' => $type, 'message' => $message];
+    private function askFreeLocalAi(string $message, array $context): ?string {
+        if (!function_exists('curl_init')) {
+            return null;
+        }
+
+        $model = getenv('OLLAMA_MODEL') ?: 'llama3.2';
+        $prompt = "Tu es l assistant gratuit de gestion des rendez-vous Valorys. "
+            . "Reponds en francais, en 2 a 5 phrases, sans diagnostic medical. "
+            . "Pour urgence medicale, conseille de contacter les urgences. "
+            . "Contexte: " . implode(' | ', $context['summary'])
+            . " | Role: " . ($context['role'] ?? 'utilisateur')
+            . " | Action disponible: " . ($context['actions'][$context['role']] ?? 'gestion rendez-vous')
+            . "\nQuestion: " . $message;
+
+        $ch = curl_init('http://127.0.0.1:11434/api/generate');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_POSTFIELDS => json_encode([
+                'model' => $model,
+                'prompt' => $prompt,
+                'stream' => false,
+                'options' => ['temperature' => 0.3],
+            ]),
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 8,
+        ]);
+
+        $response = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $status < 200 || $status >= 300) {
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        $reply = trim((string)($data['response'] ?? ''));
+
+        return $reply !== '' ? $reply : null;
     }
 
-    private function logAction(int $userId, string $action, string $description): void {
-        try {
-            $sql = "INSERT INTO logs (user_id, action, description, ip_address, created_at)
-                    VALUES (:user_id, :action, :description, :ip, NOW())";
-            $this->db->execute($sql, [
-                'user_id'     => $userId,
-                'action'      => $action,
-                'description' => $description,
-                'ip'          => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-            ]);
-        } catch (Exception $e) {
-            error_log('Erreur logAction: ' . $e->getMessage());
+    private function detectRendezVousChatAction(string $message, array $context): ?array {
+        $text = strtolower($message);
+        $role = $context['role'] ?? 'patient';
+        preg_match('/\b(\d+)\b/', $text, $matches);
+        $rdvId = isset($matches[1]) ? (int)$matches[1] : 0;
+
+        if ($role === 'patient' && (str_contains($text, 'prendre') || str_contains($text, 'nouveau') || str_contains($text, 'reserver'))) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=prendre_rendez_vous',
+                'label' => 'J ouvre la page pour prendre rendez-vous.',
+            ];
+        }
+
+        if (str_contains($text, 'mes rdv') || str_contains($text, 'mes rendez') || str_contains($text, 'liste')) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=mes_rendez_vous',
+                'label' => 'J ouvre vos rendez-vous.',
+            ];
+        }
+
+        if ($role === 'patient' && (str_contains($text, 'annul') || str_contains($text, 'supprim')) && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=annuler_rendez_vous&id=' . $rdvId,
+                'label' => 'Confirmer l annulation du RDV #' . $rdvId,
+            ];
+        }
+
+        if ((str_contains($text, 'detail') || str_contains($text, 'voir') || str_contains($text, 'modifier') || str_contains($text, 'deplacer')) && $rdvId > 0) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=detail_rendez_vous&id=' . $rdvId,
+                'label' => 'J ouvre le rendez-vous #' . $rdvId . '.',
+            ];
+        }
+
+        if ($role === 'medecin' && str_contains($text, 'confirmer') && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=confirmer_rendez_vous&id=' . $rdvId,
+                'label' => 'Confirmer le RDV #' . $rdvId,
+            ];
+        }
+
+        if ($role === 'medecin' && str_contains($text, 'terminer') && $rdvId > 0) {
+            return [
+                'type' => 'confirm_redirect',
+                'url' => 'index.php?page=terminer_rendez_vous&id=' . $rdvId,
+                'label' => 'Marquer le RDV #' . $rdvId . ' comme termine',
+            ];
+        }
+
+        return null;
+    }
+
+    private function fallbackRendezVousReply(string $message, array $context): string {
+        $text = strtolower($message);
+        $role = $context['role'] ?? 'patient';
+        $summary = !empty($context['summary']) ? "\n\nResume actuel: " . implode(' | ', $context['summary']) : '';
+
+        if (str_contains($text, 'annul')) {
+            return "Pour annuler, ouvrez le rendez-vous concerne puis utilisez le bouton Annuler. Verifiez bien la date et le patient avant de confirmer." . $summary;
+        }
+
+        if (str_contains($text, 'modif') || str_contains($text, 'changer') || str_contains($text, 'deplacer')) {
+            return "Pour modifier un rendez-vous, utilisez l action Modifier, choisissez une nouvelle date et un creneau disponible, puis enregistrez." . $summary;
+        }
+
+        if (str_contains($text, 'dispo') || str_contains($text, 'creneau') || str_contains($text, 'heure')) {
+            return "Les creneaux se chargent automatiquement apres le choix du medecin et de la date. Si aucun horaire n apparait, essayez une autre date ou verifiez les disponibilites du medecin." . $summary;
+        }
+
+        if (str_contains($text, 'statut') || str_contains($text, 'confirm')) {
+            return "Les statuts principaux sont en attente, confirme, termine et annule. Un medecin peut confirmer ou terminer une consultation, et l admin peut suivre l ensemble des statuts." . $summary;
+        }
+
+        if ($role === 'admin') {
+            return "Je peux vous aider a analyser la liste, filtrer par statut, retrouver un rendez-vous ou preparer une modification. Dites-moi ce que vous cherchez exactement." . $summary;
+        }
+
+        if ($role === 'medecin') {
+            return "Je peux vous aider a organiser la journee, confirmer les rendez-vous en attente, terminer une consultation ou retrouver les prochaines visites." . $summary;
+        }
+
+        return "Je peux vous guider pour prendre, modifier ou annuler un rendez-vous. Pour une urgence medicale, contactez directement les services d urgence." . $summary;
+    }
+
+    private function notFound(): void {
+        http_response_code(404);
+        die('Rendez-vous introuvable.');
+    }
+        // ═══════════════════════════════════════════════════════════
+    //  FRONTOFFICE - PATIENT (MODIFIER UN RENDEZ-VOUS)
+    // ═══════════════════════════════════════════════════════════
+
+    public function patientModifierRendezVous(int $id): void {
+        $this->auth->requireRole('patient');
+        
+        $rdv = $this->rdvModel->getById($id);
+        
+        // Vérifier que le rendez-vous appartient bien au patient connecté
+        if (!$rdv || $rdv['patient_id'] != $_SESSION['user_id']) {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Rendez-vous introuvable.'];
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'date_rendezvous' => $_POST['date_rendezvous'],
+                'heure_rendezvous' => $_POST['heure_rendezvous'],
+                'motif' => trim($_POST['motif'] ?? '')
+            ];
+            
+            $errors = $this->validate($data);
+            
+            if (!empty($errors)) {
+                $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
+                header("Location: index.php?page=mes_rendez_vous");
+                exit;
+            }
+            
+            $this->rdvModel->update($id, $data);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous modifié avec succès.'];
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
         }
     }
 }
