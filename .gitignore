@@ -1,0 +1,28 @@
+# Secrets & configuration sensibles
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Fichiers de session
+scratch/
+sess_*
+
+# Fichiers temporaires et de test
+temp.txt
+test_*.php
+debug_*.php
+check_*.php
+describe_*.php
+create_admin_session.php
+disable_2fa.php
+run_migration.php
+migrate_*.php
+add_sample_*.php
+
+# Dépendances
+vendor/
+node_modules/
