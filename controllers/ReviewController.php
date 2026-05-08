@@ -2,6 +2,7 @@
 if (class_exists('ReviewController')) return;
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/Validator.php';
 require_once __DIR__ . '/../models/Review.php';
 
 class ReviewController {
@@ -166,24 +167,28 @@ class ReviewController {
      * Valide les données de l'avis
      */
     private function validateReviewData(array $data): array {
-        $errors = [];
+        // ========== NETTOYAGE ==========
+        $title   = trim($data['title'] ?? '');
+        $content = trim($data['content'] ?? '');
+        $rating  = isset($data['rating']) ? (int)$data['rating'] : 0;
 
-        if (empty($data['content'])) {
-            $errors['content'] = 'Le contenu est requis';
-        } elseif (strlen($data['content']) < 10) {
-            $errors['content'] = 'L\'avis doit contenir au moins 10 caractères';
-        } elseif (strlen($data['content']) > 2000) {
-            $errors['content'] = 'L\'avis ne peut pas dépasser 2000 caractères';
-        }
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('title', $title, 'Titre')
+            ->minLength('title', $title, 3, 'Titre')
+            ->maxLength('title', $title, 100, 'Titre')
+            ->required('content', $content, 'Contenu')
+            ->minLength('content', $content, 10, 'Contenu')
+            ->maxLength('content', $content, 2000, 'Contenu');
+        
+        $errors = $validator->getErrors();
 
-        if (empty($data['title'])) {
-            $errors['title'] = 'Le titre est requis';
-        } elseif (strlen($data['title']) < 3 || strlen($data['title']) > 100) {
-            $errors['title'] = 'Le titre doit avoir entre 3 et 100 caractères';
-        }
-
-        if (empty($data['rating']) || $data['rating'] < 1 || $data['rating'] > 5) {
-            $errors['rating'] = 'La note doit être entre 1 et 5';
+        // ========== VALIDATIONS PERSONNALISÉES ==========
+        if (empty($errors['rating'])) {
+            if (empty($rating) || $rating < 1 || $rating > 5) {
+                $errors['rating'] = 'La note doit être entre 1 et 5';
+            }
         }
 
         return $errors;

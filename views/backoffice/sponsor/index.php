@@ -6,7 +6,7 @@
         <h5 class="mb-0 fw-semibold">Liste des Sponsors</h5>
         <p class="text-muted small mb-0"><?= count($sponsors) ?> sponsor(s) enregistré(s)</p>
     </div>
-    <a href="index.php?controller=sponsor&action=create" class="btn btn-primary">
+    <a href="index.php?page=sponsors_admin&action=create" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i> Nouveau sponsor
     </a>
 </div>
@@ -38,17 +38,17 @@
                     <tr>
                         <td class="text-muted small"><?= $s['id'] ?></td>
                         <td class="fw-semibold"><?= htmlspecialchars($s['nom']) ?></td>
-                        <td><?= htmlspecialchars($s['email']) ?></td>
-                        <td><?= htmlspecialchars($s['telephone']) ?></td>
+                        <td><?= htmlspecialchars($s['email'] ?? '-') ?></td>
+                        <td><?= htmlspecialchars($s['telephone'] ?? '-') ?></td>
                         <td>
-                            <?php $badges = ['bronze'=>'warning','argent'=>'secondary','or'=>'warning','platine'=>'info']; ?>
-                            <span class="badge text-bg-<?= $badges[$s['niveau']] ?? 'secondary' ?>">
-                                <?= ucfirst($s['niveau']) ?>
+                            <?php $badges = ['bronze'=>'warning','argent'=>'secondary','silver'=>'secondary','or'=>'warning','gold'=>'warning','platine'=>'info','platinium'=>'info']; ?>
+                            <span class="badge text-bg-<?= $badges[$s['niveau'] ?? ''] ?? 'secondary' ?>">
+                                <?= ucfirst($s['niveau'] ?? '-') ?>
                             </span>
                         </td>
-                        <td><?= number_format($s['montant'], 2, ',', ' ') ?></td>
+                        <td><?= number_format((float)($s['montant'] ?? 0), 2, ',', ' ') ?></td>
                         <td>
-                            <?php if ($s['site_web']): ?>
+                            <?php if (!empty($s['site_web'])): ?>
                                 <a href="<?= htmlspecialchars($s['site_web']) ?>" target="_blank" class="small">
                                     <i class="bi bi-link-45deg"></i> Voir
                                 </a>
@@ -57,11 +57,11 @@
                             <?php endif; ?>
                         </td>
                         <td class="text-center">
-                            <a href="index.php?controller=sponsor&action=edit&id=<?= $s['id'] ?>"
+                            <a href="index.php?page=sponsors_admin&action=edit&id=<?= $s['id'] ?>"
                                class="btn btn-sm btn-outline-primary me-1" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="index.php?controller=sponsor&action=delete&id=<?= $s['id'] ?>"
+                            <a href="index.php?page=sponsors_admin&action=delete&id=<?= $s['id'] ?>"
                                class="btn btn-sm btn-outline-danger js-confirm-delete" title="Supprimer"
                                data-msg="Supprimer le sponsor « <?= htmlspecialchars($s['nom']) ?> » ?">
                                 <i class="bi bi-trash"></i>
@@ -77,3 +77,4 @@
 </div>
 
 <?php require __DIR__ . '/../layout_footer.php'; ?>
+

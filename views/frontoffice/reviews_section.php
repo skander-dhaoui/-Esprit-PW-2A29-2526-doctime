@@ -77,7 +77,6 @@
                         class="form-control" 
                         rows="4"
                         placeholder="Partagez vos impressions (ou dictez vocalement)..."
-                        maxlength="2000"
                     ></textarea>
                     <div class="d-flex justify-content-between mt-2 align-items-center">
                         <small class="text-muted">Min 10, Max 2000 caractères</small>
@@ -974,4 +973,6 @@ document.querySelectorAll('.rating-star').forEach((s, i) => {
 
 console.log('✅ Review form initialized');
 </script>
+
+
 

@@ -6,7 +6,7 @@
         <h5 class="mb-0 fw-semibold">Liste des Événements</h5>
         <p class="text-muted small mb-0"><?= count($evenements) ?> événement(s)</p>
     </div>
-    <a href="index.php?controller=evenement&action=create" class="btn btn-primary">
+    <a href="index.php?page=evenements_admin&action=create" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i> Nouvel événement
     </a>
 </div>
@@ -69,11 +69,11 @@
                         </td>
                         <td><?= $e['sponsor_nom'] ? htmlspecialchars($e['sponsor_nom']) : '<span class="text-muted">—</span>' ?></td>
                         <td class="text-center">
-                            <a href="index.php?controller=evenement&action=edit&id=<?= $e['id'] ?>"
+                            <a href="index.php?page=evenements_admin&action=edit&id=<?= $e['id'] ?>"
                                class="btn btn-sm btn-outline-primary me-1" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="index.php?controller=evenement&action=delete&id=<?= $e['id'] ?>"
+                            <a href="index.php?page=evenements_admin&action=delete&id=<?= $e['id'] ?>"
                                class="btn btn-sm btn-outline-danger js-confirm-delete" title="Supprimer"
                                data-msg="Supprimer l'événement « <?= htmlspecialchars($e['titre']) ?> » ? Toutes les participations seront également supprimées.">
                                 <i class="bi bi-trash"></i>
@@ -89,3 +89,4 @@
 </div>
 
 <?php require __DIR__ . '/../layout_footer.php'; ?>
+

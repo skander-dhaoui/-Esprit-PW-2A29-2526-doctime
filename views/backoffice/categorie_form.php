@@ -170,7 +170,7 @@ $old = $old ?? [];
                 <div class="form-row">
                     <div class="form-group">
                         <label>Nom <span class="req">*</span></label>
-                        <input type="text" id="nom" name="nom" maxlength="100"
+                        <input type="text" id="nom" name="nom"
                                value="<?= htmlspecialchars($old['nom'] ?? $categorie['nom'] ?? '') ?>"
                                placeholder="Ex: Antibiotiques"
                                oninput="updateSlugPreview(this.value)">
@@ -197,7 +197,7 @@ $old = $old ?? [];
                 <div class="form-row full">
                     <div class="form-group">
                         <label>Description</label>
-                        <textarea name="description" id="description" maxlength="500"
+                        <textarea name="description" id="description"
                                   placeholder="Description courte de la catégorie…"><?= htmlspecialchars($old['description'] ?? $categorie['description'] ?? '') ?></textarea>
                         <div class="char-counter" id="desc-counter" style="font-size:11px;color:var(--gray-700);text-align:right;margin-top:4px;">0 / 500</div>
                     </div>
@@ -328,3 +328,5 @@ previewImage(document.getElementById('image').value);
 </script>
 </body>
 </html>
+
+

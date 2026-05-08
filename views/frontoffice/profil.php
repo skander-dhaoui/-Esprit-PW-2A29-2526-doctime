@@ -547,7 +547,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
+                            <input type="text" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
                             <div class="error-container" id="email-error"></div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -970,3 +970,5 @@
     </script>
 </body>
 </html>
+
+

@@ -120,11 +120,11 @@ $formAction = $isEdit
                                 </label>
                                 <input type="text" name="titre" class="form-control"
                                        value="<?= htmlspecialchars($event['titre'] ?? '') ?>"
-                                       placeholder="Nom de l'événement" required>
+                                       placeholder="Nom de l'événement">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Image (URL)</label>
-                                <input type="url" name="image" class="form-control"
+                                <input type="text" name="image" class="form-control"
                                        value="<?= htmlspecialchars($event['image'] ?? '') ?>"
                                        placeholder="https://...">
                             </div>
@@ -137,16 +137,14 @@ $formAction = $isEdit
                                     Date de début <span class="required-star">*</span>
                                 </label>
                                 <input type="datetime-local" name="date_debut" class="form-control"
-                                       value="<?= isset($event['date_debut']) ? date('Y-m-d\TH:i', strtotime($event['date_debut'])) : '' ?>"
-                                       required>
+                                       value="<?= isset($event['date_debut']) ? date('Y-m-d\TH:i', strtotime($event['date_debut'])) : '' ?>">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
                                     Date de fin <span class="required-star">*</span>
                                 </label>
                                 <input type="datetime-local" name="date_fin" class="form-control"
-                                       value="<?= isset($event['date_fin']) ? date('Y-m-d\TH:i', strtotime($event['date_fin'])) : '' ?>"
-                                       required>
+                                       value="<?= isset($event['date_fin']) ? date('Y-m-d\TH:i', strtotime($event['date_fin'])) : '' ?>">
                             </div>
                         </div>
 
@@ -170,7 +168,7 @@ $formAction = $isEdit
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Capacité maximale</label>
-                                <input type="number" name="capacite_max" class="form-control"
+                                <input type="text" name="capacite_max" class="form-control"
                                        value="<?= htmlspecialchars($event['capacite_max'] ?? '0') ?>"
                                        min="0" placeholder="0 = illimité">
                             </div>
@@ -178,7 +176,7 @@ $formAction = $isEdit
                                 <label class="form-label">Prix (€)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-euro-sign"></i></span>
-                                    <input type="number" name="prix" class="form-control"
+                                    <input type="text" name="prix" class="form-control"
                                            step="0.01" min="0"
                                            value="<?= htmlspecialchars($event['prix'] ?? '0') ?>">
                                 </div>
@@ -247,3 +245,5 @@ document.getElementById('eventForm').addEventListener('submit', function(e) {
 </script>
 </body>
 </html>
+
+

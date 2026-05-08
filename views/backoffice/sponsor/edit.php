@@ -6,31 +6,19 @@
         <h5 class="mb-0 fw-semibold">Modifier : <?= htmlspecialchars($old['nom'] ?? '') ?></h5>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a href="index.php?controller=sponsor&action=index">Sponsors</a></li>
+                <li class="breadcrumb-item"><a href="index.php?page=sponsors_admin">Sponsors</a></li>
                 <li class="breadcrumb-item active">Modifier</li>
             </ol>
         </nav>
     </div>
 </div>
 
-<?php if (!empty($errors)): ?>
-    <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        <strong>Veuillez corriger les erreurs suivantes :</strong>
-        <ul class="mb-0 mt-1">
-            <?php foreach ($errors as $e): ?>
-                <li><?= htmlspecialchars($e) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-<?php endif; ?>
-
 <div class="card">
     <div class="card-header py-3">
         <h6 class="mb-0"><i class="bi bi-building me-2"></i>Informations du sponsor</h6>
     </div>
     <div class="card-body">
-        <form action="index.php?controller=sponsor&action=update" method="POST"
+        <form action="index.php?page=sponsors_admin&action=edit" method="POST"
               id="form-sponsor" novalidate>
             <input type="hidden" name="id" value="<?= (int)($old['id'] ?? 0) ?>">
 
@@ -41,8 +29,8 @@
                     <input type="text" id="nom" name="nom"
                            class="form-control <?= isset($errors['nom']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
-                           data-validate="required|minlength:2|maxlength:100"
-                           data-label="Nom">
+                          
+                          >
                     <?php if (isset($errors['nom'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['nom']) ?></div>
                     <?php endif; ?>
@@ -53,8 +41,8 @@
                     <input type="text" id="email" name="email"
                            class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['email'] ?? '') ?>"
-                           data-validate="required|email"
-                           data-label="Email">
+                          
+                          >
                     <?php if (isset($errors['email'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['email']) ?></div>
                     <?php endif; ?>
@@ -65,8 +53,8 @@
                     <input type="text" id="telephone" name="telephone"
                            class="form-control <?= isset($errors['telephone']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['telephone'] ?? '') ?>"
-                           data-validate="required|phone"
-                           data-label="Téléphone">
+                          
+                          >
                     <?php if (isset($errors['telephone'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['telephone']) ?></div>
                     <?php endif; ?>
@@ -77,8 +65,8 @@
                     <input type="text" id="site_web" name="site_web"
                            class="form-control <?= isset($errors['site_web']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['site_web'] ?? '') ?>"
-                           data-validate="url"
-                           data-label="Site web">
+                          
+                          >
                     <?php if (isset($errors['site_web'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['site_web']) ?></div>
                     <?php endif; ?>
@@ -88,8 +76,8 @@
                     <label class="form-label" for="niveau">Niveau <span class="text-danger">*</span></label>
                     <select id="niveau" name="niveau"
                             class="form-select <?= isset($errors['niveau']) ? 'is-invalid' : '' ?>"
-                            data-validate="required"
-                            data-label="Niveau">
+                           
+                           >
                         <option value="">-- Choisir --</option>
                         <?php foreach (['bronze','argent','or','platine'] as $n): ?>
                             <option value="<?= $n ?>" <?= ($old['niveau'] ?? '') === $n ? 'selected' : '' ?>>
@@ -107,8 +95,8 @@
                     <input type="text" id="montant" name="montant"
                            class="form-control <?= isset($errors['montant']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['montant'] ?? '') ?>"
-                           data-validate="required|positive"
-                           data-label="Montant">
+                          
+                          >
                     <?php if (isset($errors['montant'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['montant']) ?></div>
                     <?php endif; ?>
@@ -121,7 +109,7 @@
                 <button type="submit" class="btn btn-primary px-4">
                     <i class="bi bi-check-lg me-1"></i> Mettre à jour
                 </button>
-                <a href="index.php?controller=sponsor&action=index" class="btn btn-outline-secondary">
+                <a href="index.php?page=sponsors_admin" class="btn btn-outline-secondary">
                     Annuler
                 </a>
             </div>
@@ -130,3 +118,4 @@
 </div>
 
 <?php require __DIR__ . '/../layout_footer.php'; ?>
+

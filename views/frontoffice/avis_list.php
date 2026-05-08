@@ -672,7 +672,7 @@ foreach ($reviews as &$review) {
                         <div class="mb-3">
                             <label class="form-label">Contenu <span class="text-danger">*</span> (10-2000 caractères)</label>
                             <textarea class="form-control" id="avisContenu" name="contenu" rows="5" 
-                                      placeholder="Partagez votre expérience..." minlength="10" maxlength="2000"></textarea>
+                                      placeholder="Partagez votre expérience..."></textarea>
                             <div class="char-count">
                                 <span id="charCount">0</span>/2000 caractères
                             </div>
@@ -841,3 +841,4 @@ foreach ($reviews as &$review) {
     </script>
 </body>
 </html>
+

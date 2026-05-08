@@ -259,5 +259,233 @@ $isLoggedIn = isset($_SESSION['user_id']);
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- CHATBOT FLOTTANT -->
+<style>
+    .chatbot-widget {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        max-height: 500px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', sans-serif;
+        z-index: 9999;
+        transition: all 0.3s ease;
+    }
+
+    .chatbot-widget.closed {
+        max-height: 60px;
+        width: 60px;
+    }
+
+    .chatbot-header {
+        background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .chatbot-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .chatbot-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    .chatbot-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 370px;
+    }
+
+    .chatbot-message {
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .chatbot-message.bot {
+        background: #f0f0f0;
+        color: #333;
+    }
+
+    .chatbot-message.user {
+        background: #2A7FAA;
+        color: white;
+        margin-left: auto;
+        max-width: 80%;
+    }
+
+    .chatbot-input-area {
+        padding: 12px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 8px;
+    }
+
+    .chatbot-input {
+        flex: 1;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .chatbot-input:focus {
+        border-color: #2A7FAA;
+        box-shadow: 0 0 0 3px rgba(42, 127, 170, 0.1);
+    }
+
+    .chatbot-send {
+        background: #2A7FAA;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .chatbot-send:hover {
+        background: #1e5f80;
+    }
+
+    .chatbot-widget.closed .chatbot-messages,
+    .chatbot-widget.closed .chatbot-input-area {
+        display: none;
+    }
+
+    .chatbot-fab {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+    }
+</style>
+
+<div class="chatbot-widget closed" id="chatbotWidget">
+    <div class="chatbot-header" onclick="toggleChatbot()">
+        <h3>💬 Assistant Événements</h3>
+        <button class="chatbot-close" onclick="closeChatbot()">&times;</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+        <div class="chatbot-message bot">
+            Bonjour! 👋 Je suis votre assistant pour les événements médicaux. Posez-moi vos questions !
+        </div>
+    </div>
+    <div class="chatbot-input-area">
+        <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Votre question..." onkeypress="sendMessage(event)">
+        <button class="chatbot-send" onclick="sendMessage()">Envoyer</button>
+    </div>
+</div>
+
+<script>
+const chatbotWidget = document.getElementById('chatbotWidget');
+const chatbotMessages = document.getElementById('chatbotMessages');
+const chatbotInput = document.getElementById('chatbotInput');
+
+const responses = {
+    'prix|coût|tarif': '💰 Nos événements coûtent entre 25 DT et 200 DT selon le type. Consultez les détails de chaque événement pour le prix exact.',
+    'lieu|adresse|où': '📍 Nous organisons des événements à Hôpital Européen, Espace Santé, Centre de Conférences International et Palais des Congrès.',
+    'date|quand|horaire': '📅 Nos événements se tiennent tout au long de l\'année 2026. Consultez la liste ci-dessus pour les dates précises.',
+    'inscr|reservation|particip': '✅ Cliquez sur "Plus de détails" pour accéder au formulaire d\'inscription. Vous pouvez vous inscrire directement en ligne.',
+    'cardio|cardiologie': '🫀 Notre conférence sur la cardiologie est prévue le 15/06/2026 à l\'Hôpital Européen. Tarif: 150 DT.',
+    'stress|bien-être': '🧘 L\'atelier bien-être et gestion du stress aura lieu le 10/07/2026 à l\'Espace Santé. Tarif: 25 DT.',
+    'pédiatr|pediatrie': '👶 Le congrès international de pédiatrie se tiendra du 12 au 14/11/2026 au Palais des Congrès. Tarif: 200 DT.',
+    'formation|medecin': '👨‍⚕️ La formation continue pour médecins généralistes aura lieu du 20 au 22/09/2026. Tarif: 150 DT.',
+    'sponsor|partenaire': '🤝 Nos sponsors platine soutiennent nos événements. Consultez la page des sponsors pour en savoir plus.',
+    'contact|information': '📞 Vous pouvez nous contacter via la page "Contact" ou directement lors d\'un événement.',
+    'default': '😊 Je ne suis pas sûr de votre question. Essayez des termes comme: prix, date, lieu, inscription, cardiologie, pédiatrie, bien-être, etc.'
+};
+
+function toggleChatbot() {
+    chatbotWidget.classList.toggle('closed');
+    if (!chatbotWidget.classList.contains('closed')) {
+        chatbotInput.focus();
+    }
+}
+
+function closeChatbot() {
+    chatbotWidget.classList.add('closed');
+}
+
+function sendMessage(event) {
+    if (event && event.key !== 'Enter') return;
+    if (event) event.preventDefault();
+
+    const message = chatbotInput.value.trim();
+    if (!message) return;
+
+    // Ajouter le message utilisateur
+    addMessage(message, 'user');
+    chatbotInput.value = '';
+
+    // Générer une réponse
+    setTimeout(() => {
+        const response = getResponse(message);
+        addMessage(response, 'bot');
+    }, 500);
+}
+
+function addMessage(text, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chatbot-message ${sender}`;
+    messageDiv.textContent = text;
+    chatbotMessages.appendChild(messageDiv);
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+}
+
+function getResponse(userMessage) {
+    const lower = userMessage.toLowerCase();
+    
+    for (const [keyword, response] of Object.entries(responses)) {
+        const keywords = keyword.split('|');
+        for (const kw of keywords) {
+            if (lower.includes(kw)) {
+                return response;
+            }
+        }
+    }
+    
+    return responses['default'];
+}
+
+// Afficher le chatbot au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    // Le chatbot est fermé par défaut, cliquer sur le header pour l'ouvrir
+    chatbotWidget.classList.add('closed');
+});
+</script>
+
 </body>
 </html>
+

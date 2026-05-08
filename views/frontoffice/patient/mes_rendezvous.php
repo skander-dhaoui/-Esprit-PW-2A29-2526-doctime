@@ -179,11 +179,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                     <input type="hidden" name="rdv_id" id="edit_rdv_id">
                     <div class="mb-3">
                         <label class="form-label">Date</label>
-                        <input type="date" name="date_rendezvous" id="edit_date" class="form-control" required>
+                        <input type="date" name="date_rendezvous" id="edit_date" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Heure</label>
-                        <select name="heure_rendezvous" id="edit_heure" class="form-select" required>
+                        <select name="heure_rendezvous" id="edit_heure" class="form-select">
                             <option value="">Sélectionner une heure</option>
                             <option value="08:00">08:00</option>
                             <option value="09:00">09:00</option>
@@ -241,3 +241,5 @@ function openEditModal(id, date, heure, motif, medecinId) {
 </script>
 </body>
 </html>
+
+

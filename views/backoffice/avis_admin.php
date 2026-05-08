@@ -243,32 +243,7 @@ try {
 <body>
 
 <!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
-        <h4>MediConnect</h4>
-        <small>Back Office</small>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="index.php?page=dashboard"><i class="fas fa-th-large"></i> Tableau de bord</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-        <a href="index.php?page=avis_admin" class="active"><i class="fas fa-star"></i> Avis</a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
-        <a href="index.php?page=ordonnances"><i class="fas fa-prescription-bottle"></i> Ordonnances</a>
-        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
-        <a href="index.php?page=articles_admin"><i class="fas fa-blog"></i> Blog</a>
-        <a href="index.php?page=evenements_admin"><i class="fas fa-calendar-day"></i> Événements</a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i> Statistiques</a>
-        <a href="index.php?page=logs"><i class="fas fa-history"></i> Historique</a>
-        <a href="index.php?page=settings"><i class="fas fa-cog"></i> Paramètres</a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </nav>
-</div>
-
+<?php include __DIR__ . '/sidebar.php'; ?>
 <div class="main-content">
     <div class="page-header">
         <h4><i class="fas fa-star"></i> Gestion des Avis</h4>
@@ -465,7 +440,7 @@ try {
             <!-- Utilisateur -->
             <div style="margin-bottom: 20px;">
                 <label style="display: block; margin: 0 0 8px; color: #333; font-weight: 500;">Utilisateur *</label>
-                <select id="userId" name="user_id" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <select id="userId" name="user_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                     <option value="">Sélectionner un utilisateur...</option>
                     <?php 
                     try {
@@ -485,7 +460,7 @@ try {
                 <div style="display: flex; gap: 10px;">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
                         <label style="cursor: pointer;">
-                            <input type="radio" name="rating" value="<?= $i ?>" required style="margin-right: 5px;">
+                            <input type="radio" name="rating" value="<?= $i ?>" style="margin-right: 5px;">
                             <span style="font-size: 24px;">â­</span>
                         </label>
                     <?php endfor; ?>
@@ -495,7 +470,7 @@ try {
             <!-- Contenu -->
             <div style="margin-bottom: 20px;">
                 <label style="display: block; margin: 0 0 8px; color: #333; font-weight: 500;">Contenu (10-2000 caractères) *</label>
-                <textarea id="content" name="content" required minlength="10" maxlength="2000" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px;"></textarea>
+                <textarea id="content" name="content" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px;"></textarea>
                 <div style="font-size: 12px; color: #999; margin-top: 5px;">
                     <span id="charCount">0</span>/2000 caractères
                 </div>
@@ -814,3 +789,4 @@ document.addEventListener('keydown', function(e) {
     </div>
 </body>
 </html>
+

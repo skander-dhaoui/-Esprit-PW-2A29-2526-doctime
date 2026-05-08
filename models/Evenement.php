@@ -11,8 +11,8 @@ class Evenement {
     public function findAll(): array {
         $stmt = $this->pdo->query("
             SELECT e.*, s.nom AS sponsor_nom
-            FROM evenement e
-            LEFT JOIN sponsor s ON e.sponsor_id = s.id
+            FROM events e
+            LEFT JOIN sponsors s ON e.sponsor_id = s.id
             ORDER BY e.date_debut DESC
         ");
         return $stmt->fetchAll();
@@ -21,8 +21,8 @@ class Evenement {
     public function findById(int $id): array|false {
         $stmt = $this->pdo->prepare("
             SELECT e.*, s.nom AS sponsor_nom
-            FROM evenement e
-            LEFT JOIN sponsor s ON e.sponsor_id = s.id
+            FROM events e
+            LEFT JOIN sponsors s ON e.sponsor_id = s.id
             WHERE e.id = :id
         ");
         $stmt->execute([':id' => $id]);
@@ -32,8 +32,8 @@ class Evenement {
     public function findUpcoming(): array {
         $stmt = $this->pdo->prepare("
             SELECT e.*, s.nom AS sponsor_nom
-            FROM evenement e
-            LEFT JOIN sponsor s ON e.sponsor_id = s.id
+            FROM events e
+            LEFT JOIN sponsors s ON e.sponsor_id = s.id
             WHERE e.date_debut >= CURDATE()
               AND e.statut = 'planifie'
             ORDER BY e.date_debut ASC
@@ -44,7 +44,7 @@ class Evenement {
 
     public function create(array $data): bool {
         $stmt = $this->pdo->prepare("
-            INSERT INTO evenement
+            INSERT INTO events
                 (titre, description, specialite, lieu, date_debut, date_fin, capacite, prix, statut, sponsor_id)
             VALUES
                 (:titre, :description, :specialite, :lieu, :date_debut, :date_fin, :capacite, :prix, :statut, :sponsor_id)
@@ -65,7 +65,7 @@ class Evenement {
 
     public function update(int $id, array $data): bool {
         $stmt = $this->pdo->prepare("
-            UPDATE evenement
+            UPDATE events
             SET titre       = :titre,
                 description = :description,
                 specialite  = :specialite,

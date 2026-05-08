@@ -266,13 +266,13 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label" for="tarif">Tarif de consultation (DT)</label>
-                            <input type="number" name="tarif" id="tarif" class="form-control"
+                            <input type="text" name="tarif" id="tarif" class="form-control"
                                    placeholder="50" step="5"
                                    value="<?= htmlspecialchars($old['tarif'] ?? '') ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label" for="experience">Années d'expérience</label>
-                            <input type="number" name="experience" id="experience" class="form-control"
+                            <input type="text" name="experience" id="experience" class="form-control"
                                    placeholder="5"
                                    value="<?= htmlspecialchars($old['experience'] ?? '') ?>">
                         </div>
@@ -666,3 +666,5 @@
     </script>
 </body>
 </html>
+
+

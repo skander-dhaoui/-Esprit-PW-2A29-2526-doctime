@@ -114,7 +114,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                     </div>
                     <div class="form-group">
                         <label>Email Contact *</label>
-                        <input type="email" name="email" id="email" value="<?= htmlspecialchars($old['email'] ?? $sponsor['email'] ?? '') ?>">
+                        <input type="text" name="email" id="email" value="<?= htmlspecialchars($old['email'] ?? $sponsor['email'] ?? '') ?>">
                     </div>
                 </div>
 
@@ -125,7 +125,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                     </div>
                     <div class="form-group">
                         <label>Site Web</label>
-                        <input type="url" id="site_web" name="site_web" placeholder="https://" value="<?= htmlspecialchars($old['site_web'] ?? $sponsor['site_web'] ?? '') ?>">
+                        <input type="text" id="site_web" name="site_web" placeholder="https://" value="<?= htmlspecialchars($old['site_web'] ?? $sponsor['site_web'] ?? '') ?>">
                     </div>
                 </div>
             </div>
@@ -145,7 +145,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit') {
                     </div>
                     <div class="form-group">
                         <label>Montant / Budget (TND) *</label>
-                        <input type="number" id="budget" step="0.01" name="budget" value="<?= htmlspecialchars($old['budget'] ?? $sponsor['budget'] ?? '0') ?>">
+                        <input type="text" id="budget" step="0.01" name="budget" value="<?= htmlspecialchars($old['budget'] ?? $sponsor['budget'] ?? '0') ?>">
                     </div>
                 </div>
                 
@@ -219,3 +219,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </body>
 </html>
+
+

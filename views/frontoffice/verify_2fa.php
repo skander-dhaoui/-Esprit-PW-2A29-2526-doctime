@@ -137,7 +137,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 
         <form method="POST" action="/valorys_Copie/index.php?page=verify_2fa" autocomplete="one-time-code">
             <label for="verification_code">Code de verification</label>
-            <input id="verification_code" name="verification_code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
+            <input id="verification_code" name="verification_code" type="text" inputmode="numeric">
 
             <div class="actions">
                 <button class="btn btn-primary" type="submit">Valider</button>
@@ -156,3 +156,4 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 </div>
 </body>
 </html>
+

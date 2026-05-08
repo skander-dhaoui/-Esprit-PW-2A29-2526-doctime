@@ -314,58 +314,7 @@
 <body>
 
 <!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
-        <h4>MediConnect</h4>
-        <small>Back Office</small>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="index.php?page=dashboard">
-            <i class="fas fa-th-large"></i> Tableau de bord
-        </a>
-        <a href="index.php?page=users">
-            <i class="fas fa-users"></i> Utilisateurs
-        </a>
-        <a href="index.php?page=medecins_admin" class="active">
-            <i class="fas fa-user-md"></i> Médecins
-        </a>
-        <a href="index.php?page=patients">
-            <i class="fas fa-user-injured"></i> Patients
-        </a>
-        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
-        <a href="index.php?page=rendez_vous_admin">
-            <i class="fas fa-calendar-check"></i> Rendez-vous
-        </a>
-        <a href="index.php?page=ordonnances">
-            <i class="fas fa-prescription-bottle"></i> Ordonnances
-        </a>
-        <a href="index.php?page=produits_admin">
-            <i class="fas fa-box"></i> Produits
-        </a>
-        <a href="index.php?page=articles_admin">
-            <i class="fas fa-blog"></i> Blog
-        </a>
-        <a href="index.php?page=evenements_admin">
-            <i class="fas fa-calendar-day"></i> Événements
-        </a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=stats">
-            <i class="fas fa-chart-line"></i> Statistiques
-        </a>
-        <a href="index.php?page=logs">
-            <i class="fas fa-history"></i> Historique
-        </a>
-        <a href="index.php?page=settings">
-            <i class="fas fa-cog"></i> Paramètres
-        </a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=logout">
-            <i class="fas fa-sign-out-alt"></i> Déconnexion
-        </a>
-    </nav>
-</div>
-
+<?php include __DIR__ . '/sidebar.php'; ?>
 <!-- Main Content -->
 <div class="main-content">
     <div class="page-header">
@@ -464,13 +413,13 @@
                         <td><?= date('d/m/Y', strtotime($m['created_at'])) ?></td>
                         <td>
                             <div class="d-flex gap-1">
-                                <a href="index.php?page=medecins_admin&action=show&id=<?= $m['id'] ?>" class="btn-action btn-view" title="Voir">
+                                <a href="index.php?page=medecins_admin&action=show&id=<?= $m['user_id'] ?? $m['id'] ?>" class="btn-action btn-view" title="Voir">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="index.php?page=medecins_admin&action=edit&id=<?= $m['id'] ?>" class="btn-action btn-edit" title="Modifier">
+                                <a href="index.php?page=medecins_admin&action=edit&id=<?= $m['user_id'] ?? $m['id'] ?>" class="btn-action btn-edit" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['id'] ?>"
+                                <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['user_id'] ?? $m['id'] ?>"
                                    class="btn-action btn-delete"
                                    title="Supprimer"
                                    data-confirm-action
@@ -525,3 +474,4 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

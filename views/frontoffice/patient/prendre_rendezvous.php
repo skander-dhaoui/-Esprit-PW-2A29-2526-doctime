@@ -65,7 +65,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 <form method="POST" action="/valorys_Copie/index.php?page=prendre_rendez_vous">
                         <div class="mb-3">
                             <label class="form-label">Médecin *</label>
-                            <select name="medecin_id" id="medecin_id" class="form-select" required>
+                            <select name="medecin_id" id="medecin_id" class="form-select">
                                 <option value="">Sélectionner un médecin</option>
                                 <?php foreach ($medecins as $medecin): ?>
                                     <option value="<?= $medecin['id'] ?>" <?= ($medecinId == $medecin['id']) ? 'selected' : '' ?>>
@@ -77,12 +77,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
                         <div class="mb-3">
                             <label class="form-label">Date *</label>
-                            <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>" required>
+                            <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Heure *</label>
-                            <select name="heure_rendezvous" id="heure_rendezvous" class="form-select" required>
+                            <select name="heure_rendezvous" id="heure_rendezvous" class="form-select">
                                 <option value="">Sélectionner une heure</option>
                                 <?php foreach ($slots as $slot): ?>
                                     <option value="<?= $slot ?>"><?= $slot ?></option>
@@ -157,3 +157,5 @@ dateInput.addEventListener('change', loadSlots);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

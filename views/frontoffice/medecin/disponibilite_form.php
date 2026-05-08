@@ -113,7 +113,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                         <i class="fas fa-calendar me-2"></i>Jour de la semaine <span style="color: #dc3545;">*</span>
                     </label>
                     <select class="form-control <?= isset($errors['jour_semaine']) ? 'is-invalid' : '' ?>" 
-                            id="jour_semaine" name="jour_semaine" required>
+                            id="jour_semaine" name="jour_semaine">
                         <option value="">-- Sélectionner un jour --</option>
                         <option value="Lundi" <?= ($old['jour_semaine'] ?? '') === 'Lundi' ? 'selected' : '' ?>>Lundi</option>
                         <option value="Mardi" <?= ($old['jour_semaine'] ?? '') === 'Mardi' ? 'selected' : '' ?>>Mardi</option>
@@ -140,8 +140,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                     </label>
                     <input type="time" 
                            class="form-control <?= isset($errors['heure_debut']) ? 'is-invalid' : '' ?>" 
-                           id="heure_debut" name="heure_debut" value="<?= htmlspecialchars($old['heure_debut'] ?? '') ?>" 
-                           required>
+                           id="heure_debut" name="heure_debut" value="<?= htmlspecialchars($old['heure_debut'] ?? '') ?>">
                     <div class="time-range-note">Exemple: 09:00</div>
                     <?php if (isset($errors['heure_debut'])): ?>
                         <div class="invalid-feedback" style="display: block;">
@@ -157,8 +156,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                     </label>
                     <input type="time" 
                            class="form-control <?= isset($errors['heure_fin']) ? 'is-invalid' : '' ?>" 
-                           id="heure_fin" name="heure_fin" value="<?= htmlspecialchars($old['heure_fin'] ?? '') ?>" 
-                           required>
+                           id="heure_fin" name="heure_fin" value="<?= htmlspecialchars($old['heure_fin'] ?? '') ?>">
                     <div class="time-range-note">Exemple: 17:00 (doit être après l'heure de début)</div>
                     <?php if (isset($errors['heure_fin'])): ?>
                         <div class="invalid-feedback" style="display: block;">
@@ -280,3 +278,5 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
     </script>
 </body>
 </html>
+
+

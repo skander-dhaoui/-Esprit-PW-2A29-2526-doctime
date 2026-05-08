@@ -35,11 +35,10 @@
                             <label class="form-label fw-semibold" for="email">
                                 <i class="bi bi-envelope me-1"></i>Votre adresse e-mail
                             </label>
-                            <input type="email" id="email" name="email"
+                            <input type="text" id="email" name="email"
                                    class="form-control"
                                    placeholder="votre@email.com"
-                                   value="<?= htmlspecialchars($email) ?>"
-                                   required>
+                                   value="<?= htmlspecialchars($email) ?>">
                         </div>
                         <div class="col-md-4">
                             <button type="submit" class="btn btn-green w-100">
@@ -171,3 +170,5 @@
 </div>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+
+
