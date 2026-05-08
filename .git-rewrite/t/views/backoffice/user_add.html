@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un utilisateur - DOCtime Back Office</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+
+        /* SIDEBAR */
+        .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #1e2a3e; color: white; z-index: 100; }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header .logo-img { width: 130px; height: auto; filter: brightness(0) invert(1); margin-bottom: 6px; }
+        .sidebar-header small { color: rgba(255,255,255,0.6); font-size: 12px; }
+        .sidebar-menu { padding: 20px 0; }
+        .sidebar-menu a { display: block; padding: 12px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s; font-weight: 500; }
+        .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.1); color: white; border-left: 4px solid #4CAF50; }
+        .sidebar-menu i { width: 25px; margin-right: 12px; }
+
+        /* MAIN */
+        .main-content { margin-left: 280px; padding: 20px; }
+
+        /* TOPBAR */
+        .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-size: 20px; font-weight: 600; color: #1e2a3e; }
+        .breadcrumb-custom { font-size: 13px; color: #888; margin-top: 4px; }
+        .breadcrumb-custom a { color: #4CAF50; text-decoration: none; }
+        .admin-info { display: flex; align-items: center; gap: 15px; }
+        .admin-avatar { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; }
+
+        /* FORM CARD */
+        .form-card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-card-title { font-size: 16px; font-weight: 600; color: #1e2a3e; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
+        .form-card-title i { color: #4CAF50; }
+
+        /* AVATAR UPLOAD */
+        .avatar-upload-zone { display: flex; align-items: center; gap: 24px; margin-bottom: 10px; }
+        .avatar-preview { width: 90px; height: 90px; border-radius: 50%; background: #e8f5e9; border: 3px dashed #4CAF50; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #4CAF50; cursor: pointer; overflow: hidden; position: relative; flex-shrink: 0; transition: all 0.3s; }
+        .avatar-preview:hover { background: #d4edda; }
+        .avatar-preview img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .avatar-upload-info p { font-size: 14px; color: #555; margin-bottom: 6px; }
+        .avatar-upload-info small { color: #999; font-size: 12px; }
+        .btn-upload { background: #f4f6f9; border: 1px solid #ddd; color: #555; padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .btn-upload:hover { background: #e9ecef; }
+
+        /* FORM ELEMENTS */
+        .form-label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
+        .form-label .required { color: #dc3545; margin-left: 2px; }
+        .form-control, .form-select { border-radius: 10px; border: 1px solid #e0e0e0; font-size: 14px; padding: 10px 14px; transition: all 0.2s; color: #333; }
+        .form-control:focus, .form-select:focus { border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.15); outline: none; }
+        .form-control::placeholder { color: #bbb; }
+        .input-group-text { background: #f4f6f9; border: 1px solid #e0e0e0; border-radius: 10px 0 0 10px; color: #888; font-size: 14px; }
+        .input-group .form-control { border-radius: 0 10px 10px 0; }
+
+        /* PASSWORD STRENGTH */
+        .password-strength { margin-top: 8px; }
+        .strength-bar { height: 4px; border-radius: 4px; background: #e0e0e0; overflow: hidden; margin-bottom: 4px; }
+        .strength-fill { height: 100%; border-radius: 4px; width: 0; transition: all 0.4s; }
+        .strength-text { font-size: 12px; color: #888; }
+
+        /* ROLE SELECTOR */
+        .role-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .role-option { border: 2px solid #e0e0e0; border-radius: 12px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .role-option:hover { border-color: #4CAF50; background: #f9fff9; }
+        .role-option.selected { border-color: #4CAF50; background: #e8f5e9; }
+        .role-option .role-icon { font-size: 26px; margin-bottom: 6px; }
+        .role-option .role-name { font-size: 13px; font-weight: 600; color: #1e2a3e; }
+        .role-option .role-desc { font-size: 11px; color: #888; margin-top: 2px; }
+        .role-option input[type="radio"] { display: none; }
+
+        /* TOGGLE SWITCH */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-info .toggle-label { font-size: 14px; font-weight: 500; color: #333; }
+        .toggle-info .toggle-desc { font-size: 12px; color: #888; margin-top: 2px; }
+        .form-switch .form-check-input { width: 44px; height: 24px; cursor: pointer; }
+        .form-check-input:checked { background-color: #4CAF50; border-color: #4CAF50; }
+
+        /* SPECIALITÉ (médecin) */
+        .medecin-fields { display: none; }
+        .medecin-fields.visible { display: block; }
+
+        /* BUTTONS */
+        .btn-save { background: linear-gradient(135deg, #4CAF50, #2A7FAA); color: white; border: none; border-radius: 10px; padding: 12px 32px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-save:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(76,175,80,0.35); }
+        .btn-cancel { background: white; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 12px 24px; font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; transition: all 0.2s; display: inline-block; }
+        .btn-cancel:hover { background: #f4f6f9; color: #333; }
+
+        /* ALERT */
+        .alert-success-custom { background: #d4edda; border-radius: 10px; padding: 14px 18px; color: #155724; font-size: 14px; display: none; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .alert-success-custom.show { display: flex; }
+        .alert-error-custom { background: #f8d7da; border-radius: 10px; padding: 14px 18px; color: #721c24; font-size: 14px; display: none; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .alert-error-custom.show { display: flex; }
+
+        /* REQUIRED LEGEND */
+        .form-legend { font-size: 12px; color: #888; margin-bottom: 20px; }
+        .form-legend span { color: #dc3545; }
+
+        /* RESPONSIVE */
+        @media (max-width: 992px) {
+            .sidebar { width: 80px; }
+            .sidebar-header .logo-img { width: 50px; }
+            .sidebar-header small { display: none; }
+            .sidebar-menu a span { display: none; }
+            .sidebar-menu a { text-align: center; padding: 15px; }
+            .sidebar-menu i { margin-right: 0; font-size: 20px; }
+            .main-content { margin-left: 80px; }
+            .role-selector { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 576px) {
+            .avatar-upload-zone { flex-direction: column; align-items: flex-start; }
+            .role-selector { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="sidebar-header">
+        <img src="logo_doctime.png" alt="DocTime Logo" class="logo-img">
+        <br><small>Back Office</small>
+    </div>
+    <div class="sidebar-menu">
+        <a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> <span>Tableau de bord</span></a>
+        <a href="users_list.html" class="active"><i class="fas fa-users"></i> <span>Utilisateurs</span></a>
+        <a href="medecins_list.html"><i class="fas fa-user-md"></i> <span>Médecins</span></a>
+        <a href="#"><i class="fas fa-calendar-check"></i> <span>Rendez-vous</span></a>
+        <a href="#"><i class="fas fa-prescription-bottle"></i> <span>Ordonnances</span></a>
+        <a href="#"><i class="fas fa-box"></i> <span>Produits</span></a>
+        <a href="#"><i class="fas fa-blog"></i> <span>Blog</span></a>
+        <a href="#"><i class="fas fa-calendar-day"></i> <span>Événements</span></a>
+        <a href="stats.html"><i class="fas fa-chart-line"></i> <span>Statistiques</span></a>
+        <a href="logs.html"><i class="fas fa-history"></i> <span>Historique</span></a>
+        <a href="#"><i class="fas fa-cog"></i> <span>Paramètres</span></a>
+        <a href="login.html"><i class="fas fa-sign-out-alt"></i> <span>Déconnexion</span></a>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="navbar-top">
+        <div>
+            <div class="page-title"><i class="fas fa-user-plus me-2" style="color:#4CAF50;"></i>Ajouter un utilisateur</div>
+            <div class="breadcrumb-custom">
+                <a href="dashboard.html">Tableau de bord</a> &rsaquo;
+                <a href="users_list.html">Utilisateurs</a> &rsaquo;
+                <span>Ajouter</span>
+            </div>
+        </div>
+        <div class="admin-info">
+            <span><i class="fas fa-bell" style="color:#888;"></i></span>
+            <div class="admin-avatar">A</div>
+            <span>Admin</span>
+        </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="alert-success-custom" id="alertSuccess">
+        <i class="fas fa-check-circle fa-lg"></i>
+        <span id="alertSuccessMsg">Utilisateur créé avec succès !</span>
+    </div>
+    <div class="alert-error-custom" id="alertError">
+        <i class="fas fa-exclamation-circle fa-lg"></i>
+        <span id="alertErrorMsg">Veuillez corriger les erreurs ci-dessous.</span>
+    </div>
+
+    <form id="addUserForm" novalidate>
+        <div class="row">
+
+            <!-- COLONNE GAUCHE -->
+            <div class="col-lg-8">
+
+                <!-- INFOS PERSONNELLES -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-id-card"></i> Informations personnelles
+                    </div>
+                    <p class="form-legend"><span>*</span> Champs obligatoires</p>
+
+                    <!-- Avatar -->
+                    <div class="avatar-upload-zone mb-3">
+                        <div class="avatar-preview" id="avatarPreview" onclick="document.getElementById('avatarInput').click()">
+                            <i class="fas fa-camera"></i>
+                            <img id="avatarImg" src="" alt="">
+                        </div>
+                        <div class="avatar-upload-info">
+                            <p>Photo de profil</p>
+                            <small>JPG, PNG ou GIF — 2 Mo max</small><br>
+                            <button type="button" class="btn-upload mt-2" onclick="document.getElementById('avatarInput').click()">
+                                <i class="fas fa-upload me-1"></i> Choisir une photo
+                            </button>
+                            <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="previewAvatar(event)">
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Prénom <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="prenom" placeholder="Ex : Ahmed" required>
+                            <div class="invalid-feedback">Le prénom est requis.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nom <span class="required">*</span></label>
+                            <input type="text" class="form-control" id="nom" placeholder="Ex : Ben Ali" required>
+                            <div class="invalid-feedback">Le nom est requis.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email <span class="required">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" placeholder="exemple@email.com" required>
+                            </div>
+                            <div class="invalid-feedback">Email invalide.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Téléphone</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="tel" class="form-control" id="telephone" placeholder="+216 XX XXX XXX">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date de naissance</label>
+                            <input type="date" class="form-control" id="dateNaissance">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sexe</label>
+                            <select class="form-select" id="sexe">
+                                <option value="">-- Sélectionner --</option>
+                                <option value="homme">Homme</option>
+                                <option value="femme">Femme</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Adresse</label>
+                            <input type="text" class="form-control" id="adresse" placeholder="Rue, Ville, Gouvernorat">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RÔLE -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-user-tag"></i> Rôle de l'utilisateur <span class="required" style="color:#dc3545;">*</span>
+                    </div>
+                    <div class="role-selector">
+                        <label class="role-option selected" id="rolePatient" onclick="selectRole('patient')">
+                            <input type="radio" name="role" value="patient" checked>
+                            <div class="role-icon">🧑‍⚕️</div>
+                            <div class="role-name">Patient</div>
+                            <div class="role-desc">Accès aux RDV & ordonnances</div>
+                        </label>
+                        <label class="role-option" id="roleMedecin" onclick="selectRole('medecin')">
+                            <input type="radio" name="role" value="medecin">
+                            <div class="role-icon">👨‍⚕️</div>
+                            <div class="role-name">Médecin</div>
+                            <div class="role-desc">Gestion des consultations</div>
+                        </label>
+                        <label class="role-option" id="roleAdmin" onclick="selectRole('admin')">
+                            <input type="radio" name="role" value="admin">
+                            <div class="role-icon">🛡️</div>
+                            <div class="role-name">Administrateur</div>
+                            <div class="role-desc">Accès complet back-office</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CHAMPS MÉDECIN -->
+                <div class="form-card medecin-fields" id="medecinFields">
+                    <div class="form-card-title">
+                        <i class="fas fa-stethoscope"></i> Informations médicales
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Spécialité <span class="required">*</span></label>
+                            <select class="form-select" id="specialite">
+                                <option value="">-- Choisir une spécialité --</option>
+                                <option>Médecin généraliste</option>
+                                <option>Cardiologue</option>
+                                <option>Dermatologue</option>
+                                <option>Gynécologue</option>
+                                <option>Pédiatre</option>
+                                <option>Ophtalmologue</option>
+                                <option>Orthopédiste</option>
+                                <option>Neurologue</option>
+                                <option>Psychiatre</option>
+                                <option>Radiologue</option>
+                                <option>Chirurgien</option>
+                                <option>Autre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">N° Ordre médical</label>
+                            <input type="text" class="form-control" id="ordreNum" placeholder="Ex : TN-12345">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Établissement</label>
+                            <input type="text" class="form-control" id="etablissement" placeholder="Clinique / Hôpital">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Années d'expérience</label>
+                            <input type="number" class="form-control" id="experience" min="0" max="60" placeholder="Ex : 10">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Biographie</label>
+                            <textarea class="form-control" id="bio" rows="3" placeholder="Courte description professionnelle..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOT DE PASSE -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-lock"></i> Mot de passe
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Mot de passe <span class="required">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" placeholder="••••••••" oninput="checkStrength()" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('password', this)" style="border-radius:0 10px 10px 0; border-color:#e0e0e0;">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength mt-2">
+                                <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                                <span class="strength-text" id="strengthText">Entrez un mot de passe</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirmer le mot de passe <span class="required">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="confirmPassword" placeholder="••••••••" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('confirmPassword', this)" style="border-radius:0 10px 10px 0; border-color:#e0e0e0;">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div id="matchMsg" class="mt-1" style="font-size:12px;"></div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="sendCredentials" checked>
+                                <label class="form-check-label" for="sendCredentials" style="font-size:13px; color:#555;">
+                                    Envoyer les identifiants par email à l'utilisateur
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COLONNE DROITE -->
+            <div class="col-lg-4">
+
+                <!-- STATUT & ACCÈS -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-toggle-on"></i> Statut & Accès
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Compte actif</div>
+                            <div class="toggle-desc">L'utilisateur peut se connecter</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                        </div>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Email vérifié</div>
+                            <div class="toggle-desc">Marquer comme vérifié</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="emailVerified">
+                        </div>
+                    </div>
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <div class="toggle-label">Notifications email</div>
+                            <div class="toggle-desc">Recevoir les alertes système</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notifEmail" checked>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RÉCAPITULATIF -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-info-circle"></i> Récapitulatif
+                    </div>
+                    <div id="recap" style="font-size:13px; color:#555; line-height:2;">
+                        <div><i class="fas fa-user me-2" style="color:#4CAF50; width:16px;"></i> <span id="recapNom">—</span></div>
+                        <div><i class="fas fa-envelope me-2" style="color:#2A7FAA; width:16px;"></i> <span id="recapEmail">—</span></div>
+                        <div><i class="fas fa-tag me-2" style="color:#ffc107; width:16px;"></i> <span id="recapRole">Patient</span></div>
+                        <div><i class="fas fa-circle me-2" style="color:#4CAF50; width:16px;" id="recapStatusIcon"></i> <span id="recapStatus">Actif</span></div>
+                    </div>
+                </div>
+
+                <!-- NOTES -->
+                <div class="form-card">
+                    <div class="form-card-title">
+                        <i class="fas fa-sticky-note"></i> Notes internes
+                    </div>
+                    <textarea class="form-control" id="notes" rows="4" placeholder="Notes visibles uniquement par les administrateurs..."></textarea>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="form-card" style="padding: 20px;">
+                    <button type="submit" class="btn-save w-100 mb-3" onclick="submitForm(event)">
+                        <i class="fas fa-save me-2"></i> Créer l'utilisateur
+                    </button>
+                    <a href="users_list.html" class="btn-cancel w-100 text-center">
+                        <i class="fas fa-times me-2"></i> Annuler
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // -- ROLE SELECTOR --
+    function selectRole(role) {
+        document.querySelectorAll('.role-option').forEach(el => el.classList.remove('selected'));
+        document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1)).classList.add('selected');
+        document.getElementById('medecinFields').classList.toggle('visible', role === 'medecin');
+        updateRecap();
+    }
+
+    // -- AVATAR PREVIEW --
+    function previewAvatar(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.getElementById('avatarImg');
+            img.src = e.target.result;
+            img.style.display = 'block';
+            document.getElementById('avatarPreview').querySelector('i').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // -- PASSWORD TOGGLE --
+    function togglePwd(id, btn) {
+        const input = document.getElementById(id);
+        const isText = input.type === 'text';
+        input.type = isText ? 'password' : 'text';
+        btn.innerHTML = isText ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+    }
+
+    // -- PASSWORD STRENGTH --
+    function checkStrength() {
+        const pwd = document.getElementById('password').value;
+        const fill = document.getElementById('strengthFill');
+        const text = document.getElementById('strengthText');
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[0-9]/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+        const levels = [
+            { w: '0%',   color: '#e0e0e0', label: 'Entrez un mot de passe' },
+            { w: '25%',  color: '#f44336', label: 'Très faible' },
+            { w: '50%',  color: '#ff9800', label: 'Moyen' },
+            { w: '75%',  color: '#2196F3', label: 'Fort' },
+            { w: '100%', color: '#4CAF50', label: 'Très fort' }
+        ];
+        const lvl = pwd.length === 0 ? levels[0] : levels[Math.min(score, 4)];
+        fill.style.width = lvl.w;
+        fill.style.background = lvl.color;
+        text.textContent = lvl.label;
+        text.style.color = lvl.color;
+        checkMatch();
+    }
+
+    // -- PASSWORD MATCH --
+    function checkMatch() {
+        const pwd = document.getElementById('password').value;
+        const conf = document.getElementById('confirmPassword').value;
+        const msg = document.getElementById('matchMsg');
+        if (!conf) { msg.textContent = ''; return; }
+        if (pwd === conf) {
+            msg.innerHTML = '<span style="color:#4CAF50;"><i class="fas fa-check-circle me-1"></i>Les mots de passe correspondent</span>';
+        } else {
+            msg.innerHTML = '<span style="color:#f44336;"><i class="fas fa-times-circle me-1"></i>Les mots de passe ne correspondent pas</span>';
+        }
+    }
+    document.getElementById('confirmPassword').addEventListener('input', checkMatch);
+
+    // -- LIVE RECAP --
+    function updateRecap() {
+        const prenom = document.getElementById('prenom').value;
+        const nom = document.getElementById('nom').value;
+        const email = document.getElementById('email').value;
+        const active = document.getElementById('isActive').checked;
+        const selectedRole = document.querySelector('input[name="role"]:checked');
+        const roleLabels = { patient: 'Patient', medecin: 'Médecin', admin: 'Administrateur' };
+
+        document.getElementById('recapNom').textContent = (prenom || nom) ? `${prenom} ${nom}`.trim() : '—';
+        document.getElementById('recapEmail').textContent = email || '—';
+        document.getElementById('recapRole').textContent = selectedRole ? roleLabels[selectedRole.value] : 'Patient';
+        document.getElementById('recapStatus').textContent = active ? 'Actif' : 'Inactif';
+        document.getElementById('recapStatusIcon').style.color = active ? '#4CAF50' : '#dc3545';
+    }
+
+    ['prenom','nom','email'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateRecap);
+    });
+    document.getElementById('isActive').addEventListener('change', updateRecap);
+
+    // -- FORM SUBMIT --
+    function submitForm(e) {
+        e.preventDefault();
+        const prenom = document.getElementById('prenom').value.trim();
+        const nom = document.getElementById('nom').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const pwd = document.getElementById('password').value;
+        const conf = document.getElementById('confirmPassword').value;
+
+        hideAlerts();
+
+        if (!prenom || !nom || !email || !pwd || !conf) {
+            showError('Veuillez remplir tous les champs obligatoires.');
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showError('Adresse email invalide.');
+            return;
+        }
+        if (pwd !== conf) {
+            showError('Les mots de passe ne correspondent pas.');
+            return;
+        }
+        if (pwd.length < 6) {
+            showError('Le mot de passe doit contenir au moins 6 caractères.');
+            return;
+        }
+
+        // Simulate save
+        const btn = document.querySelector('.btn-save');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Enregistrement...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-save me-2"></i> Créer l\'utilisateur';
+            btn.disabled = false;
+            showSuccess(`Utilisateur "${prenom} ${nom}" créé avec succès !`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 1200);
+    }
+
+    function showSuccess(msg) {
+        document.getElementById('alertSuccessMsg').textContent = msg;
+        document.getElementById('alertSuccess').classList.add('show');
+    }
+    function showError(msg) {
+        document.getElementById('alertErrorMsg').textContent = msg;
+        document.getElementById('alertError').classList.add('show');
+    }
+    function hideAlerts() {
+        document.getElementById('alertSuccess').classList.remove('show');
+        document.getElementById('alertError').classList.remove('show');
+    }
+</script>
+</body>
+</html>

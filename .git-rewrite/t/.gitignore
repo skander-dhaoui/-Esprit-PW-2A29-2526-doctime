@@ -1,0 +1,30 @@
+# Environment configuration
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+vendor/
+
+# Cache
+.cache/
+__pycache__/
+
+# Uploads (keep directory but ignore contents)
+uploads/*
+!uploads/.gitkeep

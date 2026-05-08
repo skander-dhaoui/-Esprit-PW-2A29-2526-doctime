@@ -1,0 +1,6 @@
+tree 87da35b869b2cc4c7f8f29e71795a3025b34ce55
+parent 76bf430ebfd48124923f677bba810a074b4c31c1
+author Afnen Gorai <tonemail@example.com> 1778262162 +0100
+committer Afnen Gorai <tonemail@example.com> 1778262162 +0100
+
+Add comprehensive .gitignore to protect secrets

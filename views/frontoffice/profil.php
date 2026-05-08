@@ -425,7 +425,7 @@
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
+            <a class="navbar-brand" href="index.php?page=accueil">
                 <i class="fas fa-stethoscope"></i> MediConnect
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -434,19 +434,19 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-home"></i> Accueil</a>
+                        <a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home"></i> Accueil</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
+                        <a class="nav-link" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a>
+                        <a class="nav-link" href="index.php?page=avis"><i class="fas fa-star"></i> Avis</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="/valorys_Copie/index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
+                        <a class="nav-link active" href="index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+                        <a class="nav-link" href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
                     </li>
                 </ul>
             </div>
@@ -479,7 +479,7 @@
                 <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()" title="Changer la photo">
                     <i class="fas fa-camera"></i>
                 </div>
-                <form id="avatarForm" method="POST" action="/valorys_Copie/index.php?page=profil" enctype="multipart/form-data">
+                <form id="avatarForm" method="POST" action="index.php?page=profil" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_avatar">
                     <input type="file" name="avatar" id="avatarInput" 
                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" 
@@ -530,7 +530,7 @@
                 <i class="fas fa-user-circle"></i> Informations personnelles
             </div>
             <div class="card-body">
-                <form method="POST" action="/valorys_Copie/index.php?page=profil" id="profileForm" novalidate>
+                <form method="POST" action="index.php?page=profil" id="profileForm" novalidate>
                     <input type="hidden" name="action" value="update_profile">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -547,7 +547,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="text" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
+                            <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
                             <div class="error-container" id="email-error"></div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -590,7 +590,7 @@
                         <button type="submit" class="btn-save">
                             <i class="fas fa-save me-2"></i> Enregistrer
                         </button>
-                        <a href="/valorys_Copie/index.php?page=profil" class="btn-cancel">
+                        <a href="index.php?page=profil" class="btn-cancel">
                             <i class="fas fa-undo me-2"></i> Annuler
                         </a>
                     </div>
@@ -604,7 +604,7 @@
                 <i class="fas fa-lock"></i> Sécurité
             </div>
             <div class="card-body">
-                <form method="POST" action="/valorys_Copie/index.php?page=profil" id="passwordForm" novalidate>
+                <form method="POST" action="index.php?page=profil" id="passwordForm" novalidate>
                     <input type="hidden" name="action" value="change_password">
                     <div class="mb-3">
                         <label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label>
@@ -970,5 +970,3 @@
     </script>
 </body>
 </html>
-
-

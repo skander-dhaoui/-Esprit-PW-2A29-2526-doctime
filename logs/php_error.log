@@ -1,0 +1,159 @@
+[04-May-2026 23:13:55 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[04-May-2026 23:14:10 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] faceLogin called at 2026-05-04 23:14:10
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Found 1 users with face data
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.33312468596931
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] New best match: afnengorai@gmail.com at distance=0.33312468596931
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] MATCH FOUND: afnengorai@gmail.com at distance=0.33312468596931
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] User account status: actif
+[04-May-2026 23:14:10 Europe/Berlin] [FACE] Session started for user: afnengorai@gmail.com (ID: 2)
+[04-May-2026 23:14:12 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 13:24:55 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 13:25:42 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 13:25:42 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:27:24 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 13:27:35 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:28:28 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:30:43 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=login] ===
+[05-May-2026 13:30:43 Europe/Berlin] LOGIN ATTEMPT - Email: admin@doctime.com | CaptchaResponse empty: NO
+[05-May-2026 13:30:43 Europe/Berlin] SESSION captcha_code: KCVABC
+[05-May-2026 13:30:43 Europe/Berlin] POST data: {"role":"patient","captcha_response":"KCVABC","email":"admin@doctime.com","password":"admin123","notRobot":"on"}
+[05-May-2026 13:30:43 Europe/Berlin] 2FA email: tentative envoi a admin@doctime.com
+[05-May-2026 13:30:43 Europe/Berlin] 📧 Envoi d'email à: admin@doctime.com (System Admin) - Sujet: Votre code de verification DocTime
+[2026-05-05 13:31:34] [2] fgets(): SSL: Une connexion existante a dû être fermée par l’hôte distant in C:\4xampp\htdocs\valorys_Copie\PHPMailer\src\SMTP.php:1403
+[05-May-2026 13:31:34 Europe/Berlin] ❌ Exception email: SMTP Error: Could not authenticate.
+[05-May-2026 13:31:34 Europe/Berlin]    To: admin@doctime.com
+[05-May-2026 13:31:34 Europe/Berlin]    SMTP Host: smtp.gmail.com:587
+[05-May-2026 13:31:34 Europe/Berlin]    File: C:\4xampp\htdocs\valorys_Copie\PHPMailer\src\PHPMailer.php:2440
+[05-May-2026 13:31:36 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login] ===
+[05-May-2026 13:32:22 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=login] ===
+[05-May-2026 13:32:22 Europe/Berlin] LOGIN ATTEMPT - Email: admin@doctime.com | CaptchaResponse empty: NO
+[05-May-2026 13:32:22 Europe/Berlin] SESSION captcha_code: JXBH8B
+[05-May-2026 13:32:22 Europe/Berlin] POST data: {"role":"patient","captcha_response":"JXBH8B","email":"admin@doctime.com","password":"admin123","notRobot":"on"}
+[05-May-2026 13:32:22 Europe/Berlin] 2FA email: tentative envoi a admin@doctime.com
+[05-May-2026 13:32:22 Europe/Berlin] 📧 Envoi d'email à: admin@doctime.com (System Admin) - Sujet: Votre code de verification DocTime
+[05-May-2026 13:32:48 Europe/Berlin] ✅ Email envoyé avec succès à: admin@doctime.com
+[05-May-2026 13:32:48 Europe/Berlin] 2FA email: code envoye a admin@doctime.com
+[05-May-2026 13:32:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 13:33:17 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 13:33:17 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 13:33:20 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=users] ===
+[05-May-2026 13:33:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=medecins_admin] ===
+[05-May-2026 13:33:26 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=patients] ===
+[05-May-2026 13:33:26 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=avis_admin] ===
+[05-May-2026 13:33:31 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=articles_admin] ===
+[05-May-2026 13:33:34 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 13:33:35 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=stats] ===
+[2026-05-05 13:33:35] [2] Undefined array key "count" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\stats.php:141
+[05-May-2026 13:33:35 Europe/Berlin] PHP Warning:  Undefined array key "count" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\stats.php on line 141
+[2026-05-05 13:33:35] [2] Undefined array key "count" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\stats.php:141
+[05-May-2026 13:33:35 Europe/Berlin] PHP Warning:  Undefined array key "count" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\stats.php on line 141
+[05-May-2026 13:33:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 13:33:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=settings] ===
+[05-May-2026 13:33:45 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method AdminController::settings() in C:\4xampp\htdocs\valorys_Copie\index.php:927
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 927
+[05-May-2026 13:33:54 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mon_profil] ===
+[05-May-2026 13:33:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 13:33:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:34:23 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] faceLogin called at 2026-05-05 13:34:23
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] Found 1 users with face data
+[05-May-2026 13:34:23 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.62494618550496
+[05-May-2026 13:34:30 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] faceLogin called at 2026-05-05 13:34:30
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Found 1 users with face data
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.4106150351868
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] New best match: afnengorai@gmail.com at distance=0.4106150351868
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] MATCH FOUND: afnengorai@gmail.com at distance=0.4106150351868
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] User account status: actif
+[05-May-2026 13:34:30 Europe/Berlin] [FACE] Session started for user: afnengorai@gmail.com (ID: 2)
+[05-May-2026 13:34:32 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 13:34:37 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 13:34:37 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:34:42 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] faceLogin called at 2026-05-05 13:34:42
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Found 1 users with face data
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.41300246488192
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] New best match: afnengorai@gmail.com at distance=0.41300246488192
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] MATCH FOUND: afnengorai@gmail.com at distance=0.41300246488192
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] User account status: actif
+[05-May-2026 13:34:42 Europe/Berlin] [FACE] Session started for user: afnengorai@gmail.com (ID: 2)
+[05-May-2026 13:34:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 13:37:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 13:37:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 13:37:49 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=login] ===
+[05-May-2026 13:37:49 Europe/Berlin] LOGIN ATTEMPT - Email: admin@doctime.com | CaptchaResponse empty: NO
+[05-May-2026 13:37:49 Europe/Berlin] SESSION captcha_code: 41BLK6
+[05-May-2026 13:37:49 Europe/Berlin] POST data: {"role":"patient","captcha_response":"41BLK6","email":"admin@doctime.com","password":"admin123","notRobot":"on"}
+[05-May-2026 13:37:49 Europe/Berlin] 2FA email: tentative envoi a admin@doctime.com
+[05-May-2026 13:37:49 Europe/Berlin] 📧 Envoi d'email à: admin@doctime.com (System Admin) - Sujet: Votre code de verification DocTime
+[05-May-2026 13:38:08 Europe/Berlin] ✅ Email envoyé avec succès à: admin@doctime.com
+[05-May-2026 13:38:08 Europe/Berlin] 2FA email: code envoye a admin@doctime.com
+[05-May-2026 13:38:08 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 13:38:31 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 13:38:31 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 13:38:37 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=settings] ===
+[05-May-2026 13:38:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method AdminController::settings() in C:\4xampp\htdocs\valorys_Copie\index.php:927
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 927
+[05-May-2026 13:43:14 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logs] ===
+[05-May-2026 14:41:24 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logs] ===
+[05-May-2026 14:41:27 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 14:41:29 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mon_profil] ===
+[05-May-2026 14:41:30 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 14:41:30 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 14:41:36 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] faceLogin called at 2026-05-05 14:41:36
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] Found 1 users with face data
+[05-May-2026 14:41:36 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.64509040944563
+[05-May-2026 14:41:43 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=face_login] ===
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] faceLogin called at 2026-05-05 14:41:43
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] faceLogin params: email=, role=patient, has_image=YES, has_descriptor=YES
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Live descriptor decoded, vector dimensions: 128
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Starting face comparison with threshold=0.55
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Mode 1:N - searching all users with face data
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Found 1 users with face data
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Comparing with afnengorai@gmail.com: distance=0.51641681521272
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] New best match: afnengorai@gmail.com at distance=0.51641681521272
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] MATCH FOUND: afnengorai@gmail.com at distance=0.51641681521272
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] User account status: actif
+[05-May-2026 14:41:43 Europe/Berlin] [FACE] Session started for user: afnengorai@gmail.com (ID: 2)
+[05-May-2026 14:41:44 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[05-May-2026 14:43:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[05-May-2026 14:43:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[05-May-2026 14:44:35 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=login] ===
+[05-May-2026 14:44:35 Europe/Berlin] LOGIN ATTEMPT - Email: admin@doctime.com | CaptchaResponse empty: NO
+[05-May-2026 14:44:35 Europe/Berlin] SESSION captcha_code: MT0FY7
+[05-May-2026 14:44:35 Europe/Berlin] POST data: {"role":"patient","captcha_response":"MT0FY7","email":"admin@doctime.com","password":"admin123","notRobot":"on"}
+[05-May-2026 14:44:35 Europe/Berlin] 2FA email: tentative envoi a admin@doctime.com
+[05-May-2026 14:44:35 Europe/Berlin] 📧 Envoi d'email à: admin@doctime.com (System Admin) - Sujet: Votre code de verification DocTime
+[05-May-2026 14:44:42 Europe/Berlin] ✅ Email envoyé avec succès à: admin@doctime.com
+[05-May-2026 14:44:42 Europe/Berlin] 2FA email: code envoye a admin@doctime.com
+[05-May-2026 14:44:42 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 14:45:12 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=verify_2fa] ===
+[05-May-2026 14:45:12 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=dashboard] ===
+[05-May-2026 14:45:14 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logs] ===
+[05-May-2026 14:45:18 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logs&action=export] ===
