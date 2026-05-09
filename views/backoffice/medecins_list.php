@@ -1,13 +1,6 @@
 <?php
-// views/backoffice/medecins_list.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
-
-$page_title = 'Gestion des médecins';
+// Vue déprécée - voir layout.php et medecins_list_content.php
 ?>
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -349,7 +342,7 @@ $page_title = 'Gestion des médecins';
     <div class="content-card">
         <div class="card-title-row">
             <h5><i class="fas fa-list"></i> Liste des médecins (<?= count($medecins) ?>)</h5>
-            <a href="index.php?page=users&action=create" class="btn btn-success btn-sm">
+            <a href="index.php?page=medecins_admin&action=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Ajouter un médecin
             </a>
         </div>
@@ -358,7 +351,6 @@ $page_title = 'Gestion des médecins';
             <table id="medecinsTable" class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Nom complet</th>
                         <th>Email</th>
                         <th>Téléphone</th>
@@ -373,7 +365,6 @@ $page_title = 'Gestion des médecins';
                 <?php if (!empty($medecins)): ?>
                     <?php foreach ($medecins as $m): ?>
                     <tr>
-                        <td><?= htmlspecialchars($m['id']) ?></td>
                         <td><strong>Dr. <?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($m['email']) ?></td>
                         <td><?= htmlspecialchars($m['telephone'] ?? '—') ?></td>
@@ -412,7 +403,7 @@ $page_title = 'Gestion des médecins';
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="fas fa-user-md fa-2x mb-2 d-block opacity-25"></i>
                             Aucun médecin trouvé
                         </td>
@@ -435,10 +426,10 @@ $page_title = 'Gestion des médecins';
                 url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
             },
             pageLength: 10,
-            order: [[0, 'desc']],
+            order: [[6, 'desc']],
             responsive: true,
             columnDefs: [
-                { orderable: false, targets: 8 }
+                { orderable: false, targets: 7 }
             ]
         });
     });

@@ -8,7 +8,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 $page_title = 'Gestion des patients';
 $current_page = 'patients';
 ?>
-<!DOCTYPE html>
+<?php
+// Vue déprécée - voir layout.php et patients_list_content.php
+?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -235,7 +237,7 @@ $current_page = 'patients';
             <table id="patientsTable" class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Nom complet</th><th>Email</th>
+                        <th>Nom complet</th><th>Email</th>
                         <th>Téléphone</th><th>Groupe sanguin</th><th>Statut</th><th>Inscrit le</th><th>Actions</th>
                     </tr>
                 </thead>
@@ -243,7 +245,6 @@ $current_page = 'patients';
                 <?php if (!empty($patients)): ?>
                     <?php foreach ($patients as $p): ?>
                     <tr>
-                        <td><?= htmlspecialchars($p['id']) ?></td>
                         <td><strong><?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?></strong></td>
                         <td><?= htmlspecialchars($p['email']) ?></td>
                         <td><?= htmlspecialchars($p['telephone'] ?? '—') ?></td>
@@ -259,7 +260,7 @@ $current_page = 'patients';
                     </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="8" class="text-center">Aucun patient trouvé</td></tr>
+                    <tr><td colspan="7" class="text-center">Aucun patient trouvé</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -275,7 +276,7 @@ $(document).ready(function() {
     $('#patientsTable').DataTable({
         language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
         pageLength: 10,
-        order: [[0, 'desc']]
+        order: [[5, 'desc']]
     });
 });
 </script>

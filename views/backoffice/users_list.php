@@ -1,19 +1,6 @@
 <?php
-// views/backoffice/users_list.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
-
-// Vérification que $users existe
-if (!isset($users)) {
-    die("ERREUR: La variable \$users n'est pas définie");
-}
-
-$page_title = 'Gestion des utilisateurs';
-$current_page = 'users';
+// Vue déprécée - voir layout.php et users_list_content.php
 ?>
-<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -303,7 +290,6 @@ $current_page = 'users';
             <table id="usersTable" class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Nom complet</th>
                         <th>Email</th>
                         <th>Téléphone</th>
@@ -317,7 +303,6 @@ $current_page = 'users';
                 <?php if (!empty($users)): ?>
                     <?php foreach ($users as $u): ?>
                         <tr>
-                            <td><?= htmlspecialchars($u['id']) ?></td>
                             <td><strong><?= htmlspecialchars($u['prenom'] . ' ' . $u['nom']) ?></strong></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td><?= htmlspecialchars($u['telephone'] ?? '-') ?></td>
@@ -355,7 +340,7 @@ $current_page = 'users';
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5">
                             <i class="fas fa-users fa-2x mb-2 d-block opacity-25"></i>
                             Aucun utilisateur trouvé
                         </td>
@@ -378,7 +363,7 @@ $current_page = 'users';
                 url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
             },
             pageLength: 10,
-            order: [[0, 'desc']],
+            order: [[5, 'desc']],
             responsive: true
         });
     });

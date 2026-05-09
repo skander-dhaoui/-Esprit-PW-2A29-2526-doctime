@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+<?php
+// Vue déprécée - voir layout.php
+?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -69,21 +71,17 @@
             <a href="index.php?page=medecins_admin">
                 <i class="fas fa-user-md"></i> <span>Médecins</span>
             </a>
-            <a href="index.php?page=admin_rendezvous">
-                <i class="fas fa-calendar-check"></i> <span>Rendez-vous</span>
+            <a href="index.php?page=rendez_vous_admin">
+                <i class="fas fa-calendar-check"></i> <span>Rendez vous</span>
             </a>
-            <!-- ✅ NOUVEAU : Bouton Disponibilités -->
-            <a href="index.php?page=admin_disponibilite">
-                <i class="fas fa-clock"></i> <span>Disponibilités</span>
-            </a>
-            <a href="index.php?page=admin_ordonnance">
+            <a href="index.php?page=ordonnances">
                 <i class="fas fa-prescription-bottle"></i> <span>Ordonnances</span>
             </a>
             <a href="index.php?page=produits_admin">
                 <i class="fas fa-box"></i> <span>Produits</span>
             </a>
-            <a href="index.php?page=blog">
-                <i class="fas fa-blog"></i> <span>Blog / Forum</span>
+            <a href="index.php?page=articles_admin">
+                <i class="fas fa-blog"></i> <span>Blog</span>
             </a>
             <a href="index.php?page=evenements_admin">
                 <i class="fas fa-calendar-day"></i> <span>Événements</span>
@@ -110,14 +108,10 @@
                 <img src="assets/images/logo_doctime.png" alt="DocTime Logo" class="navbar-logo"
                      onerror="this.style.display='none'">
                 <div class="navbar-menu-items">
-                    <a href="index.php?page=admin_rendezvous" class="nav-link-custom">
+                    <a href="index.php?page=rendez_vous_admin" class="nav-link-custom">
                         <i class="fas fa-calendar-check"></i> Rendez-vous
                     </a>
-                    <!-- ✅ NOUVEAU : Bouton Disponibilités dans la navbar -->
-                    <a href="index.php?page=admin_disponibilite" class="nav-link-custom">
-                        <i class="fas fa-clock"></i> Disponibilités
-                    </a>
-                    <a href="index.php?page=admin_ordonnance" class="nav-link-custom">
+                    <a href="index.php?page=ordonnances" class="nav-link-custom">
                         <i class="fas fa-prescription-bottle"></i> Ordonnances
                     </a>
                     <a href="index.php?page=produits_admin" class="nav-link-custom">
@@ -174,7 +168,7 @@
                 <div class="stat-card" style="border-left-color: #dc3545;">
                     <i class="fas fa-clock stat-icon"></i>
                     <p>En attente validation</p>
-                    <h3><?= $stats['en_validation'] ?? '—' ?></h3>
+                    <h3><?= $stats['pending_medecins'] ?? '—' ?></h3>
                     <small class="text-warning">
                         <i class="fas fa-exclamation-triangle"></i> À traiter
                     </small>
@@ -205,7 +199,6 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Nom complet</th>
                             <th>Email</th>
                             <th>Rôle</th>
@@ -218,14 +211,13 @@
                         <?php if (!empty($recentUsers)): ?>
                             <?php foreach ($recentUsers as $u): ?>
                             <tr>
-                                <td><?= $u['id'] ?></td>
                                 <td><?= htmlspecialchars($u['prenom'] . ' ' . $u['nom']) ?></td>
                                 <td><?= htmlspecialchars($u['email']) ?></td>
                                 <td>
                                     <span class="badge <?= $u['role'] === 'medecin' ? 'bg-success' : 'bg-info' ?>">
                                         <?= ucfirst($u['role']) ?>
                                     </span>
-                                 </div>
+                                </td>
                                 <td>
                                     <?php if ($u['statut'] === 'actif'): ?>
                                         <span class="badge-active">Actif</span>
@@ -234,8 +226,8 @@
                                     <?php else: ?>
                                         <span class="badge-inactive">Inactif</span>
                                     <?php endif; ?>
-                                 </div>
-                                <td><?= date('d/m/Y', strtotime($u['created_at'])) ?></div>
+                                </td>
+                                <td><?= date('d/m/Y', strtotime($u['created_at'])) ?></td>
                                 <td>
                                     <?php if ($u['role'] === 'medecin' && $u['statut'] === 'en_attente'): ?>
                                         <a href="index.php?page=medecins_admin&action=validate&id=<?= $u['id'] ?>"
@@ -252,15 +244,15 @@
                                        class="btn btn-sm btn-secondary">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                 </div>
-                             </div>
+                                </td>
+                            </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     Aucun utilisateur récent
-                                 </div>
-                             </div>
+                                </td>
+                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

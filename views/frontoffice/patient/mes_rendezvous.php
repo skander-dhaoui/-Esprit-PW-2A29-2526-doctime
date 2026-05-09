@@ -62,7 +62,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-calendar-check me-2"></i>Mes rendez-vous</h2>
-        <a href="index.php?page=prendre_rendezvous" class="btn-primary-custom">
+        <a href="index.php?page=prendre_rendez_vous" class="btn-primary-custom">
             <i class="fas fa-plus me-2"></i>Prendre un rendez-vous
         </a>
     </div>
@@ -178,11 +178,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                     <input type="hidden" name="rdv_id" id="edit_rdv_id">
                     <div class="mb-3">
                         <label class="form-label">Date</label>
-                        <input type="date" name="date_rendezvous" id="edit_date" class="form-control" required>
+                        <input type="text" name="date_rendezvous" id="edit_date" class="form-control" placeholder="YYYY-MM-DD">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Heure</label>
-                        <select name="heure_rendezvous" id="edit_heure" class="form-select" required>
+                        <select name="heure_rendezvous" id="edit_heure" class="form-select">
                             <option value="">Sélectionner une heure</option>
                             <option value="08:00">08:00</option>
                             <option value="09:00">09:00</option>

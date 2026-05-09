@@ -49,21 +49,13 @@ class Database {
     }
 
     /**
-     * ✅ NOUVEAU : Obtenir la connexion PDO directement
-     * Cette méthode est à utiliser dans les modèles
+     * Obtenir la connexion PDO
      */
-    public function getPDO(): PDO {
+    public function getConnection(): PDO {
         if ($this->conn === null) {
             $this->connect();
         }
         return $this->conn;
-    }
-
-    /**
-     * Obtenir la connexion PDO (alias de getPDO pour compatibilité)
-     */
-    public function getConnection(): PDO {
-        return $this->getPDO();
     }
 
     /**

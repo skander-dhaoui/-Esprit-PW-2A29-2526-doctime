@@ -1,136 +1,235 @@
 <?php
 require_once __DIR__ . '/../models/Article.php';
 require_once __DIR__ . '/../models/Reply.php';
+require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/AuthController.php';
 
 class ArticleController {
-    private Article $article;
-    private Reply   $reply;
+    private Article $articleModel;
+    private Reply $replyModel;
+    private AuthController $auth;
 
     public function __construct() {
-        $this->article = new Article();
-        $this->reply   = new Reply();
+        $this->articleModel = new Article();
+        $this->replyModel   = new Reply();
+        $this->auth         = new AuthController();
     }
 
-    // Affiche la vue backoffice
+    /**
+     * Backoffice - Liste des articles
+     */
     public function index(): void {
+        $this->auth->requireRole('admin');
+        $articles = $this->articleModel->getAll();
+        $total    = $this->articleModel->countAll();
+        $month    = $this->articleModel->countThisMonth();
         require_once __DIR__ . '/../views/backoffice/blog.php';
     }
 
-    // GET ?page=api_article&list=1 → JSON liste + stats
+    /**
+     * API - Liste des articles (JSON)
+     * GET index.php?page=api_article&list=1
+     */
     public function list(): void {
-        $this->json([
+        header('Content-Type: application/json');
+        $articles = $this->articleModel->getAll();
+        $total    = $this->articleModel->countAll();
+        $month    = $this->articleModel->countThisMonth();
+
+        // Normalise les champs pour que le JS n'ait qu'un seul nom de clé
+        $articles = array_map([$this, 'normalizeArticle'], $articles);
+
+        echo json_encode([
             'success'  => true,
-            'articles' => $this->article->getAll(),
-            'total'    => $this->article->countAll(),
-            'month'    => $this->article->countThisMonth(),
+            'articles' => $articles,
+            'total'    => $total,
+            'month'    => $month,
         ]);
     }
 
-    // GET ?page=api_article&id=X → JSON article + replies
+    /**
+     * API - Afficher un article + ses commentaires
+     * GET index.php?page=api_article&id=X
+     */
     public function show(int $id): void {
-        $a = $this->article->getById($id);
-        if (!$a) {
-            $this->json(['success' => false, 'message' => 'Article introuvable.'], 404);
+        header('Content-Type: application/json');
+        $article = $this->articleModel->getById($id);
+
+        if (!$article) {
+            echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
             return;
         }
-        $this->json([
+
+        $replies = $this->replyModel->getByArticle($id);
+        echo json_encode([
             'success' => true,
-            'article' => $a,
-            'replies' => $this->reply->getByArticle($id),
+            'article' => $this->normalizeArticle($article),
+            'replies' => $replies,
         ]);
     }
 
-    // POST ?page=api_article → créer
+    /**
+     * API - Créer un article
+     * POST index.php?page=api_article
+     */
     public function store(): void {
-        $d       = $this->body();
-        $titre   = trim($d['titre']   ?? '');
-        $contenu = trim($d['contenu'] ?? '');
-        $auteur  = trim($d['auteur']  ?? '') ?: null;
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $titre   = trim($data['titre']   ?? '');
+        $contenu = trim($data['contenu'] ?? '');
 
         $errors = [];
-        if (!$titre) {
-            $errors['titre'] = 'Le titre est obligatoire.';
-        } elseif (strlen($titre) > 255) {
-            $errors['titre'] = 'Le titre ne doit pas dépasser 255 caractères.';
-        }
-        
-        if (!$contenu) {
-            $errors['contenu'] = 'Le contenu est obligatoire.';
-        } elseif (strlen($contenu) < 10) {
-            $errors['contenu'] = 'Le contenu doit contenir au moins 10 caractères.';
+        if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
+        elseif (mb_strlen($titre) > 255) $errors['titre'] = 'Le titre ne doit pas dépasser 255 caractères.';
+
+        if (empty($contenu))     $errors['contenu'] = 'Le contenu est obligatoire.';
+        elseif (mb_strlen($contenu) < 10) $errors['contenu'] = 'Le contenu doit contenir au moins 10 caractères.';
+
+        if (!empty($errors)) {
+            echo json_encode(['success' => false, 'errors' => $errors]);
+            return;
         }
 
-        if (!empty($errors)) { 
-            $this->json(['success' => false, 'errors' => $errors], 422); 
-            return; 
-        }
+        $auteur_id = $_SESSION['user_id'] ?? null;
+        $id = $this->articleModel->create([
+            'titre'     => $titre,
+            'contenu'   => $contenu,
+            'auteur_id' => $auteur_id,
+        ]);
 
-        $id = $this->article->create($titre, $contenu, $auteur);
-        $this->json(['success' => true, 'message' => 'Article créé avec succès.', 'id' => $id], 201);
+        echo json_encode(['success' => true, 'id' => $id, 'message' => 'Article créé avec succès']);
     }
 
-    // PUT ?page=api_article&id=X → modifier
+    /**
+     * API - Modifier un article
+     * POST index.php?page=api_article&id=X  (avec _method=PUT dans le body)
+     */
     public function update(int $id): void {
-        if (!$this->article->getById($id)) {
-            $this->json(['success' => false, 'message' => 'Article introuvable.'], 404);
+        header('Content-Type: application/json');
+
+        $article = $this->articleModel->getById($id);
+        if (!$article) {
+            echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
             return;
         }
-        $d       = $this->body();
-        $titre   = trim($d['titre']   ?? '');
-        $contenu = trim($d['contenu'] ?? '');
-        $auteur  = trim($d['auteur']  ?? '') ?: null;
+
+        $data    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $titre   = trim($data['titre']   ?? '');
+        $contenu = trim($data['contenu'] ?? '');
 
         $errors = [];
-        if (!$titre) {
-            $errors['titre'] = 'Le titre est obligatoire.';
-        } elseif (strlen($titre) > 255) {
-            $errors['titre'] = 'Le titre ne doit pas dépasser 255 caractères.';
-        }
-        
-        if (!$contenu) {
-            $errors['contenu'] = 'Le contenu est obligatoire.';
-        } elseif (strlen($contenu) < 10) {
-            $errors['contenu'] = 'Le contenu doit contenir au moins 10 caractères.';
-        }
+        if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
+        elseif (mb_strlen($titre) > 255) $errors['titre'] = 'Le titre ne doit pas dépasser 255 caractères.';
 
-        if (!empty($errors)) { 
-            $this->json(['success' => false, 'errors' => $errors], 422); 
-            return; 
-        }
+        if (empty($contenu))     $errors['contenu'] = 'Le contenu est obligatoire.';
+        elseif (mb_strlen($contenu) < 10) $errors['contenu'] = 'Le contenu doit contenir au moins 10 caractères.';
 
-        $this->article->update($id, $titre, $contenu, $auteur);
-        $this->json(['success' => true, 'message' => 'Article mis à jour avec succès.']);
-    }
-
-    // DELETE ?page=api_article&id=X → supprimer
-    public function destroy(int $id): void {
-        if (!$this->article->getById($id)) {
-            $this->json(['success' => false, 'message' => 'Article introuvable.'], 404);
+        if (!empty($errors)) {
+            echo json_encode(['success' => false, 'errors' => $errors]);
             return;
         }
-        $this->article->delete($id);
-        $this->json(['success' => true, 'message' => 'Article supprimé avec succès.']);
+
+        $auteur_id = (int)($_SESSION['user_id'] ?? $article['auteur_id'] ?? 0) ?: null;
+        $this->articleModel->update($id, $titre, $contenu, $auteur_id);
+
+        echo json_encode(['success' => true, 'message' => 'Article modifié avec succès']);
     }
 
-    // ─── Helpers ───────────────────────────
+    /**
+     * API - Supprimer un article
+     * POST index.php?page=api_article&id=X  (avec _method=DELETE dans le body)
+     */
+    public function destroy(int $id): void {
+        header('Content-Type: application/json');
 
-    private function body(): array {
-        $raw = file_get_contents('php://input');
-        return json_decode($raw, true) ?? $_POST;
-    }
-
-    private function json(array $data, int $code = 200): void {
-        // Nettoyer les buffers de sortie avant d'envoyer le JSON
-        if (ob_get_level() > 0) {
-            ob_clean();
+        $article = $this->articleModel->getById($id);
+        if (!$article) {
+            echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
+            return;
         }
+
+        $this->articleModel->delete($id);
+        echo json_encode(['success' => true, 'message' => 'Article supprimé avec succès']);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  JOINTURES - Relation Articles ↔ Replies
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Affiche les replies d'un article spécifique (JOINTURE INNER JOIN)
+     * Pattern : afficherReplies($idArticle)
+     * 
+     * @param int $idArticle ID de l'article
+     * @return array Liste des replies avec données utilisateur
+     */
+    public function afficherReplies(int $idArticle): array {
+        // Valider l'ID d'article
+        if ($idArticle <= 0) {
+            error_log("ArticleController::afficherReplies - ID article invalide: $idArticle");
+            return [];
+        }
+
+        // Récupérer les replies via JOINTURE
+        $replies = $this->articleModel->getRepliesByArticle($idArticle);
         
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-cache, must-revalidate');
-        
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        exit;
+        return $replies;
+    }
+
+    /**
+     * Affiche tous les articles avec le nombre de replies
+     * Utilisé pour le formulaire de sélection (LEFT JOIN)
+     * 
+     * @return array Liste des articles avec comptage
+     */
+    public function afficherArticles(): array {
+        try {
+            return $this->articleModel->getArticlesWithReplyCount();
+        } catch (Exception $e) {
+            error_log('ArticleController::afficherArticles - ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Affiche un article spécifique avec toutes ses replies
+     * 
+     * @param int $id ID de l'article
+     * @return array|null Données article avec replies ou null
+     */
+    public function afficherArticleComplet(int $id): ?array {
+        if ($id <= 0) {
+            return null;
+        }
+        $article = $this->articleModel->getArticleWithReplies($id);
+        return !empty($article) ? $article : null;
+    }
+
+    // ─────────────────────────────────────────
+    //  Helper : normalise les clés de l'article
+    //  pour que le JS reçoive toujours les mêmes noms
+    // ─────────────────────────────────────────
+    private function normalizeArticle(array $a): array {
+        return [
+            // Identifiant unique — la DB renvoie "id"
+            'id'           => $a['id']         ?? $a['id_article'] ?? 0,
+            'id_article'   => $a['id']         ?? $a['id_article'] ?? 0,   // compat legacy
+
+            'titre'        => $a['titre']       ?? '',
+            'contenu'      => $a['contenu']     ?? '',
+            'auteur'       => $a['auteur_name'] ?? $a['auteur'] ?? 'Valorys',
+            'auteur_id'    => $a['auteur_id']   ?? null,
+            'categorie'    => $a['categorie']   ?? null,
+            'image'        => $a['image']       ?? null,
+            'vues'         => (int)($a['vues']  ?? 0),
+            'nb_replies'   => (int)($a['nb_replies'] ?? 0),
+
+            // Dates : on normalise sur "created_at" ET "date_creation" (compat)
+            'created_at'    => $a['created_at']    ?? $a['date_creation'] ?? null,
+            'date_creation' => $a['created_at']    ?? $a['date_creation'] ?? null,
+        ];
     }
 }
 ?>

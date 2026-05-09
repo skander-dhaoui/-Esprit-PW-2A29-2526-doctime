@@ -1,174 +1,263 @@
 <?php
+
 require_once __DIR__ . '/../models/Reply.php';
 require_once __DIR__ . '/../models/Article.php';
+require_once __DIR__ . '/AuthController.php';
 
 class ReplyController {
-    private Reply   $reply;
-    private Article $article;
+
+    private Reply $replyModel;
+    private Article $articleModel;
+    private AuthController $auth;
 
     public function __construct() {
-        $this->reply   = new Reply();
-        $this->article = new Article();
+        $this->replyModel = new Reply();
+        $this->articleModel = new Article();
+        $this->auth = new AuthController();
     }
 
-    // GET ?page=api_reply&article_id=X
+    // ─────────────────────────────────────────
+    //  API - Commentaires d'un article
+    // ─────────────────────────────────────────
     public function index(int $articleId): void {
-        if (!$this->article->getById($articleId)) {
-            $this->json(['success' => false, 'message' => 'Article introuvable.'], 404);
+        header('Content-Type: application/json');
+        
+        $article = $this->articleModel->getById($articleId);
+        
+        if (!$article) {
+            echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
             return;
         }
-        $this->json(['success' => true, 'replies' => $this->reply->getByArticle($articleId)]);
+        
+        $replies = $this->replyModel->getByArticle($articleId);
+        
+        echo json_encode(['success' => true, 'replies' => $replies]);
     }
 
-    // POST ?page=api_reply
+    // ─────────────────────────────────────────
+    //  API - Tous les commentaires
+    // ─────────────────────────────────────────
+    public function all(): void {
+        $this->auth->requireAuth();
+        header('Content-Type: application/json');
+        
+        $replies = $this->replyModel->getAll();
+        $total = $this->replyModel->countAll();
+        
+        echo json_encode(['success' => true, 'replies' => $replies, 'total' => $total]);
+    }
+
+    // ─────────────────────────────────────────
+    //  API - Afficher un commentaire
+    // ─────────────────────────────────────────
+/**
+ * API - Afficher un commentaire spécifique (pour modification)
+ */
+public function show(int $id): void {
+    header('Content-Type: application/json');
+    
+    $reply = $this->replyModel->getById($id);
+    
+    if (!$reply) {
+        echo json_encode(['success' => false, 'message' => 'Commentaire non trouvé']);
+        return;
+    }
+    
+    echo json_encode(['success' => true, 'reply' => $reply]);
+}
+
+    // ─────────────────────────────────────────
+    //  API - Créer un commentaire (avec upload photo)
+    // ─────────────────────────────────────────
     public function store(): void {
-        $d         = $this->body();
-        $articleId = (int)($d['id_article'] ?? 0);
-        $type      = trim($d['type_reply']  ?? 'text');
-        $auteur    = trim($d['auteur']       ?? '') ?: null;
-
-        $errors = [];
+        $this->auth->requireAuth();
+        header('Content-Type: application/json');
         
-        if (!in_array($type, ['text', 'emoji', 'photo'])) {
-            $errors['type_reply'] = 'Type invalide.';
-        }
+        // Vérifier si c'est un upload de fichier (multipart/form-data)
+        $isFileUpload = !empty($_FILES) && isset($_FILES['photo_file']);
         
-        if (!$this->article->getById($articleId)) {
-            $errors['id_article'] = 'Article introuvable.';
-        }
-
-        [$text, $emoji, $photo] = [null, null, null];
-
-        if (empty($errors)) {
-            switch ($type) {
-                case 'text':
-                    $text = trim($d['contenu_text'] ?? '');
-                    if (empty($text)) {
-                        $errors['contenu_text'] = 'Le texte est obligatoire.';
-                    } elseif (strlen($text) < 2) {
-                        $errors['contenu_text'] = 'Le commentaire doit contenir au moins 2 caractères.';
-                    } elseif (strlen($text) > 1000) {
-                        $errors['contenu_text'] = 'Le commentaire ne doit pas dépasser 1000 caractères.';
-                    }
-                    break;
-                case 'emoji':
-                    $emoji = trim($d['emoji'] ?? '');
-                    if (empty($emoji)) {
-                        $errors['emoji'] = "L'emoji est obligatoire.";
-                    } elseif (strlen($emoji) > 20) {
-                        $errors['emoji'] = "L'emoji est trop long (max 20 caractères).";
-                    }
-                    break;
-                case 'photo':
-                    $photo = trim($d['photo'] ?? '');
-                    if (empty($photo)) {
-                        $errors['photo'] = "L'URL est obligatoire.";
-                    } elseif (!filter_var($photo, FILTER_VALIDATE_URL)) {
-                        $errors['photo'] = 'URL invalide.';
-                    } elseif (!preg_match('/\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?.*)?$/i', $photo)) {
-                        $errors['photo'] = "L'URL doit pointer vers une image (jpg, jpeg, png, gif, webp, svg, bmp).";
-                    }
-                    break;
+        if ($isFileUpload) {
+            // Traitement upload fichier
+            $articleId = (int)($_POST['id_article'] ?? 0);
+            $type = $_POST['type_reply'] ?? 'photo';
+            $auteur = $_POST['auteur'] ?? $_SESSION['user_name'] ?? null;
+            
+            $article = $this->articleModel->getById($articleId);
+            
+            if (!$article) {
+                echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
+                return;
             }
+            
+            // Upload de l'image
+            $photo = $this->uploadPhoto($_FILES['photo_file']);
+            
+            if (!$photo) {
+                echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'upload de la photo']);
+                return;
+            }
+            
+            $id = $this->replyModel->create($articleId, null, null, $photo, $auteur, $type);
+            
+            echo json_encode(['success' => true, 'id' => $id, 'message' => 'Commentaire ajouté avec succès']);
+        } else {
+            // Traitement JSON classique
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            $articleId = (int)($data['id_article'] ?? 0);
+            $type = $data['type_reply'] ?? 'text';
+            $contenuText = $data['contenu_text'] ?? null;
+            $emoji = $data['emoji'] ?? null;
+            $photo = $data['photo'] ?? null;
+            $auteur = $data['auteur'] ?? $_SESSION['user_name'] ?? null;
+            
+            $article = $this->articleModel->getById($articleId);
+            
+            if (!$article) {
+                echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
+                return;
+            }
+            
+            $errors = [];
+            
+            if (!in_array($type, ['text', 'emoji', 'photo'])) {
+                $errors['type_reply'] = 'Type de commentaire invalide.';
+            }
+            
+            if ($type === 'text' && empty($contenuText)) {
+                $errors['contenu_text'] = 'Le texte est obligatoire.';
+            }
+            
+            if ($type === 'emoji' && empty($emoji)) {
+                $errors['emoji'] = "L'emoji est obligatoire.";
+            }
+            
+            if ($type === 'photo' && empty($photo)) {
+                $errors['photo'] = "L'URL de la photo est obligatoire.";
+            }
+            
+            if (!empty($errors)) {
+                echo json_encode(['success' => false, 'errors' => $errors]);
+                return;
+            }
+            
+            $id = $this->replyModel->create($articleId, $contenuText, $emoji, $photo, $auteur, $type);
+            
+            echo json_encode(['success' => true, 'id' => $id, 'message' => 'Commentaire ajouté avec succès']);
         }
-
-        if (!empty($errors)) { 
-            $this->json(['success' => false, 'errors' => $errors], 422); 
-            return; 
-        }
-
-        $id = $this->reply->create($articleId, $text, $emoji, $photo, $auteur, $type);
-        $this->json(['success' => true, 'message' => 'Commentaire ajouté avec succès.', 'id' => $id], 201);
     }
 
-    // PUT ?page=api_reply&id=X
+    // ─────────────────────────────────────────
+    //  API - Modifier un commentaire
+    // ─────────────────────────────────────────
     public function update(int $id): void {
-        $r = $this->reply->getById($id);
-        if (!$r) { 
-            $this->json(['success' => false, 'message' => 'Commentaire introuvable.'], 404); 
-            return; 
-        }
-
-        $d         = $this->body();
-        $articleId = (int)($d['id_article'] ?? $r['id_article']);
-        $type      = trim($d['type_reply']  ?? $r['type_reply']);
-        $auteur    = trim($d['auteur']       ?? '') ?: null;
-
-        $errors = [];
+        $this->auth->requireAuth();
+        header('Content-Type: application/json');
         
-        if (!in_array($type, ['text', 'emoji', 'photo'])) {
-            $errors['type_reply'] = 'Type invalide.';
-        }
-
-        [$text, $emoji, $photo] = [null, null, null];
-
-        if (empty($errors)) {
-            switch ($type) {
-                case 'text':
-                    $text = trim($d['contenu_text'] ?? '');
-                    if (empty($text)) {
-                        $errors['contenu_text'] = 'Le texte est obligatoire.';
-                    } elseif (strlen($text) < 2) {
-                        $errors['contenu_text'] = 'Le commentaire doit contenir au moins 2 caractères.';
-                    } elseif (strlen($text) > 1000) {
-                        $errors['contenu_text'] = 'Le commentaire ne doit pas dépasser 1000 caractères.';
-                    }
-                    break;
-                case 'emoji':
-                    $emoji = trim($d['emoji'] ?? '');
-                    if (empty($emoji)) {
-                        $errors['emoji'] = "L'emoji est obligatoire.";
-                    }
-                    break;
-                case 'photo':
-                    $photo = trim($d['photo'] ?? '');
-                    if (empty($photo)) {
-                        $errors['photo'] = "L'URL est obligatoire.";
-                    } elseif (!filter_var($photo, FILTER_VALIDATE_URL)) {
-                        $errors['photo'] = 'URL invalide.';
-                    }
-                    break;
-            }
-        }
-
-        if (!empty($errors)) { 
-            $this->json(['success' => false, 'errors' => $errors], 422); 
-            return; 
-        }
-
-        $this->reply->update($id, $articleId, $text, $emoji, $photo, $auteur, $type);
-        $this->json(['success' => true, 'message' => 'Commentaire mis à jour avec succès.']);
-    }
-
-    // DELETE ?page=api_reply&id=X
-    public function destroy(int $id): void {
-        if (!$this->reply->getById($id)) {
-            $this->json(['success' => false, 'message' => 'Commentaire introuvable.'], 404);
+        $reply = $this->replyModel->getById($id);
+        
+        if (!$reply) {
+            echo json_encode(['success' => false, 'message' => 'Commentaire non trouvé']);
             return;
         }
-        $this->reply->delete($id);
-        $this->json(['success' => true, 'message' => 'Commentaire supprimé avec succès.']);
-    }
-
-    // ─── Helpers ───────────────────────────
-
-    private function body(): array {
-        $raw = file_get_contents('php://input');
-        return json_decode($raw, true) ?? $_POST;
-    }
-
-    private function json(array $data, int $code = 200): void {
-        // Nettoyer les buffers de sortie avant d'envoyer le JSON
-        if (ob_get_level() > 0) {
-            ob_clean();
+        
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        $type = $data['type_reply'] ?? $reply['type_reply'];
+        $contenuText = $data['contenu_text'] ?? null;
+        $emoji = $data['emoji'] ?? null;
+        $photo = $data['photo'] ?? null;
+        $auteur = $data['auteur'] ?? $reply['auteur'];
+        
+        $errors = [];
+        
+        if (!in_array($type, ['text', 'emoji', 'photo'])) {
+            $errors['type_reply'] = 'Type de commentaire invalide.';
         }
         
-        http_response_code($code);
-        header('Content-Type: application/json; charset=utf-8');
-        header('Cache-Control: no-cache, must-revalidate');
+        if ($type === 'text' && empty($contenuText)) {
+            $errors['contenu_text'] = 'Le texte est obligatoire.';
+        }
         
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        exit;
+        if ($type === 'emoji' && empty($emoji)) {
+            $errors['emoji'] = "L'emoji est obligatoire.";
+        }
+        
+        if ($type === 'photo' && empty($photo)) {
+            $errors['photo'] = "L'URL de la photo est obligatoire.";
+        }
+        
+        if (!empty($errors)) {
+            echo json_encode(['success' => false, 'errors' => $errors]);
+            return;
+        }
+        
+        $this->replyModel->update($id, $reply['id_article'], $contenuText, $emoji, $photo, $auteur, $type);
+        
+        echo json_encode(['success' => true, 'message' => 'Commentaire modifié avec succès']);
+    }
+
+    // ─────────────────────────────────────────
+    //  API - Supprimer un commentaire
+    // ─────────────────────────────────────────
+    public function destroy(int $id): void {
+        $this->auth->requireAuth();
+        header('Content-Type: application/json');
+        
+        $reply = $this->replyModel->getById($id);
+        
+        if (!$reply) {
+            echo json_encode(['success' => false, 'message' => 'Commentaire non trouvé']);
+            return;
+        }
+        
+        $this->replyModel->delete($id);
+        
+        echo json_encode(['success' => true, 'message' => 'Commentaire supprimé avec succès']);
+    }
+    
+    // ─────────────────────────────────────────
+    //  Upload de photo
+    // ─────────────────────────────────────────
+    private function uploadPhoto($file): ?string {
+        // Vérifier les erreurs
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        
+        // Types MIME autorisés
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        
+        if (!in_array($mimeType, $allowedTypes)) {
+            return null;
+        }
+        
+        // Taille maximale : 2 Mo
+        if ($file['size'] > 2 * 1024 * 1024) {
+            return null;
+        }
+        
+        // Créer le dossier s'il n'existe pas
+        $uploadDir = __DIR__ . '/../uploads/comments/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        
+        // Générer un nom unique
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'comment_' . time() . '_' . uniqid() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+        $relativePath = 'uploads/comments/' . $filename;
+        
+        // Déplacer le fichier
+        if (move_uploaded_file($file['tmp_name'], $filepath)) {
+            return $relativePath;
+        }
+        
+        return null;
     }
 }
 ?>

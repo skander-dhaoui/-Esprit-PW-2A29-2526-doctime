@@ -97,28 +97,28 @@
                         <label class="form-label">Nom <span class="text-danger">*</span></label>
                         <input type="text" name="nom" id="nom" class="form-control"
                                placeholder="Votre nom"
-                               value="<?= htmlspecialchars($old['nom'] ?? '') ?>" required>
+                               value="<?= htmlspecialchars($old['nom'] ?? '') ?>">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Prénom <span class="text-danger">*</span></label>
                         <input type="text" name="prenom" id="prenom" class="form-control"
                                placeholder="Votre prénom"
-                               value="<?= htmlspecialchars($old['prenom'] ?? '') ?>" required>
+                               value="<?= htmlspecialchars($old['prenom'] ?? '') ?>">
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" name="email" id="email" class="form-control"
+                        <input type="text" name="email" id="email" class="form-control"
                                placeholder="exemple@email.com"
-                               value="<?= htmlspecialchars($old['email'] ?? '') ?>" required>
+                               value="<?= htmlspecialchars($old['email'] ?? '') ?>">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Téléphone <span class="text-danger">*</span></label>
                         <input type="tel" name="telephone" id="telephone" class="form-control"
                                placeholder="+216 XX XXX XXX"
-                               value="<?= htmlspecialchars($old['telephone'] ?? '') ?>" required>
+                               value="<?= htmlspecialchars($old['telephone'] ?? '') ?>">
                     </div>
                 </div>
 
@@ -126,7 +126,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
                         <input type="password" name="password" id="password" class="form-control"
-                               placeholder="••••••••" required>
+                               placeholder="••••••••">
                         <div class="password-requirements">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                             <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
@@ -136,7 +136,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Confirmer mot de passe <span class="text-danger">*</span></label>
                         <input type="password" name="password_confirm" id="passwordConfirm" class="form-control"
-                               placeholder="••••••••" required>
+                               placeholder="••••••••">
                     </div>
                 </div>
 
@@ -170,13 +170,13 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tarif de consultation (DT)</label>
-                            <input type="number" name="tarif" id="tarif" class="form-control"
+                            <input type="text" name="tarif" id="tarif" class="form-control"
                                    placeholder="50" step="5"
                                    value="<?= htmlspecialchars($old['tarif'] ?? '') ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Années d'expérience</label>
-                            <input type="number" name="experience" id="experience" class="form-control"
+                            <input type="text" name="experience" id="experience" class="form-control"
                                    placeholder="5"
                                    value="<?= htmlspecialchars($old['experience'] ?? '') ?>">
                         </div>
@@ -189,7 +189,7 @@
                 </div>
 
                 <div class="form-check mb-3">
-                    <input type="checkbox" class="form-check-input" id="terms" required>
+                    <input type="checkbox" class="form-check-input" id="terms">
                     <label class="form-check-label" for="terms">
                         J'accepte les <a href="#" class="login-link">conditions d'utilisation</a>
                         et la <a href="#" class="login-link">politique de confidentialité</a>
@@ -219,12 +219,8 @@
                 const mf = document.getElementById('medecinFields');
                 if (r === 'medecin') {
                     mf.style.display = 'block';
-                    document.getElementById('specialite').required = true;
-                    document.getElementById('numeroOrdre').required = true;
                 } else {
                     mf.style.display = 'none';
-                    document.getElementById('specialite').required = false;
-                    document.getElementById('numeroOrdre').required = false;
                 }
             });
         });

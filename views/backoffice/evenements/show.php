@@ -1,104 +1,390 @@
 <?php
+// views/backoffice/evenements/show.php
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: index.php?page=login');
+    header('Location: ../../../index.php?page=login');
     exit;
 }
+
+require_once __DIR__ . '/../../../models/Event.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+$id = $_GET['id'] ?? null;
+
+if (!$id || !is_numeric($id)) {
+    header('Location: list.php');
+    exit;
+}
+
+$eventModel = new Event();
+$event = $eventModel->getById((int)$id);
+
+if (!$event) {
+    header('Location: list.php');
+    exit;
+}
+
+$page_title = 'Détails de l\'Événement';
+$current_page = 'evenements';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détails de l'événement</title>
+    <title><?= $page_title ?> - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { width: 260px; background: #1a2035; color: white; position: fixed; height: 100%; }
-        .main-content { margin-left: 260px; padding: 20px; }
-        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .info-row { padding: 12px 0; border-bottom: 1px solid #eee; display: flex; }
-        .info-label { width: 180px; font-weight: 600; color: #555; }
-        .info-value { flex: 1; color: #333; }
-        .badge-upcoming { background: #d4edda; color: #155724; padding: 5px 15px; border-radius: 20px; }
-        .badge-past { background: #cfe2ff; color: #084298; padding: 5px 15px; border-radius: 20px; }
-        .badge-cancelled { background: #f8d7da; color: #721c24; padding: 5px 15px; border-radius: 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background: #1a2035;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 30px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a2035;
+            margin: 0;
+        }
+
+        .btn-back {
+            background: #6c757d;
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-back:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+            border-radius: 12px 12px 0 0;
+            padding: 20px;
+            color: white;
+        }
+
+        .card-header h4 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .event-image {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-group {
+            margin-bottom: 20px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            color: #1a2035;
+            font-weight: 500;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge-à-venir {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .badge-terminé {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .badge-annulé {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            border: none;
+            color: #000;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-warning:hover {
+            opacity: 0.9;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .description {
+            line-height: 1.6;
+            color: #555;
+        }
     </style>
 </head>
 <body>
+    <!-- Sidebar -->
+    <?php include __DIR__ . '/../sidebar.php'; ?>
 
-<div class="sidebar p-3">
-    <h4 class="text-center mb-4">Valorys Admin</h4>
-    <hr>
-    <a href="index.php?page=dashboard" class="text-white d-block py-2">📊 Dashboard</a>
-    <a href="index.php?page=admin_events" class="text-white d-block py-2 bg-primary px-2 rounded">📅 Événements</a>
-    <a href="index.php?page=logout" class="text-white d-block py-2 mt-5">🚪 Déconnexion</a>
-</div>
-
-<div class="main-content">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-day me-2"></i>Détails de l'événement</h2>
-        <div>
-            <a href="index.php?page=admin_events&action=edit&id=<?= $event['id'] ?>" class="btn btn-warning"><i class="fas fa-edit me-2"></i>Modifier</a>
-            <a href="index.php?page=admin_events" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Retour</a>
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1><i class="fas fa-calendar-check"></i> Détails de l'Événement</h1>
+            <a href="index.php?page=evenements_admin" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
         </div>
-    </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    <?php if ($event['image']): ?>
-                        <img src="<?= htmlspecialchars($event['image']) ?>" style="max-width: 100%; border-radius: 12px;" alt="<?= htmlspecialchars($event['titre']) ?>">
-                    <?php else: ?>
-                        <div style="width: 100%; height: 200px; background: #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-calendar-alt fa-4x text-muted"></i></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-8">
-                    <h3><?= htmlspecialchars($event['titre']) ?></h3>
-                    <div class="mb-3">
-                        <span class="<?= match($event['status']) { 'à venir' => 'badge-upcoming', 'terminé' => 'badge-past', 'annulé' => 'badge-cancelled', default => 'badge-secondary' } ?>"><?= $event['status'] ?></span>
+        <!-- Event Info -->
+        <div class="card">
+            <div class="card-header">
+                <h4><?= htmlspecialchars($event['titre'] ?? '') ?></h4>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($event['image'])): ?>
+                    <img src="<?= htmlspecialchars($event['image']) ?>" alt="" class="event-image">
+                <?php endif; ?>
+
+                <div class="info-row">
+                    <div class="info-group">
+                        <div class="info-label">Statut</div>
+                        <div class="info-value">
+                            <?php
+                                $status = $event['status'] ?? 'à venir';
+                                $badge_class = 'badge-' . strtolower(str_replace(' ', '-', $status));
+                            ?>
+                            <span class="badge <?= $badge_class ?>">
+                                <?= ucfirst($status) ?>
+                            </span>
+                        </div>
                     </div>
-                    <div class="info-row"><div class="info-label">Date de début</div><div class="info-value"><?= date('d/m/Y H:i', strtotime($event['date_debut'])) ?></div></div>
-                    <div class="info-row"><div class="info-label">Date de fin</div><div class="info-value"><?= date('d/m/Y H:i', strtotime($event['date_fin'])) ?></div></div>
-                    <div class="info-row"><div class="info-label">Lieu</div><div class="info-value"><?= htmlspecialchars($event['lieu'] ?? 'Non renseigné') ?></div></div>
-                    <div class="info-row"><div class="info-label">Adresse</div><div class="info-value"><?= htmlspecialchars($event['adresse'] ?? 'Non renseignée') ?></div></div>
-                    <div class="info-row"><div class="info-label">Capacité</div><div class="info-value"><?= $event['capacite_max'] ? $event['capacite_max'] . ' places' : 'Illimitée' ?></div></div>
-                    <div class="info-row"><div class="info-label">Participants</div><div class="info-value"><strong><?= $event['nb_participants'] ?? 0 ?></strong> inscrits</div></div>
-                    <div class="info-row"><div class="info-label">Prix</div><div class="info-value"><?= $event['prix'] > 0 ? $event['prix'] . ' €' : 'Gratuit' ?></div></div>
+                    <div class="info-group">
+                        <div class="info-label">Participants</div>
+                        <div class="info-value">
+                            <?= $event['nb_participants'] ?? 0 ?>
+                        </div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Capacité Maximale</div>
+                        <div class="info-value">
+                            <?= $event['capacite_max'] ?? 'Illimitée' ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-group" style="margin-top: 20px;">
+                    <div class="info-label">Description</div>
+                    <div class="info-value description">
+                        <?= htmlspecialchars($event['description'] ?? 'N/A') ?>
+                    </div>
                 </div>
             </div>
-            <hr>
-            <h5>Description</h5>
-            <p><?= nl2br(htmlspecialchars($event['description'] ?? '')) ?></p>
-            <h5>Contenu détaillé</h5>
-            <div><?= nl2br(htmlspecialchars($event['contenu'] ?? '')) ?></div>
-            
-            <?php if (!empty($participants)): ?>
-            <hr>
-            <h5><i class="fas fa-users me-2"></i>Liste des participants (<?= count($participants) ?>)</h5>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Date d'inscription</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($participants as $p): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($p['prenom'] . ' ' . $p['nom']) ?></td>
-                            <td><?= htmlspecialchars($p['email']) ?></td>
-                            <td><?= htmlspecialchars($p['telephone'] ?? '-') ?></td>
-                            <td><?= date('d/m/Y H:i', strtotime($p['date_inscription'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+        </div>
+
+        <!-- Dates and Details -->
+        <div class="card">
+            <div class="card-header">
+                <h4>Informations Générales</h4>
             </div>
-            <?php endif; ?>
+            <div class="card-body">
+                <div class="info-row">
+                    <div class="info-group">
+                        <div class="info-label">Date Début</div>
+                        <div class="info-value">
+                            <?= isset($event['date_debut']) ? 
+                                date('d/m/Y H:i', strtotime($event['date_debut'])) : 'N/A' ?>
+                        </div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Date Fin</div>
+                        <div class="info-value">
+                            <?= isset($event['date_fin']) ? 
+                                date('d/m/Y H:i', strtotime($event['date_fin'])) : 'N/A' ?>
+                        </div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Lieu</div>
+                        <div class="info-value">
+                            <?= htmlspecialchars($event['lieu'] ?? 'N/A') ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-group">
+                        <div class="info-label">Adresse</div>
+                        <div class="info-value">
+                            <?= htmlspecialchars($event['adresse'] ?? 'N/A') ?>
+                        </div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Prix</div>
+                        <div class="info-value">
+                            <?= $event['prix'] ?? 'Gratuit' ?> TND
+                        </div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Sponsor</div>
+                        <div class="info-value">
+                            <?= htmlspecialchars($event['sponsor_nom'] ?? 'N/A') ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-buttons">
+            <a href="index.php?page=evenements_admin&action=edit&id=<?= $event['id'] ?>" class="btn-warning">
+                <i class="fas fa-edit"></i> Éditer
+            </a>
+            <a href="javascript:;" class="btn-danger" onclick="confirmDelete(<?= $event['id'] ?>)">
+                <i class="fas fa-trash"></i> Supprimer
+            </a>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmDelete(id) {
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                text: "Cette action est irréversible et supprimera cet événement !",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '<i class="fas fa-trash"></i> Oui, supprimer !',
+                cancelButtonText: '<i class="fas fa-ban"></i> Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'index.php?page=evenements_admin&action=delete&id=' + id;
+                }
+            });
+        }
+    </script>
 </body>
 </html>

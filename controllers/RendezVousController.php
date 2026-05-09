@@ -193,10 +193,100 @@ class RendezVousController {
         }
 
         $this->rdvModel->updateStatus($id, 'confirmé');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous confirmé.'];
+
+        // ✉️ Envoi d'un e-mail de notification à la confirmation du RDV
+        $this->sendConfirmationEmail($rdv);
+
+        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous confirmé. Un e-mail de confirmation a été envoyé.'];
         header('Location: index.php?page=medecin_rendezvous');
         exit;
     }
+
+    /**
+     * Envoie un e-mail de confirmation de rendez-vous via PHPMailer + Gmail SMTP.
+     * L'e-mail est envoyé à : skanderdhaoui77@gmail.com
+     */
+    private function sendConfirmationEmail(array $rdv): void {
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/Exception.php';
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/PHPMailer.php';
+        require_once __DIR__ . '/../doctime_full/PHPMailer/src/SMTP.php';
+
+        $patientNom   = htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']);
+        $medecinNom   = 'Dr. ' . htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']);
+        $specialite   = htmlspecialchars($rdv['specialite'] ?? 'Médecin généraliste');
+        $date         = date('d/m/Y', strtotime($rdv['date_rendezvous']));
+        $heure        = htmlspecialchars($rdv['heure_rendezvous']);
+        $motif        = htmlspecialchars($rdv['motif'] ?? 'Non précisé');
+        $adresse      = htmlspecialchars($rdv['cabinet_adresse'] ?? 'Non précisée');
+        $patientEmail = htmlspecialchars($rdv['patient_email'] ?? '');
+
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'skanderdhaoui77@gmail.com';
+            $mail->Password   = 'fuld tydv xzka ztxb';
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = 587;
+            $mail->CharSet    = 'UTF-8';
+            // Désactiver vérification SSL (nécessaire en local XAMPP)
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ],
+            ];
+
+            $mail->setFrom('skanderdhaoui77@gmail.com', 'DocTime');
+            $mail->addAddress('skanderdhaoui77@gmail.com', 'DocTime Admin');
+            $mail->addAddress($patientEmail, $patientNom);
+
+            $mail->isHTML(true);
+            $mail->Subject = '✅ Confirmation de rendez-vous - DocTime';
+            $mail->Body    = "
+            <html>
+            <head><meta charset='UTF-8'></head>
+            <body style='font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0;'>
+              <div style='max-width:600px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);'>
+                <div style='background:#2563eb;padding:24px;text-align:center;'>
+                  <h1 style='color:#fff;margin:0;font-size:22px;'>DocTime — Confirmation de Rendez-vous</h1>
+                </div>
+                <div style='padding:30px;'>
+                  <p style='color:#374151;font-size:15px;'>Bonjour,</p>
+                  <p style='color:#374151;font-size:15px;'>Le rendez-vous suivant a ete <strong>confirme</strong> par le medecin :</p>
+                  <div style='background:#eff6ff;border-left:4px solid #2563eb;border-radius:4px;padding:16px 20px;margin:20px 0;'>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Patient :</strong> $patientNom</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Email patient :</strong> $patientEmail</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Medecin :</strong> $medecinNom</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Specialite :</strong> $specialite</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Date :</strong> $date</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Heure :</strong> $heure</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Motif :</strong> $motif</p>
+                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Adresse cabinet :</strong> $adresse</p>
+                  </div>
+                  <p style='color:#374151;font-size:15px;'>Cordialement,<br><strong>L equipe DocTime</strong></p>
+                </div>
+                <div style='background:#f9fafb;padding:16px;text-align:center;font-size:12px;color:#9ca3af;'>
+                  Cet e-mail est envoye automatiquement par DocTime.
+                </div>
+              </div>
+            </body>
+            </html>";
+
+            $mail->send();
+
+        } catch (\Exception $e) {
+            // Log l'erreur dans un fichier pour déboguer
+            $logMsg = date('[Y-m-d H:i:s]') . ' Erreur email RDV : ' . $mail->ErrorInfo . PHP_EOL;
+            file_put_contents(__DIR__ . '/../mail_error.log', $logMsg, FILE_APPEND);
+            error_log('DocTime - Erreur envoi email : ' . $mail->ErrorInfo);
+        }
+    }
+
+
 
     public function medecinTerminerRendezVous(int $id): void {
         $this->auth->requireRole('medecin');
@@ -614,12 +704,24 @@ class RendezVousController {
             }
         } elseif ($role === 'admin') {
             $context['summary'][] = 'Total rendez-vous: ' . $this->rdvModel->countAll();
-            $context['summary'][] = 'En attente: ' . $this->rdvModel->countByStatus('en_attente');
-            $context['summary'][] = 'Confirmes: ' . $this->rdvModel->countByStatus('confirmÃ©');
-            $context['summary'][] = 'Termines: ' . $this->rdvModel->countByStatus('terminÃ©');
+            $context['summary'][] = 'En attente: ' . $this->countRendezVousByStatusForChat('en_attente');
+            $context['summary'][] = 'Confirmes: ' . $this->countRendezVousByStatusForChat('confirmÃ©');
+            $context['summary'][] = 'Termines: ' . $this->countRendezVousByStatusForChat('terminÃ©');
         }
 
         return $context;
+    }
+
+    private function countRendezVousByStatusForChat(string $status): int {
+        if (method_exists($this->rdvModel, 'countByStatus')) {
+            return (int)$this->rdvModel->countByStatus($status);
+        }
+
+        if (method_exists($this->rdvModel, 'countByStatut')) {
+            return (int)$this->rdvModel->countByStatut($status);
+        }
+
+        return 0;
     }
 
     private function askFreeLocalAi(string $message, array $context): ?string {

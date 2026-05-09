@@ -59,7 +59,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                     <form method="POST" action="index.php?page=medecin_ordonnances&action=store">
                         <div class="mb-3">
                             <label class="form-label">Patient *</label>
-                            <select name="patient_id" class="form-select" required>
+                            <select name="patient_id" class="form-select">
                                 <option value="">Sélectionner un patient</option>
                                 <?php if (isset($patients) && !empty($patients)): ?>
                                     <?php foreach ($patients as $patient): ?>
@@ -70,11 +70,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Diagnostic *</label>
-                            <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..." required></textarea>
+                            <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..."></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Prescription *</label>
-                            <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..." required></textarea>
+                            <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..."></textarea>
                         </div>
                         <?php if (isset($rdv_id) && $rdv_id): ?>
                             <input type="hidden" name="rdv_id" value="<?= $rdv_id ?>">

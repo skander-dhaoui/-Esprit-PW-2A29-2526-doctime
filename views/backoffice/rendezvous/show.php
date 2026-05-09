@@ -3,139 +3,171 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: index.php?page=login');
     exit;
 }
+
+// La variable passée par le contrôleur s'appelle $rendezvous, pas $rdv
+$rdv = $rendezvous ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détails du rendez-vous - Valorys</title>
+    <title>Détail du rendez-vous - Valorys Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { width: 260px; background: #1a2035; color: white; position: fixed; height: 100%; }
-        .main-content { margin-left: 260px; padding: 20px; }
-        .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .info-row { padding: 12px 0; border-bottom: 1px solid #eee; display: flex; }
-        .info-label { width: 180px; font-weight: 600; color: #555; }
-        .info-value { flex: 1; color: #333; }
-        .badge-confirme { background: #d4edda; color: #155724; padding: 5px 15px; border-radius: 20px; }
-        .badge-attente { background: #fff3cd; color: #856404; padding: 5px 15px; border-radius: 20px; }
-        .badge-termine { background: #cfe2ff; color: #084298; padding: 5px 15px; border-radius: 20px; }
-        .badge-annule { background: #f8d7da; color: #721c24; padding: 5px 15px; border-radius: 20px; }
+        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        .card { border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background: white; border-bottom: 1px solid #eee; padding: 15px 20px; font-weight: bold; border-radius: 15px 15px 0 0; }
+        .info-label { font-weight: bold; width: 150px; display: inline-block; }
+        .info-row { margin-bottom: 12px; }
     </style>
 </head>
 <body>
-
-<!-- Sidebar -->
-<div class="sidebar p-3">
-    <h4 class="text-center mb-4">Valorys Admin</h4>
-    <hr class="bg-light">
-    <a href="index.php?page=dashboard" class="text-white d-block py-2">📊 Dashboard</a>
-    <a href="index.php?page=admin_rendezvous" class="text-white d-block py-2 bg-primary px-2 rounded">📅 Rendez-vous</a>
-    <a href="index.php?page=logout" class="text-white d-block py-2 mt-5">🚪 Déconnexion</a>
-</div>
-
-<!-- Main Content -->
-<div class="main-content">
+<div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-check me-2"></i>Détails du rendez-vous #<?= $rdv['id'] ?></h2>
+        <h2><i class="fas fa-calendar-check"></i> Détail du rendez-vous #<?= htmlspecialchars($rdv['id'] ?? '') ?></h2>
         <div>
-            <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn btn-warning">
-                <i class="fas fa-edit me-2"></i>Modifier
+            <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Retour
             </a>
-            <a href="index.php?page=admin_rendezvous" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Retour
+            <a href="index.php?page=rendez_vous_admin&action=edit&id=<?= $rdv['id'] ?? '' ?>" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+            <a href="index.php?page=rendez_vous_admin&action=delete&id=<?= $rdv['id'] ?? '' ?>" class="btn btn-danger" onclick="return confirm('Supprimer ce rendez-vous ?')">
+                <i class="fas fa-trash"></i> Supprimer
             </a>
         </div>
     </div>
 
+    <?php if (isset($flash)): ?>
+        <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show">
+            <?= htmlspecialchars($flash['message']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Informations patient -->
     <div class="card">
+        <div class="card-header">
+            <i class="fas fa-user"></i> Informations patient
+        </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h5 class="mb-3"><i class="fas fa-user me-2"></i>Informations patient</h5>
                     <div class="info-row">
-                        <div class="info-label">Nom complet</div>
-                        <div class="info-value"><?= htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']) ?></div>
+                        <span class="info-label">Nom complet :</span>
+                        <span><?= htmlspecialchars($rdv['patient_nom'] ?? 'Non renseigné') ?></span>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Email</div>
-                        <div class="info-value"><?= htmlspecialchars($rdv['patient_email'] ?? 'Non renseigné') ?></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Téléphone</div>
-                        <div class="info-value"><?= htmlspecialchars($rdv['patient_telephone'] ?? 'Non renseigné') ?></div>
+                        <span class="info-label">Email :</span>
+                        <span><?= htmlspecialchars($rdv['patient_email'] ?? 'Non renseigné') ?></span>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <h5 class="mb-3"><i class="fas fa-user-md me-2"></i>Informations médecin</h5>
                     <div class="info-row">
-                        <div class="info-label">Nom complet</div>
-                        <div class="info-value">Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Spécialité</div>
-                        <div class="info-value"><?= htmlspecialchars($rdv['specialite'] ?? 'Généraliste') ?></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Cabinet</div>
-                        <div class="info-value"><?= htmlspecialchars($rdv['cabinet_adresse'] ?? 'Non renseigné') ?></div>
+                        <span class="info-label">Téléphone :</span>
+                        <span><?= htmlspecialchars($rdv['patient_telephone'] ?? 'Non renseigné') ?></span>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <hr>
-
+    <!-- Informations médecin -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-user-md"></i> Informations médecin
+        </div>
+        <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h5 class="mb-3"><i class="fas fa-calendar me-2"></i>Détails du rendez-vous</h5>
                     <div class="info-row">
-                        <div class="info-label">Date</div>
-                        <div class="info-value"><?= date('d/m/Y', strtotime($rdv['date_rendezvous'])) ?></div>
+                        <span class="info-label">Nom complet :</span>
+                        <span>Dr. <?= htmlspecialchars($rdv['medecin_nom'] ?? 'Non renseigné') ?></span>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Heure</div>
-                        <div class="info-value"><?= $rdv['heure_rendezvous'] ?></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Motif</div>
-                        <div class="info-value"><?= nl2br(htmlspecialchars($rdv['motif'] ?? 'Non spécifié')) ?></div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Statut</div>
-                        <div class="info-value">
-                            <?php
-                            $badgeClass = match($rdv['statut']) {
-                                'confirmé' => 'badge-confirme',
-                                'en_attente' => 'badge-attente',
-                                'terminé' => 'badge-termine',
-                                'annulé' => 'badge-annule',
-                                default => 'badge-secondary'
-                            };
-                            ?>
-                            <span class="<?= $badgeClass ?>"><?= $rdv['statut'] ?></span>
-                        </div>
+                        <span class="info-label">Spécialité :</span>
+                        <span><?= htmlspecialchars($rdv['specialite'] ?? 'Généraliste') ?></span>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <h5 class="mb-3"><i class="fas fa-sticky-note me-2"></i>Notes du médecin</h5>
                     <div class="info-row">
-                        <div class="info-value"><?= nl2br(htmlspecialchars($rdv['notes_medecin'] ?? 'Aucune note')) ?></div>
+                        <span class="info-label">Email :</span>
+                        <span><?= htmlspecialchars($rdv['medecin_email'] ?? 'Non renseigné') ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cabinet :</span>
+                        <span><?= htmlspecialchars($rdv['cabinet_adresse'] ?? 'Non renseigné') ?></span>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <hr>
-
-            <div class="info-row">
-                <div class="info-label">Créé le</div>
-                <div class="info-value"><?= date('d/m/Y H:i', strtotime($rdv['created_at'])) ?></div>
+    <!-- Détails du rendez-vous -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-info-circle"></i> Détails du rendez-vous
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">Date :</span>
+                        <span><?= !empty($rdv['date_rendezvous']) ? date('d/m/Y', strtotime($rdv['date_rendezvous'])) : 'Non définie' ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Heure :</span>
+                        <span><?= htmlspecialchars($rdv['heure_rendezvous'] ?? 'Non définie') ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Motif :</span>
+                        <span><?= nl2br(htmlspecialchars($rdv['motif'] ?? 'Non spécifié')) ?></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">Statut :</span>
+                        <?php
+                        $badgeClass = match($rdv['statut'] ?? 'en_attente') {
+                            'confirmé' => 'success',
+                            'en_attente' => 'warning',
+                            'terminé' => 'info',
+                            'annulé' => 'danger',
+                            default => 'secondary'
+                        };
+                        ?>
+                        <span class="badge bg-<?= $badgeClass ?>"><?= htmlspecialchars($rdv['statut'] ?? 'en_attente') ?></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Notes :</span>
+                        <span><?= nl2br(htmlspecialchars($rdv['notes'] ?? 'Aucune note')) ?></span>
+                    </div>
+                </div>
             </div>
-            <div class="info-row">
-                <div class="info-label">Dernière modification</div>
-                <div class="info-value"><?= date('d/m/Y H:i', strtotime($rdv['updated_at'] ?? $rdv['created_at'])) ?></div>
+        </div>
+    </div>
+
+    <!-- Dates -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-calendar"></i> Dates système
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">Créé le :</span>
+                        <span><?= !empty($rdv['created_at']) ? date('d/m/Y H:i', strtotime($rdv['created_at'])) : 'Non renseigné' ?></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-row">
+                        <span class="info-label">Dernière modification :</span>
+                        <span><?= !empty($rdv['updated_at']) ? date('d/m/Y H:i', strtotime($rdv['updated_at'])) : 'Non renseigné' ?></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

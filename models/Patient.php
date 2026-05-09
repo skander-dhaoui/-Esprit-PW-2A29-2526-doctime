@@ -4,10 +4,14 @@ require_once __DIR__ . '/../config/database.php';
 
 class Patient {
 
-    private PDO $db;
+    private ?PDO $db;
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
+    }
+
+    public function __destruct() {
+        $this->db = null;
     }
 
     // ─────────────────────────────────────────
@@ -26,7 +30,25 @@ class Patient {
         $stmt->execute([':uid' => $userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
+/**
+ * Récupère tous les patients
+ */
+public function getAll(): array {
+    try {
+        $stmt = $this->db->prepare("
+            SELECT u.*, p.groupe_sanguin
+            FROM users u
+            JOIN patients p ON u.id = p.user_id
+            WHERE u.role = 'patient'
+            ORDER BY u.created_at DESC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('Erreur Patient::getAll: ' . $e->getMessage());
+        return [];
+    }
+}
     public function update(int $userId, array $data): bool {
         $allowed = ['groupe_sanguin', 'allergie', 'antecedents'];
         $fields  = [];
