@@ -117,7 +117,7 @@ if (isset($_GET['mark_all_read'])) {
         <div class="d-flex align-items-center gap-3">
             <!-- CLOCHE NOTIFICATIONS -->
             <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm position-relative" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-bell"></i>
                     <?php if ($notifCount > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;"><?= $notifCount ?></span>
@@ -283,6 +283,26 @@ if (isset($_GET['mark_all_read'])) {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dropdown-toggle[data-bs-toggle="dropdown"]').forEach(function(btn) {
+            btn.addEventListener('click', function(event) {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) {
+                    var menu = btn.nextElementSibling;
+                    if (menu && menu.classList.contains('dropdown-menu')) {
+                        menu.classList.toggle('show');
+                    }
+                }
+            });
+        });
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+    });
+
 // RECHERCHE + TRI en temps réel
 function filterArticles() {
     var q = document.getElementById('searchInput').value.toLowerCase();

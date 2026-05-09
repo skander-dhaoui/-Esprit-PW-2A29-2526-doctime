@@ -91,7 +91,7 @@ try {
 
                 <!-- CLOCHE NOTIFICATIONS -->
                 <div class="dropdown">
-                    <button class="btn btn-outline-light btn-sm position-relative" data-bs-toggle="dropdown">
+                    <button type="button" class="btn btn-outline-light btn-sm dropdown-toggle position-relative" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-bell"></i>
                         <?php if ($notifCount > 0): ?>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:10px;"><?= $notifCount ?></span>
@@ -326,5 +326,26 @@ try {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dropdown-toggle[data-bs-toggle="dropdown"]').forEach(function(btn) {
+            btn.addEventListener('click', function(event) {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) {
+                    var menu = btn.nextElementSibling;
+                    if (menu && menu.classList.contains('dropdown-menu')) {
+                        menu.classList.toggle('show');
+                    }
+                }
+            });
+        });
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+    });
+    </script>
 </body>
 </html>

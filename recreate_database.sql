@@ -1,6 +1,12 @@
 -- =============================================
--- UTILISATION DE LA BASE
+-- DOCTIME DATABASE RECREATION SCRIPT
+-- Complete SQL script to recreate the entire database
+-- Generated from project files
 -- =============================================
+
+-- Drop database if exists and create new one
+DROP DATABASE IF EXISTS doctime_db;
+CREATE DATABASE doctime_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE doctime_db;
 
 -- =============================================
@@ -73,36 +79,16 @@ CREATE TABLE IF NOT EXISTS medecins (
     certificats TEXT,
     notation_moyenne DECIMAL(3,2) DEFAULT 0,
     nombre_avis INT DEFAULT 0,
+    statut_validation ENUM('en_attente', 'valide', 'refusé') DEFAULT 'en_attente',
+    commentaire_validation TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_specialite (specialite),
     INDEX idx_ordre (numero_ordre),
     INDEX idx_ville (cabinet_ville),
-    INDEX idx_actif (actif)
-);
-
--- =============================================
--- TABLE DES RENDEZ-VOUS
--- =============================================
-CREATE TABLE IF NOT EXISTS rendez_vous (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    patient_id INT NOT NULL,
-    medecin_id INT NOT NULL,
-    date_rendezvous DATE NOT NULL,
-    heure_rendezvous TIME NOT NULL,
-    duree INT DEFAULT 30,
-    motif TEXT,
-    statut ENUM('en_attente', 'confirmé', 'annulé', 'terminé') DEFAULT 'en_attente',
-    notes_medecin TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (patient_id) REFERENCES users(id),
-    FOREIGN KEY (medecin_id) REFERENCES users(id),
-    INDEX idx_date (date_rendezvous),
-    INDEX idx_statut (statut),
-    INDEX idx_patient (patient_id),
-    INDEX idx_medecin (medecin_id)
+    INDEX idx_actif (actif),
+    INDEX idx_statut_validation (statut_validation)
 );
 
 -- =============================================
@@ -125,6 +111,32 @@ CREATE TABLE IF NOT EXISTS disponibilites (
 );
 
 -- =============================================
+-- TABLE DES RENDEZ-VOUS
+-- =============================================
+CREATE TABLE IF NOT EXISTS rendez_vous (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patient_id INT NOT NULL,
+    medecin_id INT NOT NULL,
+    disponibilite_id INT NULL,
+    date_rendezvous DATE NOT NULL,
+    heure_rendezvous TIME NOT NULL,
+    duree INT DEFAULT 30,
+    motif TEXT,
+    statut ENUM('en_attente', 'confirmé', 'annulé', 'terminé') DEFAULT 'en_attente',
+    notes_medecin TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES users(id),
+    FOREIGN KEY (medecin_id) REFERENCES users(id),
+    FOREIGN KEY (disponibilite_id) REFERENCES disponibilites(id) ON DELETE SET NULL,
+    INDEX idx_date (date_rendezvous),
+    INDEX idx_statut (statut),
+    INDEX idx_patient (patient_id),
+    INDEX idx_medecin (medecin_id),
+    INDEX idx_disponibilite (disponibilite_id)
+);
+
+-- =============================================
 -- TABLE DES ARTICLES (BLOG)
 -- =============================================
 CREATE TABLE IF NOT EXISTS articles (
@@ -138,6 +150,9 @@ CREATE TABLE IF NOT EXISTS articles (
     categorie VARCHAR(100),
     tags VARCHAR(255),
     status ENUM('brouillon', 'publié', 'archive') DEFAULT 'brouillon',
+    moderation_status ENUM('pending', 'approved', 'rejected') DEFAULT 'approved',
+    moderation_reason TEXT,
+    moderated_at DATETIME,
     vues INT DEFAULT 0,
     likes INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -145,6 +160,7 @@ CREATE TABLE IF NOT EXISTS articles (
     FOREIGN KEY (auteur_id) REFERENCES users(id),
     INDEX idx_slug (slug),
     INDEX idx_status (status),
+    INDEX idx_moderation_status (moderation_status),
     INDEX idx_created (created_at),
     INDEX idx_categorie (categorie)
 );
@@ -161,9 +177,9 @@ CREATE TABLE IF NOT EXISTS replies (
     image VARCHAR(255) DEFAULT NULL,
     status ENUM('en_attente', 'approuvé', 'rejeté') DEFAULT 'en_attente',
     moderation_status ENUM('pending', 'approved', 'rejected') DEFAULT 'approved',
-    moderation_reason TEXT DEFAULT NULL,
-    moderated_at DATETIME DEFAULT NULL,
-    parent_id INT DEFAULT NULL,
+    moderation_reason TEXT,
+    moderated_at DATETIME,
+    parent_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id),
@@ -262,6 +278,20 @@ CREATE TABLE IF NOT EXISTS categories (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_id) REFERENCES categories(id),
     INDEX idx_slug (slug)
+);
+
+-- =============================================
+-- TABLE DES MÉTIERS
+-- =============================================
+CREATE TABLE IF NOT EXISTS metiers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(255) NOT NULL,
+    categorie VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_nom (nom),
+    INDEX idx_categorie (categorie)
 );
 
 -- =============================================
@@ -403,17 +433,77 @@ CREATE TABLE IF NOT EXISTS avis (
 );
 
 -- =============================================
+-- TABLE DES COMMENTAIRES D'ÉVÉNEMENTS
+-- =============================================
+CREATE TABLE IF NOT EXISTS event_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    user_id INT NOT NULL,
+    comment LONGTEXT NOT NULL,
+    status ENUM('en_attente', 'approuvé', 'rejeté') DEFAULT 'approuvé',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_event (event_id),
+    INDEX idx_status (status),
+    INDEX idx_user (user_id),
+    INDEX idx_created (created_at)
+);
+
+-- =============================================
+-- TABLE DES LIKES D'ARTICLES
+-- =============================================
+CREATE TABLE IF NOT EXISTS article_likes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    article_id INT NOT NULL,
+    user_id INT NOT NULL,
+    type ENUM('like', 'dislike') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_article_user (article_id, user_id),
+    INDEX idx_article (article_id),
+    INDEX idx_user (user_id),
+    INDEX idx_type (type)
+);
+
+CREATE TABLE IF NOT EXISTS reply_likes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reply_id INT NOT NULL,
+    user_id INT NOT NULL,
+    type ENUM('like', 'dislike') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (reply_id) REFERENCES replies(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_reply_user (reply_id, user_id),
+    INDEX idx_reply (reply_id),
+    INDEX idx_user (user_id),
+    INDEX idx_type (type)
+);
+
+-- =============================================
+-- AJOUT DES COLONNES SOCIAL AUTH
+-- =============================================
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS social_provider VARCHAR(50) NULL AFTER avatar,
+    ADD COLUMN IF NOT EXISTS social_provider_id VARCHAR(191) NULL AFTER social_provider,
+    ADD COLUMN IF NOT EXISTS social_avatar VARCHAR(255) NULL AFTER social_provider_id;
+
+CREATE INDEX IF NOT EXISTS idx_users_social_provider
+    ON users (social_provider, social_provider_id);
+
+-- =============================================
 -- DONNÉES INITIALES
 -- =============================================
 
--- Insertion des catégories de produits
-INSERT INTO categories (nom, slug, description) VALUES 
-('Médicaments', 'medicaments', 'Médicaments sur ordonnance et en libre accès'),
-('Parapharmacie', 'parapharmacie', 'Produits de parapharmacie'),
-('Matériel médical', 'materiel-medical', 'Matériel et équipement médical'),
-('Hygiène', 'hygiene', 'Produits d\'hygiène et soins'),
-('Nutrition', 'nutrition', 'Compléments alimentaires et nutrition');
-
 -- Insertion d'un admin par défaut (mot de passe: admin123)
-INSERT INTO users (nom, prenom, email, password, role, statut) 
+INSERT INTO users (nom, prenom, email, password, role, statut)
 VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');
+
+-- =============================================
+-- FIN DU SCRIPT
+-- =============================================

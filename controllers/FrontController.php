@@ -2557,6 +2557,42 @@ class FrontController {
             header('Location: index.php?page=replies_admin'); exit;
         }
 
+        // ── CREATE COMMENTAIRE ADMIN ─────────────────
+        if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $articleId = (int)($_POST['article_id'] ?? 0);
+            $parentId  = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+            $replay    = trim((string)($_POST['replay'] ?? ''));
+            $emoji     = trim((string)($_POST['emoji'] ?? '')) ?: null;
+            $imagePath = null;
+
+            if (isset($_FILES['reply_image']) && $_FILES['reply_image']['error'] === UPLOAD_ERR_OK) {
+                $imagePath = $this->uploadReplyImage($_FILES['reply_image']);
+            }
+
+            if ($articleId <= 0) {
+                $_SESSION['flash'] = ['type'=>'error','message'=>'Article invalide.'];
+                header('Location: index.php?page=replies_admin'); exit;
+            }
+
+            if ($replay === '' && $emoji === null && $imagePath === null) {
+                $_SESSION['flash'] = ['type'=>'error','message'=>'Le commentaire ne peut pas être vide.'];
+                header('Location: index.php?page=replies_admin&article_id=' . $articleId); exit;
+            }
+
+            try {
+                $userId = $_SESSION['user_id'] ?? 0;
+                $stmt = $db->prepare(
+                    "INSERT INTO replies (article_id, parent_id, user_id, replay, emoji, image, status, moderation_status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'approuvé', 'approved', NOW())"
+                );
+                $stmt->execute([$articleId, $parentId, $userId, $replay ?: null, $emoji, $imagePath]);
+                $_SESSION['flash'] = ['type'=>'success','message'=>'Commentaire ajouté avec succès.'];
+            } catch (Exception $e) {
+                $_SESSION['flash'] = ['type'=>'error','message'=>$e->getMessage()];
+            }
+            header('Location: index.php?page=replies_admin&article_id=' . $articleId);
+            exit;
+        }
+
         // ── EDIT POST ────────────────────────────
         if ($action === 'edit' && $replyId && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $replay = trim($_POST['replay'] ?? '');
@@ -2672,6 +2708,9 @@ class FrontController {
                 .search-bar{background:white;border-radius:12px;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:20px;}
                 .search-bar input,.search-bar select{border:2px solid #e4e6eb;border-radius:25px;padding:10px 16px;font-size:14px;outline:none;}
                 .search-bar input:focus,.search-bar select:focus{border-color:#2A7FAA;}
+                .emoji-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+                .emoji-btn{font-size:18px;cursor:pointer;padding:6px 10px;border-radius:10px;border:1px solid #ddd;background:white;transition:all 0.2s;}
+                .emoji-btn:hover{background:#e3f2fd;transform:scale(1.05);}
                 .btn-act{width:32px;height:32px;border-radius:8px;border:none;display:inline-flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;text-decoration:none;margin:0 2px;}
                 .btn-act:hover{opacity:0.8;}
                 .img-thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;}
@@ -2827,6 +2866,27 @@ class FrontController {
             </form>
         </div>
 
+        <?php if ($filterArt > 0): ?>
+        <div style="background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+            <h5 style="margin-bottom:12px;color:#1c1e21;">Ajouter un commentaire à l'article</h5>
+            <form method="POST" action="index.php?page=replies_admin&action=create&article_id=<?= $filterArt ?>" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:12px;">
+                <input type="hidden" name="article_id" value="<?= $filterArt ?>">
+                <input type="hidden" name="parent_id" id="admin_parent_id" value="">
+                <div class="emoji-bar emoji-bar-inline"></div>
+                <textarea name="replay" rows="3" placeholder="Écrire un commentaire..." style="width:100%;border:2px solid #e4e6eb;border-radius:12px;padding:12px;font-size:15px;resize:vertical;"></textarea>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                    <input type="text" name="emoji" placeholder="Emoji (facultatif)" style="border:2px solid #e4e6eb;border-radius:12px;padding:10px 14px;font-size:15px;min-width:180px;flex:1;">
+                    <label style="cursor:pointer;background:#f0f2f5;border:1px solid #e4e6eb;border-radius:12px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;">
+                        <i class="fas fa-image"></i> Image
+                        <input type="file" name="reply_image" accept="image/*" style="display:none;">
+                    </label>
+                    <button type="submit" style="background:#1877f2;color:white;border:none;border-radius:25px;padding:10px 24px;font-weight:600;cursor:pointer;">Publier</button>
+                </div>
+                <small style="color:#65676b;font-size:13px;">Vous pouvez répondre à un commentaire existant en cliquant sur "Répondre".</small>
+            </form>
+        </div>
+        <?php endif; ?>
+
         <!-- TITRE + JOINTURE INFO -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
             <h4 style="margin:0;color:#1c1e21;"><i class="fas fa-comments text-primary"></i> Commentaires <span style="background:#1877f2;color:white;border-radius:20px;padding:2px 10px;font-size:14px;"><?= $total ?></span></h4>
@@ -2884,6 +2944,25 @@ class FrontController {
                     <span class="parent-badge">↩ Réponse à: <?= htmlspecialchars(substr($r['parent_contenu']??'',0,40)) ?> (<?= htmlspecialchars($r['parent_auteur']??'') ?>)</span>
                 </div>
                 <?php endif; ?>
+                <?php if ($filterArt > 0): ?>
+                <button type="button" onclick="toggleAdminReplyForm(<?= $r['reply_id'] ?>)" style="margin-top:12px;background:none;border:1px solid #2A7FAA;color:#2A7FAA;border-radius:20px;padding:7px 14px;font-size:13px;cursor:pointer;">↩ Répondre</button>
+                <div id="admin-reply-form-<?= $r['reply_id'] ?>" style="display:none;margin-top:12px;">
+                    <form method="POST" action="index.php?page=replies_admin&action=create&article_id=<?= $r['article_id'] ?>" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:10px;">
+                        <input type="hidden" name="article_id" value="<?= $r['article_id'] ?>">
+                        <input type="hidden" name="parent_id" value="<?= $r['reply_id'] ?>">
+                        <div class="emoji-bar emoji-bar-inline"></div>
+                        <textarea name="replay" rows="3" placeholder="Répondre à ce commentaire..." style="width:100%;border:2px solid #e4e6eb;border-radius:12px;padding:12px;font-size:14px;resize:vertical;"></textarea>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                            <input type="text" name="emoji" placeholder="Emoji (facultatif)" style="border:2px solid #e4e6eb;border-radius:12px;padding:10px 14px;font-size:15px;min-width:180px;flex:1;">
+                            <label style="cursor:pointer;background:#f0f2f5;border:1px solid #e4e6eb;border-radius:12px;padding:10px 14px;display:inline-flex;align-items:center;gap:8px;">
+                                <i class="fas fa-image"></i> Image
+                                <input type="file" name="reply_image" accept="image/*" style="display:none;">
+                            </label>
+                            <button type="submit" style="background:#2A7FAA;color:white;border:none;border-radius:25px;padding:10px 20px;font-weight:600;cursor:pointer;">Publier la réponse</button>
+                        </div>
+                    </form>
+                </div>
+                <?php endif; ?>
                 <?php echo renderTranslationWidget('reply', (int)$r['reply_id'], 'fr', true); ?>
             </div>
 
@@ -2937,6 +3016,30 @@ class FrontController {
             };
             xhr.send(JSON.stringify({reply_id: parseInt(replyId), type: type}));
         }
+        function toggleAdminReplyForm(replyId) {
+            var el = document.getElementById('admin-reply-form-' + replyId);
+            if (!el) return;
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var emojis = ['😀','😂','😍','🥰','😎','😢','😡','👍','👎','❤️','🔥','✅','⭐','💪','🙏','🤔','😷','🏥','💊','🩺','🎉'];
+            document.querySelectorAll('.emoji-bar-inline').forEach(function(bar) {
+                emojis.forEach(function(e) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'emoji-btn';
+                    btn.textContent = e;
+                    btn.onclick = function() {
+                        var textarea = bar.closest('form').querySelector('textarea');
+                        if (textarea) {
+                            textarea.value += e;
+                            textarea.focus();
+                        }
+                    };
+                    bar.appendChild(btn);
+                });
+            });
+        });
         </script>
         </body></html>
         <?php
