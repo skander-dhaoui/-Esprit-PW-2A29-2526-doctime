@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use \PDO;
+use \PDOException;
 use \Database;
 
 class EventRepository
@@ -138,7 +139,12 @@ class EventRepository
 
     public function getCategories(): array
     {
-        return $this->db->query("SELECT DISTINCT categorie FROM events WHERE categorie IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+        try {
+            return $this->db->query("SELECT DISTINCT categorie FROM events WHERE categorie IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (PDOException $e) {
+            // La colonne categorie n'existe pas encore dans la table
+            return [];
+        }
     }
 
     // Advanced methods for dashboard

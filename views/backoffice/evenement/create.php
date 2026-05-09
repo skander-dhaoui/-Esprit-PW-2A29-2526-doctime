@@ -50,8 +50,8 @@
                     <label class="form-label" for="description">Description <span class="text-danger">*</span></label>
                     <textarea id="description" name="description" rows="4"
                               class="form-control <?= isset($errors['description']) ? 'is-invalid' : '' ?>"
-                              data-validate="required|minlength:10"
-                              data-label="Description"><?= htmlspecialchars($old['description'] ?? '') ?></textarea>
+                             
+                             ><?= htmlspecialchars($old['description'] ?? '') ?></textarea>
                     <?php if (isset($errors['description'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['description']) ?></div>
                     <?php endif; ?>
@@ -61,8 +61,8 @@
                     <label class="form-label" for="specialite">Spécialité médicale <span class="text-danger">*</span></label>
                     <select id="specialite" name="specialite"
                             class="form-select <?= isset($errors['specialite']) ? 'is-invalid' : '' ?>"
-                            data-validate="required"
-                            data-label="Spécialité">
+                           
+                           >
                         <option value="">-- Choisir une spécialité --</option>
                         <?php foreach ($specialites as $sp): ?>
                             <option value="<?= $sp ?>" <?= ($old['specialite'] ?? '') === $sp ? 'selected' : '' ?>>
@@ -80,8 +80,8 @@
                     <input type="text" id="lieu" name="lieu"
                            class="form-control <?= isset($errors['lieu']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['lieu'] ?? '') ?>"
-                           data-validate="required"
-                           data-label="Lieu">
+                          
+                          >
                     <?php if (isset($errors['lieu'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['lieu']) ?></div>
                     <?php endif; ?>
@@ -92,8 +92,8 @@
                     <input type="text" id="date_debut" name="date_debut"
                            class="form-control <?= isset($errors['date_debut']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['date_debut'] ?? '') ?>"
-                           data-validate="required|date"
-                           data-label="Date de début"
+                          
+                          
                            placeholder="AAAA-MM-JJ">
                     <?php if (isset($errors['date_debut'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['date_debut']) ?></div>
@@ -105,8 +105,8 @@
                     <input type="text" id="date_fin" name="date_fin"
                            class="form-control <?= isset($errors['date_fin']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['date_fin'] ?? '') ?>"
-                           data-validate="required|date|dateafter:date_debut"
-                           data-label="Date de fin"
+                          
+                          
                            placeholder="AAAA-MM-JJ">
                     <?php if (isset($errors['date_fin'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['date_fin']) ?></div>
@@ -118,8 +118,8 @@
                     <input type="text" id="capacite" name="capacite"
                            class="form-control <?= isset($errors['capacite']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['capacite'] ?? '') ?>"
-                           data-validate="required|integer"
-                           data-label="Capacité">
+                          
+                          >
                     <?php if (isset($errors['capacite'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['capacite']) ?></div>
                     <?php endif; ?>
@@ -130,8 +130,8 @@
                     <input type="text" id="prix" name="prix"
                            class="form-control <?= isset($errors['prix']) ? 'is-invalid' : '' ?>"
                            value="<?= htmlspecialchars($old['prix'] ?? '0') ?>"
-                           data-validate="numeric"
-                           data-label="Prix">
+                          
+                          >
                     <div class="form-text">Laisser 0 pour un événement gratuit.</div>
                     <?php if (isset($errors['prix'])): ?>
                         <div class="invalid-feedback"><?= htmlspecialchars($errors['prix']) ?></div>
@@ -142,8 +142,8 @@
                     <label class="form-label" for="statut">Statut <span class="text-danger">*</span></label>
                     <select id="statut" name="statut"
                             class="form-select <?= isset($errors['statut']) ? 'is-invalid' : '' ?>"
-                            data-validate="required"
-                            data-label="Statut">
+                           
+                           >
                         <option value="">-- Choisir --</option>
                         <?php
                         $statutLabels = ['planifie'=>'Planifié','en_cours'=>'En cours','termine'=>'Terminé','annule'=>'Annulé'];
@@ -178,7 +178,7 @@
                 <button type="submit" class="btn btn-primary px-4">
                     <i class="bi bi-check-lg me-1"></i> Enregistrer
                 </button>
-                <a href="index.php?controller=evenement&action=index" class="btn btn-outline-secondary">
+                <a href="index.php?page=evenements_admin" class="btn btn-outline-secondary">
                     Annuler
                 </a>
             </div>
@@ -187,3 +187,4 @@
 </div>
 
 <?php require __DIR__ . '/../layout_footer.php'; ?>
+

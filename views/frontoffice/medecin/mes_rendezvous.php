@@ -60,7 +60,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                     <form method="POST" action="/valorys_Copie/index.php?page=mes_rendez_vous&action=update&id=<?= $rdv['id'] ?>">
                         <div class="mb-3">
                             <label class="form-label">Patient *</label>
-                            <select name="patient_id" class="form-select" required>
+                            <select name="patient_id" class="form-select">
                                 <option value="">Sélectionner un patient</option>
                                 <?php if (isset($patients) && !empty($patients)): ?>
                                     <?php foreach ($patients as $patient): ?>
@@ -73,11 +73,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Date *</label>
-                            <input type="date" name="date_rendezvous" id="date_rdv" class="form-control" value="<?= $rdv['date_rendezvous'] ?>" required>
+                            <input type="date" name="date_rendezvous" id="date_rdv" class="form-control" value="<?= $rdv['date_rendezvous'] ?>">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Heure *</label>
-                            <select name="heure_rendezvous" id="heure_rdv" class="form-select" required>
+                            <select name="heure_rendezvous" id="heure_rdv" class="form-select">
                                 <option value="">Sélectionner une heure</option>
                                 <option value="<?= $rdv['heure_rendezvous'] ?>" selected><?= $rdv['heure_rendezvous'] ?></option>
                             </select>
@@ -148,3 +148,5 @@ dateInput.addEventListener('change', loadSlots);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

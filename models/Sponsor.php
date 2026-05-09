@@ -71,7 +71,7 @@ class Sponsor {
 
     /** Supprime un sponsor */
     public function delete(int $id): bool {
-        $stmt = $this->pdo->prepare("DELETE FROM sponsorss WHERE id = :id");
+        $stmt = $this->pdo->prepare("DELETE FROM sponsors WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 

@@ -1,13 +1,12 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Initialize error handling and logging
 require_once __DIR__ . '/error_handler.php';
 
 // Load environment variables from .env
 require_once __DIR__ . '/config/env.php';
-
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
@@ -79,7 +78,7 @@ require_once __DIR__ . '/controllers/ReplyController.php';
 
 // Contrôleurs optionnels
 $optionalControllers = [
-    'RendezVousController', 'EventController',
+    'RendezVousController', 'EventController', 'MapController',
     'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController', 'CategorieController',
 ];
 foreach ($optionalControllers as $ctrl) {
@@ -706,6 +705,34 @@ switch ($page) {
         adminOnly();
         $adminCtrl->dashboard();
         break;
+
+    case 'carte':
+        adminOnly();
+        $mapCtrl = class_exists('MapController') ? new MapController() : null;
+        if (!$mapCtrl) { $front->page404(); break; }
+        if ($action === 'metiers') {
+            $mapCtrl->metiers();
+        } else {
+            $mapCtrl->carte();
+        }
+        break;
+
+    case 'api_map':
+        adminOnly();
+        header('Content-Type: application/json');
+        $mapCtrl = class_exists('MapController') ? new MapController() : null;
+        if (!$mapCtrl) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Map controller not found']);
+            exit;
+        }
+        if ($action === 'carte') {
+            $mapCtrl->apiCarte();
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid action']);
+        }
+        exit;
 
     case 'users':
         adminOnly();

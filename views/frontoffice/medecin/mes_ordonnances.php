@@ -114,7 +114,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Patient *</label>
-                        <select name="patient_id" class="form-select" required>
+                        <select name="patient_id" class="form-select">
                             <option value="">Sélectionner un patient</option>
                             <?php foreach ($patients as $patient): ?>
                                 <option value="<?= $patient['id'] ?>"><?= htmlspecialchars($patient['prenom'] . ' ' . $patient['nom']) ?></option>
@@ -123,11 +123,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Diagnostic *</label>
-                        <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..." required></textarea>
+                        <textarea name="diagnostic" class="form-control" rows="3" placeholder="Diagnostic du patient..."></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Prescription *</label>
-                        <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..." required></textarea>
+                        <textarea name="contenu" class="form-control" rows="5" placeholder="Liste des médicaments et posologies..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -199,3 +199,5 @@ function downloadPDF(id) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

@@ -81,3 +81,4 @@
 </section>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+

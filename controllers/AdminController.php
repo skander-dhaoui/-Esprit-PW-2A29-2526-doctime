@@ -21,6 +21,7 @@ require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/Admin.php';
 require_once __DIR__ . '/AuthController.php';
+require_once __DIR__ . '/../config/Validator.php';
 
 use App\Models\User;
 use App\Models\Medecin;
@@ -89,12 +90,28 @@ class AdminController {
         $validationStmt->execute();
         $enValidation = $validationStmt->fetch(PDO::FETCH_ASSOC)['count'];
 
+        // Statistiques des sponsors avec valeurs par défaut
+        $totalSponsors = $db->query("SELECT COUNT(*) FROM sponsors")->fetchColumn() ?? 0;
+        $totalMontant = $db->query("SELECT COALESCE(SUM(montant), 0) FROM sponsors")->fetchColumn() ?? 0;
+        $totalEvenements = $db->query("SELECT COUNT(*) FROM events")->fetchColumn() ?? 0;
+        $totalParticipations = $db->query("SELECT COUNT(*) FROM participations")->fetchColumn() ?? 0;
+
+        // Données pour les graphiques avec tableaux vides par défaut
+        $sponsorsData = $db->query("SELECT nom, montant FROM sponsors ORDER BY montant DESC")->fetchAll() ?? [];
+        $participStatut = $db->query("SELECT statut, COUNT(*) as total FROM participations GROUP BY statut")->fetchAll() ?? [];
+        $participEvenement = $db->query("SELECT e.titre, COUNT(p.id) as total FROM events e LEFT JOIN participations p ON p.event_id = e.id GROUP BY e.id, e.titre ORDER BY total DESC LIMIT 8")->fetchAll() ?? [];
+        $montantNiveau = $db->query("SELECT niveau, SUM(montant) as total FROM sponsors GROUP BY niveau ORDER BY total DESC")->fetchAll() ?? [];
+
         // Créer un tableau avec toutes les statistiques
         $stats = [
             'total_users'     => $totalUsers,       // Total d'utilisateurs
             'total_medecins'  => $totalMedecins,    // Total de médecins
             'total_patients'  => $totalPatients,    // Total de patients
             'en_validation'   => $enValidation,     // Utilisateurs en attente de validation
+            'total_sponsors'  => $totalSponsors,    // Total de sponsors
+            'total_montant'   => $totalMontant,     // Total de montant
+            'total_evenements' => $totalEvenements, // Total d'événements
+            'total_participations' => $totalParticipations, // Total de participations
         ];
 
         // Récupérer les 5 derniers utilisateurs inscrits
@@ -102,6 +119,16 @@ class AdminController {
         $recentStmt->execute();
         $recentUsers = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
         $users = $recentUsers;
+
+        // Rendre les variables disponibles pour la vue
+        $totalEvenements = $totalEvenements;
+        $totalSponsors = $totalSponsors;
+        $totalParticipations = $totalParticipations;
+        $totalMontant = $totalMontant;
+        $sponsorsData = $sponsorsData;
+        $participStatut = $participStatut;
+        $participEvenement = $participEvenement;
+        $montantNiveau = $montantNiveau;
 
         // Afficher la vue du dashboard
         $viewPath = __DIR__ . '/../views/backoffice/dashboard.php';
@@ -166,17 +193,27 @@ class AdminController {
     private function getTotalCount(string $table): int {
         $db = $this->db();
         try {
-            if ($table === 'rendez_vous') {
-                try {
-                    $stmt = $db->query("SELECT COUNT(*) FROM rendez_vous");
-                    return (int)$stmt->fetchColumn();
-                } catch (\PDOException $e) {
-                    $table = 'rendezvous';
-                }
+            // ========== SÉCURITÉ: Whitelist des tables autorisées ==========
+            $allowed_tables = [
+                'users', 'evenement', 'sponsor', 'participation', 'articles',
+                'patients', 'medecins', 'rendez_vous', 'rendezvous', 'ordonnance',
+                'disponibilites', 'reviews', 'replies', 'events', 'event_comments',
+                'categories', 'avis', 'login_history'
+            ];
+            
+            // Nettoyer et valider le nom de table
+            $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+            
+            // Vérifier que la table est dans la whitelist
+            if (!in_array($table, $allowed_tables)) {
+                throw new Exception("Table invalide: " . htmlspecialchars($table));
             }
-            $stmt = $db->query("SELECT COUNT(*) FROM " . preg_replace('/[^a-zA-Z0-9_]/', '', $table));
+            
+            // Requête sécurisée (le nom de table est validé)
+            $stmt = $db->query("SELECT COUNT(*) FROM `" . $table . "`");
             return (int)$stmt->fetchColumn();
         } catch (\PDOException $e) {
+            error_log('getTotalCount error: ' . $e->getMessage());
             return 0;
         }
     }
@@ -211,10 +248,16 @@ class AdminController {
         $users = $result['items'];           // Les utilisateurs à afficher
         $pagination = $result['pagination']; // Les données de pagination
         
-        // Variables pour la vue
-        $page_title = 'Gestion des utilisateurs';
-        $current_page = 'users';
-        require __DIR__ . '/../views/backoffice/users_list.php';
+        $this->renderAdminPage(
+            'Gestion des utilisateurs',
+            __DIR__ . '/../views/backoffice/users_list_content.php',
+            'users',
+            [
+                'users' => $users,
+                'pagination' => $pagination,
+                'filters' => $filters,
+            ]
+        );
     }
 
     /**
@@ -224,10 +267,21 @@ class AdminController {
         // Vérifier que l'utilisateur est admin
         $this->auth->requireRole('admin');
 
-        $errors = [];  // Tableau pour les erreurs de validation
-        $page_title = 'Ajouter un utilisateur';
-        $current_page = 'users';
-        require __DIR__ . '/../views/backoffice/user_add.php';
+        // Erreurs de test pour vérifier l'affichage
+        $errors = [
+            'nom' => 'Le nom est obligatoire',
+            'prenom' => 'Le prénom est obligatoire',
+            'email' => 'L\'email est obligatoire et doit être valide',
+            'password' => 'Le mot de passe est obligatoire (minimum 6 caractères)',
+            'role' => 'Le rôle est obligatoire'
+        ];
+        
+        $this->renderAdminPage(
+            'Ajouter un utilisateur',
+            __DIR__ . '/../views/backoffice/user_add_content.php',
+            'users',
+            ['errors' => $errors]
+        );
     }
 
     /**
@@ -244,57 +298,42 @@ class AdminController {
             exit;
         }
 
-        // Extraire et nettoyer les données du formulaire
+        // ========== NETTOYAGE ET EXTRACTION DES DONNÉES ==========
         $data = $this->extractUserFormData();
-        $errors = [];
-        
-        // ========== VALIDATION DES DONNÉES ==========
-        // Valider le nom
-        if (empty($data['nom'])) {
-            $errors['nom'] = 'Le nom est obligatoire.';
-        }
+        $password = trim($_POST['password'] ?? '');
 
-        // Valider le prénom
-        if (empty($data['prenom'])) {
-            $errors['prenom'] = 'Le prénom est obligatoire.';
-        }
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('nom', $data['nom'], 'Nom')
+            ->required('prenom', $data['prenom'], 'Prénom')
+            ->required('email', $data['email'], 'Email')
+            ->email('email', $data['email'], 'Email')
+            ->required('password', $password, 'Mot de passe')
+            ->minLength('password', $password, 6, 'Mot de passe')
+            ->required('role', $data['role'], 'Rôle');
 
-        // Valider l'email
-        if (empty($data['email'])) {
-            $errors['email'] = 'L\'email est obligatoire.';
-        } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            // Vérifier que l'email est au bon format
-            $errors['email'] = 'L\'email n\'est pas valide.';
-        } elseif ($this->findUserByEmail($data['email'])) {
-            // Vérifier que l'email n'existe pas déjà
+        $errors = $validator->getErrors();
+
+        // ========== VÉRIFICATIONS PERSONNALISÉES ==========
+        // Vérifier que l'email n'existe pas
+        if (empty($errors['email']) && $this->findUserByEmail($data['email'])) {
             $errors['email'] = 'Cet email est déjà utilisé.';
         }
 
-        // Valider le mot de passe
-        if (empty($_POST['password'])) {
-            $errors['password'] = 'Le mot de passe est obligatoire.';
-        } elseif (strlen($_POST['password']) < 6) {
-            // Vérifier que le mot de passe a au moins 6 caractères
-            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
-        }
-
-        // Valider le rôle
-        if (empty($data['role'])) {
-            $errors['role'] = 'Le rôle est obligatoire.';
-        }
         
         // ========== GESTION DES ERREURS ==========
-        // Si erreurs de validation, retourner à la vue
+        // Si erreurs de validation, retourner à la vue avec les erreurs
         if (!empty($errors)) {
-            $page_title = 'Ajouter un utilisateur';
-            $current_page = 'users';
-            require __DIR__ . '/../views/backoffice/user_add.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
+            header('Location: index.php?page=users&action=create');
+            exit;
         }
 
         // ========== CRÉATION DE L'UTILISATEUR ==========
-        // Hasher le mot de passe avant enregistrement
-        $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+        // Ajouter le mot de passe hashé aux données
+        $data['password'] = password_hash($password, PASSWORD_DEFAULT);
 
         // Créer l'enregistrement utilisateur en base de données
         $userId = $this->createUserRecord($data);
@@ -367,49 +406,46 @@ class AdminController {
         $user = $this->findUserById($id);
         if (!$user) { $this->notFound(); }
 
-        // Extraire et nettoyer les données (sans demander le mot de passe obligatoire)
+        // ========== NETTOYAGE ET EXTRACTION DES DONNÉES ==========
         $data = $this->extractUserFormData(false);
-        $errors = [];
-        
-        // ========== VALIDATION DES DONNÉES ==========
-        if (empty($data['nom'])) {
-            $errors['nom'] = 'Le nom est obligatoire.';
+        $password = trim($_POST['password'] ?? '');
+
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('nom', $data['nom'], 'Nom')
+            ->required('prenom', $data['prenom'], 'Prénom')
+            ->required('email', $data['email'], 'Email')
+            ->email('email', $data['email'], 'Email');
+
+        // Valider le mot de passe s'il est fourni
+        if (!empty($password)) {
+            $validator->minLength('password', $password, 6, 'Mot de passe');
         }
-        if (empty($data['prenom'])) {
-            $errors['prenom'] = 'Le prénom est obligatoire.';
-        }
-        if (empty($data['email'])) {
-            $errors['email'] = 'L\'email est obligatoire.';
-        } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'L\'email n\'est pas valide.';
-        } else {
-            // Vérifier que le nouvel email n'existe pas (sauf pour cet utilisateur)
+
+        $errors = $validator->getErrors();
+
+        // ========== VÉRIFICATIONS PERSONNALISÉES ==========
+        // Vérifier que le nouvel email n'existe pas (sauf pour cet utilisateur)
+        if (empty($errors['email'])) {
             $existing = $this->findUserByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 $errors['email'] = 'Cet email est déjà utilisé.';
             }
         }
-
-        // Valider le mot de passe s'il est fourni
-        if (!empty($_POST['password']) && strlen($_POST['password']) < 6) {
-            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
-        }
         
         // ========== GESTION DES ERREURS ==========
         if (!empty($errors)) {
-            $extras = $this->getUserExtras($id, $user['role']);
-            $viewPath = __DIR__ . '/../views/backoffice/user_edit.php';
-            if (!file_exists($viewPath)) {
-                $viewPath = __DIR__ . '/../views/backoffice/user_form.php';
-            }
-            file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
+            header("Location: index.php?page=users&action=edit&id=$id");
+            exit;
         }
 
         // ========== MISE À JOUR ==========
         // Hasher le mot de passe s'il est fourni
-        if (!empty($_POST['password'])) {
-            $data['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
+        if (!empty($password)) {
+            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
         }
 
         // Mettre à jour l'utilisateur en base de données
@@ -618,17 +654,32 @@ class AdminController {
             $filters = $this->getBackofficeListFilters([], 'created_at', 'desc');
         }
         
-        $page_title = 'Gestion des patients';
-        $current_page = 'patients';
-        require __DIR__ . '/../views/backoffice/patients_list.php';
+        $this->renderAdminPage(
+            'Gestion des patients',
+            __DIR__ . '/../views/backoffice/patients_list_content.php',
+            'patients',
+            [
+                'patients' => $patients,
+                'pagination' => $pagination,
+                'filters' => $filters,
+            ]
+        );
     }
 
     public function showAddPatient(): void {
         $this->auth->requireRole('admin');
-        $errors = [];
-        $page_title = 'Ajouter un patient';
-        $current_page = 'patients';
-        require __DIR__ . '/../views/backoffice/patient_add.php';
+        
+        // Récupérer les erreurs depuis la session
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
+        unset($_SESSION['errors'], $_SESSION['old']);
+        
+        $this->renderAdminPage(
+            'Ajouter un patient',
+            __DIR__ . '/../views/backoffice/patient_form_content.php',
+            'patients',
+            ['errors' => $errors, 'old' => $old]
+        );
     }
 
     public function addPatient(): void {
@@ -639,42 +690,40 @@ class AdminController {
             exit;
         }
         
+        // Validation des champs obligatoires
         $errors = [];
         
-        // Validation des données
-        $nom = trim($_POST['nom'] ?? '');
-        $prenom = trim($_POST['prenom'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $telephone = trim($_POST['telephone'] ?? '');
-        $adresse = trim($_POST['adresse'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $groupe_sanguin = $_POST['groupe_sanguin'] ?? '';
-        
-        if (empty($nom)) {
-            $errors['nom'] = 'Le nom est obligatoire.';
-        }
-        if (empty($prenom)) {
-            $errors['prenom'] = 'Le prénom est obligatoire.';
-        }
-        if (empty($email)) {
-            $errors['email'] = 'L\'email est obligatoire.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'L\'email n\'est pas valide.';
-        } elseif ($this->findUserByEmail($email)) {
-            $errors['email'] = 'Cet email est déjà utilisé.';
-        }
-        if (empty($password)) {
-            $errors['password'] = 'Le mot de passe est obligatoire.';
-        } elseif (strlen($password) < 6) {
-            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        if (empty(trim($_POST['nom']))) {
+            $errors['nom'] = 'Le nom est obligatoire';
         }
         
-        // Si erreurs, retourner à la vue
+        if (empty(trim($_POST['prenom']))) {
+            $errors['prenom'] = 'Le prénom est obligatoire';
+        }
+        
+        if (empty(trim($_POST['email']))) {
+            $errors['email'] = 'L\'email est obligatoire';
+        } elseif (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide';
+        }
+        
+        if (empty(trim($_POST['password']))) {
+            $errors['password'] = 'Le mot de passe est obligatoire';
+        } elseif (strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères';
+        }
+        
+        // Vérifier si l'email existe déjà
+        if (empty($errors['email']) && $this->findUserByEmail($_POST['email'])) {
+            $errors['email'] = 'Cet email est déjà utilisé';
+        }
+        
+        // S'il y a des erreurs, rediriger avec les erreurs
         if (!empty($errors)) {
-            $page_title = 'Ajouter un patient';
-            $current_page = 'patients';
-            require __DIR__ . '/../views/backoffice/patient_add.php';
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $_POST;
+            header('Location: index.php?page=patients&action=add');
+            exit;
         }
         
         try {
@@ -702,12 +751,12 @@ class AdminController {
         } catch (Exception $e) {
             error_log('Erreur addPatient: ' . $e->getMessage());
             $errors['enregistrement'] = 'Erreur lors de l\'ajout: ' . htmlspecialchars($e->getMessage());
-            $viewPath = __DIR__ . '/../views/backoffice/patient_add.php';
-            if (file_exists($viewPath)) {
-                require_once $viewPath;
-            } else {
-                echo "Vue non trouvée: " . $viewPath;
-            }
+            $this->renderAdminPage(
+                'Ajouter un patient',
+                __DIR__ . '/../views/backoffice/patient_form_content.php',
+                'patients',
+                ['errors' => $errors]
+            );
         }
     }
 
@@ -751,12 +800,15 @@ public function editPatient(int $id): void {
     
     $errors = [];
     
-    $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
-    if (file_exists($viewPath)) {
-        require_once $viewPath;
-    } else {
-        echo "Vue non trouvée: " . $viewPath;
-    }
+    $this->renderAdminPage(
+        'Modifier le patient',
+        __DIR__ . '/../views/backoffice/patient_form_content.php',
+        'patients',
+        [
+            'patient' => $patient,
+            'errors' => $errors,
+        ]
+    );
 }
 
 public function updatePatient(int $id): void {
@@ -821,12 +873,15 @@ public function updatePatient(int $id): void {
             'groupe_sanguin' => $patientInfo['groupe_sanguin'] ?? '',
         ];
         
-        $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            echo "Vue non trouvée: " . $viewPath;
-        }
+        $this->renderAdminPage(
+            'Modifier le patient',
+            __DIR__ . '/../views/backoffice/patient_form_content.php',
+            'patients',
+            [
+                'patient' => $patient,
+                'errors' => $errors,
+            ]
+        );
         return;
     }
     
@@ -875,12 +930,15 @@ public function updatePatient(int $id): void {
             'groupe_sanguin' => $patientInfo['groupe_sanguin'] ?? '',
         ];
         
-        $viewPath = __DIR__ . '/../views/backoffice/patient_edit.php';
-        if (file_exists($viewPath)) {
-            require_once $viewPath;
-        } else {
-            echo "Vue non trouvée: " . $viewPath;
-        }
+        $this->renderAdminPage(
+            'Modifier le patient',
+            __DIR__ . '/../views/backoffice/patient_form_content.php',
+            'patients',
+            [
+                'patient' => $patient,
+                'errors' => $errors,
+            ]
+        );
     }
 }
 
@@ -945,15 +1003,32 @@ public function updatePatient(int $id): void {
         
         $page_title = 'Gestion des médecins';
         $current_page = 'medecins_admin';
-        require __DIR__ . '/../views/backoffice/medecins_list.php';
+        $this->renderAdminPage(
+            'Gestion des médecins',
+            __DIR__ . '/../views/backoffice/medecins_list_content.php',
+            'medecins_admin',
+            [
+                'medecins' => $medecins,
+                'pagination' => $pagination,
+                'filters' => $filters,
+            ]
+        );
     }
 
     public function showAddMedecin(): void {
         $this->auth->requireRole('admin');
-        $errors = [];
-        $page_title = 'Ajouter un médecin';
-        $current_page = 'medecins_admin';
-        require __DIR__ . '/../views/backoffice/medecin_add.php';
+        
+        // Récupérer les erreurs depuis la session
+        $errors = $_SESSION['errors'] ?? [];
+        $old = $_SESSION['old'] ?? [];
+        unset($_SESSION['errors'], $_SESSION['old']);
+        
+        $this->renderAdminPage(
+            'Ajouter un médecin',
+            __DIR__ . '/../views/backoffice/medecin_form_content.php',
+            'medecins_admin',
+            ['errors' => $errors, 'old' => $old]
+        );
     }
 
     public function addMedecin(): void {
@@ -964,13 +1039,55 @@ public function updatePatient(int $id): void {
             exit;
         }
         
+        // Validation des champs obligatoires
+        $errors = [];
+        
+        if (empty(trim($_POST['nom']))) {
+            $errors['nom'] = 'Le nom est obligatoire';
+        }
+        
+        if (empty(trim($_POST['prenom']))) {
+            $errors['prenom'] = 'Le prénom est obligatoire';
+        }
+        
+        if (empty(trim($_POST['email']))) {
+            $errors['email'] = 'L\'email est obligatoire';
+        } elseif (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'L\'email n\'est pas valide';
+        }
+        
+        if (empty(trim($_POST['password']))) {
+            $errors['password'] = 'Le mot de passe est obligatoire';
+        } elseif (strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères';
+        }
+        
+        if (empty(trim($_POST['specialite']))) {
+            $errors['specialite'] = 'La spécialité est obligatoire';
+        }
+        
+        if (empty(trim($_POST['consultation_prix']))) {
+            $errors['consultation_prix'] = 'Le prix de consultation est obligatoire';
+        }
+        
+        if (empty(trim($_POST['annee_experience']))) {
+            $errors['annee_experience'] = 'Les années d\'expérience sont obligatoires';
+        }
+        
+        // Vérifier si l'email existe déjà
+        if (empty($errors['email']) && $this->findUserByEmail($_POST['email'])) {
+            $errors['email'] = 'Cet email est déjà utilisé';
+        }
+        
+        // S'il y a des erreurs, rediriger avec les erreurs
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $_POST;
+            header('Location: index.php?page=medecins_admin&action=add');
+            exit;
+        }
+        
         try {
-            // Vérifier si l'email existe déjà
-            if ($this->findUserByEmail($_POST['email'])) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Cet email est déjà utilisé.'];
-                header('Location: index.php?page=medecins_admin&action=add');
-                exit;
-            }
             
             // Créer l'utilisateur
             $userId = $this->createUserRecord([
@@ -1052,9 +1169,15 @@ public function editMedecin(int $id): void {
     // Récupérer les infos médecin
     $medecin = $this->findMedecinByUserId($id);
     
+    // Sauvegarder l'ID utilisateur avant le merge
+    $userId = $user['id'];
+    
     // Fusionner les données
     if ($medecin && is_array($medecin)) {
         $medecinData = array_merge($user, $medecin);
+        // Restaurer l'ID utilisateur (car array_merge écrase avec l'ID de la table medecins)
+        $medecinData['id'] = $userId;
+        $medecinData['user_id'] = $userId;
     } else {
         $medecinData = $user;
         // Ajouter des valeurs par défaut pour les champs médecins
@@ -1067,14 +1190,26 @@ public function editMedecin(int $id): void {
     
     // Passer la variable à la vue
     $medecin = $medecinData;
-    $errors = [];
     
-    $viewPath = __DIR__ . '/../views/backoffice/medecin_edit.php';
-    if (file_exists($viewPath)) {
-        require_once $viewPath;
-    } else {
-        echo "Vue non trouvée: " . $viewPath;
+    // Récupérer les erreurs depuis la session
+    $errors = $_SESSION['errors'] ?? [];
+    $old = $_SESSION['old'] ?? [];
+    unset($_SESSION['errors'], $_SESSION['old']);
+    
+    // Fusionner les anciennes valeurs avec les données du médecin
+    if (!empty($old)) {
+        $medecin = array_merge($medecin, $old);
     }
+    
+    $this->renderAdminPage(
+        'Modifier le médecin',
+        __DIR__ . '/../views/backoffice/medecin_form_content.php',
+        'medecins_admin',
+        [
+            'medecin' => $medecin,
+            'errors' => $errors,
+        ]
+    );
 }
 
     public function updateMedecin(int $id): void {
@@ -1113,38 +1248,28 @@ public function editMedecin(int $id): void {
                 $errors['email'] = 'Cet email est déjà utilisé.';
             }
         }
-        if (empty($_POST['specialite'])) {
-            $errors['specialite'] = 'La spécialité est obligatoire.';
-        }
-        if (!empty($_POST['password']) && strlen($_POST['password']) < 6) {
-            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères.';
+        if (empty(trim($_POST['specialite']))) {
+            $errors['specialite'] = 'La spécialité est obligatoire';
         }
         
-        // Si erreurs, retourner à la vue
+        if (empty(trim($_POST['consultation_prix']))) {
+            $errors['consultation_prix'] = 'Le prix de consultation est obligatoire';
+        }
+        
+        if (empty(trim($_POST['annee_experience']))) {
+            $errors['annee_experience'] = 'Les années d\'expérience sont obligatoires';
+        }
+        
+        if (!empty($_POST['password']) && strlen($_POST['password']) < 6) {
+            $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères';
+        }
+        
+        // S'il y a des erreurs, rediriger avec les erreurs
         if (!empty($errors)) {
-            $user = $this->findUserById($id);
-            $medecin = $this->findMedecinByUserId($id);
-            
-            if ($medecin && is_array($medecin)) {
-                $medecinData = array_merge($user, $medecin);
-            } else {
-                $medecinData = $user;
-                $medecinData['specialite'] = '';
-                $medecinData['numero_ordre'] = '';
-                $medecinData['annee_experience'] = '';
-                $medecinData['consultation_prix'] = '';
-                $medecinData['cabinet_adresse'] = '';
-            }
-            
-            $medecin = $medecinData;
-            
-            $viewPath = __DIR__ . '/../views/backoffice/medecin_edit.php';
-            if (file_exists($viewPath)) {
-                require_once $viewPath;
-            } else {
-                echo "Vue non trouvée: " . $viewPath;
-            }
-            return;
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $_POST;
+            header("Location: index.php?page=medecins_admin&action=edit&id=$id");
+            exit;
         }
         
         if (!empty($_POST['password'])) {
@@ -2803,7 +2928,7 @@ private function logAction(string $action, string $description): void {
         // Requête de base avec JOIN pour les infos médecin
         $sql = "
             SELECT u.id, u.nom, u.prenom, u.email, u.telephone, u.statut, u.created_at,
-                   m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse,
+                   m.user_id, m.specialite, m.numero_ordre, m.annee_experience, m.consultation_prix, m.cabinet_adresse,
                    m.statut_validation
             FROM users u
             LEFT JOIN medecins m ON u.id = m.user_id

@@ -73,24 +73,7 @@ $formAction = $isEdit
 </head>
 <body>
 
-<div class="sidebar">
-    <div class="sidebar-header">
-        <div class="logo">Valorys</div>
-        <small>Plateforme Médicale</small>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="index.php?page=articles_admin" class="active"><i class="fas fa-newspaper"></i> Articles</a>
-        <a href="index.php?page=evenements_admin"><i class="fas fa-calendar"></i> Événements</a>
-        <div class="sidebar-nav-divider"></div>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-        <a href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <div class="sidebar-nav-divider"></div>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </div>
-</div>
+<?php include __DIR__ . '/sidebar.php'; ?>
 
 <div class="main">
     <div class="topbar">
@@ -181,18 +164,20 @@ $formAction = $isEdit
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Catégorie</label>
+                        <label class="form-label">Catégorie <span class="required">*</span></label>
                         <input type="text" id="categorie" name="categorie" class="form-control"
                                value="<?= htmlspecialchars($old['categorie'] ?? $article['categorie'] ?? '') ?>"
                                placeholder="Ex: Santé, Actualités…">
+                        <div class="invalid-feedback" id="categorie-error"></div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Tags</label>
+                        <label class="form-label">Tags <span class="required">*</span></label>
                         <input type="text" id="tags" name="tags" class="form-control"
                                value="<?= htmlspecialchars($old['tags'] ?? $article['tags'] ?? '') ?>"
                                placeholder="tag1, tag2, tag3">
                         <small class="text-muted">Séparés par des virgules</small>
+                        <div class="invalid-feedback" id="tags-error"></div>
                     </div>
 
                     <div class="mb-3">
@@ -366,6 +351,12 @@ document.getElementById('articleForm').addEventListener('submit', function(e) {
     const contenuText = quill.getText().trim();
     if (!contenuText || contenuText.length < 10) err('contenu', 'contenu-error', 'Le contenu doit contenir au moins 10 caractères.');
 
+    const categorie = document.getElementById('categorie').value.trim();
+    if (!categorie) err('categorie', 'categorie-error', 'La catégorie est obligatoire.');
+
+    const tags = document.getElementById('tags').value.trim();
+    if (!tags) err('tags', 'tags-error', 'Les tags sont obligatoires.');
+
     // Save content to hidden field before submission
     document.getElementById('contenu').value = JSON.stringify(quill.getContents());
 
@@ -381,3 +372,4 @@ document.getElementById('articleForm').addEventListener('submit', function(e) {
 </script>
 </body>
 </html>
+

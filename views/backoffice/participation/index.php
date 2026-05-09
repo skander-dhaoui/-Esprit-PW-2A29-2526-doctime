@@ -6,7 +6,7 @@
         <h5 class="mb-0 fw-semibold">Liste des Participations</h5>
         <p class="text-muted small mb-0"><?= count($participations) ?> participant(s)</p>
     </div>
-    <a href="index.php?controller=participation&action=create" class="btn btn-primary">
+    <a href="index.php?page=participations&action=create" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i> Nouvelle participation
     </a>
 </div>
@@ -56,11 +56,11 @@
                         </td>
                         <td class="small"><?= date('d/m/Y', strtotime($p['date_inscription'])) ?></td>
                         <td class="text-center">
-                            <a href="index.php?controller=participation&action=edit&id=<?= $p['id'] ?>"
+                            <a href="index.php?page=participations&action=edit&id=<?= $p['id'] ?>"
                                class="btn btn-sm btn-outline-primary me-1" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <a href="index.php?controller=participation&action=delete&id=<?= $p['id'] ?>"
+                            <a href="index.php?page=participations&action=delete&id=<?= $p['id'] ?>"
                                class="btn btn-sm btn-outline-danger js-confirm-delete" title="Supprimer"
                                data-msg="Supprimer la participation de « <?= htmlspecialchars($p['prenom'].' '.$p['nom']) ?> » ?">
                                 <i class="bi bi-trash"></i>
@@ -76,3 +76,4 @@
 </div>
 
 <?php require __DIR__ . '/../layout_footer.php'; ?>
+

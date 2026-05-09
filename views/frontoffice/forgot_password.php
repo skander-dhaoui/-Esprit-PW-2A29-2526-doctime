@@ -58,7 +58,7 @@ unset($_SESSION['error'], $_SESSION['success']);
             <form method="POST" action="/valorys_Copie/index.php?page=forgot_password">
                 <div class="mb-4">
                     <label class="form-label">Votre adresse email</label>
-                    <input type="email" name="email" class="form-control" placeholder="exemple@email.com" required>
+                    <input type="text" name="email" class="form-control" placeholder="exemple@email.com">
                 </div>
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-paper-plane me-2"></i> Envoyer le lien
@@ -75,3 +75,4 @@ unset($_SESSION['error'], $_SESSION['success']);
     </div>
 </body>
 </html>
+

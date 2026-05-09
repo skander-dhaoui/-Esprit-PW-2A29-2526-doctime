@@ -55,7 +55,7 @@ $token = $token ?? null;
                 <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
                 <div class="mb-3">
                     <label class="form-label">Nouveau mot de passe</label>
-                    <input type="password" name="password" id="password" class="form-control" required>
+                    <input type="password" name="password" id="password" class="form-control">
                     <div class="password-requirements">
                         <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                         <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
@@ -64,7 +64,7 @@ $token = $token ?? null;
                 </div>
                 <div class="mb-4">
                     <label class="form-label">Confirmer le mot de passe</label>
-                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control">
                 </div>
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-key me-2"></i> Réinitialiser
@@ -104,3 +104,4 @@ $token = $token ?? null;
     </script>
 </body>
 </html>
+

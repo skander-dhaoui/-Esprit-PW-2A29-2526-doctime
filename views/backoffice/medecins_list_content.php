@@ -31,7 +31,7 @@
                 <tbody>
                     <?php foreach ($medecins as $medecin): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($medecin['user_id']); ?></td>
+                            <td><?php echo htmlspecialchars($medecin['user_id'] ?? $medecin['id']); ?></td>
                             <td><?php echo htmlspecialchars($medecin['nom']); ?></td>
                             <td><?php echo htmlspecialchars($medecin['prenom']); ?></td>
                             <td><?php echo htmlspecialchars($medecin['email']); ?></td>
@@ -46,21 +46,21 @@
                                 </span>
                             </td>
                             <td>
-                                <a href="index.php?page=medecins&action=show&id=<?php echo $medecin['user_id']; ?>" 
+                                <a href="index.php?page=medecins_admin&action=show&id=<?php echo $medecin['user_id'] ?? $medecin['id']; ?>" 
                                    class="btn btn-sm btn-info" title="Voir">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="index.php?page=medecins&action=edit&id=<?php echo $medecin['user_id']; ?>" 
+                                <a href="index.php?page=medecins_admin&action=edit&id=<?php echo $medecin['user_id'] ?? $medecin['id']; ?>" 
                                    class="btn btn-sm btn-warning" title="Éditer">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <?php if (($medecin['statut_validation'] ?? 'non_valide') === 'en_attente'): ?>
-                                    <a href="index.php?page=medecins&action=validate&id=<?php echo $medecin['user_id']; ?>" 
+                                    <a href="index.php?page=medecins_admin&action=validate&id=<?php echo $medecin['user_id'] ?? $medecin['id']; ?>" 
                                        class="btn btn-sm btn-success" title="Valider">
                                         <i class="fas fa-check"></i>
                                     </a>
                                 <?php endif; ?>
-                                <button onclick="confirmDelete('index.php?page=medecins&action=delete&id=<?php echo $medecin['user_id']; ?>')" 
+                                <button onclick="confirmDelete('index.php?page=medecins_admin&action=delete&id=<?php echo $medecin['user_id'] ?? $medecin['id']; ?>')" 
                                         class="btn btn-sm btn-danger" title="Supprimer">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -95,3 +95,4 @@ function confirmDelete(url) {
     window.location.href = url;
 }
 </script>
+

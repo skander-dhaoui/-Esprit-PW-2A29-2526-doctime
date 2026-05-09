@@ -468,3 +468,416 @@ a:not(.btn) {
         flex-direction: column;
     }
 }
+
+/* ===== EVENT FORM STYLES ===== */
+/* Styles personnalisés pour les formulaires d'événements */
+
+.card-header h6 {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.card-header .text-primary {
+    color: var(--bo-primary) !important;
+}
+
+.card-header i {
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.form-label.fw-semibold {
+    font-weight: 600 !important;
+    color: var(--bo-ink) !important;
+    font-size: 14px;
+}
+
+.form-label .text-danger {
+    font-size: 12px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--bo-primary) !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
+}
+
+.form-control::placeholder {
+    color: var(--bo-muted-light) !important;
+    opacity: 0.7;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--bo-danger) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23c7374f'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5zM6 8.2a.3.3 0 0 0 .3-.3v-.1a.3.3 0 0 0-.3-.3H6a.3.3 0 0 0-.3.3v.1a.3.3 0 0 0 .3.3z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.invalid-feedback {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    margin-top: 4px !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--bo-primary), var(--bo-primary-dark)) !important;
+    border: none !important;
+    padding: 12px 24px !important;
+    font-size: 15px !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3) !important;
+}
+
+.btn-outline-secondary {
+    border-color: var(--bo-line) !important;
+    color: var(--bo-muted) !important;
+    padding: 12px 24px !important;
+    font-size: 15px !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-outline-secondary:hover {
+    border-color: var(--bo-muted) !important;
+    color: var(--bo-ink) !important;
+    background: #f8fafc !important;
+}
+
+.alert {
+    border-radius: 12px !important;
+    border: 1px solid var(--bo-line) !important;
+    padding: 16px 20px !important;
+}
+
+.alert-success {
+    background: var(--bo-success-soft) !important;
+    color: var(--bo-success) !important;
+    border-color: rgba(24, 139, 85, 0.2) !important;
+}
+
+.alert-danger {
+    background: var(--bo-danger-soft) !important;
+    color: var(--bo-danger) !important;
+    border-color: rgba(199, 55, 79, 0.2) !important;
+}
+
+.card {
+    border-radius: 14px !important;
+    border: 1px solid var(--bo-line) !important;
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-bottom: 1px solid var(--bo-line) !important;
+    padding: 18px 22px !important;
+}
+
+.card-body {
+    padding: 24px !important;
+}
+
+.shadow-sm {
+    box-shadow: 0 4px 12px rgba(23, 32, 51, 0.06) !important;
+}
+
+/* Animation pour les cartes */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(23, 32, 51, 0.1) !important;
+}
+
+/* Image preview styling */
+.img-fluid.rounded {
+    border-radius: 10px !important;
+    border: 2px solid var(--bo-line);
+    transition: border-color 0.2s ease;
+}
+
+.img-fluid.rounded:hover {
+    border-color: var(--bo-primary);
+}
+
+/* Page header styling */
+.h4 {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: var(--bo-ink) !important;
+}
+
+.text-muted.small {
+    font-size: 14px !important;
+    color: var(--bo-muted) !important;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .col-lg-8, .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .card-header h6 {
+        font-size: 13px !important;
+    }
+
+    .form-label.fw-semibold {
+        font-size: 13px;
+    }
+
+    .btn-primary,
+    .btn-outline-secondary {
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ===== COULEURS SPÉCIFIQUES PAR RÔLE ===== */
+/* Codes couleur pour médecins, patients et utilisateurs */
+
+/* Médecins - Vert médical */
+.role-medecin .card-header h6,
+.role-medecin .text-primary {
+    color: #10b981 !important;
+}
+
+.role-medecin .btn-primary {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.role-medecin .btn-primary:hover {
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3) !important;
+}
+
+.role-medecin .card-header {
+    border-bottom-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.role-medecin .form-control:focus,
+.role-medecin .form-select:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12) !important;
+}
+
+/* Patients - Bleu patient */
+.role-patient .card-header h6,
+.role-patient .text-primary {
+    color: #3b82f6 !important;
+}
+
+.role-patient .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+}
+
+.role-patient .btn-primary:hover {
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3) !important;
+}
+
+.role-patient .card-header {
+    border-bottom-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.role-patient .form-control:focus,
+.role-patient .form-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Admin/Administrateur - Orange admin */
+.role-admin .card-header h6,
+.role-admin .text-primary {
+    color: #f59e0b !important;
+}
+
+.role-admin .btn-primary {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+}
+
+.role-admin .btn-primary:hover {
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3) !important;
+}
+
+.role-admin .card-header {
+    border-bottom-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+.role-admin .form-control:focus,
+.role-admin .form-select:focus {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Badges par rôle */
+.badge-medecin {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.badge-patient {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #3b82f6 !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.badge-admin {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+/* Sidebar navigation par rôle */
+.sidebar-nav a[href*="medecins"]:hover,
+.sidebar-nav a[href*="medecins"].active {
+    background: rgba(16, 185, 129, 0.2) !important;
+    color: #10b981 !important;
+}
+
+.sidebar-nav a[href*="patients"]:hover,
+.sidebar-nav a[href*="patients"].active {
+    background: rgba(59, 130, 246, 0.2) !important;
+    color: #3b82f6 !important;
+}
+
+.sidebar-nav a[href*="users"]:hover,
+.sidebar-nav a[href*="users"].active {
+    background: rgba(245, 158, 11, 0.2) !important;
+    color: #f59e0b !important;
+}
+
+/* ===== EVENT FORM STYLES ===== */
+/* Styles personnalisés pour le formulaire d'événement */
+
+.event-form-container {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin: 0;
+}
+
+.event-form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px 30px;
+    border-radius: 12px 12px 0 0;
+    margin: -30px -30px 30px -30px;
+}
+
+.event-form-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.event-form-header p {
+    margin: 5px 0 0 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.event-section {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid #e2e8f0;
+}
+
+.event-section-title {
+    color: #667eea;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-form-label {
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.event-form-input {
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.event-form-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.event-form-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 14px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.event-form-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.event-form-btn-secondary {
+    background: white;
+    border: 2px solid #e2e8f0;
+    padding: 14px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #4a5568;
+    transition: all 0.3s ease;
+}
+
+.event-form-btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.event-alert {
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.event-alert-success {
+    background: #f0fdf4;
+    border-color: #10b981;
+    color: #065f46;
+}
+
+.event-alert-danger {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #991b1b;
+}

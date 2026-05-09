@@ -42,8 +42,8 @@
                                 <input type="text" id="nom" name="nom"
                                        class="form-control <?= isset($errors['nom']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
-                                       data-validate="required|minlength:2"
-                                       data-label="Nom">
+                                      
+                                      >
                                 <?php if (isset($errors['nom'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['nom']) ?></div>
                                 <?php endif; ?>
@@ -54,8 +54,8 @@
                                 <input type="text" id="prenom" name="prenom"
                                        class="form-control <?= isset($errors['prenom']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['prenom'] ?? '') ?>"
-                                       data-validate="required|minlength:2"
-                                       data-label="Prénom">
+                                      
+                                      >
                                 <?php if (isset($errors['prenom'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['prenom']) ?></div>
                                 <?php endif; ?>
@@ -66,8 +66,8 @@
                                 <input type="text" id="email" name="email"
                                        class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['email'] ?? '') ?>"
-                                       data-validate="required|email"
-                                       data-label="Email"
+                                      
+                                      
                                        placeholder="votre@email.com">
                                 <?php if (isset($errors['email'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['email']) ?></div>
@@ -79,8 +79,8 @@
                                 <input type="text" id="telephone" name="telephone"
                                        class="form-control <?= isset($errors['telephone']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['telephone'] ?? '') ?>"
-                                       data-validate="required|phone"
-                                       data-label="Téléphone"
+                                      
+                                      
                                        placeholder="20 123 456">
                                 <?php if (isset($errors['telephone'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['telephone']) ?></div>
@@ -92,8 +92,8 @@
                                 <input type="text" id="profession" name="profession"
                                        class="form-control <?= isset($errors['profession']) ? 'is-invalid' : '' ?>"
                                        value="<?= htmlspecialchars($old['profession'] ?? '') ?>"
-                                       data-validate="required|minlength:2"
-                                       data-label="Profession"
+                                      
+                                      
                                        placeholder="Ex : Médecin cardiologue">
                                 <?php if (isset($errors['profession'])): ?>
                                     <div class="invalid-feedback"><?= htmlspecialchars($errors['profession']) ?></div>
@@ -114,3 +114,4 @@
 </div>
 
 <?php require __DIR__ . '/layout_footer.php'; ?>
+

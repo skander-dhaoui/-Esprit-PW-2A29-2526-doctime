@@ -10,6 +10,8 @@ use App\Models\Event;
 use App\Repositories\UserRepository;
 use App\Repositories\ArticleRepository;
 
+require_once __DIR__ . '/../config/Validator.php';
+
 class FrontController {
     
     private function requireLogin(): void {
@@ -670,16 +672,56 @@ class FrontController {
             header('Location: index.php?page=medecin_disponibilites');
             exit;
         }
+
+        // ========== RÉCUPÉRATION ET NETTOYAGE ==========
+        $jour_semaine = trim($_POST['jour_semaine'] ?? '');
+        $heure_debut  = trim($_POST['heure_debut'] ?? '');
+        $heure_fin    = trim($_POST['heure_fin'] ?? '');
+        $medecinId    = (int)$_SESSION['user_id'];
+
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('jour_semaine', $jour_semaine, 'Jour de la semaine')
+            ->required('heure_debut', $heure_debut, 'Heure de début')
+            ->required('heure_fin', $heure_fin, 'Heure de fin');
+
+        $errors = $validator->getErrors();
+
+        // ========== VALIDATIONS PERSONNALISÉES ==========
+        // Vérifier format des heures (HH:MM)
+        if (empty($errors['heure_debut']) && !preg_match('/^\d{2}:\d{2}$/', $heure_debut)) {
+            $errors['heure_debut'] = 'Format d\'heure invalide (HH:MM)';
+        }
+        if (empty($errors['heure_fin']) && !preg_match('/^\d{2}:\d{2}$/', $heure_fin)) {
+            $errors['heure_fin'] = 'Format d\'heure invalide (HH:MM)';
+        }
+
+        // Vérifier que heure_fin > heure_debut
+        if (empty($errors['heure_debut']) && empty($errors['heure_fin']) && $heure_fin <= $heure_debut) {
+            $errors['heure_fin'] = 'L\'heure de fin doit être après l\'heure de début';
+        }
+
+        // Si erreurs
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
+            header('Location: index.php?page=disponibilites&action=create');
+            exit;
+        }
+
+        // ========== CRÉATION ==========
         require_once __DIR__ . '/../models/Disponibilite.php';
         $data = [
-            'medecin_id'   => (int)$_SESSION['user_id'],
-            'jour_semaine' => $_POST['jour_semaine'],
-            'heure_debut'  => $_POST['heure_debut'],
-            'heure_fin'    => $_POST['heure_fin'],
+            'medecin_id'   => $medecinId,
+            'jour_semaine' => $jour_semaine,
+            'heure_debut'  => $heure_debut,
+            'heure_fin'    => $heure_fin,
             'actif'        => 1
         ];
         $disponibiliteModel = new Disponibilite();
         $result = $disponibiliteModel->create($data);
+        
         $_SESSION['flash'] = $result
             ? ['type' => 'success', 'message' => 'Disponibilité ajoutée avec succès.']
             : ['type' => 'error',   'message' => 'Erreur lors de l\'ajout.'];
@@ -1830,6 +1872,122 @@ JS;
                 <p>&copy; 2026 Valorys - Tous droits réservés</p>
             </div>
         </footer>
+
+        <!-- CHATBOT FLOTTANT -->
+        <div id="chatbotWidget" style="
+            position: fixed; bottom: 30px; right: 30px; width: 380px; z-index: 9999;
+            max-height: 80vh; display: flex; flex-direction: column;
+            box-shadow: 0 5px 40px rgba(0,0,0,0.16); border-radius: 12px; overflow: hidden;
+            background: white; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+        ">
+            <div style="
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
+                padding: 16px; cursor: pointer; display: flex; justify-content: space-between;
+                align-items: center;
+            " onclick="toggleChatbot()">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">💬 Assistant Médical</h3>
+                    <small style="opacity: 0.9;">Posez vos questions</small>
+                </div>
+                <button style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" onclick="closeChatbot(event)">✕</button>
+            </div>
+            <div id="chatMessages" style="
+                flex: 1; overflow-y: auto; padding: 15px; min-height: 300px;
+                background: #f8f9fa;
+            ">
+                <div style="
+                    background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
+                    padding: 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%;
+                ">
+                    <p style="margin: 0; font-size: 14px;">Bienvenue! 👋 Je suis votre assistant pour les événements médicaux. Comment puis-je vous aider?</p>
+                </div>
+            </div>
+            <div style="padding: 12px; border-top: 1px solid #e0e0e0;">
+                <form onsubmit="sendMessage(event)" style="display: flex; gap: 8px;">
+                    <input type="text" id="userInput" placeholder="Posez votre question..." style="
+                        flex: 1; border: 1px solid #ddd; border-radius: 20px;
+                        padding: 10px 15px; font-size: 14px; outline: none;
+                    " />
+                    <button type="submit" style="
+                        background: linear-gradient(135deg, #2A7FAA, #4CAF50); color: white;
+                        border: none; border-radius: 50%; width: 36px; height: 36px;
+                        cursor: pointer; font-size: 16px;
+                    ">➤</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+const chatbotWidget = document.getElementById("chatbotWidget");
+const chatMessages = document.getElementById("chatMessages");
+const userInput = document.getElementById("userInput");
+
+function toggleChatbot() {
+    chatbotWidget.style.opacity = chatbotWidget.classList.contains("closed") ? "1" : "0.1";
+    chatbotWidget.classList.toggle("closed");
+    chatMessages.style.display = chatbotWidget.classList.contains("closed") ? "none" : "flex";
+}
+
+function closeChatbot(e) {
+    e.stopPropagation();
+    chatbotWidget.style.display = "none";
+}
+
+function sendMessage(e) {
+    e.preventDefault();
+    if (!userInput.value.trim()) return;
+    
+    const userMsg = document.createElement("div");
+    userMsg.style.cssText = "background: #2A7FAA; color: white; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; margin-left: auto; word-break: break-word;";
+    userMsg.textContent = userInput.value;
+    chatMessages.appendChild(userMsg);
+    
+    const response = getResponse(userInput.value);
+    
+    setTimeout(() => {
+        const botMsg = document.createElement("div");
+        botMsg.style.cssText = "background: #e8f5e9; color: #333; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; word-break: break-word;";
+        botMsg.textContent = response;
+        chatMessages.appendChild(botMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 500);
+    
+    userInput.value = "";
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function getResponse(message) {
+    const lower = message.toLowerCase();
+    const responses = {
+        "prix|cout|tarif": "Prix entre 25 DT et 200 DT selon les evenements!",
+        "lieu|adresse|ou": "Nous organisons a Hopital Europeen, Espace Sante, Centre International!",
+        "date|quand": "Cardiologie 15/06, Bien-etre 10/07, Formation 20-22/09, Pediatrie 12-14/11!",
+        "inscription|participer": "Cliquez sur Plus de details pour vous inscrire!",
+        "cardio": "Conference Cardiologie 15/06/2026 - 150 DT!",
+        "stress": "Atelier Bien-etre 10/07/2026 - 25 DT!",
+        "pediatrie": "Congres Pediatrie 12-14/11/2026 - 200 DT!",
+        "formation": "Formation Continue 20-22/09/2026 - 150 DT!",
+        "default": "Posez une autre question ou consultez nos evenements!"
+    };
+    
+    for (const [keyword, response] of Object.entries(responses)) {
+        const keywords = keyword.split("|");
+        for (const kw of keywords) {
+            if (lower.includes(kw)) {
+                return response;
+            }
+        }
+    }
+    
+    return responses["default"];
+}
+
+// Afficher le chatbot au chargement (fermé par défaut)
+document.addEventListener("DOMContentLoaded", () => {
+    chatbotWidget.classList.add("closed");
+    chatMessages.style.display = "none";
+});
+</script>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         ';
