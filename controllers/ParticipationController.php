@@ -39,7 +39,7 @@ class ParticipationController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/participation_list_admin.php';
+            require_once __DIR__ . '/../views/backoffice/participation/index.php';
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::indexAdmin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des participations.');

@@ -7,25 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #1e2a3e; color: white; transition: all 0.3s; z-index: 100; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header .logo-img { width: 130px; height: auto; object-fit: contain; margin-bottom: 6px; filter: brightness(0) invert(1); }
-        .sidebar-header small { color: rgba(255,255,255,0.6); font-size: 12px; }
-        .sidebar-menu { padding: 20px 0; }
-        .sidebar-menu a { display: block; padding: 12px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s; font-weight: 500; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.1); color: white; border-left: 4px solid #4CAF50; }
-        .sidebar-menu i { width: 25px; margin-right: 12px; }
-        .main-content { margin-left: 280px; padding: 20px; }
+        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
         .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .navbar-left { display: flex; align-items: center; gap: 20px; }
-        .navbar-logo { height: 40px; margin-right: 15px; }
-        .navbar-menu-items { display: flex; gap: 10px; flex-wrap: wrap; }
-        .navbar-menu-items .nav-link-custom { color: #1e2a3e; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: all 0.3s; font-size: 14px; font-weight: 500; }
-        .navbar-menu-items .nav-link-custom:hover { background: #f0f0f0; color: #4CAF50; }
-        .navbar-menu-items .nav-link-custom i { margin-right: 6px; }
         .admin-info { display: flex; align-items: center; gap: 15px; }
         .admin-avatar { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
         .stat-card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; border-left: 4px solid; }
@@ -39,89 +24,15 @@
         .badge-pending { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .badge-inactive { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .chart-container { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        @media (max-width: 992px) {
-            .sidebar { width: 80px; }
-            .sidebar-header .logo-img { width: 50px; }
-            .sidebar-header small { display: none; }
-            .sidebar-menu a span { display: none; }
-            .sidebar-menu a { text-align: center; padding: 15px; }
-            .sidebar-menu i { margin-right: 0; font-size: 20px; }
-            .main-content { margin-left: 80px; }
-            .navbar-menu-items { justify-content: center; }
-        }
     </style>
 </head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <img src="assets/images/logo_doctime.png" alt="DocTime Logo" class="logo-img"
-                 onerror="this.style.display='none'">
-            <br><small>Back Office</small>
-        </div>
-        <div class="sidebar-menu">
-            <a href="index.php?page=dashboard" class="active">
-                <i class="fas fa-tachometer-alt"></i> <span>Tableau de bord</span>
-            </a>
-            <a href="index.php?page=users">
-                <i class="fas fa-users"></i> <span>Utilisateurs</span>
-            </a>
-            <a href="index.php?page=medecins_admin">
-                <i class="fas fa-user-md"></i> <span>Médecins</span>
-            </a>
-            <a href="index.php?page=rendez_vous_admin">
-                <i class="fas fa-calendar-check"></i> <span>Rendez vous</span>
-            </a>
-            <a href="index.php?page=ordonnances">
-                <i class="fas fa-prescription-bottle"></i> <span>Ordonnances</span>
-            </a>
-            <a href="index.php?page=produits_admin">
-                <i class="fas fa-box"></i> <span>Produits</span>
-            </a>
-            <a href="index.php?page=articles_admin">
-                <i class="fas fa-blog"></i> <span>Blog</span>
-            </a>
-            <a href="index.php?page=evenements_admin">
-                <i class="fas fa-calendar-day"></i> <span>Événements</span>
-            </a>
-            <a href="index.php?page=stats">
-                <i class="fas fa-chart-line"></i> <span>Statistiques</span>
-            </a>
-            <a href="index.php?page=logs">
-                <i class="fas fa-history"></i> <span>Historique</span>
-            </a>
-            <a href="index.php?page=settings">
-                <i class="fas fa-cog"></i> <span>Paramètres</span>
-            </a>
-            <a href="index.php?page=logout">
-                <i class="fas fa-sign-out-alt"></i> <span>Déconnexion</span>
-            </a>
-        </div>
-    </div>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
 
-    <!-- Main Content -->
     <div class="main-content">
         <div class="navbar-top">
-            <div class="navbar-left">
-                <img src="assets/images/logo_doctime.png" alt="DocTime Logo" class="navbar-logo"
-                     onerror="this.style.display='none'">
-                <div class="navbar-menu-items">
-                    <a href="index.php?page=rendez_vous_admin" class="nav-link-custom">
-                        <i class="fas fa-calendar-check"></i> Rendez-vous
-                    </a>
-                    <a href="index.php?page=ordonnances" class="nav-link-custom">
-                        <i class="fas fa-prescription-bottle"></i> Ordonnances
-                    </a>
-                    <a href="index.php?page=produits_admin" class="nav-link-custom">
-                        <i class="fas fa-box"></i> Produits
-                    </a>
-                    <a href="index.php?page=articles_admin" class="nav-link-custom">
-                        <i class="fas fa-blog"></i> Blog
-                    </a>
-                    <a href="index.php?page=evenements_admin" class="nav-link-custom">
-                        <i class="fas fa-calendar-day"></i> Événements
-                    </a>
-                </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <strong style="color:#1e2a3e;font-size:1.05rem;"><i class="fas fa-tachometer-alt me-2" style="color:#4CAF50"></i> Tableau de bord</strong>
             </div>
             <div class="admin-info">
                 <a href="index.php?page=mes_notifications" style="color:#1e2a3e;">

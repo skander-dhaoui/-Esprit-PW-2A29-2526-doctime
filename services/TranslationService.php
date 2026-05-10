@@ -73,10 +73,10 @@ class TranslationService
         }
 
         if ($type === 'reply') {
-            $stmt = $this->db->prepare("SELECT replay FROM replies WHERE id=?");
+            $stmt = $this->db->prepare("SELECT contenu_text FROM reply WHERE id_reply = ?");
             $stmt->execute([$id]);
             $row  = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row ? ($row['replay'] ?? null) : null;
+            return $row ? ($row['contenu_text'] ?? null) : null;
         }
 
         return null;

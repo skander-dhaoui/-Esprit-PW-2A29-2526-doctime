@@ -185,7 +185,7 @@ public function update(int $id, int $articleId, ?string $contenuText, ?string $e
                     a.titre AS article_titre,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
+             LEFT JOIN articles a ON r.id_article = a.id
              LEFT JOIN users u ON u.id = r.user_id
              ORDER BY r.date_reply DESC
              LIMIT :limit"
@@ -205,7 +205,7 @@ public function update(int $id, int $articleId, ?string $contenuText, ?string $e
                     a.titre AS article_titre,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
+             LEFT JOIN articles a ON r.id_article = a.id
              LEFT JOIN users u ON u.id = r.user_id
              WHERE r.auteur = :auteur OR CONCAT(u.nom, ' ', u.prenom) = :auteur
              ORDER BY r.date_reply DESC
@@ -227,7 +227,7 @@ public function update(int $id, int $articleId, ?string $contenuText, ?string $e
                     a.titre AS article_titre,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
-             LEFT JOIN article a ON r.id_article = a.id_article
+             LEFT JOIN articles a ON r.id_article = a.id
              LEFT JOIN users u ON u.id = r.user_id
              ORDER BY r.date_reply DESC
              LIMIT :limit"

@@ -21,13 +21,9 @@ unset($_SESSION['errors'], $_SESSION['old']);
     <title>Mes disponibilités - Espace Médecin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php include __DIR__ . '/../../partials/public_theme_styles.php'; ?>
     <style>
         body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .navbar-brand { color: white !important; font-weight: bold; }
-        .nav-link { color: rgba(255,255,255,0.9) !important; }
-        .nav-link:hover { color: white !important; }
-        .nav-link.active { background: rgba(255,255,255,0.2); border-radius: 8px; }
         .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; border: none; transition: transform 0.2s; }
         .card:hover { transform: translateY(-3px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
         .badge-actif { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: normal; }
@@ -50,24 +46,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar-check me-1"></i>Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=medecin_disponibilites"><i class="fas fa-clock me-1"></i>Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances"><i class="fas fa-prescription me-1"></i>Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil"><i class="fas fa-user-circle me-1"></i>Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout"><i class="fas fa-sign-out-alt me-1"></i>Déconnexion</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php $navActive = $_GET['page'] ?? ''; include __DIR__ . '/../../partials/nav_public.php'; ?>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">

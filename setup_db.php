@@ -14,8 +14,8 @@ try {
     
     $pdo->exec("USE doctime_db");
     
-    // Lire et exécuter le fichier SQL
-    $sql = file_get_contents(__DIR__ . '/database.sql');
+    // Schéma unique : database/doctime_full.sql (CREATE DATABASE + tables + données initiales)
+    $sql = file_get_contents(__DIR__ . '/database/doctime_full.sql');
     $pdo->exec($sql);
     echo "✅ Tables créées avec succès<br>";
     

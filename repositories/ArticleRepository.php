@@ -98,10 +98,10 @@ class ArticleRepository
     public function getRepliesByArticle(int $articleId): array
     {
         $sql = "SELECT r.*, u.nom, u.prenom 
-                FROM replies r 
+                FROM reply r 
                 LEFT JOIN users u ON r.user_id = u.id 
-                WHERE r.article_id = :id 
-                ORDER BY r.created_at DESC";
+                WHERE r.id_article = :id 
+                ORDER BY r.date_reply DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $articleId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -109,9 +109,9 @@ class ArticleRepository
 
     public function getArticlesWithReplyCount(): array
     {
-        $sql = "SELECT a.*, COUNT(r.id) as nb_replies 
+        $sql = "SELECT a.*, COUNT(r.id_reply) as nb_replies 
                 FROM articles a 
-                LEFT JOIN replies r ON a.id = r.article_id 
+                LEFT JOIN reply r ON a.id = r.id_article 
                 GROUP BY a.id 
                 ORDER BY a.created_at DESC";
         $stmt = $this->db->query($sql);
@@ -180,7 +180,7 @@ class ArticleRepository
     }
 
     public function getTopByComments(int $limit = 5): array {
-        return $this->db->query("SELECT a.*, COUNT(r.id) as comment_count FROM articles a LEFT JOIN replies r ON a.id = r.article_id GROUP BY a.id ORDER BY comment_count DESC LIMIT $limit")->fetchAll(PDO::FETCH_ASSOC);
+        return $this->db->query("SELECT a.*, COUNT(r.id_reply) as comment_count FROM articles a LEFT JOIN reply r ON a.id = r.id_article GROUP BY a.id ORDER BY comment_count DESC LIMIT $limit")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getMonthlyTrend(int $months = 6): array {

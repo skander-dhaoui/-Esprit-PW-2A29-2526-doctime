@@ -21,15 +21,9 @@ $expirees = count(array_filter($ordonnances, fn($o) =>
     <title>Gestion des ordonnances - Valorys Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php require_once __DIR__ . '/../../partials/backoffice_shell_styles.php'; ?>
     <style>
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #1e2a3e; color: white; z-index: 100; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-menu { padding: 20px 0; }
-        .sidebar-menu a { display: block; padding: 12px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.1); color: white; border-left: 4px solid #4CAF50; }
-        .sidebar-menu i { width: 25px; margin-right: 12px; }
-        .main-content { margin-left: 280px; padding: 20px; }
+        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
         .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .stat-card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid; }
         .stat-card h3 { font-size: 32px; margin: 10px 0 5px; font-weight: bold; }
@@ -37,35 +31,11 @@ $expirees = count(array_filter($ordonnances, fn($o) =>
         .badge-active { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .badge-expired { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .badge-warning { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        @media (max-width: 992px) {
-            .sidebar { width: 80px; }
-            .sidebar-menu a span { display: none; }
-            .main-content { margin-left: 80px; }
-        }
     </style>
 </head>
-<body>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/../sidebar.php'; ?>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-header">
-        <h5>Valorys Admin</h5>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> <span>Utilisateurs</span></a>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> <span>Médecins</span></a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> <span>Rendez-vous</span></a>
-        <a href="index.php?page=ordonnances" class="active"><i class="fas fa-prescription-bottle"></i> <span>Ordonnances</span></a>
-        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> <span>Produits</span></a>
-        <a href="index.php?page=articles_admin"><i class="fas fa-blog"></i> <span>Blog</span></a>
-        <a href="index.php?page=evenements_admin"><i class="fas fa-calendar-day"></i> <span>Événements</span></a>
-        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i> <span>Statistiques</span></a>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> <span>Déconnexion</span></a>
-    </div>
-</div>
-
-<!-- Main Content -->
 <div class="main-content">
     <div class="navbar-top">
         <h4 class="mb-0"><i class="fas fa-prescription-bottle me-2"></i>Gestion des ordonnances</h4>

@@ -1402,11 +1402,208 @@ JS;
     }
 
     // =============================================
-    // ÉVÉNEMENTS / CONTACT / À PROPOS
+    // ÉVÉNEMENTS / SPONSORS / CONTACT / À PROPOS
     // =============================================
 
-    public function listeEvenements(): void { $this->renderTemporaryView('Événements', '<p>Page des événements en construction...</p>'); }
-    public function detailEvenement($id): void { $this->renderTemporaryView('Détail de l\'événement', '<p>Événement ID: ' . htmlspecialchars($id) . '</p>'); }
+    public function listeEvenements(): void {
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel     = new Event();
+        $upcomingEvents = $eventModel->getUpcoming();
+
+        ob_start();
+        ?>
+        <style>
+            .event-card { background:white;border-radius:16px;margin-bottom:25px;box-shadow:0 5px 15px rgba(0,0,0,0.08);transition:transform 0.3s;overflow:hidden;position:relative; }
+            .event-card:hover { transform:translateY(-5px); }
+            .event-image { height:200px;background-size:cover;background-position:center;background-color:#e9ecef; }
+            .event-body { padding:20px; }
+            .event-title { font-size:1.25rem;font-weight:700;margin-bottom:8px; }
+            .event-title a { color:#1a2035;text-decoration:none; }
+            .event-title a:hover { color:#2A7FAA; }
+            .event-meta { font-size:13px;color:#6c757d;margin-bottom:8px;display:flex;align-items:center;gap:10px; }
+            .event-footer { display:flex;justify-content:space-between;align-items:center;padding-top:15px;border-top:1px solid #eee; }
+            .event-price { font-size:18px;font-weight:bold;color:#2A7FAA; }
+            .btn-register { background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;border-radius:25px;padding:8px 20px;font-size:13px;text-decoration:none;display:inline-block; }
+        </style>
+        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:60px 0;text-align:center;margin-bottom:40px;border-radius:12px;">
+            <h1 style="font-size:2.5rem;"><i class="fas fa-calendar-alt me-3"></i>Événements médicaux</h1>
+            <p style="font-size:1.2rem;opacity:0.9;">Conférences, ateliers et rencontres médicales</p>
+        </div>
+        <div class="row" id="eventsList">
+        <?php if (empty($upcomingEvents)): ?>
+        <div class="col-12"><div style="text-align:center;padding:40px;color:#6c757d;"><i class="fas fa-calendar-check fa-3x mb-3"></i><p>Aucun événement disponible.</p></div></div>
+        <?php else: ?>
+        <?php foreach ($upcomingEvents as $event):
+            $prix = $event['prix'] ?? 0;
+            $prixText = $prix > 0 ? $prix . ' DT' : 'GRATUIT';
+            $image = htmlspecialchars($event['image'] ?? 'https://via.placeholder.com/400x200?text=Event');
+        ?>
+        <div class="col-md-6 col-lg-4">
+            <div class="event-card">
+                <div class="event-image" style="background-image:url('<?= $image ?>')"></div>
+                <div class="event-body">
+                    <h3 class="event-title"><a href="index.php?page=detail_evenement&slug=<?= htmlspecialchars($event['slug']) ?>"><?= htmlspecialchars($event['titre']) ?></a></h3>
+                    <div class="event-meta"><i class="fas fa-calendar"></i><?= date('d/m/Y', strtotime($event['date_debut'])) ?></div>
+                    <div class="event-meta"><i class="fas fa-map-marker-alt"></i><?= htmlspecialchars($event['lieu'] ?? 'À déterminer') ?></div>
+                    <div class="event-footer">
+                        <div class="event-price"><?= $prixText ?></div>
+                        <a href="index.php?page=detail_evenement&slug=<?= htmlspecialchars($event['slug']) ?>" class="btn-register"><i class="fas fa-info-circle"></i> Détails</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+        <?php endif; ?>
+        </div>
+        <?php
+        $content = ob_get_clean();
+        $this->renderPublicView('Événements', $content);
+    }
+
+    public function detailEvenement($id = null): void {
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $slug  = isset($_GET['slug']) ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
+        $event = $slug ? $eventModel->getBySlug($slug) : ($id ? $eventModel->getById((int)$id) : null);
+        if (!$event) {
+            $this->page404();
+            return;
+        }
+        $isLoggedIn = isset($_SESSION['user_id']);
+        $prix       = $event['prix'] ?? 0;
+        $prixText   = $prix > 0 ? number_format((float)$prix, 2, ',', ' ') . ' DT' : 'GRATUIT';
+
+        ob_start();
+        ?>
+        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:40px;margin-bottom:30px;border-radius:12px;">
+            <a href="index.php?page=evenements" style="color:white;text-decoration:none;"><i class="fas fa-arrow-left me-2"></i>Retour</a>
+            <h1 style="font-size:2.5rem;margin-top:15px;"><?= htmlspecialchars($event['titre']) ?></h1>
+            <p><?= date('d F Y', strtotime($event['date_debut'])) ?></p>
+        </div>
+        <div class="row">
+            <div class="col-lg-8">
+                <?php if (!empty($event['image'])): ?>
+                <img src="<?= htmlspecialchars($event['image']) ?>" alt="" style="width:100%;max-height:400px;object-fit:cover;border-radius:12px;margin-bottom:30px;">
+                <?php endif; ?>
+                <div style="background:white;border-radius:12px;padding:30px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+                    <h3 style="color:#2A7FAA;margin-bottom:15px;">Description</h3>
+                    <?= nl2br(htmlspecialchars($event['description'] ?? 'Aucune description.')) ?>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border-radius:12px;padding:25px;text-align:center;">
+                    <div>Tarif</div>
+                    <div style="font-size:36px;font-weight:bold;margin-bottom:10px;"><?= $prixText ?></div>
+                    <button type="button" onclick="<?= $isLoggedIn ? 'registerForEvent(' . (int)$event['id'] . ')' : "window.location.href='index.php?page=login'" ?>" style="background:white;color:#2A7FAA;border:none;border-radius:25px;padding:12px 35px;font-size:16px;font-weight:600;cursor:pointer;margin-top:15px;">
+                        <?= $isLoggedIn ? "S'inscrire" : 'Se connecter' ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <script>
+        function registerForEvent(eventId) {
+            fetch("index.php?page=event_register", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, credentials:"include", body:"event_id="+eventId })
+            .then(r=>r.json()).then(d=>{ if(d.success) alert("Inscription confirmée!"); else alert("Erreur: "+(d.message||"Impossible")); });
+        }
+        </script>
+        <?php
+        $content = ob_get_clean();
+        $this->renderPublicView(htmlspecialchars($event['titre']), $content);
+    }
+
+    /** Inscription AJAX aux événements (table participations : event_id, user_id) */
+    public function registerEventAction(): void {
+        header('Content-Type: application/json');
+        if (empty($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter.']);
+            exit;
+        }
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        $userId  = (int)$_SESSION['user_id'];
+        if (!$eventId) {
+            echo json_encode(['success' => false, 'message' => 'ID invalide.']);
+            exit;
+        }
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $event      = $eventModel->getById($eventId);
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
+            exit;
+        }
+
+        $pdo = Database::getInstance()->getConnection();
+        try {
+            $chk = $pdo->prepare('SELECT COUNT(*) FROM participations WHERE event_id = :e AND user_id = :u');
+            $chk->execute([':e' => $eventId, ':u' => $userId]);
+            if ((int)$chk->fetchColumn() > 0) {
+                echo json_encode(['success' => false, 'message' => 'Déjà inscrit.']);
+                exit;
+            }
+            $ins = $pdo->prepare('INSERT INTO participations (event_id, user_id, statut) VALUES (:e, :u, :s)');
+            $ok  = $ins->execute([':e' => $eventId, ':u' => $userId, ':s' => 'inscrit']);
+            echo json_encode($ok ? ['success' => true, 'message' => 'Inscription confirmée!'] : ['success' => false, 'message' => 'Erreur lors de l\'enregistrement.']);
+        } catch (Throwable $e) {
+            error_log('registerEventAction: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Erreur serveur.']);
+        }
+        exit;
+    }
+
+    /** Page publique sponsors (schéma database.sql : niveau, actif) */
+    public function listSponsors(): void {
+        $pdo = Database::getInstance()->getConnection();
+        try {
+            $stmt = $pdo->query("SELECT id, nom, logo, site_web, description, niveau, actif FROM sponsors WHERE actif = 1 ORDER BY FIELD(niveau,'platinium','gold','silver','bronze'), nom");
+            $sponsors = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (Throwable $e) {
+            error_log('listSponsors: ' . $e->getMessage());
+            $sponsors = [];
+        }
+
+        $levelMap = ['platinium' => 'Platine', 'gold' => 'Or', 'silver' => 'Argent', 'bronze' => 'Bronze'];
+        $sponsorsByLevel = [];
+        foreach ($sponsors as $sponsor) {
+            $nk = $sponsor['niveau'] ?? 'bronze';
+            $levelKey = $levelMap[$nk] ?? 'Autre';
+            $sponsorsByLevel[$levelKey][] = $sponsor;
+        }
+
+        ob_start();
+        ?>
+        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:60px 0;text-align:center;margin-bottom:40px;border-radius:12px;">
+            <h1><i class="fas fa-handshake me-3"></i>Nos Sponsors</h1>
+            <p style="font-size:1.1rem;opacity:0.9;">Partenaires qui soutiennent nos événements</p>
+        </div>
+        <?php if (empty($sponsors)): ?>
+        <div class="alert alert-info text-center" style="padding:40px;"><p>Aucun sponsor disponible.</p></div>
+        <?php else: ?>
+        <?php foreach (['Platine','Or','Argent','Bronze','Autre'] as $level):
+            if (empty($sponsorsByLevel[$level])) {
+                continue;
+            } ?>
+        <h3 style="font-size:1.8rem;font-weight:700;margin-top:40px;margin-bottom:30px;padding-bottom:15px;border-bottom:3px solid #2A7FAA;"><?= htmlspecialchars($level) ?></h3>
+        <div class="row">
+            <?php foreach ($sponsorsByLevel[$level] as $sponsor): ?>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div style="background:white;border-radius:12px;padding:30px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.08);text-align:center;">
+                    <?php if (!empty($sponsor['logo'])): ?>
+                    <div style="margin-bottom:15px;"><img src="<?= htmlspecialchars($sponsor['logo']) ?>" alt="" style="max-height:80px;max-width:100%;object-fit:contain;"></div>
+                    <?php endif; ?>
+                    <div style="font-size:18px;font-weight:700;margin-bottom:10px;"><?= htmlspecialchars($sponsor['nom']) ?></div>
+                    <?php if (!empty($sponsor['site_web'])): ?>
+                    <div style="font-size:13px;"><a href="<?= htmlspecialchars($sponsor['site_web']) ?>" target="_blank" rel="noopener">Site web</a></div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endforeach; ?>
+        <?php endif; ?>
+        <?php
+        $content = ob_get_clean();
+        $this->renderPublicView('Nos Sponsors', $content);
+    }
     public function contact(): void {
         $this->renderTemporaryView('Contact', '
             <form method="POST">
@@ -2148,46 +2345,10 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <?= $this->getCustomStyles() ?>
         </head>
         <body>
-            <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-                <div class="container">
-                    <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-hospital-user"></i> Valorys</a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=evenements">Événements</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=parapharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
-                        </ul>
-                        <ul class="navbar-nav">
-                            <?php if (isset($_SESSION['user_id'])): ?>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-circle"></i> <?= htmlspecialchars($_SESSION['user_name'] ?? 'Compte') ?>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="index.php?page=mon_profil"><i class="fas fa-id-card"></i> Mon profil</a></li>
-                                    <li><a class="dropdown-item" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar-check"></i> Mes rendez-vous</a></li>
-                                    <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Administration</a></li>
-                                    <?php endif; ?>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
-                                </ul>
-                            </li>
-                            <?php else: ?>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
+            <?= $this->getPublicNavbar() ?>
             <div class="container mt-4">
                 <?= $this->getFlashMessages() ?>
                 <div class="row">
@@ -2273,72 +2434,17 @@ private function getFlashMessages(): string {
     // =============================================
 
     private function getCustomStyles(): string {
-        return '
-        <style>
-            :root {
-                --primary:#2A7FAA;--primary-dark:#1e5f80;--primary-light:#e0f0f5;
-                --secondary:#4CAF50;--secondary-dark:#3d8b40;
-                --text-dark:#1a3a6b;--bg-light:#f0f6ff;--border:#d0e4f7;
-                --shadow:0 4px 12px rgba(42,127,170,0.15);--shadow-lg:0 10px 30px rgba(42,127,170,0.2);
-            }
-            body { font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;background:var(--bg-light);color:var(--text-dark); }
-            .navbar-custom { background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);box-shadow:var(--shadow);padding:0.8rem 2rem; }
-            .navbar-custom .navbar-brand { font-size:1.5rem;font-weight:700; }
-            .dropdown-menu { border:none;border-radius:12px;box-shadow:var(--shadow-lg); }
-            .dropdown-item { padding:0.75rem 1rem;transition:all 0.2s; }
-            .dropdown-item:hover { background:var(--primary-light);color:var(--primary); }
-            .btn-primary { background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);border:none;border-radius:10px;font-weight:500;padding:0.6rem 1.2rem;transition:all 0.3s; }
-            .btn-primary:hover { transform:translateY(-2px);box-shadow:0 8px 16px rgba(42,127,170,0.3); }
-            .card { border:1px solid var(--border);border-radius:15px;transition:all 0.3s; }
-            .card:hover { transform:translateY(-5px);box-shadow:var(--shadow-lg); }
-            .card-header { background:linear-gradient(135deg,var(--primary-light) 0%,rgba(76,175,80,0.1) 100%);border-bottom:2px solid var(--border); }
-            .table thead th { background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);color:white;border:none;padding:1rem; }
-            .table tbody tr:hover { background:var(--bg-light); }
-            .form-control { border:1px solid var(--border);border-radius:8px;padding:0.6rem 1rem;transition:all 0.3s; }
-            .form-control:focus { border-color:var(--primary);box-shadow:0 0 0 0.2rem rgba(42,127,170,0.1); }
-            .avatar { width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:1.2rem; }
-        </style>';
+        ob_start();
+        include __DIR__ . '/../views/partials/public_theme_styles.php';
+        return ob_get_clean();
     }
 
-    private function getPublicNavbar(): string {
-        $isLoggedIn = !empty($_SESSION['user_id']);
-        $userName   = htmlspecialchars($_SESSION['user_name'] ?? 'Compte');
-        $userRole   = $_SESSION['user_role'] ?? 'guest';
-        $rightLinks = $isLoggedIn ? '
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                <span class="avatar me-2" style="width:32px;height:32px;font-size:0.9rem;">' . strtoupper(substr($userName, 0, 1)) . '</span>' . $userName . '
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="index.php?page=mon_profil"><i class="fas fa-user me-2"></i>Mon profil</a></li>
-                <li><a class="dropdown-item" href="index.php?page=modifier_profil"><i class="fas fa-edit me-2"></i>Modifier le profil</a></li>
-                <li><a class="dropdown-item" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar me-2"></i>Mes rendez-vous</a></li>
-                ' . ($userRole === 'admin' ? '<li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="index.php?page=dashboard"><i class="fas fa-cog me-2"></i>Administration</a></li>' : '') . '
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="index.php?page=logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-            </ul>
-        </li>'
-        : '
-        <li class="nav-item"><a class="nav-link" href="index.php?page=login"><i class="fas fa-sign-in-alt me-1"></i>Connexion</a></li>
-        <li class="nav-item"><a class="nav-link btn btn-light ms-2" href="index.php?page=register"><i class="fas fa-user-plus me-1"></i>Inscription</a></li>';
-        return '
-        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
-            <div class="container">
-                <a class="navbar-brand fw-bold" href="index.php?page=accueil"><i class="fas fa-hospital-user"></i> Valorys</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=pharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
-                    </ul>
-                    <ul class="navbar-nav ms-auto">' . $rightLinks . '</ul>
-                </div>
-            </div>
-        </nav>';
+    /** Barre nav publique unique : views/partials/nav_public.php */
+    private function getPublicNavbar(?string $navActiveOverride = null): string {
+        $navActive = $navActiveOverride ?? ($_GET['page'] ?? '');
+        ob_start();
+        include __DIR__ . '/../views/partials/nav_public.php';
+        return ob_get_clean();
     }
 
     private function getFooter(): string {

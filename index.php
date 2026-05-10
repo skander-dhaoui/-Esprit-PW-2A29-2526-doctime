@@ -2,12 +2,37 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-ob_start();
+
+if (is_file(__DIR__ . '/error_handler.php')) {
+    require_once __DIR__ . '/error_handler.php';
+}
+if (is_file(__DIR__ . '/config/env.php')) {
+    require_once __DIR__ . '/config/env.php';
+}
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
     session_start();
 }
+
+ob_start(static function ($buffer) {
+    if (stripos($buffer, '</head>') === false) {
+        return $buffer;
+    }
+    $hasThemeScript = strpos($buffer, 'assets/js/theme-mode.js') !== false;
+    $hasThemeStyle = strpos($buffer, 'assets/css/theme-mode.css') !== false;
+    if ($hasThemeScript && $hasThemeStyle) {
+        return $buffer;
+    }
+    $themeAssets = '';
+    if (!$hasThemeScript) {
+        $themeAssets .= "    <script src=\"assets/js/theme-mode.js\"></script>\n";
+    }
+    if (!$hasThemeStyle) {
+        $themeAssets .= "    <link rel=\"stylesheet\" href=\"assets/css/theme-mode.css\">\n";
+    }
+    return preg_replace('/<\/head>/i', $themeAssets . '</head>', $buffer, 1);
+});
 
 define('DEBUG_MODE', false);
 
@@ -15,16 +40,28 @@ define('DEBUG_MODE', false);
 // INCLUDES — MODÈLES
 // =============================================
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/mail.php';
 require_once __DIR__ . '/models/User.php';
+if (is_file(__DIR__ . '/models/FaceRecognition.php')) {
+    require_once __DIR__ . '/models/FaceRecognition.php';
+}
 require_once __DIR__ . '/models/Patient.php';
 require_once __DIR__ . '/models/Medecin.php';
 require_once __DIR__ . '/models/Admin.php';
 require_once __DIR__ . '/models/Article.php';
 require_once __DIR__ . '/models/Reply.php';
 
+foreach (['ArticleRepository', 'UserRepository', 'EventRepository', 'ParticipationRepository'] as $repositoryClass) {
+    $repositoryPath = __DIR__ . '/repositories/' . $repositoryClass . '.php';
+    if (is_file($repositoryPath)) {
+        require_once $repositoryPath;
+    }
+}
+
 // Modèles optionnels
 $optionalModels = [
     'RendezVous', 'Disponibilite', 'Event', 'Ordonnance',
+    'Participation', 'Sponsor',
     'Categorie', 'Produit', 'Commande', 'Client', 'CommandeLigne',
 ];
 foreach ($optionalModels as $model) {
@@ -46,8 +83,9 @@ require_once __DIR__ . '/controllers/ReplyController.php';
 
 // Contrôleurs optionnels
 $optionalControllers = [
-    'RendezVousController', 'EventController',
+    'RendezVousController', 'EventController', 'MapController',
     'ProduitController', 'OrdonnanceController', 'DisponibiliteController',
+    'ParticipationController', 'SponsorController',
     'PharmacieController',
 ];
 foreach ($optionalControllers as $ctrl) {
@@ -94,7 +132,8 @@ $pharmacieCtrl     = class_exists('PharmacieController')     ? new PharmacieCont
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
     'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
-    'evenements', 'detail_evenement', 'contact', 'about',
+    'evenements', 'detail_evenement', 'event_register', 'sponsors', 'contact', 'about',
+    'get_face_photo',
 ];
 
 $guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login'];
@@ -114,6 +153,29 @@ if ($page === 'face_login') {
     } else {
         echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
     }
+    exit;
+}
+
+if ($page === 'get_face_photo') {
+    header('Content-Type: application/json');
+    $email = trim($_GET['email'] ?? '');
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Email invalide']);
+        exit;
+    }
+    $db = Database::getInstance()->getConnection();
+    $stmt = $db->prepare('SELECT face_photo, role FROM users WHERE email = :email LIMIT 1');
+    $stmt->execute([':email' => $email]);
+    $userFace = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$userFace || empty($userFace['face_photo'])) {
+        echo json_encode(['success' => false, 'message' => 'Aucune photo enregistrée pour cet utilisateur']);
+        exit;
+    }
+    $protocol  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/') . '/';
+    $photoUrl  = $protocol . '://' . $host . $scriptDir . $userFace['face_photo'];
+    echo json_encode(['success' => true, 'photo_url' => $photoUrl, 'role' => $userFace['role']]);
     exit;
 }
 
@@ -213,9 +275,16 @@ if ($page === 'api_reply') {
     exit;
 }
 
-// =============================================
-// VÉRIFICATION PAGES PROTÉGÉES
-// =============================================
+if ($page === 'api_rdv_chatbot') {
+    if (!$rendezVousCtrl) {
+        http_response_code(501);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'reply' => 'Le module rendez-vous est indisponible.']);
+        exit;
+    }
+    $rendezVousCtrl->apiRendezVousChatbot();
+    exit;
+}
 
 // =============================================
 // VÉRIFICATION PAGES PROTÉGÉES
@@ -347,6 +416,14 @@ switch ($page) {
 
     case 'detail_evenement':
         $front->detailEvenement($id);
+        break;
+
+    case 'event_register':
+        $front->registerEventAction();
+        break;
+
+    case 'sponsors':
+        $front->listSponsors();
         break;
 
     case 'contact':
@@ -678,6 +755,61 @@ case 'articles_admin':
             } else {
                 $pharmacieCtrl->panier();
             }
+        }
+        break;
+
+    case 'blog':
+        adminOnly();
+        $articleCtrl->index();
+        break;
+
+    case 'sponsors_admin':
+        adminOnly();
+        if (class_exists('SponsorController')) {
+            $sponsorCtrl = new SponsorController();
+            if ($action === 'delete' && $id) {
+                $sponsorCtrl->delete($id);
+            } elseif ($action === 'create') {
+                $_SERVER['REQUEST_METHOD'] === 'POST' ? $sponsorCtrl->store() : $sponsorCtrl->create();
+            } elseif ($action === 'edit' && $id) {
+                $_SERVER['REQUEST_METHOD'] === 'POST' ? $sponsorCtrl->update($id) : $sponsorCtrl->edit($id);
+            } elseif ($action === 'show' && $id) {
+                $sponsorCtrl->show($id);
+            } else {
+                $sponsorCtrl->index();
+            }
+        } else {
+            $front->page404();
+        }
+        break;
+
+    case 'participations':
+        adminOnly();
+        if (class_exists('ParticipationController')) {
+            $partCtrl = new ParticipationController();
+            if ($action === 'delete' && $id) {
+                $partCtrl->delete($id);
+            } elseif ($action === 'edit' && $id) {
+                $_SERVER['REQUEST_METHOD'] === 'POST' ? $partCtrl->update($id) : $partCtrl->edit($id);
+            } else {
+                $partCtrl->indexAdmin();
+            }
+        } else {
+            $front->page404();
+        }
+        break;
+
+    case 'carte':
+        adminOnly();
+        if (class_exists('MapController')) {
+            $mapCtrl = new MapController();
+            if ($action === 'metiers') {
+                $mapCtrl->metiers();
+            } else {
+                $mapCtrl->carte();
+            }
+        } else {
+            $front->page404();
         }
         break;
 

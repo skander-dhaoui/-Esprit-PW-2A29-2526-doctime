@@ -1,5 +1,3 @@
--- Fichier miroir du schéma : la référence d’import est database/doctime_full.sql
--- (setup_db.php charge database/doctime_full.sql). Contenu aligné à la main.
 -- =============================================
 -- CRÉATION DE LA BASE (MySQL / MariaDB)
 -- =============================================
@@ -395,6 +393,7 @@ CREATE TABLE IF NOT EXISTS avis (
 -- DONNÉES INITIALES (ré-importables sans erreur duplicate key)
 -- =============================================
 
+-- Catégories : IGNORE si le slug existe déjà (#1062)
 INSERT IGNORE INTO categories (nom, slug, description) VALUES 
 ('Médicaments', 'medicaments', 'Médicaments sur ordonnance et en libre accès'),
 ('Parapharmacie', 'parapharmacie', 'Produits de parapharmacie'),
@@ -402,5 +401,6 @@ INSERT IGNORE INTO categories (nom, slug, description) VALUES
 ('Hygiène', 'hygiene', 'Produits d\'hygiène et soins'),
 ('Nutrition', 'nutrition', 'Compléments alimentaires et nutrition');
 
+-- Admin par défaut (mot de passe: admin123) — IGNORE si admin@doctime.com existe
 INSERT IGNORE INTO users (nom, prenom, email, password, role, statut) 
 VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');

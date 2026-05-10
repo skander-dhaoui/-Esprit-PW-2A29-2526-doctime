@@ -58,6 +58,11 @@ class Database {
         return $this->conn;
     }
 
+    /** Alias pour les modèles qui appellent getPDO() */
+    public function getPDO(): PDO {
+        return $this->getConnection();
+    }
+
     /**
      * Exécuter une requête (INSERT, UPDATE, DELETE)
      */

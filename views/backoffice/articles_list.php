@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../../models/Article.php';
-require_once __DIR__ . '/sidebar.php';
 
 $articleModel = new Article();
 $articles = $articleModel->getAll();
@@ -14,17 +13,10 @@ $articles = $articleModel->getAll();
     <title>Valorys — Gestion Articles</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#f0f4f8;font-family:'Segoe UI',sans-serif}
-        .sidebar{position:fixed;top:0;left:0;width:260px;height:100%;background:#0f2b3d;color:#fff;z-index:100;overflow-y:auto}
-        .sidebar-header{padding:22px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
-        .sidebar-header .logo{font-size:20px;font-weight:700;color:#fff}
-        .sidebar-header small{color:rgba(255,255,255,.5);font-size:11px}
-        .sidebar-menu a{display:flex;align-items:center;gap:10px;padding:12px 22px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;font-weight:500;transition:.2s}
-        .sidebar-menu a:hover,.sidebar-menu a.active{background:rgba(76,175,80,.15);color:#fff;border-left:3px solid #4CAF50}
-        .sidebar-menu a i{width:20px;font-size:1rem}
-        .main{margin-left:260px;padding:24px 28px}
+        body.bo-shell-body{background:#f0f4f8;font-family:'Segoe UI',sans-serif}
         .topbar{background:#fff;border-radius:16px;padding:14px 22px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.05)}
         .topbar-title{font-size:17px;font-weight:700;color:#0f2b3d}
         .admin-badge{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500}
@@ -46,22 +38,9 @@ $articles = $articleModel->getAll();
         .alert-info{background:#e3f2fd;color:#1565c0;border-left:4px solid #1565c0}
     </style>
 </head>
-<body>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">Valorys</div>
-            <small>Plateforme Médicale</small>
-        </div>
-        <div class="sidebar-menu">
-            <a href="index.php?page=dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
-            <a href="index.php?page=articles_admin" class="active"><i class="fas fa-newspaper"></i> Articles</a>
-            <a href="index.php?page=evenements_admin"><i class="fas fa-calendar"></i> Événements</a>
-            <a href="index.php?page=medecins_admin"><i class="fas fa-stethoscope"></i> Médecins</a>
-            <a href="index.php?page=patients_admin"><i class="fas fa-user-injured"></i> Patients</a>
-            <a href="index.php?page=users_admin"><i class="fas fa-users"></i> Utilisateurs</a>
-        </div>
-    </div>
-    
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
     <div class="main">
         <div class="topbar">
             <div class="topbar-title"><i class="fas fa-newspaper"></i> Gestion des Articles</div>

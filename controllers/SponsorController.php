@@ -34,7 +34,7 @@ class SponsorController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/sponsor_list.php';
+            require_once __DIR__ . '/../views/backoffice/sponsor/index.php';
         } catch (Exception $e) {
             error_log('Erreur SponsorController::index - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des sponsors.');

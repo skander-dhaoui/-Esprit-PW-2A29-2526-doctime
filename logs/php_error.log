@@ -4361,3 +4361,308 @@ Stack trace:
 [09-May-2026 20:08:33 Europe/Berlin] === SOCIAL CALLBACK SUCCESS ===
 [09-May-2026 20:08:33 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
 [09-May-2026 20:09:28 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 05:52:55 Europe/Berlin] === REQUEST START [GET /] ===
+[10-May-2026 05:53:01 Europe/Berlin] === REQUEST START [GET /index.php?page=medecins] ===
+[10-May-2026 05:53:01 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 05:53:02 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 05:53:09 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 05:53:12 Europe/Berlin] === REQUEST START [GET /index.php?page=pharmacie] ===
+[10-May-2026 05:53:14 Europe/Berlin] === REQUEST START [GET /index.php?page=contact] ===
+[10-May-2026 05:53:21 Europe/Berlin] === REQUEST START [GET /index.php?page=login] ===
+[10-May-2026 05:53:33 Europe/Berlin] === REQUEST START [GET /index.php?page=contact] ===
+[10-May-2026 05:53:36 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 05:53:42 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 05:53:42 Europe/Berlin] Erreur blogList: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'doctime_db.reply' doesn't exist
+[10-May-2026 05:56:45 Europe/Berlin] === REQUEST START [GET /index.php?page=register] ===
+[10-May-2026 05:57:44 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 05:57:44 Europe/Berlin] Erreur blogList: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'doctime_db.reply' doesn't exist
+[10-May-2026 05:57:53 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 05:57:53 Europe/Berlin] Erreur blogList: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'doctime_db.reply' doesn't exist
+[10-May-2026 06:04:38 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:04:54 Europe/Berlin] === REQUEST START [GET /index.php?page=login] ===
+[10-May-2026 06:05:55 Europe/Berlin] === REQUEST START [GET /index.php?page=register] ===
+[10-May-2026 06:06:26 Europe/Berlin] === REQUEST START [POST /index.php?page=register] ===
+[10-May-2026 06:06:29 Europe/Berlin] Erreur d'envoi email: SMTP Error: Could not authenticate.
+[10-May-2026 06:06:29 Europe/Berlin] === REQUEST START [POST /index.php?page=register] ===
+[10-May-2026 06:06:29 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:06:39 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_rendez_vous] ===
+[10-May-2026 06:06:43 Europe/Berlin] === REQUEST START [GET /index.php?page=prendre_rendez_vous] ===
+[10-May-2026 06:06:43 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:06:49 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_rendez_vous] ===
+[10-May-2026 06:06:55 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:06:59 Europe/Berlin] === REQUEST START [GET /index.php?page=articles_admin&action=create] ===
+[10-May-2026 06:07:08 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:07:11 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:07:16 Europe/Berlin] === REQUEST START [GET /index.php?page=articles_admin&action=create] ===
+[10-May-2026 06:08:59 Europe/Berlin] === REQUEST START [GET /index.php?page=pharmacie] ===
+[10-May-2026 06:09:00 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:09:00 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:09:07 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:09:15 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:09:25 Europe/Berlin] === REQUEST START [GET /index.php?page=mon_profil] ===
+[10-May-2026 06:09:48 Europe/Berlin] === REQUEST START [POST /index.php?page=profil] ===
+[10-May-2026 06:09:52 Europe/Berlin] === REQUEST START [POST /index.php?page=profil] ===
+[10-May-2026 06:09:56 Europe/Berlin] === REQUEST START [POST /index.php?page=profil] ===
+[10-May-2026 06:10:02 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:10:05 Europe/Berlin] === REQUEST START [GET /index.php?page=contact] ===
+[10-May-2026 06:10:08 Europe/Berlin] === REQUEST START [GET /index.php?page=pharmacie] ===
+[10-May-2026 06:10:09 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:10:09 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:10:14 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:10:44 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_rendez_vous] ===
+[10-May-2026 06:10:51 Europe/Berlin] === REQUEST START [GET /index.php?page=medecins] ===
+[10-May-2026 06:10:52 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:10:54 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:10:56 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:10:59 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:11:01 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:11:02 Europe/Berlin] === REQUEST START [GET /index.php?page=sponsors] ===
+[10-May-2026 06:11:03 Europe/Berlin] === REQUEST START [GET /index.php?page=sponsors] ===
+[10-May-2026 06:11:05 Europe/Berlin] === REQUEST START [GET /index.php?page=parapharmacie] ===
+[10-May-2026 06:11:05 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:11:05 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:11:07 Europe/Berlin] === REQUEST START [GET /index.php?page=contact] ===
+[10-May-2026 06:11:11 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:11:17 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_rendez_vous] ===
+[10-May-2026 06:11:23 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_rendez_vous&statut=confirm%C3%A9&date=] ===
+[10-May-2026 06:11:27 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:11:31 Europe/Berlin] === REQUEST START [GET /index.php?page=articles_admin&action=create] ===
+[10-May-2026 06:11:44 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:11:47 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:11:58 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:12:07 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:12:14 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:12:17 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:12:45 Europe/Berlin] === REQUEST START [GET /index.php?page=evenements] ===
+[10-May-2026 06:12:48 Europe/Berlin] === REQUEST START [GET /index.php?page=accueil] ===
+[10-May-2026 06:12:56 Europe/Berlin] === REQUEST START [GET /index.php?page=medecins] ===
+[10-May-2026 06:12:56 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:12:59 Europe/Berlin] === REQUEST START [GET /index.php?page=sponsors] ===
+[10-May-2026 06:13:06 Europe/Berlin] === REQUEST START [GET /index.php?page=parapharmacie] ===
+[10-May-2026 06:13:07 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:07 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:13:07] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:07 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:07] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:07 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:10 Europe/Berlin] === REQUEST START [GET /index.php?page=panier] ===
+[2026-05-10 06:13:10] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:10 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:10] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:10 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:13 Europe/Berlin] === REQUEST START [GET /index.php?page=pharmacie] ===
+[10-May-2026 06:13:13 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:13 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:13:13] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:13 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:13] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:13 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:15 Europe/Berlin] === REQUEST START [POST /index.php?page=pharmacie] ===
+[10-May-2026 06:13:16 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:16 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:13:16] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:16 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:16] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:16 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:18 Europe/Berlin] === REQUEST START [POST /index.php?page=pharmacie] ===
+[10-May-2026 06:13:18 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:18 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:13:18] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:18 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:18] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:18 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:36 Europe/Berlin] === REQUEST START [POST /index.php?page=pharmacie] ===
+[10-May-2026 06:13:37 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:37 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:13:37 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[2026-05-10 06:13:37] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:37 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:37] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:37 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:13:56 Europe/Berlin] === REQUEST START [POST /index.php?page=pharmacie] ===
+[10-May-2026 06:13:56 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:13:56 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:13:56 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[2026-05-10 06:13:56] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:56 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:13:56] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:13:56 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:14:21 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_commandes] ===
+[2026-05-10 06:14:22] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:22 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:14:22] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:22 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:14:27 Europe/Berlin] === REQUEST START [GET /index.php?page=pharmacie] ===
+[10-May-2026 06:14:27 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:14:27 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:14:27] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:27 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:14:27] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:27 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:14:31 Europe/Berlin] === REQUEST START [GET /index.php?page=parapharmacie] ===
+[10-May-2026 06:14:31 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:14:31 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:14:31] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:31 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:14:31] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:31 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:14:33 Europe/Berlin] === REQUEST START [GET /index.php?page=parapharmacie] ===
+[10-May-2026 06:14:33 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:14:33 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:14:33] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:33 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:14:33] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:33 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:14:41 Europe/Berlin] === REQUEST START [GET /index.php?page=mes_commandes] ===
+[2026-05-10 06:14:41] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:41 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[2026-05-10 06:14:41] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:106
+[10-May-2026 06:14:41 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 106
+[10-May-2026 06:17:41 Europe/Berlin] === REQUEST START [GET /] ===
+[10-May-2026 06:17:48 Europe/Berlin] === REQUEST START [GET /index.php?page=blog_public] ===
+[10-May-2026 06:17:55 Europe/Berlin] === REQUEST START [GET /index.php?page=logout] ===
+[10-May-2026 06:17:55 Europe/Berlin] === REQUEST START [GET //index.php?page=login] ===
+[10-May-2026 06:18:13 Europe/Berlin] === REQUEST START [POST //index.php?page=login] ===
+[10-May-2026 06:18:13 Europe/Berlin] === REQUEST START [GET //index.php?page=accueil] ===
+[10-May-2026 06:18:18 Europe/Berlin] === REQUEST START [GET //index.php?page=mon_profil] ===
+[10-May-2026 06:18:36 Europe/Berlin] === REQUEST START [GET //index.php?page=modifier_profil] ===
+[10-May-2026 06:18:36 Europe/Berlin] Erreur vérification Face ID: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'face_descriptor' in 'field list'
+[10-May-2026 06:18:43 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins] ===
+[10-May-2026 06:18:43 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:18:47 Europe/Berlin] === REQUEST START [GET //index.php?page=logout] ===
+[10-May-2026 06:18:47 Europe/Berlin] === REQUEST START [GET //index.php?page=login] ===
+[10-May-2026 06:20:17 Europe/Berlin] === REQUEST START [POST //index.php?page=login] ===
+[10-May-2026 06:20:18 Europe/Berlin] === REQUEST START [GET //index.php?page=login] ===
+[10-May-2026 06:22:00 Europe/Berlin] === REQUEST START [POST //index.php?page=login] ===
+[10-May-2026 06:22:01 Europe/Berlin] === REQUEST START [GET //index.php?page=dashboard] ===
+[10-May-2026 06:22:04 Europe/Berlin] === REQUEST START [GET //index.php?page=ordonnances] ===
+[10-May-2026 06:22:04 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:22:07 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:22:12 Europe/Berlin] === REQUEST START [GET //index.php?page=ordonnances] ===
+[10-May-2026 06:22:13 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:22:16 Europe/Berlin] === REQUEST START [GET //index.php?page=stats] ===
+[2026-05-10 06:22:16] [2] Undefined variable $totalRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:40
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $totalRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 40
+[2026-05-10 06:22:16] [2] Undefined variable $todayRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:41
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $todayRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 41
+[2026-05-10 06:22:16] [2] Undefined variable $next7DaysRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:42
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $next7DaysRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 42
+[2026-05-10 06:22:16] [2] Undefined variable $totalRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:43
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $totalRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 43
+[2026-05-10 06:22:16] [2] Undefined variable $pendingRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:47
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $pendingRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 47
+[2026-05-10 06:22:16] [2] Undefined variable $cancelledRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:48
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $cancelledRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 48
+[2026-05-10 06:22:16] [2] Undefined variable $finishedRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php:49
+[10-May-2026 06:22:16 Europe/Berlin] PHP Warning:  Undefined variable $finishedRdv in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\stats.php on line 49
+[10-May-2026 06:40:42 Europe/Berlin] === REQUEST START [GET /] ===
+[10-May-2026 06:40:54 Europe/Berlin] === REQUEST START [GET //index.php?page=ordonnances] ===
+[10-May-2026 06:40:54 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:40:58 Europe/Berlin] === REQUEST START [GET //index.php?page=disponibilites_admin] ===
+[10-May-2026 06:41:00 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:41:02 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:41:02 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:41:32 Europe/Berlin] === REQUEST START [GET //index.php?page=patients] ===
+[10-May-2026 06:41:53 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins_admin] ===
+[10-May-2026 06:42:14 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:42:15 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:42:19 Europe/Berlin] === REQUEST START [GET //index.php?page=users&action=edit&id=3] ===
+[10-May-2026 06:42:24 Europe/Berlin] === REQUEST START [GET //index.php?page=ordonnances] ===
+[10-May-2026 06:42:24 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:42:26 Europe/Berlin] === REQUEST START [GET //index.php?page=produits_admin] ===
+[10-May-2026 06:42:26 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:26 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'actif' in 'where clause'
+[10-May-2026 06:42:26 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'stock_alerte' in 'where clause'
+[10-May-2026 06:42:26 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'prix_vente' in 'field list'
+[10-May-2026 06:42:32 Europe/Berlin] === REQUEST START [GET //index.php?page=produits_admin&action=export_csv&] ===
+[10-May-2026 06:42:39 Europe/Berlin] === REQUEST START [GET //index.php?page=categories_admin] ===
+[10-May-2026 06:42:39 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:115
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 115
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [8192] ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:115
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 115
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [8192] ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:115
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 115
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [8192] ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:115
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 115
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [8192] ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:115
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 115
+[2026-05-10 06:42:39] [2] Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Warning:  Undefined array key "statut" in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[2026-05-10 06:42:39] [8192] ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php:116
+[10-May-2026 06:42:39 Europe/Berlin] PHP Deprecated:  ucfirst(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\backoffice\pharmacie\categories_list.php on line 116
+[10-May-2026 06:42:45 Europe/Berlin] === REQUEST START [GET //index.php?page=categories_admin&action=edit&id=4] ===
+[10-May-2026 06:42:46 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:51 Europe/Berlin] === REQUEST START [GET //index.php?page=commandes_admin] ===
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:52 Europe/Berlin] Erreur queryScalar : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[10-May-2026 06:42:54 Europe/Berlin] === REQUEST START [GET //index.php?page=blog] ===
+[10-May-2026 06:42:54 Europe/Berlin] === REQUEST START [GET //index.php?page=api_article&list=1] ===
+[10-May-2026 06:42:55 Europe/Berlin] === REQUEST START [GET //index.php?page=api_article&list=1] ===
+[10-May-2026 06:42:55 Europe/Berlin] === REQUEST START [GET //index.php?page=api_reply&all=1] ===
+[10-May-2026 06:42:57 Europe/Berlin] === REQUEST START [GET //index.php?page=dashboard] ===
+[10-May-2026 06:43:19 Europe/Berlin] === REQUEST START [GET //index.php?page=mes_notifications] ===
+[10-May-2026 06:43:23 Europe/Berlin] === REQUEST START [GET //index.php?page=parapharmacie] ===
+[10-May-2026 06:43:23 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'p.actif' in 'where clause'
+[10-May-2026 06:43:23 Europe/Berlin] Erreur query : SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statut' in 'where clause'
+[2026-05-10 06:43:23] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/public_theme_styles.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:16
+[10-May-2026 06:43:23 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/public_theme_styles.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 16
+[2026-05-10 06:43:23] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/public_theme_styles.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:16
+[10-May-2026 06:43:23 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/public_theme_styles.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 16
+[2026-05-10 06:43:23] [2] include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:93
+[10-May-2026 06:43:23 Europe/Berlin] PHP Warning:  include(C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php): Failed to open stream: No such file or directory in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 93
+[2026-05-10 06:43:23] [2] include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php:93
+[10-May-2026 06:43:23 Europe/Berlin] PHP Warning:  include(): Failed opening 'C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials/../../partials/nav_public.php' for inclusion (include_path='C:\xampp\php\PEAR') in C:\Users\dev4\Desktop\-Esprit-PW-2A29-2526-doctime\views\frontoffice\pharmacie\partials\header.php on line 93
+[10-May-2026 06:43:28 Europe/Berlin] === REQUEST START [GET //index.php?page=mes_notifications] ===
+[10-May-2026 06:43:30 Europe/Berlin] === REQUEST START [GET //index.php?page=accueil] ===
+[10-May-2026 06:43:32 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins] ===
+[10-May-2026 06:43:32 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:43:33 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins] ===
+[10-May-2026 06:43:34 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 06:43:39 Europe/Berlin] === REQUEST START [GET //index.php?page=dashboard] ===
+[10-May-2026 06:43:44 Europe/Berlin] === REQUEST START [GET //index.php?page=disponibilites_admin] ===
+[10-May-2026 06:43:47 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:44:05 Europe/Berlin] === REQUEST START [GET //index.php?page=admin_rendezvous&action=create] ===
+[10-May-2026 06:44:09 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:46:33 Europe/Berlin] === REQUEST START [GET //index.php?page=patients] ===
+[10-May-2026 06:46:37 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins_admin] ===
+[10-May-2026 06:46:37 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins_admin] ===
+[10-May-2026 06:46:39 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:46:41 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 06:46:43 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:46:54 Europe/Berlin] === REQUEST START [GET //index.php?page=users&action=toggle&id=1] ===
+[10-May-2026 06:46:55 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:46:59 Europe/Berlin] === REQUEST START [GET //index.php?page=users&action=toggle&id=1] ===
+[10-May-2026 06:47:00 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 06:47:08 Europe/Berlin] === REQUEST START [GET //index.php?page=disponibilites_admin] ===
+[10-May-2026 16:10:33 Europe/Berlin] === REQUEST START [GET //index.php?page=medecins_admin] ===
+[10-May-2026 16:10:35 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 16:10:42 Europe/Berlin] === REQUEST START [GET //index.php?page=patients] ===
+[10-May-2026 16:10:43 Europe/Berlin] === REQUEST START [GET //index.php?page=rendez_vous_admin] ===
+[10-May-2026 16:10:44 Europe/Berlin] === REQUEST START [GET //index.php?page=disponibilites_admin] ===
+[10-May-2026 16:10:56 Europe/Berlin] === REQUEST START [GET //index.php?page=disponibilites_admin&medecin_id=&jour=&search=] ===
+[10-May-2026 16:11:01 Europe/Berlin] === REQUEST START [GET //index.php?page=ordonnances] ===
+[10-May-2026 16:11:01 Europe/Berlin] Nombre de médecins trouvés: 0
+[10-May-2026 16:11:04 Europe/Berlin] === REQUEST START [GET //index.php?page=users] ===
+[10-May-2026 16:12:48 Europe/Berlin] === REQUEST START [GET //index.php?page=dashboard] ===

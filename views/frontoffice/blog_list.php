@@ -6,12 +6,12 @@
     <title>Blog Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php include __DIR__ . '/../partials/public_theme_styles.php'; ?>
     <style>
         body{background:#f5f7fb;font-family:'Segoe UI',sans-serif}
         .blog-header{background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);color:#fff;padding:60px 0;text-align:center;margin-bottom:40px}
         .blog-header h1{font-size:2.2rem;font-weight:700}
         .blog-header p{opacity:.9}
-        nav.navbar{background:#1a2035!important}
         .art-card{background:#fff;border-radius:16px;padding:28px;margin-bottom:24px;box-shadow:0 4px 16px rgba(0,0,0,.07);border-left:4px solid #2A7FAA;transition:.3s;position:relative}
         .art-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.1)}
         .art-title{font-size:1.25rem;font-weight:700;color:#1a2035;margin-bottom:8px}
@@ -89,27 +89,7 @@
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
-        <div class="collapse navbar-collapse" id="nav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
-                <?php else: ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
-                <?php endif; ?>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php $navActive = $_GET['page'] ?? 'blog_public'; include __DIR__ . '/../partials/nav_public.php'; ?>
 
 <div class="blog-header">
     <div class="container">

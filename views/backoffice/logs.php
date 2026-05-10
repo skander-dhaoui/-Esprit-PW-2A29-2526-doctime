@@ -1,6 +1,27 @@
-<div class="container-fluid">
+<?php
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+    header('Location: index.php?page=login');
+    exit;
+}
+$pageTitle = 'Historique / Logs';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($pageTitle) ?> — Valorys</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
+</head>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
+
+<div class="main-content">
+<div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-history text-primary me-2"></i>Historique des Actions (Logs)</h2>
+        <h2 class="h4 mb-0"><i class="fas fa-history text-primary me-2"></i>Historique des actions (logs)</h2>
         <a href="index.php?page=logs&action=export" class="btn btn-sm btn-primary shadow-sm">
             <i class="fas fa-download fa-sm text-white-50"></i> Exporter
         </a>
@@ -45,7 +66,6 @@
                                     </td>
                                     <td>
                                         <?php
-                                        // Couleurs par défaut basées sur l'action
                                         $actionColor = 'bg-secondary';
                                         if (stripos($log['action'], 'connexion') !== false) $actionColor = 'bg-info';
                                         if (stripos($log['action'], 'create') !== false || stripos($log['action'], 'ajout') !== false) $actionColor = 'bg-success';
@@ -66,20 +86,20 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
             <?php if (isset($totalPages) && $totalPages > 1): ?>
+                <?php $logPageNum = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1; ?>
                 <nav aria-label="Page navigation" class="mt-4">
                     <ul class="pagination justify-content-center">
-                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
-                            <a class="page-link" href="?page=logs&p=<?= $page - 1 ?>">Précédent</a>
+                        <li class="page-item <?= ($logPageNum <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="index.php?page=logs&p=<?= $logPageNum - 1 ?>">Précédent</a>
                         </li>
                         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                            <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
-                                <a class="page-link" href="?page=logs&p=<?= $i ?>"><?= $i ?></a>
+                            <li class="page-item <?= ($logPageNum == $i) ? 'active' : '' ?>">
+                                <a class="page-link" href="index.php?page=logs&p=<?= $i ?>"><?= $i ?></a>
                             </li>
                         <?php endfor; ?>
-                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
-                            <a class="page-link" href="?page=logs&p=<?= $page + 1 ?>">Suivant</a>
+                        <li class="page-item <?= ($logPageNum >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="index.php?page=logs&p=<?= $logPageNum + 1 ?>">Suivant</a>
                         </li>
                     </ul>
                 </nav>
@@ -87,4 +107,8 @@
         </div>
     </div>
 </div>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

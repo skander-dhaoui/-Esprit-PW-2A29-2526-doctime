@@ -6,17 +6,10 @@
     <title>Valorys — Gestion Blog</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#f0f4f8;font-family:'Segoe UI',sans-serif}
-        .sidebar{position:fixed;top:0;left:0;width:260px;height:100%;background:#0f2b3d;color:#fff;z-index:100;overflow-y:auto}
-        .sidebar-header{padding:22px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
-        .sidebar-header .logo{font-size:20px;font-weight:700;color:#fff}
-        .sidebar-header small{color:rgba(255,255,255,.5);font-size:11px}
-        .sidebar-menu a{display:flex;align-items:center;gap:10px;padding:12px 22px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;font-weight:500;transition:.2s}
-        .sidebar-menu a:hover,.sidebar-menu a.active{background:rgba(76,175,80,.15);color:#fff;border-left:3px solid #4CAF50}
-        .sidebar-menu a i{width:20px;font-size:1rem}
-        .main{margin-left:260px;padding:24px 28px}
+        body.bo-shell-body{background:#f0f4f8;font-family:'Segoe UI',sans-serif}
         .topbar{background:#fff;border-radius:16px;padding:14px 22px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.05)}
         .topbar-title{font-size:17px;font-weight:700;color:#0f2b3d}
         .admin-badge{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500}
@@ -81,24 +74,10 @@
         .toast.err{background:#991b1b}
         .toast.ok{background:#166534}
         @keyframes slideup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @media(max-width:992px){.sidebar{width:70px}.sidebar-header .logo,.sidebar-header small,.sidebar-menu a span{display:none}.sidebar-menu a{justify-content:center;padding:14px 0}.main{margin-left:70px}}
     </style>
 </head>
-<body>
-<div class="sidebar">
-    <div class="sidebar-header"><div class="logo">Valorys</div><small>Back Office</small></div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i><span>Utilisateurs</span></a>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i><span>Médecins</span></a>
-        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i><span>Patients</span></a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i><span>Rendez-vous</span></a>
-        <a href="index.php?page=blog" class="active"><i class="fas fa-blog"></i><span>Blog / Forum</span></a>
-        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i><span>Statistiques</span></a>
-        <a href="index.php?page=settings"><i class="fas fa-cog"></i><span>Paramètres</span></a>
-        <a href="index.php?page=logout" style="margin-top:10px"><i class="fas fa-sign-out-alt"></i><span>Déconnexion</span></a>
-    </div>
-</div>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
 
 <div class="main">
     <div class="topbar">

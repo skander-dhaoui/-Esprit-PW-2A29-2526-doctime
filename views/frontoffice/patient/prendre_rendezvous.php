@@ -12,12 +12,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
     <title>Prendre rendez-vous - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php include __DIR__ . '/../../partials/public_theme_styles.php'; ?>
     <style>
         body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: #1a2035; }
-        .navbar-brand { color: white !important; }
-        .nav-link { color: rgba(255,255,255,0.8) !important; }
-        .nav-link:hover { color: white !important; }
         .card { border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .card-header { background: linear-gradient(135deg, #2A7FAA, #4CAF50); color: white; border-radius: 12px 12px 0 0 !important; }
         .form-label { font-weight: 600; }
@@ -28,22 +25,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=prendre_rendezvous">Prendre RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php $navActive = $_GET['page'] ?? ''; include __DIR__ . '/../../partials/nav_public.php'; ?>
 
 <div class="container mt-4">
     <div class="row justify-content-center">

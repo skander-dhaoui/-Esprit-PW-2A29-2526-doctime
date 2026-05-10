@@ -13,23 +13,10 @@ $userRole   = $_SESSION['user_role'] ?? 'guest';
     <title><?= htmlspecialchars($pageTitle) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php include __DIR__ . '/../../partials/public_theme_styles.php'; ?>
     <style>
         /* ── Styles originaux du module parapharmacie ─────────── */
         body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
-
-        /* Navbar identique au reste du site (gradient bleu→vert) */
-        .navbar-custom {
-            background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
-            box-shadow: 0 4px 12px rgba(42,127,170,0.15);
-            padding: 0.8rem 2rem;
-        }
-        .navbar-custom .navbar-brand { font-size: 1.5rem; font-weight: 700; }
-        .navbar-custom .nav-link { color: white !important; }
-        .navbar-custom .nav-link:hover { opacity: .85; }
-        .navbar-custom .nav-link.active { font-weight: 700; }
-        .dropdown-menu { border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(42,127,170,0.2); }
-        .dropdown-item:hover { background: #e0f0f5; color: #2A7FAA; }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.9rem; }
 
         /* Header parapharmacie plein largeur (style original) */
         .pharma-header {
@@ -101,64 +88,10 @@ $userRole   = $_SESSION['user_role'] ?? 'guest';
 
 <div id="valo-toasts"></div>
 
-<!-- NAVBAR identique au reste du site (gradient bleu→vert, même structure) -->
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="index.php?page=accueil">
-            <i class="fas fa-hospital-user"></i> Valorys
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mx-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $activePage === 'parapharmacie' ? 'active' : '' ?>"
-                       href="index.php?page=parapharmacie">
-                        <i class="fas fa-pills me-1"></i>Parapharmacie
-                    </a>
-                </li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
-            </ul>
-            <ul class="navbar-nav ms-auto">
-                <?php if ($isLoggedIn): ?>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
-                       role="button" data-bs-toggle="dropdown">
-                        <span class="avatar"><?= strtoupper(substr($userName, 0, 1)) ?></span>
-                        <?= $userName ?>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="index.php?page=mon_profil"><i class="fas fa-user me-2"></i>Mon profil</a></li>
-                        <li><a class="dropdown-item" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar me-2"></i>Mes rendez-vous</a></li>
-                        <li><a class="dropdown-item <?= $activePage === 'mes_commandes' ? 'fw-bold' : '' ?>"
-                               href="index.php?page=mes_commandes">
-                            <i class="fas fa-shopping-bag me-2"></i>Mes commandes
-                        </a></li>
-                        <li><a class="dropdown-item <?= $activePage === 'panier' ? 'fw-bold' : '' ?>"
-                               href="index.php?page=panier">
-                            <i class="fas fa-cart-shopping me-2"></i>Mon panier
-                        </a></li>
-                        <?php if ($userRole === 'admin'): ?>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="index.php?page=dashboard"><i class="fas fa-cog me-2"></i>Administration</a></li>
-                        <?php endif; ?>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="index.php?page=logout"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </li>
-                <?php else: ?>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=login"><i class="fas fa-sign-in-alt me-1"></i>Connexion</a></li>
-                <li class="nav-item"><a class="nav-link btn btn-light ms-2 text-primary" href="index.php?page=register"><i class="fas fa-user-plus me-1"></i>Inscription</a></li>
-                <?php endif; ?>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php
+$navActive = $activePage ?? ($_GET['page'] ?? '');
+include __DIR__ . '/../../partials/nav_public.php';
+?>
 
 <script>
 /* Système Valo — remplace confirm() et alert() browser */

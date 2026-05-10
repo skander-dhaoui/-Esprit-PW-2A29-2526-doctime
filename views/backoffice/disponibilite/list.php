@@ -28,18 +28,10 @@ $jours = [
     <title>Gestion des disponibilités - Valorys Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php require_once __DIR__ . '/../../partials/backoffice_shell_styles.php'; ?>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #1e2a3e; color: white; transition: all 0.3s; z-index: 100; }
-        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header .logo-img { width: 130px; height: auto; margin-bottom: 6px; filter: brightness(0) invert(1); }
-        .sidebar-header small { color: rgba(255,255,255,0.6); font-size: 12px; }
-        .sidebar-menu { padding: 20px 0; }
-        .sidebar-menu a { display: block; padding: 12px 25px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.3s; font-weight: 500; }
-        .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.1); color: white; border-left: 4px solid #4CAF50; }
-        .sidebar-menu i { width: 25px; margin-right: 12px; }
-        .main-content { margin-left: 280px; padding: 20px; }
+        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
         .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .admin-info { display: flex; align-items: center; gap: 15px; }
         .admin-avatar { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
@@ -48,39 +40,11 @@ $jours = [
         .stat-icon { font-size: 45px; opacity: 0.3; float: right; }
         .badge-actif { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
         .badge-inactif { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        @media (max-width: 992px) {
-            .sidebar { width: 80px; }
-            .sidebar-menu a span { display: none; }
-            .sidebar-menu a { text-align: center; padding: 15px; }
-            .sidebar-menu i { margin-right: 0; font-size: 20px; }
-            .main-content { margin-left: 80px; }
-        }
     </style>
 </head>
-<body>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/../sidebar.php'; ?>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-header">
-        <img src="assets/images/logo_doctime.png" alt="Valorys Logo" class="logo-img" onerror="this.style.display='none'">
-        <br><small>Back Office</small>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> <span>Utilisateurs</span></a>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> <span>Médecins</span></a>
-        <a href="index.php?page=disponibilites_admin" class="active"><i class="fas fa-clock"></i> <span>Disponibilités</span></a>
-        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> <span>Rendez-vous</span></a>
-        <a href="index.php?page=ordonnances"><i class="fas fa-prescription-bottle"></i> <span>Ordonnances</span></a>
-        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> <span>Produits</span></a>
-        <a href="index.php?page=articles_admin"><i class="fas fa-blog"></i> <span>Blog</span></a>
-        <a href="index.php?page=evenements_admin"><i class="fas fa-calendar-day"></i> <span>Événements</span></a>
-        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i> <span>Statistiques</span></a>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> <span>Déconnexion</span></a>
-    </div>
-</div>
-
-<!-- Main Content -->
 <div class="main-content">
     <div class="navbar-top">
         <h4 class="mb-0"><i class="fas fa-clock me-2"></i>Gestion des disponibilités</h4>

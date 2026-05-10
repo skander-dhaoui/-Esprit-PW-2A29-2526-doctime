@@ -58,7 +58,7 @@ class DashboardController {
         $allowed_tables = [
             'users', 'events', 'sponsors', 'participations', 'articles',
             'patients', 'medecins', 'rendez_vous', 'ordonnances', 'disponibilites',
-            'replies', 'categories'
+            'reply', 'categories'
         ];
         
         // Valider que la table est dans la whitelist

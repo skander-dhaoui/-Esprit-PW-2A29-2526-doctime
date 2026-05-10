@@ -13,9 +13,9 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
     <style>
-        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .main-content { padding: 22px; }
+        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
         .kpi { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.05); height: 100%; border-left: 4px solid #2a7faa; }
         .kpi h6 { color: #6c757d; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; }
         .kpi .value { font-size: 28px; font-weight: 700; color: #1e2a3e; }
@@ -27,7 +27,8 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') 
         .risk-red    { background:#f8d7da; color:#721c24; }
     </style>
 </head>
-<body>
+<body class="bo-shell-body">
+<?php require_once __DIR__ . '/sidebar.php'; ?>
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0"><i class="fas fa-chart-line me-2"></i>Statistiques rendez-vous</h3>
