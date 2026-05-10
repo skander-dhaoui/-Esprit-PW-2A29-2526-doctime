@@ -1,8 +1,8 @@
 <?php
 $isEdit     = isset($categorie);
 $pageTitle  = $isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie';
-$activePage = 'categories';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'categories_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
@@ -122,5 +122,4 @@ document.getElementById('formCategorie').addEventListener('submit', function(e) 
     if (valid) this.submit();
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</div></body></html>
+<?php require __DIR__ . '/_layout_bottom.php'; ?>

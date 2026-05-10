@@ -1,7 +1,7 @@
 <?php
 $pageTitle  = 'Gestion des Commandes';
-$activePage = 'commandes';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'commandes_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
@@ -10,22 +10,24 @@ require __DIR__ . '/_layout_top.php';
 </div>
 <?php endif; ?>
 
-<!-- KPI -->
+<!-- KPI Cards -->
 <div class="row g-3 mb-4">
     <?php $kpis = [
-        ['label'=>'Total',       'val'=>$stats['total'],      'color'=>'#607d8b', 'icon'=>'shopping-cart'],
-        ['label'=>'En attente',  'val'=>$stats['en_attente'], 'color'=>'#FF9800', 'icon'=>'clock'],
-        ['label'=>'Confirmées',  'val'=>$stats['confirmees'], 'color'=>'#2196F3', 'icon'=>'check'],
-        ['label'=>'Livrées',     'val'=>$stats['livrees'],    'color'=>'#4CAF50', 'icon'=>'truck'],
-        ['label'=>'Annulées',    'val'=>$stats['annulees'],   'color'=>'#f44336', 'icon'=>'times'],
-        ['label'=>'CA Total',    'val'=>number_format($stats['ca_total'],2).' TND', 'color'=>'#9C27B0', 'icon'=>'coins'],
+        ['label'=>'Total',       'val'=>$stats['total'],      'color'=>'#607d8b', 'icon'=>'shopping-cart', 'bg'=>'rgba(96, 125, 139, 0.15)'],
+        ['label'=>'En attente',  'val'=>$stats['en_attente'], 'color'=>'#FF9800', 'icon'=>'clock', 'bg'=>'rgba(255, 152, 0, 0.15)'],
+        ['label'=>'Confirmées',  'val'=>$stats['confirmees'], 'color'=>'#2196F3', 'icon'=>'check', 'bg'=>'rgba(33, 150, 243, 0.15)'],
+        ['label'=>'Livrées',     'val'=>$stats['livrees'],    'color'=>'#4CAF50', 'icon'=>'truck', 'bg'=>'rgba(76, 175, 80, 0.15)'],
+        ['label'=>'Annulées',    'val'=>$stats['annulees'],   'color'=>'#f44336', 'icon'=>'times', 'bg'=>'rgba(244, 67, 54, 0.15)'],
+        ['label'=>'CA Total',    'val'=>number_format($stats['ca_total'],2).' TND', 'color'=>'#9C27B0', 'icon'=>'coins', 'bg'=>'rgba(156, 39, 176, 0.15)'],
     ];
     foreach ($kpis as $k): ?>
     <div class="col-6 col-md-2">
-        <div class="stat-card" style="border-color:<?= $k['color'] ?>">
-            <i class="fas fa-<?= $k['icon'] ?> fa-xl" style="color:<?= $k['color'] ?>44;float:right"></i>
-            <h3 style="color:<?= $k['color'] ?>;font-size:22px"><?= $k['val'] ?></h3>
-            <p><?= $k['label'] ?></p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: <?= $k['bg'] ?>; color: <?= $k['color'] ?>;">
+                <i class="fas fa-<?= $k['icon'] ?>"></i>
+            </div>
+            <div class="stat-value" style="color: <?= $k['color'] ?>; font-size: 1.6rem;"><?= $k['val'] ?></div>
+            <div class="stat-label"><?= $k['label'] ?></div>
         </div>
     </div>
     <?php endforeach; ?>
@@ -206,4 +208,4 @@ require __DIR__ . '/_layout_top.php';
     }
 })();
 </script>
-</div></body></html>
+<?php require __DIR__ . '/_layout_bottom.php'; ?>

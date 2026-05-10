@@ -1,7 +1,7 @@
 <?php
 $pageTitle  = 'Gestion des Produits';
-$activePage = 'produits';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'produits_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
@@ -11,34 +11,42 @@ require __DIR__ . '/_layout_top.php';
 </div>
 <?php endif; ?>
 
-<!-- KPI -->
+<!-- KPI Cards -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="stat-card" style="border-color:#4CAF50">
-            <i class="fas fa-pills fa-2x" style="color:#4CAF5055"></i>
-            <h3 style="color:#4CAF50"><?= $stats['total'] ?></h3>
-            <p>Total produits</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(76, 175, 80, 0.15); color: #4CAF50;">
+                <i class="fas fa-pills"></i>
+            </div>
+            <div class="stat-value" style="color: #4CAF50;"><?= $stats['total'] ?></div>
+            <div class="stat-label">Total produits</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card" style="border-color:#2196F3">
-            <i class="fas fa-check-circle fa-2x" style="color:#2196F355"></i>
-            <h3 style="color:#2196F3"><?= $stats['actifs'] ?></h3>
-            <p>Actifs</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(33, 150, 243, 0.15); color: #2196F3;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-value" style="color: #2196F3;"><?= $stats['actifs'] ?></div>
+            <div class="stat-label">Actifs</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card" style="border-color:#FF9800">
-            <i class="fas fa-exclamation-triangle fa-2x" style="color:#FF980055"></i>
-            <h3 style="color:#FF9800"><?= $stats['alerte'] ?></h3>
-            <p>Stock alerte</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(255, 152, 0, 0.15); color: #FF9800;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-value" style="color: #FF9800;"><?= $stats['alerte'] ?></div>
+            <div class="stat-label">Stock alerte</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="stat-card" style="border-color:#f44336">
-            <i class="fas fa-times-circle fa-2x" style="color:#f4433655"></i>
-            <h3 style="color:#f44336"><?= $stats['rupture'] ?></h3>
-            <p>En rupture</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(244, 67, 54, 0.15); color: #f44336;">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-value" style="color: #f44336;"><?= $stats['rupture'] ?></div>
+            <div class="stat-label">En rupture</div>
         </div>
     </div>
 </div>
@@ -132,72 +140,60 @@ require __DIR__ . '/_layout_top.php';
     </div>
     <?php else: ?>
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" id="produitsTable">
-            <thead style="background:#f8f9fa">
+        <table class="table table-modern mb-0" id="produitsTable">
+            <thead>
                 <tr>
                     <th>Référence</th>
                     <th>Produit</th>
                     <th>Catégorie</th>
-                    <th>Prix vente</th>
+                    <th>Prix</th>
                     <th>Stock</th>
-                    <th>Conseil expert</th>
                     <th>Statut</th>
-                    <th>Actions</th>
+                    <th style="width: 120px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
             <?php foreach ($produits as $p): ?>
             <?php
                 $stockClass = '';
-                if ($p['stock'] == 0) $stockClass = 'text-danger fw-bold';
-                elseif ($p['stock'] <= $p['stock_alerte']) $stockClass = 'text-warning fw-bold';
+                $stockBadge = '';
+                if ($p['stock'] == 0) {
+                    $stockClass = 'text-danger fw-bold';
+                    $stockBadge = '<span class="badge badge-annulee ms-1">Rupture</span>';
+                } elseif ($p['stock'] <= 5) {
+                    $stockClass = 'text-warning fw-bold';
+                    $stockBadge = '<span class="badge badge-alerte ms-1">Alerte</span>';
+                }
             ?>
-            <tr
-                data-ref="<?= strtolower(htmlspecialchars((string)$p['reference'])) ?>"
-                data-nom="<?= strtolower(htmlspecialchars((string)$p['nom'])) ?>"
-                data-cat="<?= (int)($p['categorie_id'] ?? 0) ?>"
-                data-cat-name="<?= strtolower(htmlspecialchars((string)($p['categorie_nom'] ?? ''))) ?>"
-                data-prix="<?= (float)$p['prix_vente'] ?>"
-                data-stock="<?= (int)$p['stock'] ?>"
-                data-statut="<?= $p['actif'] ? 'actif' : 'inactif' ?>"
-                data-alerte="<?= (int)$p['stock_alerte'] ?>"
-            >
-                <td><code><?= htmlspecialchars($p['reference']) ?></code></td>
+            <tr>
+                <td><code class="bg-light px-2 py-1 rounded"><?= htmlspecialchars($p['reference'] ?? 'REF-'.$p['id']) ?></code></td>
                 <td>
-                    <strong><?= htmlspecialchars($p['nom']) ?></strong>
-                    <?php if ($p['description']): ?>
-                    <br><small class="text-muted"><?= htmlspecialchars(substr($p['description'], 0, 50)) ?>...</small>
-                    <?php endif; ?>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded p-2 me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-pills text-muted"></i>
+                        </div>
+                        <div>
+                            <strong class="d-block"><?= htmlspecialchars($p['nom']) ?></strong>
+                            <small class="text-muted"><?= htmlspecialchars(substr($p['description'] ?? '', 0, 40)) ?>...</small>
+                        </div>
+                    </div>
                 </td>
-                <td><?= htmlspecialchars($p['categorie_nom'] ?? '—') ?></td>
-                <td><strong><?= number_format($p['prix_vente'], 2) ?> TND</strong></td>
+                <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($p['categorie_nom'] ?? '—') ?></span></td>
+                <td><strong style="color: #0fa99b;"><?= number_format($p['prix'] ?? 0, 2) ?> TND</strong></td>
                 <td>
-                    <span class="<?= $stockClass ?>">
-                        <?= $p['stock'] ?>
-                        <?php if ($p['stock'] == 0): ?>
-                            <span class="badge badge-annulee ms-1">Rupture</span>
-                        <?php elseif ($p['stock'] <= $p['stock_alerte']): ?>
-                            <span class="badge badge-en_attente ms-1">Alerte</span>
-                        <?php endif; ?>
-                    </span>
+                    <span class="<?= $stockClass ?>"><?= $p['stock'] ?></span>
+                    <?= $stockBadge ?>
                 </td>
                 <td>
-                    <?php if ($p['prescription']): ?>
-                    <span class="badge" style="background:#e3f2fd;color:#1565c0"><i class="fas fa-prescription me-1"></i>Recommande</span>
-                    <?php else: ?>
-                    <span class="badge" style="background:#f3f3f3;color:#666">Optionnel</span>
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <span class="badge badge-<?= $p['actif'] ? 'actif' : 'inactif' ?>">
-                        <?= $p['actif'] ? 'Actif' : 'Inactif' ?>
+                    <span class="badge badge-<?= ($p['status'] ?? 'actif') === 'actif' ? 'actif' : 'inactif' ?>">
+                        <?= ($p['status'] ?? 'actif') === 'actif' ? 'Actif' : 'Inactif' ?>
                     </span>
                 </td>
                 <td>
                     <a href="index.php?page=produits_admin&action=show&id=<?= $p['id'] ?>"
-                       class="btn btn-sm btn-outline-info" title="Voir"><i class="fas fa-eye"></i></a>
+                       class="btn-action btn-action-view" title="Voir"><i class="fas fa-eye"></i></a>
                     <a href="index.php?page=produits_admin&action=edit&id=<?= $p['id'] ?>"
-                       class="btn btn-sm btn-outline-warning" title="Modifier"><i class="fas fa-edit"></i></a>
+                       class="btn-action btn-action-edit" title="Modifier"><i class="fas fa-edit"></i></a>
                     <a href="index.php?page=produits_admin&action=delete&id=<?= $p['id'] ?>"
                        class="btn btn-sm btn-outline-danger" title="Supprimer"
                        onclick="return confirm('Supprimer ce produit ?')"><i class="fas fa-trash"></i></a>
@@ -331,4 +327,4 @@ require __DIR__ . '/_layout_top.php';
     }
 })();
 </script>
-</div></body></html>
+<?php require __DIR__ . '/_layout_bottom.php'; ?>

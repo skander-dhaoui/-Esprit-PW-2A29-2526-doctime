@@ -1,8 +1,8 @@
 <?php
 $isEdit     = isset($produit);
 $pageTitle  = $isEdit ? 'Modifier le produit' : 'Nouveau produit';
-$activePage = 'produits';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'produits_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
@@ -201,5 +201,4 @@ document.querySelector('[name="reference"]').addEventListener('input', function(
     this.value = this.value.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</div></body></html>
+<?php require __DIR__ . '/_layout_bottom.php'; ?>

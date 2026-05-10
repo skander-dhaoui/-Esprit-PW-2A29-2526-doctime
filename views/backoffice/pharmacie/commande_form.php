@@ -1,7 +1,7 @@
 <?php
 $pageTitle  = 'Nouvelle commande';
-$activePage = 'commandes';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'commandes_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>

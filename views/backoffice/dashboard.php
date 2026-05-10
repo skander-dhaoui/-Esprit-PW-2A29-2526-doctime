@@ -1,5 +1,6 @@
-<?php $pageTitle = 'Tableau de bord'; ?>
 <?php 
+$pageTitle = 'Tableau de bord';
+$currentPage = 'dashboard';
 // Charger les données directement pour éviter les erreurs de variables
 require_once __DIR__ . '/../../config/database.php';
 $db = Database::getInstance()->getConnection();
@@ -13,7 +14,7 @@ $participStatut = $db->query("SELECT statut, COUNT(*) as total FROM participatio
 $participEvenement = $db->query("SELECT e.titre, COUNT(p.id) as total FROM events e LEFT JOIN participations p ON p.event_id = e.id GROUP BY e.id, e.titre ORDER BY total DESC LIMIT 8")->fetchAll() ?? [];
 $montantNiveau = $db->query("SELECT niveau, SUM(montant) as total FROM sponsors GROUP BY niveau ORDER BY total DESC")->fetchAll() ?? [];
 ?>
-<?php require __DIR__ . '/layout_header_simple.php'; ?>
+<?php require __DIR__ . '/layout_header.php'; ?>
 
 <!-- ── Stat cards ── -->
 <div class="row g-3 mb-4">

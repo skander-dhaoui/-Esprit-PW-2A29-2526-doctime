@@ -1,7 +1,7 @@
 <?php
 $pageTitle  = 'Gestion des Catégories';
-$activePage = 'categories';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'categories_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
@@ -10,24 +10,33 @@ require __DIR__ . '/_layout_top.php';
 </div>
 <?php endif; ?>
 
-<!-- KPI -->
+<!-- KPI Cards -->
 <div class="row g-3 mb-4">
     <div class="col-4">
-        <div class="stat-card" style="border-color:#4CAF50">
-            <h3 style="color:#4CAF50"><?= $stats['total'] ?></h3>
-            <p>Total catégories</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(76, 175, 80, 0.15); color: #4CAF50;">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="stat-value" style="color: #4CAF50;"><?= $stats['total'] ?></div>
+            <div class="stat-label">Total catégories</div>
         </div>
     </div>
     <div class="col-4">
-        <div class="stat-card" style="border-color:#2196F3">
-            <h3 style="color:#2196F3"><?= $stats['actives'] ?></h3>
-            <p>Actives</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(33, 150, 243, 0.15); color: #2196F3;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-value" style="color: #2196F3;"><?= $stats['actives'] ?></div>
+            <div class="stat-label">Actives</div>
         </div>
     </div>
     <div class="col-4">
-        <div class="stat-card" style="border-color:#f44336">
-            <h3 style="color:#f44336"><?= $stats['inactives'] ?></h3>
-            <p>Inactives</p>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(244, 67, 54, 0.15); color: #f44336;">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-value" style="color: #f44336;"><?= $stats['inactives'] ?></div>
+            <div class="stat-label">Inactives</div>
         </div>
     </div>
 </div>
@@ -193,4 +202,4 @@ require __DIR__ . '/_layout_top.php';
     }
 })();
 </script>
-</div></body></html>
+<?php require __DIR__ . '/_layout_bottom.php'; ?>

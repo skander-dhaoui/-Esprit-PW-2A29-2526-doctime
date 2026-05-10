@@ -117,6 +117,73 @@
             letter-spacing: .06em; color: #64748b; border-bottom: 2px solid #e4eaf0;
         }
 
+        /* ── Modern Stat Cards (Pharmacie) ── */
+        .stat-card { 
+            background: #fff; 
+            border-radius: 16px; 
+            padding: 20px; 
+            box-shadow: 0 2px 12px rgba(0,0,0,.06); 
+            border: none; 
+            transition: all .2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,.1); }
+        .stat-card .stat-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        /* Status badges like screenshots */
+        .badge { padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px; }
+        .badge-en_attente, .badge-attente { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+        .badge-confirmee, .badge-confirme { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .badge-livree, .badge-termine { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge-annulee { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .badge-actif { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .badge-inactif { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .badge-alerte { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+        
+        /* Table modern styling */
+        .table-modern { border-collapse: separate; border-spacing: 0; }
+        .table-modern th { background: #f8fafc; font-weight: 600; color: #475569; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 16px; border-bottom: 2px solid #e2e8f0; }
+        .table-modern td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .table-modern tbody tr:hover { background: #f8fafc; }
+        
+        /* Action buttons */
+        .btn-action { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: none; transition: all .2s; margin: 0 2px; }
+        .btn-action-edit { background: #dbeafe; color: #2563eb; }
+        .btn-action-edit:hover { background: #2563eb; color: white; }
+        .btn-action-delete { background: #fee2e2; color: #dc2626; }
+        .btn-action-delete:hover { background: #dc2626; color: white; }
+        .btn-action-view { background: #f0fdf4; color: #16a34a; }
+        .btn-action-view:hover { background: #16a34a; color: white; }
+        
+        .content-card { background: #fff; border-radius: 15px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,.03); border: 1px solid rgba(0,0,0,.02); }
+        .flash-box { border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; font-weight: 500; border: none; }
+        .flash-success { background: #dcfce7; color: #166534; }
+        .flash-error { background: #fee2e2; color: #991b1b; }
+
         /* ── Buttons ── */
         .btn-primary {
             background: linear-gradient(90deg, var(--grad-start), var(--grad-end));
@@ -170,13 +237,38 @@ $currentAction = $_GET['action'] ?? '';
                 <i class="bi bi-speedometer2"></i> Tableau de bord
             </a>
         </li>
-        <li class="nav-section">Gestion</li>
+        <li class="nav-section">Gestion Globale</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'users' ? 'active' : '' ?>"
                href="/valorys_Copie/index.php?page=users">
                 <i class="bi bi-people-fill"></i> Utilisateurs
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $currentPage === 'evenements_admin' ? 'active' : '' ?>"
+               href="/valorys_Copie/index.php?page=evenements_admin">
+                <i class="bi bi-calendar-event"></i> Événements
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $currentPage === 'produits_admin' ? 'active' : '' ?>"
+               href="/valorys_Copie/index.php?page=produits_admin">
+                <i class="bi bi-capsule-pill"></i> Pharmacie - Produits
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $currentPage === 'categories_admin' ? 'active' : '' ?>"
+               href="/valorys_Copie/index.php?page=categories_admin">
+                <i class="bi bi-tags"></i> Pharmacie - Catégories
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $currentPage === 'commandes_admin' ? 'active' : '' ?>"
+               href="/valorys_Copie/index.php?page=commandes_admin">
+                <i class="bi bi-cart-check"></i> Pharmacie - Commandes
+            </a>
+        </li>
+        <li class="nav-section">Médical</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'medecins_admin' ? 'active' : '' ?>"
                href="/valorys_Copie/index.php?page=medecins_admin">
@@ -189,12 +281,7 @@ $currentAction = $_GET['action'] ?? '';
                 <i class="bi bi-person-heart"></i> Patients
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $currentPage === 'evenements_admin' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=evenements_admin">
-                <i class="bi bi-calendar-event"></i> Événements
-            </a>
-        </li>
+        <li class="nav-section">Événements & Sponsors</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'sponsors_admin' ? 'active' : '' ?>"
                href="/valorys_Copie/index.php?page=sponsors_admin">

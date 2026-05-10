@@ -1,7 +1,7 @@
 <?php
 $pageTitle  = 'Détail produit — ' . htmlspecialchars($produit['nom']);
-$activePage = 'produits';
-require __DIR__ . '/_layout_top.php';
+$currentPage = 'produits_admin';
+require __DIR__ . '/../layout_header.php';
 ?>
 
 <?php if ($flash): ?>
