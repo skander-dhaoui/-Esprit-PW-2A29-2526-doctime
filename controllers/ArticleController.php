@@ -79,6 +79,10 @@ class ArticleController {
 
         $titre   = trim($data['titre']   ?? '');
         $contenu = trim($data['contenu'] ?? '');
+        $categorie = trim($data['categorie'] ?? '') ?: null;
+        $tags = trim($data['tags'] ?? '') ?: null;
+        $status = trim($data['status'] ?? 'publié');
+        $image = $data['image'] ?? null;
 
         $errors = [];
         if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
@@ -97,6 +101,10 @@ class ArticleController {
             'titre'     => $titre,
             'contenu'   => $contenu,
             'auteur_id' => $auteur_id,
+            'image'     => $image,
+            'categorie' => $categorie,
+            'tags'      => $tags,
+            'status'    => $status,
         ]);
 
         echo json_encode(['success' => true, 'id' => $id, 'message' => 'Article créé avec succès']);
@@ -115,9 +123,13 @@ class ArticleController {
             return;
         }
 
-        $data    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $titre   = trim($data['titre']   ?? '');
         $contenu = trim($data['contenu'] ?? '');
+        $categorie = trim($data['categorie'] ?? '') ?: null;
+        $tags = trim($data['tags'] ?? '') ?: null;
+        $status = trim($data['status'] ?? $article['status'] ?? 'publié');
+        $image = $data['image'] ?? $article['image'] ?? null;
 
         $errors = [];
         if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
@@ -132,7 +144,7 @@ class ArticleController {
         }
 
         $auteur_id = (int)($_SESSION['user_id'] ?? $article['auteur_id'] ?? 0) ?: null;
-        $this->articleModel->update($id, $titre, $contenu, $auteur_id);
+        $this->articleModel->updateFull($id, $titre, $contenu, $auteur_id, $image, $categorie, $tags, $status);
 
         echo json_encode(['success' => true, 'message' => 'Article modifié avec succès']);
     }
