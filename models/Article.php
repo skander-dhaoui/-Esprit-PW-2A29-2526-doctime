@@ -1,384 +1,301 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/../config/database.php';
 
-class Article
-{
+class Article {
     private PDO $db;
 
-    private int     $id;
-    private string  $titre;
-    private string  $contenu;
-    private ?int    $auteurId;
-    private ?string $categorie;
-    private string  $status;
-    private ?string $tags;
-    private ?string $image;
-    private int     $vues;
-    private int     $likes;
-    private string  $createdAt;
-    private string  $updatedAt;
-
-    public function __construct(array $data = [])
-    {
+    public function __construct() {
         $this->db = Database::getInstance()->getConnection();
-
-        $this->id        = (int)    ($data['id']         ?? $data['id_article'] ?? 0);
-        $this->titre     = (string) ($data['titre']      ?? '');
-        $this->contenu   = (string) ($data['contenu']    ?? '');
-        $this->auteurId  =          (($data['auteur_id'] ?? null) !== null ? (int)$data['auteur_id'] : null);
-        $this->categorie =          ($data['categorie']  ?? null);
-        $this->status    = (string) ($data['status']     ?? 'brouillon');
-        $this->tags      =          ($data['tags']       ?? null);
-        $this->image     =          ($data['image']      ?? null);
-        $this->vues      = (int)    ($data['vues']       ?? 0);
-        $this->likes     = (int)    ($data['likes']      ?? 0);
-        $this->createdAt = (string) ($data['created_at'] ?? '');
-        $this->updatedAt = (string) ($data['updated_at'] ?? '');
     }
 
-    public function __destruct() {}
-
-    // ── Getters ──────────────────────────────────────────
-    public function getId(): int            { return $this->id; }
-    public function getTitre(): string      { return $this->titre; }
-    public function getContenu(): string    { return $this->contenu; }
-    public function getAuteurId(): ?int     { return $this->auteurId; }
-    public function getCategorie(): ?string { return $this->categorie; }
-    public function getStatus(): string     { return $this->status; }
-    public function getTags(): ?string      { return $this->tags; }
-    public function getImage(): ?string     { return $this->image; }
-    public function getVues(): int          { return $this->vues; }
-    public function getLikes(): int         { return $this->likes; }
-    public function getCreatedAt(): string  { return $this->createdAt; }
-    public function getUpdatedAt(): string  { return $this->updatedAt; }
-
-    // ── Setters ──────────────────────────────────────────
-    public function setId(int $v): void            { $this->id        = $v; }
-    public function setTitre(string $v): void       { $this->titre     = $v; }
-    public function setContenu(string $v): void     { $this->contenu   = $v; }
-    public function setAuteurId(?int $v): void      { $this->auteurId  = $v; }
-    public function setCategorie(?string $v): void  { $this->categorie = $v; }
-    public function setStatus(string $v): void      { $this->status    = $v; }
-    public function setTags(?string $v): void       { $this->tags      = $v; }
-    public function setImage(?string $v): void      { $this->image     = $v; }
-    public function setVues(int $v): void           { $this->vues      = $v; }
-    public function setLikes(int $v): void          { $this->likes     = $v; }
-    public function setCreatedAt(string $v): void   { $this->createdAt = $v; }
-    public function setUpdatedAt(string $v): void   { $this->updatedAt = $v; }
-
-    // ── Méthodes Base de Données ─────────────────────────
-
-    public function getAll(): array
-    {
-        $stmt = $this->db->query("
-            SELECT a.*,
-                   CONCAT(u.prenom, ' ', u.nom) AS auteur_name,
-                   (SELECT COUNT(*) FROM replies r WHERE r.article_id = a.id) AS nb_replies,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            WHERE a.status = 'publié' AND (a.moderation_status = 'approved' OR a.moderation_status IS NULL)
-            ORDER BY a.created_at DESC
-        ");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getById(int $id): ?array
-    {
-        $stmt = $this->db->prepare("
-            SELECT a.*,
-                   CONCAT(u.prenom, ' ', u.nom) AS auteur_name,
-                   (SELECT COUNT(*) FROM replies r WHERE r.article_id = a.id) AS nb_replies,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            WHERE a.id = ?
-        ");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-    // ── RECHERCHE AVANCÉE ─────────────────────────────────
-
-    public function search(string $query): array
-    {
-        $q = '%' . $query . '%';
-        $stmt = $this->db->prepare("
-            SELECT a.*,
-                   CONCAT(u.prenom, ' ', u.nom) AS auteur_name,
-                   (SELECT COUNT(*) FROM replies r WHERE r.article_id = a.id) AS nb_replies,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            WHERE a.status = 'publié'
-              AND (a.moderation_status = 'approved' OR a.moderation_status IS NULL)
-              AND (
-                  a.titre   LIKE :q
-                  OR a.contenu LIKE :q2
-                  OR CONCAT(u.prenom, ' ', u.nom) LIKE :q3
-              )
-            ORDER BY a.created_at DESC
-        ");
-        $stmt->execute([':q' => $q, ':q2' => $q, ':q3' => $q]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function advancedSearch(array $filters): array
-    {
-        $where  = ["a.status = 'publié'", "(a.moderation_status = 'approved' OR a.moderation_status IS NULL)"];
-        $params = [];
-
-        if (!empty($filters['keyword'])) {
-            $q = '%' . $filters['keyword'] . '%';
-            $where[] = "(a.titre LIKE :kw OR a.contenu LIKE :kw2 OR CONCAT(u.prenom,' ',u.nom) LIKE :kw3)";
-            $params[':kw']  = $q;
-            $params[':kw2'] = $q;
-            $params[':kw3'] = $q;
-        }
-        if (!empty($filters['categorie'])) {
-            $where[]              = "a.categorie = :categorie";
-            $params[':categorie'] = $filters['categorie'];
-        }
-        if (!empty($filters['tag'])) {
-            $where[]        = "a.tags LIKE :tag";
-            $params[':tag'] = '%' . $filters['tag'] . '%';
-        }
-        if (!empty($filters['date_min'])) {
-            $where[]             = "a.created_at >= :date_min";
-            $params[':date_min'] = $filters['date_min'];
-        }
-
-        $sql = "
-            SELECT a.*,
-                   CONCAT(u.prenom, ' ', u.nom) AS auteur_name,
-                   (SELECT COUNT(*) FROM replies r WHERE r.article_id = a.id) AS nb_replies,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
-                   (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            WHERE " . implode(' AND ', $where) . "
-            ORDER BY a.created_at DESC
-        ";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // ── LIKES ─────────────────────────────────────────────
-
-    public function getUserLike(int $articleId, int $userId): ?string
-    {
-        $stmt = $this->db->prepare("SELECT type FROM article_likes WHERE article_id = ? AND user_id = ?");
-        $stmt->execute([$articleId, $userId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ? $row['type'] : null;
-    }
-
-    public function toggleLike(int $articleId, int $userId, string $type): array
-    {
-        $existing = $this->getUserLike($articleId, $userId);
-
-        if ($existing === $type) {
-            // Annuler le like/dislike
-            $this->db->prepare("DELETE FROM article_likes WHERE article_id = ? AND user_id = ?")
-                     ->execute([$articleId, $userId]);
-            $action = 'removed';
-        } elseif ($existing !== null) {
-            // Changer de like à dislike ou vice versa
-            $this->db->prepare("UPDATE article_likes SET type = ? WHERE article_id = ? AND user_id = ?")
-                     ->execute([$type, $articleId, $userId]);
-            $action = 'changed';
+    /**
+     * Crée un nouvel article
+     * Accepte soit un tableau associatif, soit des paramètres séparés
+     */
+    public function create($titreOrData, ?string $contenu = null, $auteurIdOrName = null): int {
+        // Support appel avec tableau : create(['titre'=>..., 'contenu'=>..., 'auteur_id'=>...])
+        if (is_array($titreOrData)) {
+            $titre    = $titreOrData['titre']    ?? '';
+            $contenu  = $titreOrData['contenu']  ?? '';
+            $auteur_id = $titreOrData['auteur_id'] ?? null;
         } else {
-            // Nouveau like/dislike
-            $this->db->prepare("INSERT INTO article_likes (article_id, user_id, type) VALUES (?, ?, ?)")
-                     ->execute([$articleId, $userId, $type]);
-            $action = 'added';
+            // Support appel avec paramètres séparés : create($titre, $contenu, $auteur)
+            $titre    = $titreOrData;
+            $auteur_id = null;
+            // Si le 3ème paramètre est un int, c'est un auteur_id
+            if (is_int($auteurIdOrName)) {
+                $auteur_id = $auteurIdOrName;
+            } elseif (!empty($auteurIdOrName)) {
+                // C'est un nom d'auteur, on essaie de trouver l'ID
+                $auteur_id = $this->resolveAuthorId($auteurIdOrName);
+            }
         }
 
-        // Retourner les nouveaux compteurs
-        $stmt = $this->db->prepare("
-            SELECT
-                SUM(type = 'like') AS likes,
-                SUM(type = 'dislike') AS dislikes
-            FROM article_likes WHERE article_id = ?
-        ");
-        $stmt->execute([$articleId]);
-        $counts = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return [
-            'action'   => $action,
-            'likes'    => (int)($counts['likes']    ?? 0),
-            'dislikes' => (int)($counts['dislikes'] ?? 0),
-        ];
-    }
-
-    // ── MODÉRATION ────────────────────────────────────────
-
-    public function setModerationStatus(int $id, string $status, ?string $reason = null): void
-    {
-        $stmt = $this->db->prepare("
-            UPDATE articles
-            SET moderation_status = :status,
-                moderation_reason = :reason,
-                moderated_at = NOW()
-            WHERE id = :id
-        ");
-        $stmt->execute([':status' => $status, ':reason' => $reason, ':id' => $id]);
-    }
-
-    public function getPendingModeration(): array
-    {
-        $stmt = $this->db->query("
-            SELECT a.*, CONCAT(u.prenom, ' ', u.nom) AS auteur_name
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            WHERE a.moderation_status = 'pending'
-            ORDER BY a.created_at DESC
-        ");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // ── CRUD ──────────────────────────────────────────────
-
-    public function countAll(): int
-    {
-        return (int) $this->db->query("SELECT COUNT(*) FROM articles")->fetchColumn();
-    }
-
-    public function countThisMonth(): int
-    {
-        return (int) $this->db->query("
-            SELECT COUNT(*) FROM articles
-            WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW())
-        ")->fetchColumn();
-    }
-
-    
-
-        public function create(array $data): int
-{
-    // Récupérer l'ID de l'utilisateur connecté
-    $auteur_id = $data['auteur_id'] ?? $_SESSION['user_id'] ?? null;
-    
-    if (!$auteur_id) {
-        // Chercher un admin par défaut
-        $stmt = $this->db->query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
-        $admin = $stmt->fetch();
-        if ($admin) {
-            $auteur_id = $admin['id'];
-        } else {
-            throw new \Exception("Impossible de créer l'article: aucun utilisateur valide trouvé");
-        }
-    }
-    
-    // Vérification que l'utilisateur existe
-    $check = $this->db->prepare("SELECT id FROM users WHERE id = ?");
-    $check->execute([$auteur_id]);
-    if (!$check->fetch()) {
-        throw new \Exception("L'utilisateur ID {$auteur_id} n'existe pas dans la base");
-    }
-    
-    $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $data['titre'])));
-    $slug = $slug . '-' . time();
-
-    $stmt = $this->db->prepare("
-        INSERT INTO articles (titre, slug, contenu, auteur_id, image, categorie, tags, status, moderation_status, created_at, updated_at)
-        VALUES (:titre, :slug, :contenu, :auteur_id, :image, :categorie, :tags, :status, 'pending', NOW(), NOW())
-    ");
-    $stmt->execute([
-        ':titre'     => $data['titre'],
-        ':slug'      => $slug,
-        ':contenu'   => $data['contenu'],
-        ':auteur_id' => $auteur_id,
-        ':image'     => $data['image']     ?? null,
-        ':categorie' => $data['categorie'] ?? null,
-        ':tags'      => $data['tags']      ?? null,
-        ':status'    => $data['status']    ?? 'publié',
-    ]);
-    return (int) $this->db->lastInsertId();
-}
-
-    public function update(int $id, string $titre, string $contenu, ?int $auteurId): void
-    {
-        $stmt = $this->db->prepare("
-            UPDATE articles
-            SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id, updated_at = NOW()
-            WHERE id = :id
-        ");
-        $stmt->execute([':titre' => $titre, ':contenu' => $contenu, ':auteur_id' => $auteurId, ':id' => $id]);
-    }
-
-    public function updateFull(int $id, string $titre, string $contenu, ?int $auteurId,
-                               ?string $image, ?string $categorie, ?string $tags, string $status): bool
-    {
-        $stmt = $this->db->prepare("
-            UPDATE articles
-            SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id,
-                image = :image, categorie = :categorie, tags = :tags,
-                status = :status, updated_at = NOW()
-            WHERE id = :id
-        ");
-        return $stmt->execute([
+        $stmt = $this->db->prepare(
+            "INSERT INTO articles (titre, contenu, auteur_id, created_at) 
+             VALUES (:titre, :contenu, :auteur_id, NOW())"
+        );
+        $stmt->execute([
             ':titre'     => $titre,
             ':contenu'   => $contenu,
-            ':auteur_id' => $auteurId,
-            ':image'     => $image,
-            ':categorie' => $categorie,
-            ':tags'      => $tags,
-            ':status'    => $status,
-            ':id'        => $id,
+            ':auteur_id' => $auteur_id,
+        ]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    /**
+     * Récupère un article par son ID avec le nombre de commentaires
+     */
+    public function getById(int $id): array|false {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             WHERE a.id = :id
+             GROUP BY a.id"
+        );
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupère tous les articles avec le nombre de commentaires
+     */
+    public function getAll(): array {
+        $stmt = $this->db->query(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             GROUP BY a.id
+             ORDER BY a.created_at DESC"
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupère les derniers articles
+     */
+    public function getLatest(int $limit = 10): array {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             GROUP BY a.id
+             ORDER BY a.created_at DESC
+             LIMIT :limit"
+        );
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+public function updateFull(int $id, string $titre, string $contenu, $auteur = null, ?string $image = null, 
+                          ?string $categorie = null, ?string $tags = null, ?string $status = null): bool {
+    $auteur_id = null;
+    if (is_int($auteur)) {
+        $auteur_id = $auteur;
+    } elseif (!empty($auteur)) {
+        $auteur_id = $this->resolveAuthorId($auteur);
+    }
+    
+    $stmt = $this->db->prepare(
+        "UPDATE articles SET 
+            titre = :titre, 
+            contenu = :contenu, 
+            auteur_id = :auteur_id, 
+            image = :image,
+            categorie = :categorie,
+            tags = :tags,
+            status = :status,
+            updated_at = NOW()
+         WHERE id = :id"
+    );
+    return $stmt->execute([
+        ':titre' => $titre,
+        ':contenu' => $contenu,
+        ':auteur_id' => $auteur_id,
+        ':image' => $image,
+        ':categorie' => $categorie,
+        ':tags' => $tags,
+        ':status' => $status,
+        ':id' => $id,
+    ]);
+}
+    /**
+     * Met à jour un article
+     */
+public function update(int $id, string $titre, string $contenu, $auteur = null, ?string $image = null): bool {
+    $auteur_id = null;
+    if (is_int($auteur)) {
+        $auteur_id = $auteur;
+    } elseif (!empty($auteur)) {
+        $auteur_id = $this->resolveAuthorId($auteur);
+    }
+    
+    if ($image !== null) {
+        $stmt = $this->db->prepare(
+            "UPDATE articles SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id, image = :image 
+             WHERE id = :id"
+        );
+        return $stmt->execute([
+            ':titre' => $titre,
+            ':contenu' => $contenu,
+            ':auteur_id' => $auteur_id,
+            ':image' => $image,
+            ':id' => $id,
+        ]);
+    } else {
+        $stmt = $this->db->prepare(
+            "UPDATE articles SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id 
+             WHERE id = :id"
+        );
+        return $stmt->execute([
+            ':titre' => $titre,
+            ':contenu' => $contenu,
+            ':auteur_id' => $auteur_id,
+            ':id' => $id,
         ]);
     }
+}
 
-    public function delete(int $id): bool
-    {
-        $stmt = $this->db->prepare("DELETE FROM articles WHERE id = ?");
-        return $stmt->execute([$id]);
+    /**
+     * Supprime un article et tous ses commentaires associés
+     */
+    public function delete(int $id): bool {
+        try {
+            $this->db->beginTransaction();
+
+            $stmt1 = $this->db->prepare("DELETE FROM reply WHERE id_article = :id");
+            $stmt1->execute([':id' => $id]);
+
+            $stmt2 = $this->db->prepare("DELETE FROM articles WHERE id = :id");
+            $result = $stmt2->execute([':id' => $id]);
+
+            $this->db->commit();
+            return $result;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log('Erreur Article::delete - ' . $e->getMessage());
+            return false;
+        }
     }
 
-    public function incrementViews(int $id): void
-    {
-        $this->db->prepare("UPDATE articles SET vues = vues + 1 WHERE id = ?")->execute([$id]);
+    // ─────────────────────────────────────────
+    //  Compteurs
+    // ─────────────────────────────────────────
+
+    public function countAll(): int {
+        $stmt = $this->db->query("SELECT COUNT(*) FROM articles");
+        return (int)$stmt->fetchColumn();
     }
 
-    public function getArticlesWithReplyCount(): array
-    {
-        $stmt = $this->db->query("
-            SELECT a.*, CONCAT(u.prenom, ' ', u.nom) AS auteur_name,
-                   COUNT(r.id) AS nb_replies
-            FROM articles a
-            LEFT JOIN users u ON u.id = a.auteur_id
-            LEFT JOIN replies r ON r.article_id = a.id
-            GROUP BY a.id
-            ORDER BY a.created_at DESC
-        ");
+    public function countThisMonth(): int {
+        $stmt = $this->db->query(
+            "SELECT COUNT(*) FROM articles
+             WHERE MONTH(created_at) = MONTH(NOW()) 
+             AND YEAR(created_at)  = YEAR(NOW())"
+        );
+        return (int)$stmt->fetchColumn();
+    }
+
+    // ─────────────────────────────────────────
+    //  Recherche
+    // ─────────────────────────────────────────
+
+    public function search(string $keyword): array {
+        $kw   = '%' . $keyword . '%';
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             WHERE a.titre LIKE :kw OR a.contenu LIKE :kw
+             GROUP BY a.id
+             ORDER BY a.created_at DESC"
+        );
+        $stmt->execute([':kw' => $kw]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getRepliesByArticle(int $articleId): array
-    {
-        $stmt = $this->db->prepare("
-            SELECT r.*, CONCAT(u.prenom, ' ', u.nom) AS auteur_name
-            FROM replies r
-            LEFT JOIN users u ON u.id = r.user_id
-            WHERE r.article_id = :id
-            ORDER BY r.created_at ASC
-        ");
-        $stmt->execute([':id' => $articleId]);
+    public function getByCategorie(string $categorie): array {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             WHERE a.categorie = :categorie
+             GROUP BY a.id
+             ORDER BY a.created_at DESC"
+        );
+        $stmt->execute([':categorie' => $categorie]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getArticleWithReplies(int $id): array
-    {
-        $article = $this->getById($id);
-        if (!$article) return [];
-        $article['replies'] = $this->getRepliesByArticle($id);
-        return $article;
+    // ─────────────────────────────────────────
+    //  Utilitaires
+    // ─────────────────────────────────────────
+
+    public function incrementViews(int $id): bool {
+        $stmt = $this->db->prepare("UPDATE articles SET vues = vues + 1 WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    public function getPopular(int $limit = 5): array {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             GROUP BY a.id
+             ORDER BY a.vues DESC
+             LIMIT :limit"
+        );
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getByAuthor(string $auteur): array {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             WHERE a.auteur_id = :auteur
+             GROUP BY a.id
+             ORDER BY a.created_at DESC"
+        );
+        $stmt->execute([':auteur' => $auteur]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getByDate(string $date): array {
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+             FROM articles a
+             LEFT JOIN users u ON u.id = a.auteur_id
+             LEFT JOIN reply r ON r.id_article = a.id
+             WHERE DATE(a.created_at) = :date
+             GROUP BY a.id
+             ORDER BY a.created_at DESC"
+        );
+        $stmt->execute([':date' => $date]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ─────────────────────────────────────────
+    //  Privé
+    // ─────────────────────────────────────────
+
+    private function resolveAuthorId(string $name): ?int {
+        $stmt = $this->db->prepare(
+            "SELECT id FROM users WHERE nom = :name OR CONCAT(nom, ' ', prenom) = :name LIMIT 1"
+        );
+        $stmt->execute([':name' => $name]);
+        $id = (int)$stmt->fetchColumn();
+        return $id > 0 ? $id : null;
     }
 }
+?>

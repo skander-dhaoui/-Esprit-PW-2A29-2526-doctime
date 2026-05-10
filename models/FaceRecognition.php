@@ -1,140 +1,80 @@
 <?php
-declare(strict_types=1);
-
+// models/FaceRecognition.php
 require_once __DIR__ . '/../config/database.php';
 
-class FaceRecognition
-{
-    private int $userId;
-    private ?string $facePhoto;
-    private ?string $faceEncoding;
-    private ?string $faceDescriptor;
-
-    public function __construct(array $data = [])
-    {
-        $this->userId = (int) ($data['user_id'] ?? 0);
-        $this->facePhoto = $data['face_photo'] ?? null;
-        $this->faceEncoding = $data['face_encoding'] ?? ($data['face_descriptors'] ?? null);
-        $this->faceDescriptor = $data['face_descriptor'] ?? ($data['face_descriptors'] ?? null);
+class FaceRecognition {
+    private PDO $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance()->getConnection();
     }
-
-    public function getUserId(): int { return $this->userId; }
-    public function getFacePhoto(): ?string { return $this->facePhoto; }
-    public function getFaceEncoding(): ?string { return $this->faceEncoding; }
-    public function getFaceDescriptor(): ?string { return $this->faceDescriptor; }
-
-    public function setUserId(int $value): void { $this->userId = $value; }
-    public function setFacePhoto(?string $value): void { $this->facePhoto = $value; }
-    public function setFaceEncoding(?string $value): void { $this->faceEncoding = $value; }
-    public function setFaceDescriptor(?string $value): void { $this->faceDescriptor = $value; }
-
-    public function saveFacePhoto(int $userId, string $imageData): bool
-    {
-        if ($userId <= 0) {
-            return false;
+    
+    /**
+     * Sauvegarder la photo du visage pour un utilisateur
+     */
+    public function saveFacePhoto(int $userId, string $imageData): bool {
+        $uploadDir = __DIR__ . '/../uploads/faces/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
         }
-
-        if (!preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
-            error_log('FaceRecognition::saveFacePhoto invalid image payload');
-            return false;
-        }
-
-        $extension = strtolower($matches[1]);
-        if (!in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
-            $extension = 'jpg';
-        }
-
-        $rawData = substr($imageData, strpos($imageData, ',') + 1);
-        $binary = base64_decode(str_replace(' ', '+', $rawData), true);
-        if ($binary === false) {
-            error_log('FaceRecognition::saveFacePhoto base64 decode failed');
-            return false;
-        }
-
-        $uploadDir = dirname(__DIR__) . '/uploads/faces';
-        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
-            error_log('FaceRecognition::saveFacePhoto cannot create upload dir');
-            return false;
-        }
-
-        $filename = sprintf('face_%d_%d.%s', $userId, time(), $extension);
-        $fullPath = $uploadDir . '/' . $filename;
+        
+        $filename = 'face_' . $userId . '_' . time() . '.jpg';
+        $filepath = $uploadDir . $filename;
         $relativePath = 'uploads/faces/' . $filename;
-
-        if (file_put_contents($fullPath, $binary) === false) {
-            error_log('FaceRecognition::saveFacePhoto cannot write file');
-            return false;
+        
+        $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
+        $imageData = str_replace(' ', '+', $imageData);
+        $imageBinary = base64_decode($imageData);
+        
+        if (file_put_contents($filepath, $imageBinary)) {
+            $stmt = $this->db->prepare("UPDATE users SET face_photo = :photo WHERE id = :id");
+            return $stmt->execute([':photo' => $relativePath, ':id' => $userId]);
         }
-
-        $db = Database::getInstance()->getConnection();
-
-        $oldStmt = $db->prepare("SELECT face_photo FROM users WHERE id = :id LIMIT 1");
-        $oldStmt->execute([':id' => $userId]);
-        $oldPhoto = $oldStmt->fetchColumn();
-        if (is_string($oldPhoto) && $oldPhoto !== '') {
-            $oldFullPath = dirname(__DIR__) . '/' . ltrim(str_replace('\\', '/', $oldPhoto), '/');
-            if (is_file($oldFullPath)) {
-                @unlink($oldFullPath);
-            }
-        }
-
-        $stmt = $db->prepare(
-            "UPDATE users
-             SET face_photo = :face_photo,
-                 face_descriptors = NULL
-             WHERE id = :id"
-        );
-
-        return $stmt->execute([
-            ':face_photo' => $relativePath,
-            ':id' => $userId,
-        ]);
+        return false;
     }
-
-    public function findUserByFace(string $imageData, string $role = 'patient', string $email = ''): ?array
-    {
-        if ($imageData === '') {
-            return null;
+    
+    /**
+     * Récupérer la photo du visage d'un utilisateur
+     */
+    public function getFacePhoto(int $userId): ?string {
+        $stmt = $this->db->prepare("SELECT face_photo FROM users WHERE id = :id");
+        $stmt->execute([':id' => $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['face_photo'] ?? null;
+    }
+    
+    /**
+     * Vérifier si un utilisateur a une photo de visage enregistrée
+     */
+    public function hasFaceRegistered(int $userId): bool {
+        $stmt = $this->db->prepare("SELECT face_photo FROM users WHERE id = :id AND face_photo IS NOT NULL");
+        $stmt->execute([':id' => $userId]);
+        return $stmt->fetch() !== false;
+    }
+    
+    /**
+     * Vérifier si l'utilisateur existe et récupérer ses infos
+     */
+    public function findUserByFace($imageData): array|false {
+        // Sauvegarder l'image temporairement
+        $tempFile = __DIR__ . '/../uploads/temp_face_' . time() . '.jpg';
+        $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
+        $imageData = str_replace(' ', '+', $imageData);
+        file_put_contents($tempFile, base64_decode($imageData));
+        
+        // Récupérer tous les utilisateurs qui ont une photo de visage
+        $stmt = $this->db->prepare("SELECT id, nom, prenom, email, role, statut, face_photo FROM users WHERE face_photo IS NOT NULL AND statut = 'actif'");
+        $stmt->execute();
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Pour l'instant, version simplifiée : 
+        // En production, utilisez une API de reconnaissance faciale (Face++, Microsoft, etc.)
+        // Ici on simule la reconnaissance en prenant le premier utilisateur trouvé
+        if (!empty($users)) {
+            return $users[0];
         }
-
-        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return null;
-        }
-
-        $db = Database::getInstance()->getConnection();
-        $allowedRoles = ['patient', 'medecin', 'admin'];
-        $role = in_array($role, $allowedRoles, true) ? $role : '';
-
-        if ($role !== '') {
-            $stmt = $db->prepare(
-                "SELECT id, nom, prenom, email, role, statut, face_photo, face_descriptors AS face_descriptor
-                 FROM users
-                 WHERE email = :email
-                   AND role = :role
-                   AND (face_photo IS NOT NULL OR face_descriptors IS NOT NULL)
-                 LIMIT 1"
-            );
-            $stmt->execute([
-                ':email' => $email,
-                ':role' => $role,
-            ]);
-
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($user) {
-                return $user;
-            }
-        }
-
-        $fallbackStmt = $db->prepare(
-            "SELECT id, nom, prenom, email, role, statut, face_photo, face_descriptors AS face_descriptor
-             FROM users
-             WHERE email = :email
-               AND (face_photo IS NOT NULL OR face_descriptors IS NOT NULL)
-             LIMIT 1"
-        );
-        $fallbackStmt->execute([':email' => $email]);
-
-        $user = $fallbackStmt->fetch(PDO::FETCH_ASSOC);
-        return $user ?: null;
+        
+        return false;
     }
 }
+?>

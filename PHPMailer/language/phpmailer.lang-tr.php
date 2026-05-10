@@ -41,3 +41,4 @@ $PHPMAILER_LANG['no_smtputf8']          = 'Unicode adreslere gönderim için ger
 $PHPMAILER_LANG['imap_recommended']     = 'Basitleştirilmiş adres ayrıştırıcısını kullanmanız önerilmez. ' .
     'Tam RFC822 ayrıştırma için PHP IMAP eklentisini yükleyin.';
 $PHPMAILER_LANG['deprecated_argument']  = 'Kullanımdan kaldırılmış argüman: ';
+

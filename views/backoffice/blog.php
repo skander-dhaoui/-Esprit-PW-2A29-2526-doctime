@@ -1,4 +1,4 @@
-<?php // Vue déprécée ?>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -165,10 +165,7 @@
             <input type="hidden" id="artId">
             <div class="fg"><label>Titre *</label><input id="artTitre" placeholder="Titre de l'article"><span class="err-msg" id="eArtTitre"></span></div>
             <div class="fg"><label>Contenu *</label><textarea id="artContenu" placeholder="Contenu de l'article..."></textarea><span class="err-msg" id="eArtContenu"></span></div>
-            <div class="fg"><label>Catégorie</label><input id="artCategorie" placeholder="Catégorie (optionnel)"></div>
-            <div class="fg"><label>Tags</label><input id="artTags" placeholder="Tags séparés par des virgules (optionnel)"></div>
-            <div class="fg"><label>Statut</label><select id="artStatus"><option value="publié">Publié</option><option value="brouillon">Brouillon</option><option value="archivé">Archivé</option></select></div>
-            <div class="fg"><label>Image URL</label><input id="artImage" placeholder="https://... (optionnel)"></div>
+            <div class="fg"><label>Auteur</label><input id="artAuteur" placeholder="Nom de l'auteur (optionnel)"></div>
         </div>
         <div class="mf">
             <button class="btn-cancel" onclick="closeOv('ovArt')">Annuler</button>
@@ -184,11 +181,11 @@
         <div class="mb">
             <input type="hidden" id="repId">
             <div class="fg"><label>Article *</label><select id="repArticle"><option value="">-- Choisir --</option></select><span class="err-msg" id="eRepArticle"></span></div>
-            <div class="fg"><label>Répondre à (optionnel)</label><select id="repParent"><option value="">-- Commentaire racine --</option></select></div>
             <div class="fg"><label>Type *</label><select id="repType" onchange="toggleRepFields()"><option value="text">💬 Texte</option><option value="emoji">😊 Emoji</option><option value="photo">🖼️ Photo URL</option></select></div>
             <div class="fg" id="fRepText"><label>Commentaire *</label><textarea id="repText" placeholder="Votre commentaire..."></textarea><span class="err-msg" id="eRepText"></span></div>
             <div class="fg" id="fRepEmoji" style="display:none"><label>Emoji *</label><input id="repEmoji" placeholder="😊"><span class="err-msg" id="eRepEmoji"></span></div>
             <div class="fg" id="fRepPhoto" style="display:none"><label>URL Photo *</label><input id="repPhoto" placeholder="https://..."><span class="err-msg" id="eRepPhoto"></span></div>
+            <div class="fg"><label>Auteur</label><input id="repAuteur" placeholder="Nom (optionnel)"></div>
         </div>
         <div class="mf">
             <button class="btn-cancel" onclick="closeOv('ovRep')">Annuler</button>
@@ -266,20 +263,13 @@ async function loadArticles(){
 
 async function openArtModal(id=null){
     clrErr();
-    ['artId','artTitre','artContenu','artCategorie','artTags','artStatus','artImage'].forEach(x=>$(x).value='');
-    $('artStatus').value='publié';
+    ['artId','artTitre','artContenu','artAuteur'].forEach(x=>$(x).value='');
     if(id){
         $('mArtTitle').textContent="Modifier l'article";
         const r=await apiGet({page:'api_article',id});
         if(!r.success){toast('Article introuvable','err');return}
         const a=r.article;
-        $('artId').value=a.id_article;
-        $('artTitre').value=a.titre;
-        $('artContenu').value=a.contenu;
-        $('artCategorie').value=a.categorie||'';
-        $('artTags').value=a.tags||'';
-        $('artStatus').value=a.status||'publié';
-        $('artImage').value=a.image||'';
+        $('artId').value=a.id_article;$('artTitre').value=a.titre;$('artContenu').value=a.contenu;$('artAuteur').value=a.auteur||'';
     } else {
         $('mArtTitle').textContent='Nouvel article';
     }
@@ -290,17 +280,14 @@ async function saveArt(){
     clrErr();
     const titre=$('artTitre').value.trim();
     const contenu=$('artContenu').value.trim();
-    const categorie=$('artCategorie').value.trim()||null;
-    const tags=$('artTags').value.trim()||null;
-    const status=$('artStatus').value.trim()||'publié';
-    const image=$('artImage').value.trim()||null;
+    const auteur=$('artAuteur').value.trim()||null;
     const id=$('artId').value;
     let ok=true;
     if(!titre){setErr('eArtTitre','Le titre est obligatoire.');setInvalid('artTitre');ok=false}
     if(!contenu){setErr('eArtContenu','Le contenu est obligatoire.');setInvalid('artContenu');ok=false}
     if(!ok)return;
     const btn=$('btnSaveArt');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
-    const payload={titre,contenu,categorie,tags,status,image};
+    const payload={titre,contenu,auteur};
     const r=id?await apiPost({page:'api_article',id},{...payload,_method:'PUT'}):await apiPost({page:'api_article'},payload);
     btn.disabled=false;btn.innerHTML='<i class="fas fa-save me-1"></i>Enregistrer';
     if(!r.success){toast(r.message||'Erreur','err');if(r.errors)Object.entries(r.errors).forEach(([k,v])=>setErr('eArt'+k[0].toUpperCase()+k.slice(1),v));return}
@@ -356,39 +343,16 @@ function renderReplies(replies){
 async function openRepModal(id=null){
     clrErr();
     const sel=$('repArticle');
-    const selParent=$('repParent');
     sel.innerHTML='<option value="">-- Choisir --</option>';
-    selParent.innerHTML='<option value="">-- Commentaire racine --</option>';
     if(!allArticles.length){const r=await apiGet({page:'api_article',list:1});if(r.success)allArticles=r.articles||[]}
     allArticles.forEach(a=>{const o=document.createElement('option');o.value=a.id_article;o.textContent=`#${a.id_article} — ${a.titre.substring(0,50)}`;sel.appendChild(o)});
-    ['repId','repText','repEmoji','repPhoto'].forEach(x=>$(x).value='');
+    ['repId','repText','repEmoji','repPhoto','repAuteur'].forEach(x=>$(x).value='');
     $('repType').value='text';toggleRepFields();
     if(currentArtFilter)sel.value=currentArtFilter;
     if(id){
         $('mRepTitle').textContent='Modifier le commentaire';
         const r=await apiGet({page:'api_reply',id});
-        if(r.success&&r.reply){
-            const rp=r.reply;
-            $('repId').value=rp.id_reply;
-            sel.value=rp.id_article;
-            $('repType').value=rp.type_reply;
-            $('repText').value=rp.contenu_text||'';
-            $('repEmoji').value=rp.emoji||'';
-            $('repPhoto').value=rp.photo||'';
-            $('repParent').value=rp.parent_id||'';
-            toggleRepFields();
-            // Charger les autres commentaires de cet article pour le sélecteur parent
-            const rArt=await apiGet({page:'api_article',id:rp.id_article});
-            if(rArt.success&&rArt.replies){
-                rArt.replies.forEach(rep=>{
-                    const o=document.createElement('option');
-                    o.value=rep.id_reply;
-                    const label=rep.type_reply==='emoji'?rep.emoji:(rep.contenu_text||'photo').substring(0,30);
-                    o.textContent=`#${rep.id_reply} — ${label}`;
-                    selParent.appendChild(o);
-                });
-            }
-        }
+        if(r.success&&r.reply){const rp=r.reply;$('repId').value=rp.id_reply;sel.value=rp.id_article;$('repType').value=rp.type_reply;$('repText').value=rp.contenu_text||'';$('repEmoji').value=rp.emoji||'';$('repPhoto').value=rp.photo||'';$('repAuteur').value=rp.auteur||'';toggleRepFields()}
     } else {
         $('mRepTitle').textContent='Nouveau commentaire';
     }
@@ -399,7 +363,7 @@ function toggleRepFields(){const t=$('repType').value;$('fRepText').style.displa
 
 async function saveRep(){
     clrErr();
-    const artId=$('repArticle').value,type=$('repType').value,parentId=$('repParent').value||null,id=$('repId').value;
+    const artId=$('repArticle').value,type=$('repType').value,auteur=$('repAuteur').value.trim()||null,id=$('repId').value;
     let ok=true,contenu_text=null,emoji=null,photo=null;
     if(!artId){setErr('eRepArticle','Choisissez un article.');setInvalid('repArticle');ok=false}
     if(type==='text'){contenu_text=$('repText').value.trim();if(!contenu_text){setErr('eRepText','Le texte est obligatoire.');setInvalid('repText');ok=false}}
@@ -407,8 +371,7 @@ async function saveRep(){
     else{photo=$('repPhoto').value.trim();if(!photo){setErr('eRepPhoto',"L'URL est obligatoire.");setInvalid('repPhoto');ok=false}}
     if(!ok)return;
     const btn=$('btnSaveRep');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
-    const payload={id_article:parseInt(artId),type_reply:type,contenu_text,emoji,photo};
-    if(parentId)payload.parent_id=parseInt(parentId);
+    const payload={id_article:parseInt(artId),type_reply:type,contenu_text,emoji,photo,auteur};
     const r=id?await apiPost({page:'api_reply',id},{...payload,_method:'PUT'}):await apiPost({page:'api_reply'},payload);
     btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane me-1"></i>Publier';
     if(!r.success){toast(r.message||'Erreur','err');return}

@@ -103,9 +103,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                             <button class="btn-edit" onclick="openEditModal(<?= $rdv['id'] ?>, '<?= $rdv['date_rendezvous'] ?>', '<?= $rdv['heure_rendezvous'] ?>', '<?= addslashes($rdv['motif'] ?? '') ?>', <?= $rdv['medecin_id'] ?>)">
                                 <i class="fas fa-edit me-1"></i>Modifier
                             </button>
-                            <a href="index.php?page=annuler_rendezvous&id=<?= $rdv['id'] ?>" class="btn-cancel" onclick="return confirm('Annuler ce rendez-vous ?')">
-                                <i class="fas fa-times me-1"></i>Annuler
-                            </a>
                         </div>
                     </div>
                 </div>

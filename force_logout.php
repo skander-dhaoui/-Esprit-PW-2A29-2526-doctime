@@ -17,3 +17,4 @@ setcookie('PHPSESSID', '', time() - 3600, '/');
 // Rediriger vers login
 header('Location: index.php?page=login');
 exit;
+

@@ -1,44 +1,52 @@
 <?php
+// models/CommandeLigne.php
 
 require_once __DIR__ . '/../config/database.php';
 
 class CommandeLigne {
 
-    private Database $db;
+    // ── Attributs ────────────────────────────────────────────────
+    private ?int   $id;
+    private int    $commande_id;
+    private int    $produit_id;
+    private int    $quantite;
+    private float  $prix_unitaire;
+    private float  $total_ligne;
 
-    public function __construct() {
-        $this->db = Database::getInstance();
+    // ── Constructeur ─────────────────────────────────────────────
+    public function __construct(
+        ?int  $id            = null,
+        int   $commande_id   = 0,
+        int   $produit_id    = 0,
+        int   $quantite      = 1,
+        float $prix_unitaire = 0.0,
+        float $total_ligne   = 0.0
+    ) {
+        $this->id            = $id;
+        $this->commande_id   = $commande_id;
+        $this->produit_id    = $produit_id;
+        $this->quantite      = $quantite;
+        $this->prix_unitaire = $prix_unitaire;
+        $this->total_ligne   = $total_ligne;
     }
 
-    public function create(array $data): bool {
-        try {
-            $total = $data['total_ligne'] ?? $data['total'] ?? 0;
-            $sql = "INSERT INTO commande_details (commande_id, produit_id, quantite, prix_unitaire, total)
-                    VALUES (:commande_id, :produit_id, :quantite, :prix_unitaire, :total)";
-            return $this->db->execute($sql, [
-                'commande_id'   => $data['commande_id'],
-                'produit_id'    => $data['produit_id'],
-                'quantite'      => $data['quantite'],
-                'prix_unitaire' => $data['prix_unitaire'],
-                'total'         => $total,
-            ]);
-        } catch (Exception $e) {
-            error_log('Erreur CommandeLigne::create - ' . $e->getMessage());
-            return false;
-        }
-    }
+    // ── Destructeur ──────────────────────────────────────────────
+    public function __destruct() {}
 
-    public function getByCommande(int $commandeId): array {
-        try {
-            $sql = "SELECT cd.*, p.nom AS produit_nom, p.slug AS reference
-                    FROM commande_details cd
-                    LEFT JOIN produits p ON p.id = cd.produit_id
-                    WHERE cd.commande_id = :commande_id
-                    ORDER BY cd.id ASC";
-            return $this->db->query($sql, ['commande_id' => $commandeId]);
-        } catch (Exception $e) {
-            error_log('Erreur CommandeLigne::getByCommande - ' . $e->getMessage());
-            return [];
-        }
-    }
+    // ── Getters ──────────────────────────────────────────────────
+    public function getId(): ?int          { return $this->id; }
+    public function getCommandeId(): int   { return $this->commande_id; }
+    public function getProduitId(): int    { return $this->produit_id; }
+    public function getQuantite(): int     { return $this->quantite; }
+    public function getPrixUnitaire(): float { return $this->prix_unitaire; }
+    public function getTotalLigne(): float { return $this->total_ligne; }
+
+    // ── Setters ──────────────────────────────────────────────────
+    public function setId(?int $id): void            { $this->id = $id; }
+    public function setCommandeId(int $id): void     { $this->commande_id = $id; }
+    public function setProduitId(int $id): void      { $this->produit_id = $id; }
+    public function setQuantite(int $q): void        { $this->quantite = $q; }
+    public function setPrixUnitaire(float $p): void  { $this->prix_unitaire = $p; }
+    public function setTotalLigne(float $t): void    { $this->total_ligne = $t; }
+
 }

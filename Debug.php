@@ -43,7 +43,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <h2>🗄️ Test connexion base de données</h2>
     <?php
     try {
-        require_once __DIR__ . '/../config/database.php'';
+        require_once __DIR__ . '/../config/database.php';
         $db = Database::getInstance();
         $result = $db->query("SELECT id, nom, prenom, email, role, statut FROM users LIMIT 5");
         echo '<p class="ok">✅ Connexion BDD réussie</p>';
@@ -101,7 +101,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <?php
     if (isset($_GET['force_login'])) {
         try {
-            require_once __DIR__ . '/../config/database.php'';
+            require_once __DIR__ . '/../config/database.php';
             $db = Database::getInstance();
             $admin = $db->queryOne(
                 "SELECT * FROM users WHERE role = 'admin' AND statut = 'actif' LIMIT 1"
@@ -149,3 +149,4 @@ if (isset($_GET['clear'])) {
 
 </body>
 </html>
+

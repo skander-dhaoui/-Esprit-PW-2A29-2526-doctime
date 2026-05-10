@@ -1,10 +1,8 @@
 <?php
+// models/Client.php
 
 require_once __DIR__ . '/../config/database.php';
 
-/**
- * Client e-commerce : utilisateurs avec rôle client (table users).
- */
 class Client {
 
     private Database $db;
@@ -15,9 +13,11 @@ class Client {
 
     public function findById(int $id): ?array {
         try {
-            $sql = "SELECT * FROM users WHERE id = :id AND role = 'client' LIMIT 1";
-            $r = $this->db->query($sql, ['id' => $id]);
-            return $r[0] ?? null;
+            $sql = "SELECT id, nom, prenom, email, telephone, adresse
+                    FROM users
+                    WHERE id = :id";
+            $rows = $this->db->query($sql, ['id' => $id]);
+            return $rows ? $rows[0] : null;
         } catch (Exception $e) {
             error_log('Erreur Client::findById - ' . $e->getMessage());
             return null;
@@ -28,19 +28,17 @@ class Client {
         return $this->findById($userId);
     }
 
-    /**
-     * @return array<int, array<string,mixed>>
-     */
     public function getTopClients(int $limit = 10): array {
         try {
-            $lim = max(1, min(50, $limit));
-            $sql = "SELECT u.id, u.nom, u.prenom, u.email, COUNT(c.id) AS nb_commandes, COALESCE(SUM(c.total_ttc),0) AS montant
+            $limit = max(1, (int)$limit);
+            $sql = "SELECT u.id, u.nom, u.prenom, u.email,
+                           COUNT(c.id) AS nb_commandes,
+                           COALESCE(SUM(c.total_ttc), 0) AS total_depense
                     FROM users u
-                    INNER JOIN commandes c ON c.user_id = u.id
-                    WHERE u.role = 'client'
+                    JOIN commandes c ON c.user_id = u.id
                     GROUP BY u.id, u.nom, u.prenom, u.email
-                    ORDER BY montant DESC
-                    LIMIT $lim";
+                    ORDER BY total_depense DESC
+                    LIMIT $limit";
             return $this->db->query($sql);
         } catch (Exception $e) {
             error_log('Erreur Client::getTopClients - ' . $e->getMessage());

@@ -79,10 +79,6 @@ class ArticleController {
 
         $titre   = trim($data['titre']   ?? '');
         $contenu = trim($data['contenu'] ?? '');
-        $categorie = trim($data['categorie'] ?? '') ?: null;
-        $tags = trim($data['tags'] ?? '') ?: null;
-        $status = trim($data['status'] ?? 'publié');
-        $image = $data['image'] ?? null;
 
         $errors = [];
         if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
@@ -101,10 +97,6 @@ class ArticleController {
             'titre'     => $titre,
             'contenu'   => $contenu,
             'auteur_id' => $auteur_id,
-            'image'     => $image,
-            'categorie' => $categorie,
-            'tags'      => $tags,
-            'status'    => $status,
         ]);
 
         echo json_encode(['success' => true, 'id' => $id, 'message' => 'Article créé avec succès']);
@@ -123,13 +115,9 @@ class ArticleController {
             return;
         }
 
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $data    = json_decode(file_get_contents('php://input'), true) ?? [];
         $titre   = trim($data['titre']   ?? '');
         $contenu = trim($data['contenu'] ?? '');
-        $categorie = trim($data['categorie'] ?? '') ?: null;
-        $tags = trim($data['tags'] ?? '') ?: null;
-        $status = trim($data['status'] ?? $article['status'] ?? 'publié');
-        $image = $data['image'] ?? $article['image'] ?? null;
 
         $errors = [];
         if (empty($titre))       $errors['titre']   = 'Le titre est obligatoire.';
@@ -144,7 +132,7 @@ class ArticleController {
         }
 
         $auteur_id = (int)($_SESSION['user_id'] ?? $article['auteur_id'] ?? 0) ?: null;
-        $this->articleModel->updateFull($id, $titre, $contenu, $auteur_id, $image, $categorie, $tags, $status);
+        $this->articleModel->update($id, $titre, $contenu, $auteur_id);
 
         echo json_encode(['success' => true, 'message' => 'Article modifié avec succès']);
     }
@@ -164,59 +152,6 @@ class ArticleController {
 
         $this->articleModel->delete($id);
         echo json_encode(['success' => true, 'message' => 'Article supprimé avec succès']);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    //  JOINTURES - Relation Articles ↔ Replies
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Affiche les replies d'un article spécifique (JOINTURE INNER JOIN)
-     * Pattern : afficherReplies($idArticle)
-     * 
-     * @param int $idArticle ID de l'article
-     * @return array Liste des replies avec données utilisateur
-     */
-    public function afficherReplies(int $idArticle): array {
-        // Valider l'ID d'article
-        if ($idArticle <= 0) {
-            error_log("ArticleController::afficherReplies - ID article invalide: $idArticle");
-            return [];
-        }
-
-        // Récupérer les replies via JOINTURE
-        $replies = $this->articleModel->getRepliesByArticle($idArticle);
-        
-        return $replies;
-    }
-
-    /**
-     * Affiche tous les articles avec le nombre de replies
-     * Utilisé pour le formulaire de sélection (LEFT JOIN)
-     * 
-     * @return array Liste des articles avec comptage
-     */
-    public function afficherArticles(): array {
-        try {
-            return $this->articleModel->getArticlesWithReplyCount();
-        } catch (Exception $e) {
-            error_log('ArticleController::afficherArticles - ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    /**
-     * Affiche un article spécifique avec toutes ses replies
-     * 
-     * @param int $id ID de l'article
-     * @return array|null Données article avec replies ou null
-     */
-    public function afficherArticleComplet(int $id): ?array {
-        if ($id <= 0) {
-            return null;
-        }
-        $article = $this->articleModel->getArticleWithReplies($id);
-        return !empty($article) ? $article : null;
     }
 
     // ─────────────────────────────────────────

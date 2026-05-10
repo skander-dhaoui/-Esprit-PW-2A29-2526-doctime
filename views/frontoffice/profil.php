@@ -599,13 +599,13 @@
                 <i class="fas fa-camera"></i> Reconnaissance faciale
             </div>
             <div class="card-body">
-                <?php if (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])): ?>
+                <?php if (!empty($user['face_encoding'])): ?>
                     <div class="alert-success-custom mb-3" style="background: #d4edda; border-left-color: #28a745;">
                         <i class="fas fa-check-circle me-2"></i> ✅ Visage enregistré
                     </div>
                 <?php endif; ?>
                 
-                <div id="faceCaptureSection" style="<?= (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])) ? 'display:none;' : '' ?>">
+                <div id="faceCaptureSection" style="<?= !empty($user['face_encoding']) ? 'display:none;' : '' ?>">
                     <div class="text-center">
                         <div id="faceVideoContainer">
                             <video id="faceVideo" width="450" height="340" autoplay playsinline style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
@@ -627,7 +627,7 @@
                     </div>
                 </div>
                 
-                <?php if (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])): ?>
+                <?php if (!empty($user['face_encoding'])): ?>
                     <div class="text-center">
                         <button type="button" class="btn-cancel" onclick="deleteFace()">
                             <i class="fas fa-trash-alt me-2"></i> Supprimer mon visage
@@ -885,7 +885,7 @@
             
             document.getElementById('faceStatus').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Envoi...</div>';
             
-            fetch('index.php?page=register_face', {
+            fetch('index.php?page=profil', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: imageData, action: 'register_face' })
@@ -893,10 +893,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Sauvegarde locale pour simuler la reconnaissance faciale sans saisie d'email
-                    localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
-                    localStorage.setItem('valorys_face_role', '<?= htmlspecialchars($userRole ?? $_SESSION['user_role'] ?? 'patient') ?>');
-                    
                     document.getElementById('faceStatus').innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
                     stopFaceCamera();
                     setTimeout(() => {
@@ -921,8 +917,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        localStorage.removeItem('valorys_face_email');
-                        localStorage.removeItem('valorys_face_role');
                         location.reload();
                     } else {
                         showToast(data.message || 'Erreur lors de la suppression', 'error');
@@ -973,11 +967,8 @@
 
         // Start face camera if needed
         document.addEventListener('DOMContentLoaded', function() {
-            <?php if (empty($user['face_photo']) && empty($user['face_descriptors']) && empty($user['face_encoding']) && empty($user['face_descriptor'])): ?>
+            <?php if (empty($user['face_encoding'])): ?>
             startFaceCamera();
-            <?php else: ?>
-            localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
-            localStorage.setItem('valorys_face_role', '<?= htmlspecialchars($userRole ?? $_SESSION['user_role'] ?? 'patient') ?>');
             <?php endif; ?>
         });
     </script>

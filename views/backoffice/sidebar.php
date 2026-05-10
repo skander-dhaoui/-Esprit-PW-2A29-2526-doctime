@@ -33,24 +33,18 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=categories_admin" class="<?= $current_page === 'categories_admin' ? 'active' : '' ?>">
             <i class="fas fa-tags"></i> Catégories
         </a>
+        <a href="index.php?page=commandes_admin" class="<?= $current_page === 'commandes_admin' ? 'active' : '' ?>">
+            <i class="fas fa-shopping-cart"></i> Commandes
+        </a>
         <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
             <i class="fas fa-blog"></i> Blog
         </a>
         <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-day"></i> Événements
         </a>
-        <a href="index.php?page=participations" class="<?= $current_page === 'participations' ? 'active' : '' ?>">
-            <i class="fas fa-handshake"></i> Participations
-        </a>
-<a href="index.php?page=sponsors_admin" class="<?= $current_page === 'sponsors_admin' ? 'active' : '' ?>">
-            <i class="fas fa-hand-holding-usd"></i> Sponsors
-        </a>
         <div class="nav-divider"></div>
         <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
             <i class="fas fa-chart-line"></i> Statistiques
-        </a>
-        <a href="index.php?page=evenements_admin&action=advanced" class="<?= ($current_page === 'evenements_admin' && ($_GET['action'] ?? '') === 'advanced') ? 'active' : '' ?>">
-            <i class="fas fa-chart-bar"></i> Événements Avancé
         </a>
         <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
             <i class="fas fa-history"></i> Historique

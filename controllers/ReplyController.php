@@ -73,10 +73,6 @@ public function show(int $id): void {
         $this->auth->requireAuth();
         header('Content-Type: application/json');
         
-        // Paramètres communs
-        $userId = $_SESSION['user_id'] ?? null;
-        $auteur = $_SESSION['user_name'] ?? null;
-        
         // Vérifier si c'est un upload de fichier (multipart/form-data)
         $isFileUpload = !empty($_FILES) && isset($_FILES['photo_file']);
         
@@ -84,8 +80,7 @@ public function show(int $id): void {
             // Traitement upload fichier
             $articleId = (int)($_POST['id_article'] ?? 0);
             $type = $_POST['type_reply'] ?? 'photo';
-            $auteur = $_POST['auteur'] ?? $auteur ?? null;
-            $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+            $auteur = $_POST['auteur'] ?? $_SESSION['user_name'] ?? null;
             
             $article = $this->articleModel->getById($articleId);
             
@@ -102,20 +97,19 @@ public function show(int $id): void {
                 return;
             }
             
-            $id = $this->replyModel->create($articleId, null, null, $photo, $auteur, $type, $userId, $parentId);
+            $id = $this->replyModel->create($articleId, null, null, $photo, $auteur, $type);
             
             echo json_encode(['success' => true, 'id' => $id, 'message' => 'Commentaire ajouté avec succès']);
         } else {
             // Traitement JSON classique
-            $data = json_decode(file_get_contents('php://input'), true) ?? [];
+            $data = json_decode(file_get_contents('php://input'), true);
             
             $articleId = (int)($data['id_article'] ?? 0);
             $type = $data['type_reply'] ?? 'text';
             $contenuText = $data['contenu_text'] ?? null;
             $emoji = $data['emoji'] ?? null;
             $photo = $data['photo'] ?? null;
-            $auteur = $data['auteur'] ?? $auteur ?? null;
-            $parentId = !empty($data['parent_id']) ? (int)$data['parent_id'] : null;
+            $auteur = $data['auteur'] ?? $_SESSION['user_name'] ?? null;
             
             $article = $this->articleModel->getById($articleId);
             
@@ -147,7 +141,7 @@ public function show(int $id): void {
                 return;
             }
             
-            $id = $this->replyModel->create($articleId, $contenuText, $emoji, $photo, $auteur, $type, $userId, $parentId);
+            $id = $this->replyModel->create($articleId, $contenuText, $emoji, $photo, $auteur, $type);
             
             echo json_encode(['success' => true, 'id' => $id, 'message' => 'Commentaire ajouté avec succès']);
         }

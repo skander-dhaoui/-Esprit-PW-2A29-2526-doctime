@@ -29,12 +29,12 @@ class SponsorController {
             $filter = $_GET['filter'] ?? 'all'; // all, actif, inactif, archive
             $search = $_GET['search'] ?? '';
 
-            $sponsors = $this->sponsorModel->getAll(0, 100, $filter, $search);
+            $sponsors = $this->sponsorModel->getAll($filter, $search);
 
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/sponsors/list.php';
+            require_once __DIR__ . '/../views/backoffice/sponsor_list.php';
         } catch (Exception $e) {
             error_log('Erreur SponsorController::index - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des sponsors.');
@@ -62,7 +62,7 @@ class SponsorController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/sponsors/show.php';
+            require_once __DIR__ . '/../views/backoffice/sponsor_show.php';
         } catch (Exception $e) {
             error_log('Erreur SponsorController::show - ' . $e->getMessage());
             http_response_code(500);
@@ -78,15 +78,16 @@ class SponsorController {
 
         try {
             $csrfToken = $this->generateCsrfToken();
+            $categorieSponsor = $this->sponsorModel->getCategories();
             $old = $_SESSION['old'] ?? null;
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/sponsors/form.php';
+            require_once __DIR__ . '/../views/backoffice/sponsor_form.php';
         } catch (Exception $e) {
             error_log('Erreur SponsorController::create - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         }
     }
@@ -98,34 +99,27 @@ class SponsorController {
         $this->auth->requireRole('admin');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: index.php?page=sponsors/create');
+            header('Location: /admin/sponsors/create');
             exit;
         }
 
         if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->setFlash('error', 'Erreur de sécurité. Veuillez réessayer.');
-            header('Location: index.php?page=sponsors/create');
+            header('Location: /admin/sponsors/create');
             exit;
         }
 
         try {
             $data = [
                 'nom' => htmlspecialchars(trim($_POST['nom'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'description' => htmlspecialchars(trim($_POST['description'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'categorie' => $_POST['categorie'] ?? 'autre',
                 'email' => strtolower(trim($_POST['email'] ?? '')),
                 'telephone' => trim($_POST['telephone'] ?? ''),
-                'secteur' => htmlspecialchars(trim($_POST['secteur'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'niveau' => $_POST['niveau'] ?? 'Argent',
-                'budget' => (float)($_POST['budget'] ?? 0),
-                'description' => htmlspecialchars(trim($_POST['description'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'adresse' => htmlspecialchars(trim($_POST['adresse'] ?? ''), ENT_QUOTES, 'UTF-8'),
                 'site_web' => filter_var($_POST['site_web'] ?? '', FILTER_VALIDATE_URL) ?: null,
+                'budget_annuel' => (float)($_POST['budget_annuel'] ?? 0),
                 'statut' => $_POST['statut'] ?? 'actif',
-                'contact_nom' => htmlspecialchars(trim($_POST['contact_nom'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'contact_prenom' => htmlspecialchars(trim($_POST['contact_prenom'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'contact_email' => strtolower(trim($_POST['contact_email'] ?? '')),
-                'contact_telephone' => trim($_POST['contact_telephone'] ?? ''),
-                'notes' => htmlspecialchars(trim($_POST['notes'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'date_debut' => !empty($_POST['date_debut']) ? $_POST['date_debut'] : null,
-                'date_fin' => !empty($_POST['date_fin']) ? $_POST['date_fin'] : null,
                 'logo' => null,
             ];
 
@@ -134,7 +128,7 @@ class SponsorController {
             if (!empty($errors)) {
                 $this->setFlash('error', implode('<br>', $errors));
                 $_SESSION['old'] = $data;
-                header('Location: index.php?page=sponsors/create');
+                header('Location: /admin/sponsors/create');
                 exit;
             }
 
@@ -142,7 +136,7 @@ class SponsorController {
             if ($this->sponsorModel->findByEmail($data['email'])) {
                 $this->setFlash('error', 'Cet email est déjà utilisé.');
                 $_SESSION['old'] = $data;
-                header('Location: index.php?page=sponsors/create');
+                header('Location: /admin/sponsors/create');
                 exit;
             }
 
@@ -152,7 +146,7 @@ class SponsorController {
                 if (is_array($logoData) && isset($logoData['error'])) {
                     $this->setFlash('error', $logoData['error']);
                     $_SESSION['old'] = $data;
-                    header('Location: index.php?page=sponsors/create');
+                    header('Location: /admin/sponsors/create');
                     exit;
                 }
                 $data['logo'] = $logoData;
@@ -167,13 +161,13 @@ class SponsorController {
             $this->logAction($_SESSION['user_id'], 'Création sponsor', "Sponsor #$sponsorId créé - {$data['nom']}");
 
             $this->setFlash('success', 'Sponsor créé avec succès.');
-            header('Location: index.php?page=sponsors/' . $sponsorId);
+            header('Location: /admin/sponsors/' . $sponsorId);
             exit;
         } catch (Exception $e) {
             error_log('Erreur SponsorController::store - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la création.');
             $_SESSION['old'] = $data ?? [];
-            header('Location: index.php?page=sponsors/create');
+            header('Location: /admin/sponsors/create');
             exit;
         }
     }
@@ -193,15 +187,16 @@ class SponsorController {
             }
 
             $csrfToken = $this->generateCsrfToken();
+            $categorieSponsor = $this->sponsorModel->getCategories();
             $old = $_SESSION['old'] ?? null;
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/sponsors/form.php';
+            require_once __DIR__ . '/../views/backoffice/sponsor_form_edit.php';
         } catch (Exception $e) {
             error_log('Erreur SponsorController::edit - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         }
     }
@@ -213,13 +208,13 @@ class SponsorController {
         $this->auth->requireRole('admin');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: index.php?page=sponsors/$id/edit");
+            header("Location: /admin/sponsors/$id/edit");
             exit;
         }
 
         if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->setFlash('error', 'Erreur de sécurité.');
-            header("Location: index.php?page=sponsors/$id/edit");
+            header("Location: /admin/sponsors/$id/edit");
             exit;
         }
 
@@ -233,21 +228,14 @@ class SponsorController {
 
             $data = [
                 'nom' => htmlspecialchars(trim($_POST['nom'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'description' => htmlspecialchars(trim($_POST['description'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'categorie' => $_POST['categorie'] ?? 'autre',
                 'email' => strtolower(trim($_POST['email'] ?? '')),
                 'telephone' => trim($_POST['telephone'] ?? ''),
-                'secteur' => htmlspecialchars(trim($_POST['secteur'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'niveau' => $_POST['niveau'] ?? 'Argent',
-                'budget' => (float)($_POST['budget'] ?? 0),
-                'description' => htmlspecialchars(trim($_POST['description'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'adresse' => htmlspecialchars(trim($_POST['adresse'] ?? ''), ENT_QUOTES, 'UTF-8'),
                 'site_web' => filter_var($_POST['site_web'] ?? '', FILTER_VALIDATE_URL) ?: null,
+                'budget_annuel' => (float)($_POST['budget_annuel'] ?? 0),
                 'statut' => $_POST['statut'] ?? 'actif',
-                'contact_nom' => htmlspecialchars(trim($_POST['contact_nom'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'contact_prenom' => htmlspecialchars(trim($_POST['contact_prenom'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'contact_email' => strtolower(trim($_POST['contact_email'] ?? '')),
-                'contact_telephone' => trim($_POST['contact_telephone'] ?? ''),
-                'notes' => htmlspecialchars(trim($_POST['notes'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'date_debut' => !empty($_POST['date_debut']) ? $_POST['date_debut'] : null,
-                'date_fin' => !empty($_POST['date_fin']) ? $_POST['date_fin'] : null,
             ];
 
             $errors = $this->validateSponsorUpdate($data);
@@ -255,7 +243,7 @@ class SponsorController {
             if (!empty($errors)) {
                 $this->setFlash('error', implode('<br>', $errors));
                 $_SESSION['old'] = $data;
-                header("Location: index.php?page=sponsors/$id/edit");
+                header("Location: /admin/sponsors/$id/edit");
                 exit;
             }
 
@@ -264,7 +252,7 @@ class SponsorController {
             if ($existing && (int)$existing['id'] !== $id) {
                 $this->setFlash('error', 'Cet email est déjà utilisé.');
                 $_SESSION['old'] = $data;
-                header("Location: index.php?page=sponsors/$id/edit");
+                header("Location: /admin/sponsors/$id/edit");
                 exit;
             }
 
@@ -274,7 +262,7 @@ class SponsorController {
                 if (is_array($logoData) && isset($logoData['error'])) {
                     $this->setFlash('error', $logoData['error']);
                     $_SESSION['old'] = $data;
-                    header("Location: index.php?page=sponsors/$id/edit");
+                    header("Location: /admin/sponsors/$id/edit");
                     exit;
                 }
                 $data['logo'] = $logoData;
@@ -290,12 +278,12 @@ class SponsorController {
             $this->logAction($_SESSION['user_id'], 'Modification sponsor', "Sponsor #$id modifié");
 
             $this->setFlash('success', 'Sponsor mis à jour.');
-            header('Location: index.php?page=sponsors/' . $id);
+            header('Location: /admin/sponsors/' . $id);
             exit;
         } catch (Exception $e) {
             error_log('Erreur SponsorController::update - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la mise à jour.');
-            header("Location: index.php?page=sponsors/$id/edit");
+            header("Location: /admin/sponsors/$id/edit");
             exit;
         }
     }
@@ -318,7 +306,7 @@ class SponsorController {
             $eventCount = $this->sponsorModel->countEventsAssociated($id);
             if ($eventCount > 0) {
                 $this->setFlash('error', "Impossible de supprimer : $eventCount événement(s) associé(s).");
-                header('Location: index.php?page=sponsors');
+                header('Location: /admin/sponsors');
                 exit;
             }
 
@@ -332,12 +320,12 @@ class SponsorController {
             $this->logAction($_SESSION['user_id'], 'Suppression sponsor', "Sponsor #$id supprimé");
 
             $this->setFlash('success', 'Sponsor supprimé.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         } catch (Exception $e) {
             error_log('Erreur SponsorController::delete - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la suppression.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         }
     }
@@ -362,12 +350,12 @@ class SponsorController {
             $this->logAction($_SESSION['user_id'], 'Changement statut sponsor', "Sponsor #$id - Statut: $newStatus");
 
             $this->setFlash('success', "Sponsor $newStatus.");
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         } catch (Exception $e) {
             error_log('Erreur toggleStatus - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du changement de statut.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         }
     }
@@ -602,7 +590,7 @@ class SponsorController {
         } catch (Exception $e) {
             error_log('Erreur SponsorController::report - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: index.php?page=sponsors');
+            header('Location: /admin/sponsors');
             exit;
         }
     }
@@ -617,20 +605,24 @@ class SponsorController {
             $errors[] = 'Le nom doit contenir au moins 2 caractères.';
         }
 
+        if (empty($data['description']) || strlen($data['description']) < 10) {
+            $errors[] = 'La description doit contenir au moins 10 caractères.';
+        }
+
         if (empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Email invalide.';
         }
 
         if (empty($data['telephone']) || strlen($data['telephone']) < 10) {
-            $errors[] = 'Numéro de téléphone invalide (minimum 10 chiffres).';
+            $errors[] = 'Numéro de téléphone invalide.';
         }
 
-        if ($data['budget'] <= 0) {
-            $errors[] = 'Le budget doit être positif.';
+        if ($data['budget_annuel'] <= 0) {
+            $errors[] = 'Le budget annuel doit être positif.';
         }
 
-        if (empty($data['secteur']) || strlen($data['secteur']) < 2) {
-            $errors[] = 'Le secteur doit être spécifié.';
+        if (!in_array($data['categorie'], ['technologie', 'santé', 'education', 'finance', 'autre'])) {
+            $errors[] = 'Catégorie invalide.';
         }
 
         return $errors;

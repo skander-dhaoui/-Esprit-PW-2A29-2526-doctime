@@ -29,22 +29,17 @@ class ParticipationController {
         $this->auth->requireRole('admin');
 
         try {
-            $filter = $_GET['filter'] ?? 'tous'; 
-            if ($filter === 'all') $filter = 'tous';
-            $eventId = isset($_GET['event']) ? (int)$_GET['event'] : null;
+            $filter = $_GET['filter'] ?? 'all'; // all, confirmé, en attente, annulé, présent, absent
+            $eventId = $_GET['event'] ?? null;
             $search = $_GET['search'] ?? '';
 
-            if ($eventId) {
-                $participations = $this->participationModel->getByEvenement($eventId, 0, 1000, $filter);
-            } else {
-                $participations = $this->participationModel->getAll(0, 1000, $filter, $search);
-            }
+            $participations = $this->participationModel->getAll($filter, $eventId, $search);
 
             $events = $this->eventModel->getAll();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/participations/list.php';
+            require_once __DIR__ . '/../views/backoffice/participation_list_admin.php';
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::indexAdmin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des participations.');
@@ -214,94 +209,16 @@ class ParticipationController {
 
             $csrfToken = $this->generateCsrfToken();
             $event = $this->eventModel->getById($participation['event_id']);
+            $patient = $this->patientModel->findByUserId($participation['patient_id']);
             $old = $_SESSION['old'] ?? null;
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
-            $isEdit = true;
-            $events = $this->eventModel->getAll();
-            $users = Database::getInstance()->query("SELECT id, nom, prenom FROM users");
-            
-            require_once __DIR__ . '/../views/backoffice/participations/form.php';
+
+            require_once __DIR__ . '/../views/backoffice/participation_form_edit.php';
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::edit - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: index.php?page=participations');
-            exit;
-        }
-    }
-
-    public function create(): void {
-        $this->auth->requireRole(['admin', 'medecin']);
-        $csrfToken = $this->generateCsrfToken();
-        $old = $_SESSION['old'] ?? null;
-        $flash = $_SESSION['flash'] ?? null;
-        unset($_SESSION['old'], $_SESSION['flash']);
-        $isEdit = false;
-        $participation = null;
-        $events = $this->eventModel->getAll();
-        $users = Database::getInstance()->query("SELECT id, nom, prenom FROM users");
-
-        require_once __DIR__ . '/../views/backoffice/participations/form.php';
-    }
-
-    public function store(): void {
-        $this->auth->requireRole(['admin', 'medecin']);
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: index.php?page=participations&action=create");
-            exit;
-        }
-
-        try {
-            $nom = trim($_POST['nom'] ?? '');
-            $prenom = trim($_POST['prenom'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $tel = trim($_POST['telephone'] ?? '');
-            $eventId = $_POST['event_id'] ?? null;
-
-            if (empty($eventId) || empty($nom) || empty($prenom) || empty($email)) {
-                $this->setFlash('error', 'L\'événement, nom, prénom et email sont obligatoires.');
-                $_SESSION['old'] = $_POST;
-                header("Location: index.php?page=participations&action=create");
-                exit;
-            }
-
-            $db = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT id FROM users WHERE email = :email");
-            $stmt->execute(['email' => $email]);
-            $userId = $stmt->fetchColumn();
-
-            if (!$userId) {
-                // Auto create user
-                $stmt = $db->prepare("INSERT INTO users (nom, prenom, email, telephone, role, password) VALUES (:nom, :prenom, :email, :tel, 'patient', :pw)");
-                $stmt->execute([
-                    'nom' => $nom, 
-                    'prenom' => $prenom, 
-                    'email' => $email, 
-                    'tel' => $tel, 
-                    'pw' => password_hash('password123', PASSWORD_DEFAULT)
-                ]);
-                $userId = $db->lastInsertId();
-            }
-
-            $data = [
-                'event_id' => $eventId,
-                'user_id' => $userId,
-                'statut' => $_POST['statut'] ?? 'confirmé',
-                'notes_supplementaires' => trim($_POST['notes_supplementaires'] ?? ''),
-                'date_inscription' => date('Y-m-d H:i:s'),
-                'code_qr' => 'QR' . rand(1000, 9999) 
-            ];
-
-            $this->participationModel->create($data);
-            $this->setFlash('success', 'Participation ajoutée avec succès.');
-            header("Location: index.php?page=participations");
-            exit;
-        } catch (Exception $e) {
-            error_log('Erreur ParticipationController::store - ' . $e->getMessage());
-            $this->setFlash('error', 'Erreur lors de la création.');
-            $_SESSION['old'] = $_POST;
-            header("Location: index.php?page=participations&action=create");
+            header('Location: /events');
             exit;
         }
     }
@@ -332,16 +249,17 @@ class ParticipationController {
             }
 
             $data = [
-                'event_id' => $_POST['event_id'] ?? null,
-                'user_id' => $_POST['user_id'] ?? null,
                 'statut' => $_POST['statut'] ?? 'confirmé',
-                'notes_supplementaires' => trim($_POST['notes_supplementaires'] ?? ''),
+                'notes' => htmlspecialchars(trim($_POST['notes'] ?? ''), ENT_QUOTES, 'UTF-8'),
+                'presence' => $_POST['presence'] ?? null,
             ];
 
-            if (empty($data['event_id']) || empty($data['user_id'])) {
-                $this->setFlash('error', 'L\'événement et l\'utilisateur sont obligatoires.');
-                $_SESSION['old'] = $_POST;
-                header("Location: index.php?page=participations&action=edit&id=$id");
+            $errors = $this->validateParticipation($data);
+
+            if (!empty($errors)) {
+                $this->setFlash('error', implode('<br>', $errors));
+                $_SESSION['old'] = $data;
+                header("Location: /participations/$id/edit");
                 exit;
             }
 
@@ -350,12 +268,12 @@ class ParticipationController {
             $this->logAction($_SESSION['user_id'], 'Modification participation', "Participation #$id modifiée");
 
             $this->setFlash('success', 'Participation mise à jour.');
-            header("Location: index.php?page=participations");
+            header("Location: /participations/$id");
             exit;
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::update - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la mise à jour.');
-            header("Location: index.php?page=participations&action=edit&id=$id");
+            header("Location: /participations/$id/edit");
             exit;
         }
     }
@@ -492,12 +410,12 @@ class ParticipationController {
             $this->logAction($_SESSION['user_id'], 'Suppression participation', "Participation #$id supprimée");
 
             $this->setFlash('success', 'Participation supprimée.');
-            header('Location: index.php?page=participations');
+            header('Location: /admin/participations');
             exit;
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::delete - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la suppression.');
-            header('Location: index.php?page=participations');
+            header('Location: /admin/participations');
             exit;
         }
     }

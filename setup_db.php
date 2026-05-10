@@ -14,15 +14,10 @@ try {
     
     $pdo->exec("USE doctime_db");
     
-    // Lire et exécuter le fichier SQL schema
-    $sql = file_get_contents(__DIR__ . '/recreate_database.sql');
+    // Lire et exécuter le fichier SQL
+    $sql = file_get_contents(__DIR__ . '/database.sql');
     $pdo->exec($sql);
     echo "✅ Tables créées avec succès<br>";
-    
-    // Lire et exécuter le fichier SQL data
-    $sql = file_get_contents(__DIR__ . '/sample_data.sql');
-    $pdo->exec($sql);
-    echo "✅ Données d'exemple insérées avec succès<br>";
     
     echo "<hr>";
     echo "<h3>Installation terminée !</h3>";

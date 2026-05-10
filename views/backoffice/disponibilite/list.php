@@ -197,12 +197,12 @@ $jours = [
                                     <?php else: ?>
                                         <span class="badge badge-inactif">Inactif</span>
                                     <?php endif; ?>
-                                </td>
+                                 </div>
                                 <td>
                                     <a href="index.php?page=disponibilites_admin&action=edit&id=<?= $dispo['id'] ?>" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
                                     <a href="index.php?page=disponibilites_admin&action=delete&id=<?= $dispo['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer cette disponibilité ?')"><i class="fas fa-trash"></i></a>
-                                </td>
-                            </tr>
+                                 </div>
+                             </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
