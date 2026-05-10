@@ -5,15 +5,16 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
 use App\Models\Produit;
+use App\Repositories\ProduitRepository;
 
 class ProduitController {
 
-    private Produit $produitModel;
+    private ProduitRepository $produitRepo;
     private AuthController $auth;
     private Database $db;
 
     public function __construct() {
-        $this->produitModel = new Produit();
+        $this->produitRepo = new ProduitRepository();
         $this->auth = new AuthController();
         $this->db = Database::getInstance();
     }
@@ -32,7 +33,7 @@ class ProduitController {
             $sort = $_GET['sort'] ?? 'recent';
 
             $catId = ($categorie !== 'all') ? (int)$categorie : 0;
-            $allProduits = $this->produitModel->getAll($search, $catId, 'actif');
+            $allProduits = $this->produitRepo->getAll($search, $catId, 'actif');
 
             if ($sort === 'prix_asc') {
                 usort($allProduits, fn($a, $b) => $a['prix'] <=> $b['prix']);
@@ -44,7 +45,7 @@ class ProduitController {
             $totalPages = ceil($total / $perPage) ?: 1;
             
             $produits = array_slice($allProduits, $offset, $perPage);
-            $categories = $this->produitModel->getAllCategories();
+            $categories = $this->produitRepo->getAllCategories();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
@@ -62,7 +63,7 @@ class ProduitController {
     // ─────────────────────────────────────────
     public function show(int $id): void {
         try {
-            $produit = $this->produitModel->getById($id);
+            $produit = $this->produitRepo->getById($id);
 
             if (!$produit) {
                 http_response_code(404);
@@ -70,7 +71,7 @@ class ProduitController {
                 exit;
             }
 
-            $allCatProducts = $this->produitModel->getAll('', $produit['categorie_id'], 'actif');
+            $allCatProducts = $this->produitRepo->getAll('', $produit['categorie_id'], 'actif');
             $produits_similaires = array_slice(array_filter($allCatProducts, fn($p) => $p['id'] != $id), 0, 4);
             $avis = [];
             $moyenne_avis = 0;
@@ -100,7 +101,7 @@ class ProduitController {
                 exit;
             }
 
-            $produits = $this->produitModel->search($search, $limit);
+            $produits = $this->produitRepo->search($search, $limit);
 
             echo json_encode([
                 'success' => true,
@@ -129,17 +130,17 @@ class ProduitController {
             $search = $_GET['search'] ?? '';
 
             $statut = ($filter !== 'all') ? $filter : '';
-            $allProduits = $this->produitModel->getAll($search, 0, $statut);
+            $allProduits = $this->produitRepo->getAll($search, 0, $statut);
             
             $total = count($allProduits);
             $totalPages = ceil($total / $perPage) ?: 1;
             
             $produits = array_slice($allProduits, $offset, $perPage);
-            $categories = $this->produitModel->getAllCategories();
+            $categories = $this->produitRepo->getAllCategories();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/produit_manage.php';
+            require_once __DIR__ . '/../views/backoffice/pharmacie/produits_list.php';
         } catch (Exception $e) {
             error_log('Erreur ProduitController::manage - ' . $e->getMessage());
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors du chargement.'];
@@ -183,7 +184,7 @@ class ProduitController {
                     exit;
                 }
 
-                $id = $this->produitModel->create($data);
+                $id = $this->produitRepo->create($data);
 
                 if ($id) {
                     $this->logAction($_SESSION['user_id'], 'Création produit', "Produit #$id créé");
@@ -203,12 +204,12 @@ class ProduitController {
 
         try {
             $csrfToken  = $this->generateCsrfToken();
-            $categories = $this->produitModel->getAllCategories();
+            $categories = $this->produitRepo->getAllCategories();
             $old        = $_SESSION['old']   ?? null;
             $flash      = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/produit_form.php';
+            require_once __DIR__ . '/../views/backoffice/pharmacie/produit_form.php';
         } catch (Exception $e) {
             error_log('Erreur create form - ' . $e->getMessage());
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur.'];
@@ -252,7 +253,7 @@ class ProduitController {
                     exit;
                 }
 
-                if ($this->produitModel->update($id, $data)) {
+                if ($this->produitRepo->update($id, $data)) {
                     $this->logAction($_SESSION['user_id'], 'Modification produit', "Produit #$id modifié");
                     $_SESSION['flash'] = ['type' => 'success', 'message' => 'Produit mis à jour.'];
                     header("Location: index.php?page=produits_admin&action=edit&id=$id");
@@ -269,7 +270,7 @@ class ProduitController {
         }
 
         try {
-            $produit = $this->produitModel->getById($id);
+            $produit = $this->produitRepo->getById($id);
 
             if (!$produit) {
                 http_response_code(404);
@@ -277,13 +278,13 @@ class ProduitController {
             }
 
             $csrfToken = $this->generateCsrfToken();
-            $categories = $this->produitModel->getAllCategories();
+            $categories = $this->produitRepo->getAllCategories();
             $old = $_SESSION['old'] ?? null;
             unset($_SESSION['old']);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/produit_form_edit.php';
+            require_once __DIR__ . '/../views/backoffice/pharmacie/produit_form.php';
         } catch (Exception $e) {
             error_log('Erreur edit form - ' . $e->getMessage());
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur.'];
@@ -299,7 +300,7 @@ class ProduitController {
         $this->auth->requireRole('admin');
 
         try {
-            $produit = $this->produitModel->getById($id);
+            $produit = $this->produitRepo->getById($id);
 
             if (!$produit) {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => 'Produit introuvable.'];
@@ -307,7 +308,7 @@ class ProduitController {
                 exit;
             }
 
-            if ($this->produitModel->delete($id)) {
+            if ($this->produitRepo->delete($id)) {
                 $this->logAction($_SESSION['user_id'], 'Suppression produit', "Produit #$id supprimé");
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Produit supprimé avec succès.'];
                 header('Location: index.php?page=produits_admin');
@@ -351,7 +352,7 @@ class ProduitController {
 
             $userId = $_SESSION['user_id'];
 
-            if ($this->produitModel->addAvis($produitId, $userId, $note, $commentaire)) {
+            if ($this->produitRepo->addAvis($produitId, $userId, $note, $commentaire)) {
                 echo json_encode(['success' => true, 'message' => 'Avis ajouté.']);
             } else {
                 echo json_encode(['error' => 'Erreur lors de l\'ajout.']);

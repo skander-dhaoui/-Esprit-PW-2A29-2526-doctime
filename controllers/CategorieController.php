@@ -3,18 +3,20 @@
 
 require_once __DIR__ . '/../models/Categorie.php';
 require_once __DIR__ . '/../models/Produit.php';
+require_once __DIR__ . '/../repositories/CategorieRepository.php';
 require_once __DIR__ . '/../config/database.php';
 
 use App\Models\Categorie;
 use App\Models\Produit;
+use App\Repositories\CategorieRepository;
 
 class CategorieController {
 
-    private Categorie $categorieModel;
+    private CategorieRepository $categorieRepo;
     private Produit   $produitModel;
 
     public function __construct() {
-        $this->categorieModel = new Categorie();
+        $this->categorieRepo = new CategorieRepository();
         $this->produitModel   = new Produit();
     }
 
@@ -25,12 +27,12 @@ class CategorieController {
         $this->adminOnly();
 
         $search     = $_GET['search'] ?? '';
-        $categories = $this->categorieModel->getAll($search);
-        $stats      = $this->categorieModel->getStats();
+        $categories = $this->categorieRepo->getAll($search);
+        $stats      = $this->categorieRepo->getStats();
         $flash      = $_SESSION['flash'] ?? null;
         unset($_SESSION['flash']);
 
-        require_once __DIR__ . '/../views/backoffice/categorie_manage.php';
+        require_once __DIR__ . '/../views/backoffice/pharmacie/categories_list.php';
     }
 
     // ─────────────────────────────────────────
@@ -70,7 +72,7 @@ class CategorieController {
                 'parent_id'   => $parentId,
             ];
 
-            $id = $this->categorieModel->create($data);
+            $id = $this->categorieRepo->create($data);
             if ($id) {
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie créée avec succès.'];
                 header('Location: index.php?page=categories_admin');
@@ -84,12 +86,12 @@ class CategorieController {
         $isEdit     = false;
         $categorie  = [];
         $csrfToken  = $this->makeCsrf();
-        $categories = $this->categorieModel->getActives();
+        $categories = $this->categorieRepo->getActives();
         $old        = $_SESSION['old'] ?? [];
         $flash      = $_SESSION['flash'] ?? null;
         unset($_SESSION['old'], $_SESSION['flash']);
 
-        require_once __DIR__ . '/../views/backoffice/categorie_form.php';
+        require_once __DIR__ . '/../views/backoffice/pharmacie/categorie_form.php';
     }
 
     // ─────────────────────────────────────────
@@ -98,7 +100,7 @@ class CategorieController {
     public function edit(int $id): void {
         $this->adminOnly();
 
-        $categorie = $this->categorieModel->getById($id);
+        $categorie = $this->categorieRepo->getById($id);
         if (!$categorie) {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Catégorie introuvable.'];
             header('Location: index.php?page=categories_admin');
@@ -138,7 +140,7 @@ class CategorieController {
                 'parent_id'   => $parentId,
             ];
 
-            if ($this->categorieModel->update($id, $data)) {
+            if ($this->categorieRepo->update($id, $data)) {
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie mise à jour.'];
             } else {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la mise à jour.'];
@@ -150,14 +152,14 @@ class CategorieController {
         $isEdit     = true;
         $csrfToken  = $this->makeCsrf();
         $categories = array_filter(
-            $this->categorieModel->getActives(),
+            $this->categorieRepo->getActives(),
             fn($c) => (int)$c['id'] !== $id   // exclure la catégorie elle-même
         );
         $old   = $_SESSION['old'] ?? [];
         $flash = $_SESSION['flash'] ?? null;
         unset($_SESSION['old'], $_SESSION['flash']);
 
-        require_once __DIR__ . '/../views/backoffice/categorie_form.php';
+        require_once __DIR__ . '/../views/backoffice/pharmacie/categorie_form.php';
     }
 
     // ─────────────────────────────────────────
@@ -166,7 +168,7 @@ class CategorieController {
     public function delete(int $id): void {
         $this->adminOnly();
 
-        if ($this->categorieModel->delete($id)) {
+        if ($this->categorieRepo->delete($id)) {
             $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie supprimée.'];
         } else {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Impossible de supprimer : des produits sont liés à cette catégorie.'];
@@ -180,7 +182,7 @@ class CategorieController {
     // ─────────────────────────────────────────
     public function afficherProduits(int $idCategorie): array {
         if ($idCategorie <= 0) return [];
-        $categorie = $this->categorieModel->getById($idCategorie);
+        $categorie = $this->categorieRepo->getById($idCategorie);
         if (!$categorie) return [];
         return $this->produitModel->getProduitsByCategorie($idCategorie);
     }
@@ -195,7 +197,7 @@ class CategorieController {
     }
 
     public function afficherCategorie(int $id): ?array {
-        return $id > 0 ? $this->categorieModel->getById($id) : null;
+        return $id > 0 ? $this->categorieRepo->getById($id) : null;
     }
 
     // ─────────────────────────────────────────
@@ -207,7 +209,7 @@ class CategorieController {
             $errors[] = 'Le nom doit contenir au moins 2 caractères.';
         if (strlen($nom) > 100)
             $errors[] = 'Le nom ne peut pas dépasser 100 caractères.';
-        if ($this->categorieModel->slugExists($slug, $excludeId))
+        if ($this->categorieRepo->slugExists($slug, $excludeId))
             $errors[] = "Une catégorie avec ce nom (slug: «$slug») existe déjà.";
         return $errors;
     }

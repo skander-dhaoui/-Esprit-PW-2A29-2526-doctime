@@ -5,25 +5,26 @@ require_once __DIR__ . '/../models/Produit.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Commande;
 use App\Models\CommandeLigne;
 use App\Models\Produit;
+use App\Repositories\CommandeRepository;
+use App\Repositories\ProduitRepository;
 
 class CommandeController {
 
-    private Commande $commandeModel;
-    private CommandeLigne $commandeLigneModel;
-    private Produit $produitModel;
-    private Client $clientModel;
-    private AuthController $auth;
-    private Database $db;
+    private CommandeRepository $commandeRepo;
+    private ProduitRepository $produitRepo;
+    private \Client           $clientModel;
+    private AuthController    $auth;
+    private Database          $db;
 
     public function __construct() {
-        $this->commandeModel = new Commande();
-        $this->commandeLigneModel = new CommandeLigne();
-        $this->produitModel = new Produit();
-        $this->clientModel = new Client();
-        $this->auth = new AuthController();
-        $this->db = Database::getInstance();
+        $this->commandeRepo = new CommandeRepository();
+        $this->produitRepo  = new ProduitRepository();
+        $this->clientModel  = new \Client();
+        $this->auth         = new AuthController();
+        $this->db           = Database::getInstance();
     }
 
     // ─────────────────────────────────────────
@@ -42,22 +43,22 @@ class CommandeController {
             $dateDebut = $_GET['date_debut'] ?? '';
             $dateFin = $_GET['date_fin'] ?? '';
 
-            $commandes = $this->commandeModel->getAll($filter, $offset, $perPage, $search, $dateDebut, $dateFin);
-            $total = $this->commandeModel->countAll($filter, $search, $dateDebut, $dateFin);
+            $commandes = $this->commandeRepo->getAll($filter, $offset, $perPage, $search, $dateDebut, $dateFin);
+            $total = $this->commandeRepo->countAll($filter, $search, $dateDebut, $dateFin);
             $totalPages = ceil($total / $perPage);
 
             $stats = [
-                'total_commandes' => $this->commandeModel->countAll('all'),
-                'commandes_en_attente' => $this->commandeModel->countByStatus('en attente'),
-                'commandes_confirmees' => $this->commandeModel->countByStatus('confirmée'),
-                'total_montant' => $this->commandeModel->getTotalMontant(),
-                'montant_mois' => $this->commandeModel->getTotalMontantMois(),
+                'total_commandes' => $this->commandeRepo->countAll('all'),
+                'commandes_en_attente' => $this->commandeRepo->countByStatus('en attente'),
+                'commandes_confirmees' => $this->commandeRepo->countByStatus('confirmée'),
+                'total_montant' => $this->commandeRepo->getTotalMontant(),
+                'montant_mois' => $this->commandeRepo->getTotalMontantMois(),
             ];
 
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/commande_list.php';
+            require_once __DIR__ . '/../views/backoffice/pharmacie/commandes_list.php';
         } catch (Exception $e) {
             error_log('Erreur CommandeController::index - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des commandes.');
@@ -73,7 +74,7 @@ class CommandeController {
         $this->auth->requireRole(['admin', 'client']);
 
         try {
-            $commande = $this->commandeModel->getById($id);
+            $commande = $this->commandeRepo->getById($id);
 
             if (!$commande) {
                 http_response_code(404);
@@ -89,9 +90,9 @@ class CommandeController {
                 die('Accès refusé.');
             }
 
-            $lignes = $this->commandeLigneModel->getByCommande($id);
+            $lignes = $this->commandeRepo->getByCommande($id);
             $client = $this->clientModel->findById($commande['client_id']);
-            $historique = $this->commandeModel->getHistorique($id);
+            $historique = $this->commandeRepo->getHistorique($id);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
@@ -111,8 +112,8 @@ class CommandeController {
 
         try {
             $csrfToken = $this->generateCsrfToken();
-            $produits = $this->produitModel->getActive();
-            $categories = $this->produitModel->getCategories();
+            $produits = $this->produitRepo->getActive();
+            $categories = $this->produitRepo->getCategories();
             $panier = $_SESSION['panier'] ?? [];
             $old = $_SESSION['old'] ?? null;
             $flash = $_SESSION['flash'] ?? null;
@@ -134,7 +135,7 @@ class CommandeController {
         $this->auth->requireRole('client');
 
         try {
-            $produit = $this->produitModel->getById($produitId);
+            $produit = $this->produitRepo->getById($produitId);
 
             if (!$produit) {
                 echo json_encode(['error' => 'Produit introuvable']);
@@ -229,7 +230,7 @@ class CommandeController {
             }
 
             $produitId = $_SESSION['panier'][$panierKey]['produit_id'];
-            $produit = $this->produitModel->getById($produitId);
+            $produit = $this->produitRepo->getById($produitId);
 
             if ($quantite > $produit['stock']) {
                 echo json_encode(['error' => 'Stock insuffisant']);
@@ -338,7 +339,7 @@ class CommandeController {
 
             // Vérifier le stock pour chaque produit
             foreach ($panier as $item) {
-                $produit = $this->produitModel->getById($item['produit_id']);
+                $produit = $this->produitRepo->getById($item['produit_id']);
                 if ($item['quantite'] > $produit['stock']) {
                     $this->setFlash('error', "Stock insuffisant pour {$produit['nom']}");
                     header('Location: /panier');
@@ -373,7 +374,7 @@ class CommandeController {
                 exit;
             }
 
-            $commandeId = $this->commandeModel->create($data);
+            $commandeId = $this->commandeRepo->create($data);
 
             if (!$commandeId) {
                 throw new Exception('Erreur lors de la création de la commande.');
@@ -381,9 +382,9 @@ class CommandeController {
 
             // Créer les lignes de commande
             foreach ($panier as $item) {
-                $produit = $this->produitModel->getById($item['produit_id']);
+                $produit = $this->produitRepo->getById($item['produit_id']);
                 
-                $this->commandeLigneModel->create([
+                $this->commandeRepo->create([
                     'commande_id' => $commandeId,
                     'produit_id' => $item['produit_id'],
                     'quantite' => $item['quantite'],
@@ -392,7 +393,7 @@ class CommandeController {
                 ]);
 
                 // Mettre à jour le stock
-                $this->produitModel->decrementStock($item['produit_id'], $item['quantite']);
+                $this->produitRepo->decrementStock($item['produit_id'], $item['quantite']);
             }
 
             $this->logAction($clientId, 'Création commande', "Commande #$commandeId créée - Montant: {$data['montant_total']}€");
@@ -421,7 +422,7 @@ class CommandeController {
         $this->auth->requireRole('admin');
 
         try {
-            $commande = $this->commandeModel->getById($id);
+            $commande = $this->commandeRepo->getById($id);
 
             if (!$commande) {
                 http_response_code(404);
@@ -460,7 +461,7 @@ class CommandeController {
         }
 
         try {
-            $commande = $this->commandeModel->getById($id);
+            $commande = $this->commandeRepo->getById($id);
 
             if (!$commande) {
                 http_response_code(404);
@@ -476,13 +477,13 @@ class CommandeController {
                 exit;
             }
 
-            $this->commandeModel->update($id, [
+            $this->commandeRepo->update($id, [
                 'statut' => $nouveauStatut,
                 'notes_admin' => $notes,
             ]);
 
             // Enregistrer le changement dans l'historique
-            $this->commandeModel->addHistorique($id, $_SESSION['user_id'], "Changement statut: {$commande['statut']} → $nouveauStatut", $nouveauStatut);
+            $this->commandeRepo->addHistorique($id, $_SESSION['user_id'], "Changement statut: {$commande['statut']} → $nouveauStatut", $nouveauStatut);
 
             $this->logAction($_SESSION['user_id'], 'Modification commande', "Commande #$id - Statut: $nouveauStatut");
 
@@ -509,7 +510,7 @@ class CommandeController {
         $this->auth->requireRole(['admin', 'client']);
 
         try {
-            $commande = $this->commandeModel->getById($id);
+            $commande = $this->commandeRepo->getById($id);
 
             if (!$commande) {
                 http_response_code(404);
@@ -533,18 +534,18 @@ class CommandeController {
             $raison = htmlspecialchars(trim($_POST['raison'] ?? ''), ENT_QUOTES, 'UTF-8');
 
             // Restaurer le stock
-            $lignes = $this->commandeLigneModel->getByCommande($id);
+            $lignes = $this->commandeRepo->getByCommande($id);
             foreach ($lignes as $ligne) {
-                $this->produitModel->incrementStock($ligne['produit_id'], $ligne['quantite']);
+                $this->produitRepo->incrementStock($ligne['produit_id'], $ligne['quantite']);
             }
 
-            $this->commandeModel->update($id, [
+            $this->commandeRepo->update($id, [
                 'statut' => 'annulée',
                 'raison_annulation' => $raison,
                 'date_annulation' => date('Y-m-d H:i:s'),
             ]);
 
-            $this->commandeModel->addHistorique($id, $userId, "Annulation: $raison", 'annulée');
+            $this->commandeRepo->addHistorique($id, $userId, "Annulation: $raison", 'annulée');
 
             $this->logAction($userId, 'Annulation commande', "Commande #$id annulée - Raison: $raison");
 
@@ -566,7 +567,7 @@ class CommandeController {
         $this->auth->requireRole(['admin', 'client']);
 
         try {
-            $commande = $this->commandeModel->getById($id);
+            $commande = $this->commandeRepo->getById($id);
 
             if (!$commande) {
                 http_response_code(404);
@@ -581,7 +582,7 @@ class CommandeController {
                 die('Accès refusé.');
             }
 
-            $lignes = $this->commandeLigneModel->getByCommande($id);
+            $lignes = $this->commandeRepo->getByCommande($id);
             $client = $this->clientModel->findById($commande['client_id']);
 
             // Inclure la classe PDF (exemple avec TCPDF ou FPDF)
@@ -622,7 +623,7 @@ class CommandeController {
 
             $pdf->SetFont('Arial', '', 9);
             foreach ($lignes as $ligne) {
-                $produit = $this->produitModel->getById($ligne['produit_id']);
+                $produit = $this->produitRepo->getById($ligne['produit_id']);
                 $pdf->Cell(80, 10, substr($produit['nom'], 0, 30), 1, 0, 'L');
                 $pdf->Cell(30, 10, $ligne['quantite'], 1, 0, 'C');
                 $pdf->Cell(30, 10, number_format($ligne['prix_unitaire'], 2, ',', ' ') . '€', 1, 0, 'R');
@@ -665,16 +666,16 @@ class CommandeController {
             $sort = $_GET['sort'] ?? 'recent';
 
             $commandes = match ($sort) {
-                'ancien' => $this->commandeModel->getByClientOrderByOldest($clientId, $filter),
-                'montant_asc' => $this->commandeModel->getByClientOrderByMontant($clientId, $filter, 'ASC'),
-                'montant_desc' => $this->commandeModel->getByClientOrderByMontant($clientId, $filter, 'DESC'),
-                default => $this->commandeModel->getByClientOrderByRecent($clientId, $filter),
+                'ancien' => $this->commandeRepo->getByClientOrderByOldest($clientId, $filter),
+                'montant_asc' => $this->commandeRepo->getByClientOrderByMontant($clientId, $filter, 'ASC'),
+                'montant_desc' => $this->commandeRepo->getByClientOrderByMontant($clientId, $filter, 'DESC'),
+                default => $this->commandeRepo->getByClientOrderByRecent($clientId, $filter),
             };
 
             $stats = [
-                'total_commandes' => $this->commandeModel->countByClient($clientId),
-                'montant_total' => $this->commandeModel->getTotalClientMontant($clientId),
-                'dernier_achat' => $this->commandeModel->getLastOrderDate($clientId),
+                'total_commandes' => $this->commandeRepo->countByClient($clientId),
+                'montant_total' => $this->commandeRepo->getTotalClientMontant($clientId),
+                'dernier_achat' => $this->commandeRepo->getLastOrderDate($clientId),
             ];
 
             $flash = $_SESSION['flash'] ?? null;
@@ -699,8 +700,8 @@ class CommandeController {
             $mois = (int)($_GET['mois'] ?? date('m'));
             $annee = (int)($_GET['annee'] ?? date('Y'));
 
-            $stats = $this->commandeModel->getStatsParMois($mois, $annee);
-            $topProduits = $this->produitModel->getTopProduits(10);
+            $stats = $this->commandeRepo->getStatsParMois($mois, $annee);
+            $topProduits = $this->produitRepo->getTopProduits(10);
             $topClients = $this->clientModel->getTopClients(10);
 
             $flash = $_SESSION['flash'] ?? null;
@@ -724,15 +725,15 @@ class CommandeController {
 
         try {
             $stats = [
-                'total_commandes' => $this->commandeModel->countAll('all'),
-                'commandes_en_attente' => $this->commandeModel->countByStatus('en attente'),
-                'commandes_confirmees' => $this->commandeModel->countByStatus('confirmée'),
-                'commandes_expediees' => $this->commandeModel->countByStatus('expédiée'),
-                'commandes_livrees' => $this->commandeModel->countByStatus('livrée'),
-                'total_montant' => $this->commandeModel->getTotalMontant(),
-                'montant_mois' => $this->commandeModel->getTotalMontantMois(),
-                'montant_jour' => $this->commandeModel->getTotalMontantJour(),
-                'moyenne_commande' => $this->commandeModel->getAverageCommande(),
+                'total_commandes' => $this->commandeRepo->countAll('all'),
+                'commandes_en_attente' => $this->commandeRepo->countByStatus('en attente'),
+                'commandes_confirmees' => $this->commandeRepo->countByStatus('confirmée'),
+                'commandes_expediees' => $this->commandeRepo->countByStatus('expédiée'),
+                'commandes_livrees' => $this->commandeRepo->countByStatus('livrée'),
+                'total_montant' => $this->commandeRepo->getTotalMontant(),
+                'montant_mois' => $this->commandeRepo->getTotalMontantMois(),
+                'montant_jour' => $this->commandeRepo->getTotalMontantJour(),
+                'moyenne_commande' => $this->commandeRepo->getAverageCommande(),
             ];
 
             echo json_encode([
