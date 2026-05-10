@@ -6,8 +6,6 @@ require_once __DIR__ . '/../models/Produit.php';
 require_once __DIR__ . '/../repositories/CategorieRepository.php';
 require_once __DIR__ . '/../config/database.php';
 
-use App\Models\Categorie;
-use App\Models\Produit;
 use App\Repositories\CategorieRepository;
 
 class CategorieController {
@@ -43,20 +41,17 @@ class CategorieController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$this->verifyCsrf($_POST['csrf_token'] ?? '')) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur de sécurité.'];
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Token CSRF invalide.'];
                 header('Location: index.php?page=categories_admin&action=create');
                 exit;
             }
 
-            $nom      = trim($_POST['nom'] ?? '');
-            $slug     = $this->makeSlug($nom);
-            $desc     = trim($_POST['description'] ?? '');
-            $image    = trim($_POST['image'] ?? '');
-            $parentId = (int)($_POST['parent_id'] ?? 0) ?: null;
-            $statut   = in_array($_POST['statut'] ?? '', ['actif','inactif']) ? $_POST['statut'] : 'actif';
+            $nom         = trim($_POST['nom'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $parentId    = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+            $slug        = $this->slugify($nom);
 
             $errors = $this->validate($nom, $slug);
-
             if (!empty($errors)) {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
                 $_SESSION['old']   = $_POST;
@@ -65,10 +60,9 @@ class CategorieController {
             }
 
             $data = [
-                'nom'         => htmlspecialchars($nom, ENT_QUOTES, 'UTF-8'),
+                'nom'         => $nom,
                 'slug'        => $slug,
-                'description' => htmlspecialchars($desc, ENT_QUOTES, 'UTF-8'),
-                'image'       => $image,
+                'description' => $description,
                 'parent_id'   => $parentId,
             ];
 
@@ -76,11 +70,8 @@ class CategorieController {
             if ($id) {
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Catégorie créée avec succès.'];
                 header('Location: index.php?page=categories_admin');
-            } else {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la création.'];
-                header('Location: index.php?page=categories_admin&action=create');
+                exit;
             }
-            exit;
         }
 
         $isEdit     = false;
@@ -95,7 +86,7 @@ class CategorieController {
     }
 
     // ─────────────────────────────────────────
-    //  ADMIN — éditer
+    //  ADMIN — modifier
     // ─────────────────────────────────────────
     public function edit(int $id): void {
         $this->adminOnly();
@@ -109,34 +100,27 @@ class CategorieController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$this->verifyCsrf($_POST['csrf_token'] ?? '')) {
-                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur de sécurité.'];
+                $_SESSION['flash'] = ['type' => 'error', 'message' => 'Token CSRF invalide.'];
                 header("Location: index.php?page=categories_admin&action=edit&id=$id");
                 exit;
             }
 
-            $nom      = trim($_POST['nom'] ?? '');
-            $slug     = $this->makeSlug($nom);
-            $desc     = trim($_POST['description'] ?? '');
-            $image    = trim($_POST['image'] ?? '');
-            $parentId = (int)($_POST['parent_id'] ?? 0) ?: null;
-            $statut   = in_array($_POST['statut'] ?? '', ['actif','inactif']) ? $_POST['statut'] : 'actif';
-
-            if ($parentId === $id) $parentId = null; // pas d'auto-parent
+            $nom         = trim($_POST['nom'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $parentId    = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
+            $slug        = $this->slugify($nom);
 
             $errors = $this->validate($nom, $slug, $id);
-
             if (!empty($errors)) {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => implode('<br>', $errors)];
-                $_SESSION['old']   = $_POST;
                 header("Location: index.php?page=categories_admin&action=edit&id=$id");
                 exit;
             }
 
             $data = [
-                'nom'         => htmlspecialchars($nom, ENT_QUOTES, 'UTF-8'),
+                'nom'         => $nom,
                 'slug'        => $slug,
-                'description' => htmlspecialchars($desc, ENT_QUOTES, 'UTF-8'),
-                'image'       => $image,
+                'description' => $description,
                 'parent_id'   => $parentId,
             ];
 
@@ -145,7 +129,7 @@ class CategorieController {
             } else {
                 $_SESSION['flash'] = ['type' => 'error', 'message' => 'Erreur lors de la mise à jour.'];
             }
-            header("Location: index.php?page=categories_admin&action=edit&id=$id");
+            header('Location: index.php?page=categories_admin');
             exit;
         }
 
@@ -178,7 +162,7 @@ class CategorieController {
     }
 
     // ─────────────────────────────────────────
-    //  Méthodes de service (existantes)
+    //  FRONT — Affichage
     // ─────────────────────────────────────────
     public function afficherProduits(int $idCategorie): array {
         if ($idCategorie <= 0) return [];
@@ -187,13 +171,12 @@ class CategorieController {
         return $this->produitModel->getProduitsByCategorie($idCategorie);
     }
 
-    public function afficherCategories(): array {
-        try {
-            return $this->produitModel->getAllCategories();
-        } catch (Exception $e) {
-            error_log('CategorieController::afficherCategories - ' . $e->getMessage());
-            return [];
-        }
+    public function listerActives(): array {
+        return $this->categorieRepo->getActives();
+    }
+
+    public function listerArborescence(): array {
+        return $this->categorieRepo->getTree();
     }
 
     public function afficherCategorie(int $id): ?array {
@@ -201,9 +184,9 @@ class CategorieController {
     }
 
     // ─────────────────────────────────────────
-    //  Helpers privés
+    //  HELPERS
     // ─────────────────────────────────────────
-    private function validate(string $nom, string $slug, int $excludeId = 0): array {
+    private function validate(string $nom, string $slug, ?int $excludeId = null): array {
         $errors = [];
         if (empty($nom) || strlen($nom) < 2)
             $errors[] = 'Le nom doit contenir au moins 2 caractères.';
@@ -214,18 +197,20 @@ class CategorieController {
         return $errors;
     }
 
-    private function makeSlug(string $text): string {
-        $text = strtolower(trim($text));
-        $map  = ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ù'=>'u','û'=>'u',
-                  'î'=>'i','ï'=>'i','ô'=>'o','œ'=>'oe','æ'=>'ae','ç'=>'c'];
-        $text = strtr($text, $map);
-        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-        return trim($text, '-');
+    private function slugify(string $text): string {
+        $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+        $text = preg_replace('~[^-\w]+~', '', $text);
+        $text = trim($text, '-');
+        $text = preg_replace('~-+~', '-', $text);
+        $text = strtolower($text);
+        return empty($text) ? 'n-a' : $text;
     }
 
     private function makeCsrf(): string {
-        if (empty($_SESSION['csrf_token']))
+        if (empty($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
         return $_SESSION['csrf_token'];
     }
 
@@ -240,4 +225,3 @@ class CategorieController {
         }
     }
 }
-?>
