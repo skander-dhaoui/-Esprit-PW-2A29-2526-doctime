@@ -392,3 +392,58 @@ INSERT INTO categories (nom, slug, description) VALUES
 -- Insertion d'un admin par défaut (mot de passe: admin123)
 INSERT INTO users (nom, prenom, email, password, role, statut) 
 VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');
+
+-- =============================================
+-- TABLE DES PHARMACIES (NOUVELLE)
+-- =============================================
+CREATE TABLE IF NOT EXISTS pharmacies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    adresse TEXT NOT NULL,
+    ville VARCHAR(100) NOT NULL,
+    code_postal VARCHAR(10),
+    telephone VARCHAR(20) NOT NULL,
+    email VARCHAR(255),
+    site_web VARCHAR(255),
+    responsable_id INT,
+    horaires_ouverture TEXT,
+    gerant_nom VARCHAR(200),
+    gerant_prenom VARCHAR(200),
+    gerant_telephone VARCHAR(20),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    image VARCHAR(255),
+    statut ENUM('actif', 'inactif', 'fermé') DEFAULT 'actif',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (responsable_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_ville (ville),
+    INDEX idx_statut (statut),
+    INDEX idx_slug (slug)
+);
+
+-- =============================================
+-- MODIFICATION DE LA TABLE EVENTS (AJOUTER PHARMACIE)
+-- =============================================
+ALTER TABLE events ADD COLUMN pharmacie_id INT DEFAULT NULL AFTER status;
+ALTER TABLE events ADD COLUMN FOREIGN KEY (pharmacie_id) REFERENCES pharmacies(id) ON DELETE SET NULL;
+
+-- =============================================
+-- TABLE DE LIAISON UTILISATEUR-PHARMACIE
+-- =============================================
+CREATE TABLE IF NOT EXISTS utilisateur_pharmacie (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    pharmacie_id INT NOT NULL,
+    role VARCHAR(50) DEFAULT 'employ', -- admin, employe, pharmacien
+    date_embauche DATE,
+    statut ENUM('actif', 'inactif') DEFAULT 'actif',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (pharmacie_id) REFERENCES pharmacies(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_pharmacie (user_id, pharmacie_id),
+    INDEX idx_pharmacie (pharmacie_id),
+    INDEX idx_statut (statut)
+);
