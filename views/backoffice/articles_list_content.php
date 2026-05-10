@@ -19,7 +19,6 @@
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
                         <th>Titre</th>
                         <th>Auteur</th>
                         <th>Date</th>
@@ -31,7 +30,6 @@
                 <tbody>
                     <?php foreach ($articles as $article): ?>
                         <tr>
-                            <td><?= htmlspecialchars($article['id'] ?? '') ?></td>
                             <td><strong><?= htmlspecialchars(substr($article['titre'] ?? '', 0, 60)) ?></strong></td>
                             <td><?= htmlspecialchars(($article['prenom'] ?? '') . ' ' . ($article['nom'] ?? '')) ?></td>
                             <td><?= date('d/m/Y H:i', strtotime($article['created_at'] ?? '')) ?></td>
@@ -82,4 +80,3 @@ function confirmDelete(id, title) {
     }
 }
 </script>
-

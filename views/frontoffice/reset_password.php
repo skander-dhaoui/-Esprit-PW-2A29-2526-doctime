@@ -1,10 +1,9 @@
 <?php
 // views/frontoffice/reset_password.php
-// $error, $validToken, et $token sont passés par AuthController::showResetPassword()
-// Si ce ne sont pas définis, c'est une erreur
-$error = $error ?? null;
-$validToken = $validToken ?? false;
-$token = $token ?? null;
+$error = $_SESSION['error'] ?? null;
+$validToken = $_SESSION['valid_token'] ?? false;
+$token = $_GET['token'] ?? null;
+unset($_SESSION['error'], $_SESSION['valid_token']);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -43,16 +42,7 @@ $token = $token ?? null;
                 </div>
             <?php endif; ?>
 
-            <?php if (!$validToken): ?>
-                <div class="alert-error-custom">
-                    <i class="fas fa-exclamation-circle me-2"></i> Ce lien est invalide ou a expiré.
-                </div>
-                <a href="/valorys_Copie/index.php?page=forgot_password" class="btn btn-primary w-100">
-                    Demander un nouveau lien
-                </a>
-            <?php else: ?>
-            <form method="POST" action="/valorys_Copie/index.php?page=reset_password">
-                <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
+            <form method="POST" action="index.php?page=reset_password">
                 <div class="mb-3">
                     <label class="form-label">Nouveau mot de passe</label>
                     <input type="password" name="password" id="password" class="form-control">
@@ -70,7 +60,6 @@ $token = $token ?? null;
                     <i class="fas fa-key me-2"></i> Réinitialiser
                 </button>
             </form>
-            <?php endif; ?>
         </div>
     </div>
 
@@ -104,4 +93,3 @@ $token = $token ?? null;
     </script>
 </body>
 </html>
-

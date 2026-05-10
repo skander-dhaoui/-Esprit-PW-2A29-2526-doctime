@@ -161,7 +161,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         <a href="index.php?page=disponibilites_admin">
             <i class="fas fa-clock"></i> <span>Disponibilités</span>
         </a>
-        <a href="index.php?page=admin_rendezvous" class="active">
+        <a href="index.php?page=rendez_vous_admin" class="active">
             <i class="fas fa-calendar-check"></i> <span>Rendez vous</span>
         </a>
         <a href="index.php?page=ordonnances">
@@ -202,7 +202,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                 <a href="index.php?page=disponibilites_admin" class="nav-link-custom">
                     <i class="fas fa-clock"></i> Disponibilités
                 </a>
-                <a href="index.php?page=admin_rendezvous" class="nav-link-custom active-nav">
+                <a href="index.php?page=rendez_vous_admin" class="nav-link-custom active-nav">
                     <i class="fas fa-calendar-check"></i> Rendez-vous
                 </a>
                 <a href="index.php?page=ordonnances" class="nav-link-custom">
@@ -280,10 +280,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     <!-- Filtres -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <input type="hidden" name="page" value="admin_rendezvous">
+            <form method="GET" class="row g-3" id="rdvFiltersForm">
+                <input type="hidden" name="page" value="rendez_vous_admin">
                 <div class="col-md-3">
-                    <input type="date" name="date" class="form-control" value="<?= $_GET['date'] ?? '' ?>" placeholder="Date">
+                    <input type="text" name="date" class="form-control" value="<?= $_GET['date'] ?? '' ?>" placeholder="YYYY-MM-DD">
                 </div>
                 <div class="col-md-3">
                     <select name="statut" class="form-select">
@@ -295,7 +295,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                    <input type="text" name="search" id="rdvSearchInput" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100">Filtrer</button>
@@ -306,10 +306,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 
     <!-- Bouton Toggle Vue -->
     <div class="view-toggle">
-        <button class="btn-toggle active" onclick="switchView('table')">
+        <button class="btn-toggle active" onclick="switchView('table', this)">
             <i class="fas fa-table me-2"></i>Vue Tableau
         </button>
-        <button class="btn-toggle" onclick="switchView('card')">
+        <button class="btn-toggle" onclick="switchView('card', this)">
             <i class="fas fa-th-large me-2"></i>Vue Avancée
         </button>
     </div>
@@ -339,8 +339,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                                 <td>Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></td>
                                 <td><?= htmlspecialchars($rdv['specialite'] ?? '-') ?></td>
                                 <td><?= date('d/m/Y', strtotime($rdv['date_rendezvous'])) ?></td>
-                                <td><?= $rdv['heure_rendezvous'] ?></td>
-                                <td><?= htmlspecialchars(substr($rdv['motif'] ?? '', 0, 30)) ?>...</div>
+                                <td><?= htmlspecialchars($rdv['heure_rendezvous']) ?></td>
+                                <td>
+                                    <?php $motif = (string)($rdv['motif'] ?? ''); ?>
+                                    <?= htmlspecialchars(mb_strimwidth($motif, 0, 33, '...')) ?>
+                                </td>
                                 <td>
                                     <?php
                                     $badgeClass = match($rdv['statut']) {
@@ -351,23 +354,23 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                                         default => 'badge-secondary'
                                     };
                                     ?>
-                                    <span class="badge <?= $badgeClass ?> px-3 py-2"><?= $rdv['statut'] ?></span>
-                                 </div>
+                                    <span class="badge <?= $badgeClass ?> px-3 py-2"><?= htmlspecialchars($rdv['statut']) ?></span>
+                                </td>
                                 <td>
-                                    <a href="index.php?page=admin_rendezvous&action=view&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-info" title="Voir détails"><i class="fas fa-eye"></i></a>
-                                    <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
-                                    <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer ce rendez-vous ?')"><i class="fas fa-trash"></i></a>
-                                 </div>
-                             </div>
+                                    <a href="index.php?page=rendez_vous_admin&action=view&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-info" title="Voir détails"><i class="fas fa-eye"></i></a>
+                                    <a href="index.php?page=rendez_vous_admin&action=edit&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
+                                    <a href="index.php?page=rendez_vous_admin&action=delete&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer ce rendez-vous ?')"><i class="fas fa-trash"></i></a>
+                                </td>
+                            </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="8" class="text-center text-muted py-4">Aucun rendez-vous trouvé</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
+                <?php if (empty($rdvs)): ?>
+                    <div class="text-center text-muted py-4">Aucun rendez-vous trouvé</div>
+                <?php endif; ?>
             </div>
         </div>
-    </div>
     </div>
 
     <!-- Vue Avancée (Cartes) -->
@@ -427,13 +430,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                 </div>
                 
                 <div class="rdv-card-actions">
-                    <a href="index.php?page=admin_rendezvous&action=view&id=<?= $rdv['id'] ?>" class="btn-view" title="Voir détails">
+                    <a href="index.php?page=rendez_vous_admin&action=view&id=<?= $rdv['id'] ?>" class="btn-view" title="Voir détails">
                         <i class="fas fa-eye me-1"></i><span>Voir</span>
                     </a>
-                    <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn-edit" title="Modifier">
+                    <a href="index.php?page=rendez_vous_admin&action=edit&id=<?= $rdv['id'] ?>" class="btn-edit" title="Modifier">
                         <i class="fas fa-edit me-1"></i><span>Éditer</span>
                     </a>
-                    <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $rdv['id'] ?>" class="btn-delete" onclick="return confirm('Supprimer ce rendez-vous ?')" title="Supprimer">
+                    <a href="index.php?page=rendez_vous_admin&action=delete&id=<?= $rdv['id'] ?>" class="btn-delete" onclick="return confirm('Supprimer ce rendez-vous ?')" title="Supprimer">
                         <i class="fas fa-trash me-1"></i><span>Supprimer</span>
                     </a>
                 </div>
@@ -449,13 +452,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     </div>
 </div>
 
+<?php require_once __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 
 <script>
 // === VUE TOGGLE ===
-function switchView(view) {
+function switchView(view, triggerBtn = null) {
     const tableView = document.getElementById('tableView');
     const cardView = document.getElementById('cardView');
     const buttons = document.querySelectorAll('.view-toggle .btn-toggle');
@@ -465,12 +470,12 @@ function switchView(view) {
     if (view === 'table') {
         tableView.style.display = 'block';
         cardView.style.display = 'none';
-        event.target.closest('.btn-toggle').classList.add('active');
+        if (triggerBtn) triggerBtn.classList.add('active');
         localStorage.setItem('rdvViewMode', 'table');
     } else {
         tableView.style.display = 'none';
         cardView.style.display = 'block';
-        event.target.closest('.btn-toggle').classList.add('active');
+        if (triggerBtn) triggerBtn.classList.add('active');
         localStorage.setItem('rdvViewMode', 'card');
     }
 }
@@ -479,17 +484,36 @@ function switchView(view) {
 document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('rdvViewMode') || 'table';
     if (savedView === 'card') {
-        switchView('card');
+        const buttons = document.querySelectorAll('.view-toggle .btn-toggle');
+        switchView('card', buttons[1] || null);
     }
     
     // DataTable initialization
     if (document.getElementById('rdvTable')) {
+        $.fn.dataTable.ext.errMode = 'none';
         $('#rdvTable').DataTable({
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json',
+                emptyTable: 'Aucun rendez-vous trouvé'
+            },
             pageLength: 10,
             order: [[3, 'desc']],
             searching: false,
             paging: true
+        });
+    }
+
+    // Barre de recherche dynamique: auto-submit pendant la saisie
+    const form = document.getElementById('rdvFiltersForm');
+    const searchInput = document.getElementById('rdvSearchInput');
+    if (form && searchInput) {
+        let timer = null;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(timer);
+            timer = setTimeout(() => form.submit(), 450);
+        });
+        form.querySelectorAll('select,input[name="date"]').forEach(el => {
+            el.addEventListener('change', () => form.submit());
         });
     }
 });

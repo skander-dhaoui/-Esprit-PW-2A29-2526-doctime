@@ -63,7 +63,23 @@ $csrf = $_SESSION['csrf_token'];
     </style>
 </head>
 <body>
-<?php include __DIR__ . '/sidebar.php'; ?>
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
+        <h4>MediConnect</h4><small>Back Office</small>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.php?page=dashboard"><i class="fas fa-th-large"></i> Tableau de bord</a>
+        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
+        <a href="index.php?page=medecins_admin" class="active"><i class="fas fa-user-md"></i> Médecins</a>
+        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
+        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
+        <a href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
+        <div class="nav-divider"></div>
+        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+    </nav>
+</div>
+
 <div class="main-content">
     <div class="page-header">
         <h4><i class="fas fa-user-edit"></i> Modifier le médecin</h4>

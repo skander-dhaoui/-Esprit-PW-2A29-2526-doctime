@@ -385,4 +385,3 @@ $current_page = 'participations';
     </script>
 </body>
 </html>
-

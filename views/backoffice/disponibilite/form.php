@@ -81,7 +81,7 @@ $errors = $errors ?? [];
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Heure début <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_debut" class="form-control <?= isset($errors['heure_debut']) ? 'error' : '' ?>"
+                        <input type="text" name="heure_debut" class="form-control <?= isset($errors['heure_debut']) ? 'error' : '' ?>"
                                value="<?= htmlspecialchars($old['heure_debut'] ?? ($disponibilite['heure_debut'] ?? '')) ?>">
                         <div class="error-container" id="heure_debut-error">
                             <?php if (isset($errors['heure_debut'])): ?>
@@ -92,7 +92,7 @@ $errors = $errors ?? [];
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Heure fin <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_fin" class="form-control <?= isset($errors['heure_fin']) ? 'error' : '' ?>"
+                        <input type="text" name="heure_fin" class="form-control <?= isset($errors['heure_fin']) ? 'error' : '' ?>"
                                value="<?= htmlspecialchars($old['heure_fin'] ?? ($disponibilite['heure_fin'] ?? '')) ?>">
                         <div class="error-container" id="heure_fin-error">
                             <?php if (isset($errors['heure_fin'])): ?>
@@ -105,13 +105,13 @@ $errors = $errors ?? [];
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Pause début (optionnel)</label>
-                        <input type="time" name="pause_debut" class="form-control"
+                        <input type="text" name="pause_debut" class="form-control"
                                value="<?= htmlspecialchars($old['pause_debut'] ?? ($disponibilite['pause_debut'] ?? '')) ?>">
                     </div>
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Pause fin (optionnel)</label>
-                        <input type="time" name="pause_fin" class="form-control"
+                        <input type="text" name="pause_fin" class="form-control"
                                value="<?= htmlspecialchars($old['pause_fin'] ?? ($disponibilite['pause_fin'] ?? '')) ?>">
                     </div>
                 </div>

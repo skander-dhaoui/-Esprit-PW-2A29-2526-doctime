@@ -52,7 +52,7 @@ $formAction = $isEdit
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
+        <a class="navbar-brand" href="index.php?page=accueil">
             <i class="fas fa-stethoscope me-2"></i>Valorys
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -60,12 +60,12 @@ $formAction = $isEdit
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=evenements">Événements</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=contact">Contact</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">
+                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">
                     <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
                 </a></li>
             </ul>
@@ -120,11 +120,11 @@ $formAction = $isEdit
                                 </label>
                                 <input type="text" name="titre" class="form-control"
                                        value="<?= htmlspecialchars($event['titre'] ?? '') ?>"
-                                       placeholder="Nom de l'événement">
+                                       placeholder="Nom de l'événement" required>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Image (URL)</label>
-                                <input type="text" name="image" class="form-control"
+                                <input type="url" name="image" class="form-control"
                                        value="<?= htmlspecialchars($event['image'] ?? '') ?>"
                                        placeholder="https://...">
                             </div>
@@ -137,14 +137,16 @@ $formAction = $isEdit
                                     Date de début <span class="required-star">*</span>
                                 </label>
                                 <input type="datetime-local" name="date_debut" class="form-control"
-                                       value="<?= isset($event['date_debut']) ? date('Y-m-d\TH:i', strtotime($event['date_debut'])) : '' ?>">
+                                       value="<?= isset($event['date_debut']) ? date('Y-m-d\TH:i', strtotime($event['date_debut'])) : '' ?>"
+                                       required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
                                     Date de fin <span class="required-star">*</span>
                                 </label>
                                 <input type="datetime-local" name="date_fin" class="form-control"
-                                       value="<?= isset($event['date_fin']) ? date('Y-m-d\TH:i', strtotime($event['date_fin'])) : '' ?>">
+                                       value="<?= isset($event['date_fin']) ? date('Y-m-d\TH:i', strtotime($event['date_fin'])) : '' ?>"
+                                       required>
                             </div>
                         </div>
 
@@ -168,7 +170,7 @@ $formAction = $isEdit
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Capacité maximale</label>
-                                <input type="text" name="capacite_max" class="form-control"
+                                <input type="number" name="capacite_max" class="form-control"
                                        value="<?= htmlspecialchars($event['capacite_max'] ?? '0') ?>"
                                        min="0" placeholder="0 = illimité">
                             </div>
@@ -176,7 +178,7 @@ $formAction = $isEdit
                                 <label class="form-label">Prix (€)</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-euro-sign"></i></span>
-                                    <input type="text" name="prix" class="form-control"
+                                    <input type="number" name="prix" class="form-control"
                                            step="0.01" min="0"
                                            value="<?= htmlspecialchars($event['prix'] ?? '0') ?>">
                                 </div>
@@ -208,7 +210,7 @@ $formAction = $isEdit
                         <!-- BOUTONS -->
                         <hr>
                         <div class="d-flex gap-2 justify-content-end">
-                            <a href="/valorys_Copie/index.php?page=evenements" class="btn btn-outline-secondary btn-cancel">
+                            <a href="index.php?page=evenements" class="btn btn-outline-secondary btn-cancel">
                                 <i class="fas fa-times me-1"></i>Annuler
                             </a>
                             <button type="submit" class="btn btn-save">
@@ -245,5 +247,3 @@ document.getElementById('eventForm').addEventListener('submit', function(e) {
 </script>
 </body>
 </html>
-
-

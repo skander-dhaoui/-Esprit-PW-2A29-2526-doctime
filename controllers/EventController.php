@@ -2,19 +2,15 @@
 
 require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/AuthController.php';
-
-use App\Models\Event;
-use App\Repositories\EventRepository;
 
 class EventController {
 
-    private EventRepository $eventRepo;
+    private Event $eventModel;
     private AuthController $auth;
     private Database $db;
 
     public function __construct() {
-        $this->eventRepo = new EventRepository();
+        $this->eventModel = new Event();
         $this->auth = new AuthController();
         $this->db = Database::getInstance();
     }
@@ -27,17 +23,17 @@ class EventController {
             $userRole = $_SESSION['user_role'];
 
             $events = match ($filter) {
-                'upcoming' => $this->eventRepo->getUpcomingEvents($category),
-                'past'     => $this->eventRepo->getPastEvents($category),
-                'all'      => $this->eventRepo->getAllEvents($category),
-                default    => $this->eventRepo->getUpcomingEvents($category),
+                'upcoming' => $this->eventModel->getUpcomingEvents($category),
+                'past'     => $this->eventModel->getPastEvents($category),
+                'all'      => $this->eventModel->getAllEvents($category),
+                default    => $this->eventModel->getUpcomingEvents($category),
             };
 
             if ($userRole === 'patient') {
                 $events = array_filter($events, fn($e) => in_array($e['type'], ['webinaire', 'atelier', 'sensibilisation']));
             }
 
-            $categories = $this->eventRepo->getCategories();
+            $categories = $this->eventModel->getCategories();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
@@ -53,15 +49,15 @@ class EventController {
     public function show(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventRepo->getById($id);
+            $event = $this->eventModel->getById($id);
             if (!$event) {
                 http_response_code(404);
                 require_once __DIR__ . '/../views/errors/404.php';
                 exit;
             }
 
-            $participants     = $this->eventRepo->getParticipants($id);
-            $isParticipating  = $this->eventRepo->isUserParticipant($id, (int)$_SESSION['user_id']);
+            $participants     = $this->eventModel->getParticipants($id);
+            $isParticipating  = $this->eventModel->isUserParticipant($id, (int)$_SESSION['user_id']);
             $participantCount = count($participants);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
@@ -78,16 +74,12 @@ class EventController {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
             $csrfToken  = $this->generateCsrfToken();
-            $categories = $this->eventRepo->getCategories();
-            $old    = $_SESSION['old']    ?? null;
-            $flash  = $_SESSION['flash']  ?? null;
-            $errors = $_SESSION['errors'] ?? [];
-            unset($_SESSION['old'], $_SESSION['flash'], $_SESSION['errors']);
+            $categories = $this->eventModel->getCategories();
+            $old   = $_SESSION['old']   ?? null;
+            $flash = $_SESSION['flash'] ?? null;
+            unset($_SESSION['old'], $_SESSION['flash']);
 
-            $event = $old ?? [];
-            $pageTitle = 'Ajouter un événement';
-            $contentFile = __DIR__ . '/../views/backoffice/evenements/form_content.php';
-            require_once __DIR__ . '/../views/backoffice/layout.php';
+            require_once __DIR__ . '/../views/backoffice/evenements/form.php';
         } catch (Exception $e) {
             error_log('Erreur EventController::create - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
@@ -130,7 +122,7 @@ class EventController {
 
             $errors = $this->validateEvent($data);
             if (!empty($errors)) {
-                $_SESSION['errors'] = $errors;
+                $this->setFlash('error', implode('<br>', $errors));
                 $_SESSION['old'] = $data;
                 header('Location: index.php?page=evenements_admin&action=create');
                 exit;
@@ -147,24 +139,7 @@ class EventController {
                 $data['image'] = $imageData;
             }
 
-            // Mapper les champs du formulaire vers les champs de la base de données
-            $dbData = [
-                'titre' => $data['titre'] ?? '',
-                'slug' => $this->slugify($data['titre'] ?? ''),
-                'description' => $data['description'] ?? '',
-                'contenu' => $data['description'] ?? '',
-                'date_debut' => $data['date_debut'] . ' ' . ($data['heure_debut'] ?? '00:00:00'),
-                'date_fin' => $data['date_fin'] . ' ' . ($data['heure_fin'] ?? '23:59:59'),
-                'lieu' => $data['lieu'] ?? '',
-                'adresse' => $data['lieu'] ?? '',
-                'capacite_max' => $data['nombre_places_max'] ?? 0,
-                'places_restantes' => $data['nombre_places_max'] ?? 0,
-                'image' => $data['image'] ?? null,
-                'prix' => 0,
-                'status' => 'à venir',
-            ];
-
-            $eventId = $this->eventRepo->create($dbData);
+            $eventId = $this->eventModel->create($data);
             if (!$eventId) throw new Exception('Erreur lors de la creation.');
 
             $this->logAction($_SESSION['user_id'], 'Creation evenement', "Evenement #$eventId cree - {$data['titre']}");
@@ -183,25 +158,17 @@ class EventController {
     public function edit(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventRepo->getById($id);
+            $event = $this->eventModel->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canEditEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
             $csrfToken  = $this->generateCsrfToken();
-            $categories = $this->eventRepo->getCategories();
-            $old    = $_SESSION['old']    ?? null;
-            $flash  = $_SESSION['flash']  ?? null;
-            $errors = $_SESSION['errors'] ?? [];
-            unset($_SESSION['old'], $_SESSION['flash'], $_SESSION['errors']);
+            $categories = $this->eventModel->getCategories();
+            $old   = $_SESSION['old']   ?? null;
+            $flash = $_SESSION['flash'] ?? null;
+            unset($_SESSION['old'], $_SESSION['flash']);
 
-            // Fusionner les anciennes données avec l'événement
-            if (!empty($old)) {
-                $event = array_merge($event, $old);
-            }
-
-            $pageTitle = 'Modifier l\'événement';
-            $contentFile = __DIR__ . '/../views/backoffice/evenements/form_content.php';
-            require_once __DIR__ . '/../views/backoffice/layout.php';
+            require_once __DIR__ . '/../views/backoffice/evenements/form.php';
         } catch (Exception $e) {
             error_log('Erreur EventController::edit - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
@@ -225,7 +192,7 @@ class EventController {
         }
 
         try {
-            $event = $this->eventRepo->getById($id);
+            $event = $this->eventModel->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canEditEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
@@ -245,7 +212,7 @@ class EventController {
 
             $errors = $this->validateEvent($data);
             if (!empty($errors)) {
-                $_SESSION['errors'] = $errors;
+                $this->setFlash('error', implode('<br>', $errors));
                 $_SESSION['old'] = $data;
                 header("Location: index.php?page=evenements_admin&action=edit&id=$id");
                 exit;
@@ -265,24 +232,7 @@ class EventController {
                 }
             }
 
-            // Mapper les champs du formulaire vers les champs de la base de données
-            $dbData = [
-                'titre' => $data['titre'] ?? '',
-                'slug' => $this->slugify($data['titre'] ?? ''),
-                'description' => $data['description'] ?? '',
-                'contenu' => $data['description'] ?? '',
-                'date_debut' => $data['date_debut'] . ' ' . ($data['heure_debut'] ?? '00:00:00'),
-                'date_fin' => $data['date_fin'] . ' ' . ($data['heure_fin'] ?? '23:59:59'),
-                'lieu' => $data['lieu'] ?? '',
-                'adresse' => $data['lieu'] ?? '',
-                'capacite_max' => $data['nombre_places_max'] ?? 0,
-                'places_restantes' => $data['nombre_places_max'] ?? 0,
-            ];
-            if (!empty($data['image'])) {
-                $dbData['image'] = $data['image'];
-            }
-
-            $this->eventRepo->update($id, $dbData);
+            $this->eventModel->update($id, $data);
             $this->logAction($_SESSION['user_id'], 'Modification evenement', "Evenement #$id modifie");
             $this->setFlash('success', 'Evenement mis a jour.');
             header('Location: index.php?page=evenements_admin&action=show&id=' . $id);
@@ -298,7 +248,7 @@ class EventController {
     public function delete(int $id): void {
         $this->auth->requireAuth();
         try {
-            $event = $this->eventRepo->getById($id);
+            $event = $this->eventModel->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
             if (!$this->canDeleteEvent($event)) { http_response_code(403); die('Acces refuse.'); }
 
@@ -306,7 +256,7 @@ class EventController {
                 @unlink(__DIR__ . '/../../public/uploads/events/' . $event['image']);
             }
 
-            $this->eventRepo->delete($id);
+            $this->eventModel->delete($id);
             $this->logAction($_SESSION['user_id'], 'Suppression evenement', "Evenement #$id supprime");
             $this->setFlash('success', 'Evenement supprime.');
             header('Location: index.php?page=evenements_admin');
@@ -322,28 +272,10 @@ class EventController {
     public function listAdmin(): void {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
-            $events = $this->eventRepo->getAll();
-            $evenements = array_map(static function (array $event): array {
-                return [
-                    'id' => $event['id'] ?? 0,
-                    'titre' => $event['titre'] ?? '',
-                    'specialite' => $event['categorie'] ?? 'General',
-                    'lieu' => $event['lieu'] ?? $event['adresse'] ?? '',
-                    'date_debut' => $event['date_debut'] ?? '',
-                    'date_fin' => $event['date_fin'] ?? '',
-                    'capacite' => $event['capacite_max'] ?? $event['places_restantes'] ?? 0,
-                    'statut' => match ($event['status'] ?? '') {
-                        'en_cours' => 'en_cours',
-                        'terminé', 'termine' => 'termine',
-                        'annulé', 'annule' => 'annule',
-                        default => 'planifie',
-                    },
-                    'sponsor_nom' => $event['sponsor_nom'] ?? null,
-                ];
-            }, $events);
+            $events = $this->eventModel->getAll();
             $flash  = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
-            require_once __DIR__ . '/../views/backoffice/evenement/index.php';
+            require_once __DIR__ . '/../views/backoffice/evenements/list.php';
         } catch (Exception $e) {
             error_log('Erreur EventController::listAdmin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
@@ -355,9 +287,9 @@ class EventController {
     public function showAdmin(int $id): void {
         $this->auth->requireRole(['admin', 'medecin']);
         try {
-            $event = $this->eventRepo->getById($id);
+            $event = $this->eventModel->getById($id);
             if (!$event) { http_response_code(404); die('Evenement introuvable.'); }
-            $participants = $this->eventRepo->getParticipants($id);
+            $participants = $this->eventModel->getParticipants($id);
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
             require_once __DIR__ . '/../views/backoffice/evenements/show.php';
@@ -375,10 +307,10 @@ class EventController {
             $filter = $_GET['filter'] ?? 'upcoming';
 
             $events = match ($filter) {
-                'upcoming' => $this->eventRepo->getUpcomingEventsByParticipant($userId),
-                'past'     => $this->eventRepo->getPastEventsByParticipant($userId),
-                'all'      => $this->eventRepo->getAllEventsByParticipant($userId),
-                default    => $this->eventRepo->getUpcomingEventsByParticipant($userId),
+                'upcoming' => $this->eventModel->getUpcomingEventsByParticipant($userId),
+                'past'     => $this->eventModel->getPastEventsByParticipant($userId),
+                'all'      => $this->eventModel->getAllEventsByParticipant($userId),
+                default    => $this->eventModel->getUpcomingEventsByParticipant($userId),
             };
 
             $flash = $_SESSION['flash'] ?? null;
@@ -401,10 +333,10 @@ class EventController {
             $filter   = $_GET['filter'] ?? 'all';
 
             $events = match ($filter) {
-                'publie'    => $this->eventRepo->getEventsByCreator($userId, $userRole, 'publie'),
-                'brouillon' => $this->eventRepo->getEventsByCreator($userId, $userRole, 'brouillon'),
-                'annule'    => $this->eventRepo->getEventsByCreator($userId, $userRole, 'annule'),
-                default     => $this->eventRepo->getEventsByCreator($userId, $userRole),
+                'publie'    => $this->eventModel->getEventsByCreator($userId, $userRole, 'publie'),
+                'brouillon' => $this->eventModel->getEventsByCreator($userId, $userRole, 'brouillon'),
+                'annule'    => $this->eventModel->getEventsByCreator($userId, $userRole, 'annule'),
+                default     => $this->eventModel->getEventsByCreator($userId, $userRole),
             };
 
             $flash = $_SESSION['flash'] ?? null;
@@ -451,9 +383,9 @@ class EventController {
             $statuts      = $eventAvance->getStatuts();
 
             // Stats classiques
-            $topEvents               = $this->eventRepo->getTopEventsByParticipants(5);
-            $revenueEvents           = $this->eventRepo->getRevenueEvents();
-            $specialtiesDistribution = $this->eventRepo->getSpecialtyDistribution();
+            $topEvents               = $this->eventModel->getTopEventsByParticipants(5);
+            $revenueEvents           = $this->eventModel->getRevenueEvents();
+            $specialtiesDistribution = $this->eventModel->getSpecialtyDistribution();
 
             // Export CSV
             if (isset($_GET['export']) && $_GET['export'] === 'csv' && !empty($_GET['event_id'])) {
@@ -484,21 +416,21 @@ class EventController {
     private function validateEvent(array $data): array {
         $errors = [];
         if (empty($data['titre']) || strlen($data['titre']) < 3)
-            $errors['titre'] = 'Le titre doit contenir au moins 3 caracteres.';
+            $errors[] = 'Le titre doit contenir au moins 3 caracteres.';
         if (empty($data['description']) || strlen($data['description']) < 10)
-            $errors['description'] = 'La description doit contenir au moins 10 caracteres.';
+            $errors[] = 'La description doit contenir au moins 10 caracteres.';
         if (empty($data['date_debut']))
-            $errors['date_debut'] = 'La date de debut est obligatoire.';
+            $errors[] = 'La date de debut est obligatoire.';
         if (empty($data['date_fin']))
-            $errors['date_fin'] = 'La date de fin est obligatoire.';
+            $errors[] = 'La date de fin est obligatoire.';
         if (!empty($data['date_debut']) && !empty($data['date_fin'])) {
             $debut = DateTime::createFromFormat('Y-m-d', $data['date_debut']);
             $fin   = DateTime::createFromFormat('Y-m-d', $data['date_fin']);
             if ($debut && $fin && $debut > $fin)
-                $errors['date_fin'] = 'La date de fin doit etre apres la date de debut.';
+                $errors[] = 'La date de fin doit etre apres la date de debut.';
         }
         if (($data['nombre_places_max'] ?? 0) < 0)
-            $errors['nombre_places_max'] = 'Le nombre de places doit etre positif.';
+            $errors[] = 'Le nombre de places doit etre positif.';
         return $errors;
     }
 
@@ -541,14 +473,6 @@ class EventController {
 
     private function setFlash(string $type, string $message): void {
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
-    }
-
-    private function slugify(string $text): string {
-        $text = preg_replace('/[^\pL\d]+/u', '-', $text);
-        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
-        $text = preg_replace('/[^\d\w-]+/', '', $text);
-        $text = strtolower(trim($text, '-'));
-        return $text ?: 'evenement';
     }
 
     private function logAction(int $userId, string $action, string $description): void {

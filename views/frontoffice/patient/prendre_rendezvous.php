@@ -30,17 +30,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=prendre_rendezvous">Prendre RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link active" href="index.php?page=prendre_rendezvous">Prendre RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -62,7 +61,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                         <?php unset($_SESSION['flash']); ?>
                     <?php endif; ?>
 
-<form method="POST" action="/valorys_Copie/index.php?page=prendre_rendez_vous">
+<form method="POST" action="index.php?page=prendre_rendez_vous">
                         <div class="mb-3">
                             <label class="form-label">Médecin *</label>
                             <select name="medecin_id" id="medecin_id" class="form-select">
@@ -77,7 +76,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
                         <div class="mb-3">
                             <label class="form-label">Date *</label>
-                            <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>">
+                            <input type="text" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>" placeholder="YYYY-MM-DD">
                         </div>
 
                         <div class="mb-3">
@@ -101,7 +100,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                             <button type="submit" class="btn-submit">
                                 <i class="fas fa-check-circle me-2"></i>Confirmer le rendez-vous
                             </button>
-                            <a href="/valorys_Copie/index.php?page=mes_rendezvous" class="btn btn-secondary">Annuler</a>
+                            <a href="index.php?page=mes_rendezvous" class="btn btn-secondary">Annuler</a>
                         </div>
                     </form>
                 </div>
@@ -116,6 +115,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
         <small>Plateforme médicale en ligne</small>
     </div>
 </footer>
+
+<?php require_once __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
 
 <script>
 // Charger les créneaux disponibles dynamiquement
@@ -157,5 +158,3 @@ dateInput.addEventListener('change', loadSlots);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

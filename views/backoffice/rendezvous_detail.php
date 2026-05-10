@@ -4,7 +4,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!isset($rdv) || !$rdv) {
-    header('Location: index.php?page=admin_rendezvous');
+    header('Location: index.php?page=rendez_vous_admin');
     exit;
 }
 
@@ -113,7 +113,7 @@ $badgeText = match($statut) {
 <div class="main-content">
     <div class="page-header">
         <h4><i class="fas fa-calendar-check"></i> Détails du Rendez-vous</h4>
-        <a href="index.php?page=admin_rendezvous" class="btn btn-secondary btn-sm">
+        <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i> Retour
         </a>
     </div>
@@ -165,13 +165,13 @@ $badgeText = match($statut) {
         </div>
 
         <div class="action-buttons">
-            <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $id ?>" class="btn-custom btn-edit">
+            <a href="index.php?page=rendez_vous_admin&action=edit&id=<?= $id ?>" class="btn-custom btn-edit">
                 <i class="fas fa-edit"></i> Modifier
             </a>
-            <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $id ?>" class="btn-custom btn-delete" onclick="return confirm('Supprimer ce rendez-vous ?')">
+            <a href="index.php?page=rendez_vous_admin&action=delete&id=<?= $id ?>" class="btn-custom btn-delete" onclick="return confirm('Supprimer ce rendez-vous ?')">
                 <i class="fas fa-trash"></i> Supprimer
             </a>
-            <a href="index.php?page=admin_rendezvous" class="btn-custom btn-back">
+            <a href="index.php?page=rendez_vous_admin" class="btn-custom btn-back">
                 <i class="fas fa-arrow-left"></i> Retour à la liste
             </a>
         </div>
@@ -182,4 +182,3 @@ $badgeText = match($statut) {
 
 </body>
 </html>
-

@@ -48,7 +48,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" action="index.php?page=admin_rendezvous&action=create">
+            <form method="POST" action="index.php?page=rendez_vous_admin&action=create">
                 <div class="row">
                     <!-- Patient -->
                     <div class="col-md-6 mb-3">
@@ -91,7 +91,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                     <!-- Date -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Date <span class="text-danger">*</span></label>
-                        <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'error' : '' ?>" 
+                        <input type="text" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['date_rendezvous'] ?? '') ?>">
                         <div class="error-container" id="date_rendezvous-error">
                             <?php if (isset($errors['date_rendezvous'])): ?>
@@ -103,7 +103,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                     <!-- Heure -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Heure <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'error' : '' ?>" 
+                        <input type="text" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['heure_rendezvous'] ?? '') ?>">
                         <div class="error-container" id="heure_rendezvous-error">
                             <?php if (isset($errors['heure_rendezvous'])): ?>

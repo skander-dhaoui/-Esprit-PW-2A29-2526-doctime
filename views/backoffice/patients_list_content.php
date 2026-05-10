@@ -18,7 +18,6 @@
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
                         <th>Nom</th>
                         <th>Prénom</th>
                         <th>Email</th>
@@ -31,7 +30,6 @@
                 <tbody>
                     <?php foreach ($patients as $patient): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($patient['id']); ?></td>
                             <td><?php echo htmlspecialchars($patient['nom']); ?></td>
                             <td><?php echo htmlspecialchars($patient['prenom']); ?></td>
                             <td><?php echo htmlspecialchars($patient['email']); ?></td>
@@ -67,29 +65,13 @@
                 </tbody>
             </table>
         </div>
-        
-        <?php
-            $page_param = 'p';
-            include __DIR__ . '/components/pagination.php';
-            unset($page_param);
-        ?>
     <?php endif; ?>
 </div>
 
 <script>
 function confirmDelete(url) {
-    if (window.ValorysConfirm) {
-        window.ValorysConfirm.open({
-            href: url,
-            title: 'Supprimer le patient',
-            message: 'Supprimer définitivement ce patient ?',
-            confirmText: 'Supprimer',
-            confirmClass: 'btn-danger',
-            icon: 'fa-trash'
-        });
-        return;
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce patient ?')) {
+        window.location.href = url;
     }
-    window.location.href = url;
 }
 </script>
-

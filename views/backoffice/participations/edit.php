@@ -295,7 +295,7 @@ $success = $_GET['success'] ?? null;
 
                     <div class="form-group">
                         <label for="statut">Statut *</label>
-                        <select name="statut" id="statut">
+                        <select name="statut" id="statut" required>
                             <option value="inscrit" <?= $participation['statut'] === 'inscrit' ? 'selected' : '' ?>>Inscrit</option>
                             <option value="confirmé" <?= $participation['statut'] === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
                             <option value="présent" <?= $participation['statut'] === 'présent' ? 'selected' : '' ?>>Présent</option>
@@ -320,5 +320,3 @@ $success = $_GET['success'] ?? null;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

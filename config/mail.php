@@ -14,115 +14,117 @@ class MailConfig {
     private static $smtpHost = 'smtp.gmail.com';
     private static $smtpPort = 587;
     private static $smtpUser = 'afnengorai@gmail.com';
-    private static $smtpPass = 'amrgtpgoryfmvmai';  // Mot de passe d'application Gmail
+    private static $smtpPass = 'amrgtpgoryfmvmai';
     private static $smtpSecure = 'tls';
     private static $fromEmail = 'afnengorai@gmail.com';
     private static $fromName = 'DocTime';
+
+    private static function env(string $key, string $default): string {
+        $value = getenv($key);
+        return $value !== false && $value !== '' ? $value : $default;
+    }
     
-    /**
-     * Envoyer un email
-     */
     public static function send($to, $toName, $subject, $body, $altBody = ''): bool {
         $mail = new PHPMailer(true);
-        
+
         try {
             if (!filter_var((string) $to, FILTER_VALIDATE_EMAIL)) {
-                error_log("Email non envoye: destinataire invalide [" . (string) $to . "]");
+                error_log('Email non envoye: destinataire invalide [' . (string) $to . ']');
                 return false;
             }
-            // Désactiver DEBUG pour éviter d'afficher avant les headers
-            // Les erreurs sont loggées dans error_log
+
             $mail->SMTPDebug = SMTP::DEBUG_OFF;
-            
             $mail->isSMTP();
-            $mail->Host       = self::$smtpHost;
+            $mail->Host       = self::env('MAIL_HOST', self::$smtpHost);
             $mail->SMTPAuth   = true;
-            $mail->Username   = self::$smtpUser;
-            $mail->Password   = self::$smtpPass;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = self::$smtpPort;
+            $mail->Username   = self::env('MAIL_USERNAME', self::$smtpUser);
+            $mail->Password   = self::env('MAIL_PASSWORD', self::$smtpPass);
+            $enc              = self::env('MAIL_ENCRYPTION', self::$smtpSecure);
+            $mail->SMTPSecure = ($enc === 'tls' || $enc === 'ssl')
+                ? (($enc === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS)
+                : $enc;
+            $mail->Port       = (int) self::env('MAIL_PORT', (string) self::$smtpPort);
             $mail->Timeout    = 15;
-            
-            // Configuration pour Gmail
-            $mail->CharSet = 'UTF-8';
-            $mail->Encoding = '8bit';
-            
-            // Options SSL (optionnel pour certains serveurs)
+            $mail->CharSet    = 'UTF-8';
+            $mail->Encoding   = '8bit';
+
             $mail->SMTPOptions = [
                 'ssl' => [
                     'verify_peer'       => false,
                     'verify_peer_name'  => false,
-                    'allow_self_signed' => true
-                ]
+                    'allow_self_signed' => true,
+                ],
             ];
-            
-            $mail->setFrom(self::$fromEmail, self::$fromName);
-            $mail->addReplyTo(self::$fromEmail, self::$fromName);
+
+            $fromAddr = self::env('MAIL_FROM_ADDRESS', self::$fromEmail);
+            $fromName = self::env('MAIL_FROM_NAME', self::$fromName);
+            $mail->setFrom($fromAddr, $fromName);
+            $mail->addReplyTo($fromAddr, $fromName);
             $mail->addAddress($to, $toName);
-            
+
             $mail->isHTML(true);
             $mail->Subject = $subject;
             $mail->Body    = $body;
-            $mail->AltBody = $altBody ?: strip_tags($body);
-            
-            // Log
-            error_log("📧 Envoi d'email à: $to ($toName) - Sujet: $subject");
-            
+            $mail->AltBody = $altBody !== '' ? $altBody : strip_tags($body);
+
+            error_log("Envoi d'email à: $to ($toName) - Sujet: $subject");
             $result = $mail->send();
-            
             if ($result) {
-                error_log("✅ Email envoyé avec succès à: $to");
+                error_log("Email envoye avec succes à: $to");
             } else {
-                error_log("❌ Échec envoi email à: $to - Erreur: " . $mail->ErrorInfo);
+                error_log("Echec envoi email à: $to - " . $mail->ErrorInfo);
             }
-            
+
             return $result;
         } catch (Exception $e) {
-            error_log("❌ Exception email: " . $e->getMessage());
-            error_log("   To: $to");
-            error_log("   SMTP Host: " . self::$smtpHost . ":" . self::$smtpPort);
-            error_log("   File: " . $e->getFile() . ":" . $e->getLine());
+            error_log('Exception email: ' . $e->getMessage() . ' | ' . $mail->ErrorInfo);
             return false;
         }
     }
-    
+
     /**
-     * Tester la connexion SMTP
+     * Tester la connexion SMTP (diagnostic back-office / dev).
+     *
+     * @return array{success:bool, message:string, details:array<int,string>}
      */
     public static function testConnection(): array {
         $mail = new PHPMailer(true);
         $result = [
             'success' => false,
             'message' => '',
-            'details' => []
+            'details' => [],
         ];
-        
+
         try {
             $mail->SMTPDebug = SMTP::DEBUG_OFF;
             $mail->isSMTP();
-            $mail->Host       = self::$smtpHost;
+            $mail->Host       = self::env('MAIL_HOST', self::$smtpHost);
             $mail->SMTPAuth   = true;
-            $mail->Username   = self::$smtpUser;
-            $mail->Password   = self::$smtpPass;
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = self::$smtpPort;
-            
-            // Tester la connexion
+            $mail->Username   = self::env('MAIL_USERNAME', self::$smtpUser);
+            $mail->Password   = self::env('MAIL_PASSWORD', self::$smtpPass);
+            $enc              = self::env('MAIL_ENCRYPTION', self::$smtpSecure);
+            $mail->SMTPSecure = ($enc === 'tls' || $enc === 'ssl')
+                ? (($enc === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS)
+                : $enc;
+            $mail->Port       = (int) self::env('MAIL_PORT', (string) self::$smtpPort);
+
             if ($mail->smtpConnect()) {
                 $result['success'] = true;
                 $result['message'] = 'Connexion SMTP reussie';
-                $result['details'][] = "Serveur: " . self::$smtpHost;
-                $result['details'][] = "Port: " . self::$smtpPort;
-                $result['details'][] = "Utilisateur: " . self::$smtpUser;
+                $result['details'][] = 'Serveur: ' . self::env('MAIL_HOST', self::$smtpHost);
+                $result['details'][] = 'Port: ' . self::env('MAIL_PORT', (string) self::$smtpPort);
                 $mail->smtpClose();
             } else {
                 $result['message'] = 'Impossible de se connecter au serveur SMTP';
             }
         } catch (Exception $e) {
             $result['message'] = 'Erreur de connexion: ' . $e->getMessage();
-            $result['details'][] = "Erreur SMTP: " . $mail->ErrorInfo;
+            if (!empty($mail->ErrorInfo)) {
+                $result['details'][] = $mail->ErrorInfo;
+            }
         }
-        
+
         return $result;
     }
 }
+?>

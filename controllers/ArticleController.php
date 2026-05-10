@@ -4,19 +4,15 @@ require_once __DIR__ . '/../models/Reply.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/AuthController.php';
 
-use App\Models\Article;
-use App\Models\Reply;
-use App\Repositories\ArticleRepository;
-
 class ArticleController {
-    private ArticleRepository $articleRepo;
+    private Article $articleModel;
     private Reply $replyModel;
     private AuthController $auth;
 
     public function __construct() {
-        $this->articleRepo = new ArticleRepository();
-        $this->replyModel  = new Reply();
-        $this->auth        = new AuthController();
+        $this->articleModel = new Article();
+        $this->replyModel   = new Reply();
+        $this->auth         = new AuthController();
     }
 
     /**
@@ -24,9 +20,9 @@ class ArticleController {
      */
     public function index(): void {
         $this->auth->requireRole('admin');
-        $articles = $this->articleRepo->getAll();
-        $total    = $this->articleRepo->countAll();
-        $month    = $this->articleRepo->countThisMonth();
+        $articles = $this->articleModel->getAll();
+        $total    = $this->articleModel->countAll();
+        $month    = $this->articleModel->countThisMonth();
         require_once __DIR__ . '/../views/backoffice/blog.php';
     }
 
@@ -36,9 +32,9 @@ class ArticleController {
      */
     public function list(): void {
         header('Content-Type: application/json');
-        $articles = $this->articleRepo->getAll();
-        $total    = $this->articleRepo->countAll();
-        $month    = $this->articleRepo->countThisMonth();
+        $articles = $this->articleModel->getAll();
+        $total    = $this->articleModel->countAll();
+        $month    = $this->articleModel->countThisMonth();
 
         // Normalise les champs pour que le JS n'ait qu'un seul nom de clé
         $articles = array_map([$this, 'normalizeArticle'], $articles);
@@ -57,7 +53,7 @@ class ArticleController {
      */
     public function show(int $id): void {
         header('Content-Type: application/json');
-        $article = $this->articleRepo->getById($id);
+        $article = $this->articleModel->getById($id);
 
         if (!$article) {
             echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
@@ -97,7 +93,7 @@ class ArticleController {
         }
 
         $auteur_id = $_SESSION['user_id'] ?? null;
-        $id = $this->articleRepo->create([
+        $id = $this->articleModel->create([
             'titre'     => $titre,
             'contenu'   => $contenu,
             'auteur_id' => $auteur_id,
@@ -113,7 +109,7 @@ class ArticleController {
     public function update(int $id): void {
         header('Content-Type: application/json');
 
-        $article = $this->articleRepo->getById($id);
+        $article = $this->articleModel->getById($id);
         if (!$article) {
             echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
             return;
@@ -136,7 +132,7 @@ class ArticleController {
         }
 
         $auteur_id = (int)($_SESSION['user_id'] ?? $article['auteur_id'] ?? 0) ?: null;
-        $this->articleRepo->update($id, $titre, $contenu, $auteur_id);
+        $this->articleModel->update($id, $titre, $contenu, $auteur_id);
 
         echo json_encode(['success' => true, 'message' => 'Article modifié avec succès']);
     }
@@ -148,13 +144,13 @@ class ArticleController {
     public function destroy(int $id): void {
         header('Content-Type: application/json');
 
-        $article = $this->articleRepo->getById($id);
+        $article = $this->articleModel->getById($id);
         if (!$article) {
             echo json_encode(['success' => false, 'message' => 'Article non trouvé']);
             return;
         }
 
-        $this->articleRepo->delete($id);
+        $this->articleModel->delete($id);
         echo json_encode(['success' => true, 'message' => 'Article supprimé avec succès']);
     }
 
@@ -177,7 +173,7 @@ class ArticleController {
         }
 
         // Récupérer les replies via JOINTURE
-        $replies = $this->articleRepo->getRepliesByArticle($idArticle);
+        $replies = $this->articleModel->getRepliesByArticle($idArticle);
         
         return $replies;
     }
@@ -190,7 +186,7 @@ class ArticleController {
      */
     public function afficherArticles(): array {
         try {
-            return $this->articleRepo->getArticlesWithReplyCount();
+            return $this->articleModel->getArticlesWithReplyCount();
         } catch (Exception $e) {
             error_log('ArticleController::afficherArticles - ' . $e->getMessage());
             return [];
@@ -207,7 +203,7 @@ class ArticleController {
         if ($id <= 0) {
             return null;
         }
-        $article = $this->articleRepo->getArticleWithReplies($id);
+        $article = $this->articleModel->getArticleWithReplies($id);
         return !empty($article) ? $article : null;
     }
 

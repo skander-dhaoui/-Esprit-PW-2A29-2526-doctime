@@ -8,6 +8,7 @@
     <title><?= $page_title ?> - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; min-height: 100vh; }
@@ -204,56 +205,62 @@
         }
 
         .btn-sm { padding: 5px 10px; margin: 2px; }
-
-        .filter-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 12px;
-            margin-bottom: 20px;
-            align-items: end;
-        }
-
-        .filter-form .form-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #1a2035;
-            margin-bottom: 6px;
-        }
-
-        @media (max-width: 992px) {
-            .filter-form {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .pagination-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .pagination-info {
-            font-size: 14px;
-            color: #5b6475;
-        }
-
-        .pagination-links {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
     </style>
-    <link rel="stylesheet" href="assets/css/backoffice-polish.css">
-    <script src="assets/js/theme-mode.js"></script>
-    <link rel="stylesheet" href="assets/css/theme-mode.css">
 </head>
 <body>
 
 <!-- Sidebar -->
-<?php include __DIR__ . '/sidebar.php'; ?>
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
+        <h4>MediConnect</h4>
+        <small>Back Office</small>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.php?page=dashboard" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>">
+            <i class="fas fa-th-large"></i> Tableau de bord
+        </a>
+        <a href="index.php?page=users" class="active">
+            <i class="fas fa-users"></i> Utilisateurs
+        </a>
+        <a href="index.php?page=medecins_admin" class="<?= $current_page === 'medecins_admin' ? 'active' : '' ?>">
+            <i class="fas fa-user-md"></i> Médecins
+        </a>
+        <a href="index.php?page=patients" class="<?= $current_page === 'patients' ? 'active' : '' ?>">
+            <i class="fas fa-user-injured"></i> Patients
+        </a>
+        <a href="index.php?page=rendez_vous_admin" class="<?= $current_page === 'rendez_vous_admin' ? 'active' : '' ?>">
+            <i class="fas fa-calendar-check"></i> Rendez-vous
+        </a>
+        <a href="index.php?page=ordonnances" class="<?= $current_page === 'ordonnances' ? 'active' : '' ?>">
+            <i class="fas fa-prescription-bottle"></i> Ordonnances
+        </a>
+        <a href="index.php?page=produits_admin" class="<?= $current_page === 'produits_admin' ? 'active' : '' ?>">
+            <i class="fas fa-box"></i> Produits
+        </a>
+        <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
+            <i class="fas fa-blog"></i> Blog
+        </a>
+        <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
+            <i class="fas fa-calendar-day"></i> Événements
+        </a>
+        <div class="nav-divider"></div>
+        <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
+            <i class="fas fa-chart-line"></i> Statistiques
+        </a>
+        <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
+            <i class="fas fa-history"></i> Historique
+        </a>
+        <a href="index.php?page=settings" class="<?= $current_page === 'settings' ? 'active' : '' ?>">
+            <i class="fas fa-cog"></i> Paramètres
+        </a>
+        <div class="nav-divider"></div>
+        <a href="index.php?page=logout">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </a>
+    </nav>
+</div>
+
 <!-- Main Content -->
 <div class="main-content">
     <div class="page-header">
@@ -273,40 +280,14 @@
 
     <div class="content-card">
         <div class="card-title-row">
-            <h5><i class="fas fa-list"></i> Liste des utilisateurs (<?= (int) ($pagination['total_items'] ?? count($users)) ?>)</h5>
+            <h5><i class="fas fa-list"></i> Liste des utilisateurs (<?= count($users) ?>)</h5>
             <a href="index.php?page=users&action=create" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Ajouter
             </a>
         </div>
 
-        <form method="get" action="index.php" class="filter-form" data-dynamic-filter>
-            <input type="hidden" name="page" value="users">
-            <div>
-                <label class="form-label" for="users-q">Recherche</label>
-                <input id="users-q" type="text" name="q" class="form-control" placeholder="Nom, email, téléphone, rôle..." value="<?= htmlspecialchars($filters['q'] ?? '') ?>">
-            </div>
-            <div>
-                <label class="form-label" for="users-sort">Trier par</label>
-                <select id="users-sort" name="sort" class="form-select">
-                    <option value="created_at" <?= ($filters['sort'] ?? '') === 'created_at' ? 'selected' : '' ?>>Date d'inscription</option>
-                    <option value="nom" <?= ($filters['sort'] ?? '') === 'nom' ? 'selected' : '' ?>>Nom</option>
-                    <option value="email" <?= ($filters['sort'] ?? '') === 'email' ? 'selected' : '' ?>>Email</option>
-                    <option value="role" <?= ($filters['sort'] ?? '') === 'role' ? 'selected' : '' ?>>Rôle</option>
-                    <option value="statut" <?= ($filters['sort'] ?? '') === 'statut' ? 'selected' : '' ?>>Statut</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label" for="users-direction">Ordre</label>
-                <select id="users-direction" name="direction" class="form-select">
-                    <option value="asc" <?= ($filters['direction'] ?? '') === 'asc' ? 'selected' : '' ?>>Croissant</option>
-                    <option value="desc" <?= ($filters['direction'] ?? 'desc') === 'desc' ? 'selected' : '' ?>>Décroissant</option>
-                </select>
-            </div>
-            <a href="index.php?page=users" class="btn btn-outline-secondary">Réinitialiser</a>
-        </form>
-
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
+            <table id="usersTable" class="table table-hover align-middle">
                 <thead>
                     <tr>
                         <th>Nom complet</th>
@@ -321,13 +302,6 @@
                 <tbody>
                 <?php if (!empty($users)): ?>
                     <?php foreach ($users as $u): ?>
-                        <?php
-                            $userName = trim(($u['prenom'] ?? '') . ' ' . ($u['nom'] ?? ''));
-                            $userLabel = $userName !== '' ? $userName : ($u['email'] ?? 'cet utilisateur');
-                            $toggleText = $u['statut'] === 'actif' ? 'Désactiver' : 'Activer';
-                            $toggleClass = $u['statut'] === 'actif' ? 'btn-warning' : 'btn-success';
-                            $toggleIcon = $u['statut'] === 'actif' ? 'fa-user-slash' : 'fa-user-check';
-                        ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($u['prenom'] . ' ' . $u['nom']) ?></strong></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
@@ -353,27 +327,11 @@
                                 <a href="index.php?page=users&action=edit&id=<?= $u['id'] ?>" class="btn btn-sm btn-primary" title="Modifier">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="index.php?page=users&action=toggle&id=<?= $u['id'] ?>"
-                                   class="btn btn-sm <?= $toggleClass ?>"
-                                   title="<?= $toggleText ?>"
-                                   data-confirm-action
-                                   data-confirm-title="Modifier le statut"
-                                   data-confirm-message="<?= htmlspecialchars($toggleText . ' le compte de ' . $userLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
-                                   data-confirm-text="<?= $toggleText ?>"
-                                   data-confirm-class="<?= $toggleClass ?>"
-                                   data-confirm-icon="<?= $toggleIcon ?>">
+                                <a href="index.php?page=users&action=toggle&id=<?= $u['id'] ?>" class="btn btn-sm <?= $u['statut'] === 'actif' ? 'btn-warning' : 'btn-success' ?>" title="<?= $u['statut'] === 'actif' ? 'Désactiver' : 'Activer' ?>" onclick="return confirm('Modifier le statut ?')">
                                     <i class="fas <?= $u['statut'] === 'actif' ? 'fa-ban' : 'fa-check' ?>"></i>
                                 </a>
                                 <?php if ($u['id'] != $_SESSION['user_id']): ?>
-                                <a href="index.php?page=users&action=delete&id=<?= $u['id'] ?>"
-                                   class="btn btn-sm btn-danger"
-                                   title="Supprimer"
-                                   data-confirm-action
-                                   data-confirm-title="Supprimer l'utilisateur"
-                                   data-confirm-message="<?= htmlspecialchars('Supprimer définitivement le compte de ' . $userLabel . ' ?', ENT_QUOTES, 'UTF-8') ?>"
-                                   data-confirm-text="Supprimer"
-                                   data-confirm-class="btn-danger"
-                                   data-confirm-icon="fa-trash">
+                                <a href="index.php?page=users&action=delete&id=<?= $u['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer définitivement cet utilisateur ?')">
                                     <i class="fas fa-trash"></i>
                                 </a>
                                 <?php endif; ?>
@@ -391,33 +349,24 @@
                 </tbody>
             </table>
         </div>
-
-        <?php if (($pagination['total_pages'] ?? 1) > 1): ?>
-            <?php $usersQuery = ['page' => 'users', 'q' => $filters['q'] ?? '', 'sort' => $filters['sort'] ?? 'created_at', 'direction' => $filters['direction'] ?? 'desc']; ?>
-            <div class="pagination-bar">
-                <div class="pagination-info">
-                    Affichage de <?= (int) ($pagination['start_item'] ?? 0) ?> à <?= (int) ($pagination['end_item'] ?? 0) ?> sur <?= (int) ($pagination['total_items'] ?? 0) ?> utilisateurs
-                </div>
-                <div class="pagination-links">
-                    <?php if (!empty($pagination['has_previous'])): ?>
-                        <a class="btn btn-outline-primary btn-sm" href="index.php?<?= htmlspecialchars(http_build_query($usersQuery + ['p' => $pagination['previous_page']])) ?>">Précédent</a>
-                    <?php endif; ?>
-                    <?php for ($i = 1; $i <= (int) $pagination['total_pages']; $i++): ?>
-                        <a class="btn btn-sm <?= $i === (int) $pagination['current_page'] ? 'btn-primary' : 'btn-outline-primary' ?>" href="index.php?<?= htmlspecialchars(http_build_query($usersQuery + ['p' => $i])) ?>"><?= $i ?></a>
-                    <?php endfor; ?>
-                    <?php if (!empty($pagination['has_next'])): ?>
-                        <a class="btn btn-outline-primary btn-sm" href="index.php?<?= htmlspecialchars(http_build_query($usersQuery + ['p' => $pagination['next_page']])) ?>">Suivant</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
     </div>
 </div>
 
-<?php include __DIR__ . '/components/dynamic_filter.php'; ?>
-<?php include __DIR__ . '/components/confirm_modal.php'; ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#usersTable').DataTable({
+            language: { 
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+            },
+            pageLength: 10,
+            order: [[5, 'desc']],
+            responsive: true
+        });
+    });
+</script>
 </body>
 </html>
-

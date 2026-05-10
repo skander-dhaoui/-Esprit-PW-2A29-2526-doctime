@@ -5,9 +5,6 @@ require_once __DIR__ . '/../models/Categorie.php';
 require_once __DIR__ . '/../models/Produit.php';
 require_once __DIR__ . '/../config/database.php';
 
-use App\Models\Categorie;
-use App\Models\Produit;
-
 class CategorieController {
 
     private Categorie $categorieModel;

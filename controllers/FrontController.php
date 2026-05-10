@@ -1,16 +1,5 @@
 <?php
-
-use App\Models\Medecin;
-use App\Models\Article;
-use App\Models\Reply;
-use App\Models\Disponibilite;
-use App\Models\User;
-use App\Models\Produit;
-use App\Models\Event;
-use App\Repositories\UserRepository;
-use App\Repositories\ArticleRepository;
-
-require_once __DIR__ . '/../config/Validator.php';
+require_once __DIR__ . '/../config/mail.php';
 
 class FrontController {
     
@@ -52,56 +41,7 @@ class FrontController {
     }
 
     public function accueilPublic(): void {
-        require_once __DIR__ . '/../models/Review.php';
-        
-        try {
-            $reviewModel = new Review();
-            $page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
-            $perPage = 6;
-            $offset = ($page - 1) * $perPage;
-            
-            // Récupérer les données
-            $reviews = $reviewModel->getApproved($perPage, $offset);
-            $totalCount = $reviewModel->count(true);
-            $totalPages = ceil($totalCount / $perPage);
-            
-            // Enrichir avec emojis
-            foreach ($reviews as &$review) {
-                $review['emojis'] = $reviewModel->getEmojis($review['id']);
-            }
-            
-            $stats = $reviewModel->getStats();
-            
-            $reviewData = [
-                'reviews' => $reviews,
-                'stats' => $stats,
-                'pagination' => [
-                    'current_page' => $page,
-                    'total_pages' => $totalPages,
-                ]
-            ];
-        } catch (\Exception $e) {
-            // En cas d'erreur, utiliser des données vides
-            $reviewData = [
-                'reviews' => [],
-                'stats' => ['total' => 0, 'average_rating' => 0, 'by_sentiment' => []],
-                'pagination' => ['current_page' => 1, 'total_pages' => 1]
-            ];
-        }
-        
-        // Préparer le contenu avec la section d'avis
         $content = $this->getPublicDashboardHTML();
-        
-        // Inclure la section d'avis
-        ob_start();
-        $stats = $reviewData['stats'];
-        $reviews = $reviewData['reviews'];
-        $pagination = $reviewData['pagination'];
-        include __DIR__ . '/../views/frontoffice/reviews_section.php';
-        $reviewsContent = ob_get_clean();
-        
-        $content .= $reviewsContent;
-        
         $this->renderPublicView('Accueil', $content);
     }
 
@@ -127,164 +67,44 @@ class FrontController {
     }
 
     public function listeMedecins(): void {
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare(
-            "SELECT m.*, u.prenom, u.nom, u.email FROM medecins m
-             JOIN users u ON m.user_id = u.id WHERE u.statut = 'actif' ORDER BY u.nom ASC"
-        );
-        $stmt->execute();
-        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        require_once __DIR__ . '/../models/Medecin.php';
+        $medecinModel = new Medecin();
+        $medecins = $medecinModel->getAllWithUsers();
 
         if (empty($medecins)) {
-            $content = '<div class="alert alert-info py-5 text-center shadow-sm" style="border-radius: 15px;"><i class="fas fa-user-md fa-4x text-muted mb-3"></i><br><h4 class="text-muted">Aucun médecin disponible pour le moment.</h4></div>';
+            $content = '<div class="alert alert-info">Aucun médecin disponible pour le moment.</div>';
         } else {
             $content = '
-            <style>
-                .medecin-grid { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; padding: 20px 0; }
-                .medecin-card {
-                    background: rgba(255, 255, 255, 0.95);
-                    backdrop-filter: blur(10px);
-                    border-radius: 20px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-                    width: 320px;
-                    overflow: hidden;
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    position: relative;
-                }
-                .medecin-card:hover {
-                    transform: translateY(-10px);
-                    box-shadow: 0 15px 40px rgba(42, 127, 170, 0.2);
-                }
-                .medecin-avatar-wrapper {
-                    background: linear-gradient(135deg, #2A7FAA, #4CAF50);
-                    height: 120px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: flex-end;
-                    position: relative;
-                }
-                .medecin-avatar {
-                    width: 90px;
-                    height: 90px;
-                    background: white;
-                    border-radius: 50%;
-                    border: 4px solid white;
-                    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 2.5rem;
-                    color: #2A7FAA;
-                    margin-bottom: -45px;
-                    font-weight: bold;
-                }
-                .medecin-info {
-                    padding: 60px 25px 30px;
-                    text-align: center;
-                }
-                .medecin-name {
-                    font-size: 1.3rem;
-                    font-weight: 800;
-                    color: #2c3e50;
-                    margin-bottom: 8px;
-                }
-                .medecin-specialty {
-                    background: #e3f2fd;
-                    color: #1976d2;
-                    padding: 6px 15px;
-                    border-radius: 20px;
-                    font-size: 0.85rem;
-                    font-weight: 700;
-                    display: inline-block;
-                    margin-bottom: 20px;
-                }
-                .medecin-contact {
-                    color: #6c757d;
-                    font-size: 0.95rem;
-                    line-height: 1.6;
-                    margin-bottom: 25px;
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border-radius: 12px;
-                }
-                .medecin-contact div {
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 8px;
-                }
-                .medecin-contact div:last-child {
-                    margin-bottom: 0;
-                }
-                .medecin-contact i {
-                    width: 25px;
-                    color: #4CAF50;
-                    font-size: 1rem;
-                }
-                .btn-view-profile {
-                    background: linear-gradient(135deg, #2A7FAA, #175476);
-                    color: white;
-                    border: none;
-                    border-radius: 25px;
-                    padding: 12px 25px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    font-size: 0.85rem;
-                    letter-spacing: 1px;
-                    transition: all 0.3s;
-                    text-decoration: none;
-                    display: inline-block;
-                    width: 100%;
-                }
-                .btn-view-profile:hover {
-                    background: linear-gradient(135deg, #175476, #0d3851);
-                    color: white;
-                    box-shadow: 0 5px 15px rgba(42, 127, 170, 0.4);
-                }
-                .page-header {
-                    text-align: center;
-                    margin-bottom: 3rem;
-                }
-                .page-header h2 {
-                    color: #2c3e50;
-                    font-weight: 800;
-                    font-size: 2.5rem;
-                }
-                .page-header p {
-                    color: #6c757d;
-                    font-size: 1.2rem;
-                }
-            </style>
-            <div class="page-header">
-                <h2><i class="fas fa-user-md text-primary me-3"></i>Nos Médecins Spécialistes</h2>
-                <p>Découvrez notre équipe de professionnels de santé à votre écoute</p>
-            </div>
-            <div class="medecin-grid">';
-            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="medecinsTable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom complet</th>
+                            <th>Email</th>
+                            <th>Spécialité</th>
+                            <th>Téléphone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
             foreach ($medecins as $medecin) {
                 $userId = $medecin['user_id'] ?? $medecin['id'] ?? 0;
-                $initialKey = strtoupper(substr($medecin['prenom'], 0, 1) . substr($medecin['nom'], 0, 1));
-                
                 $content .= '
-                <div class="medecin-card">
-                    <div class="medecin-avatar-wrapper">
-                        <div class="medecin-avatar">
-                            ' . htmlspecialchars($initialKey) . '
-                        </div>
-                    </div>
-                    <div class="medecin-info">
-                        <h3 class="medecin-name">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
-                        <div class="medecin-specialty">' . htmlspecialchars($medecin['specialite']) . '</div>
-                        <div class="medecin-contact text-start">
-                            <div><i class="fas fa-envelope"></i> ' . htmlspecialchars($medecin['email']) . '</div>
-                            <div><i class="fas fa-phone-alt"></i> ' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</div>
-                        </div>
-                        <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn-view-profile">
-                            <i class="fas fa-user-circle me-2"></i> Voir le profil
-                        </a>
-                    </div>
-                </div>';
+                    <tr>
+                        <td>' . htmlspecialchars($userId) . '</td>
+                        <td>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</td>
+                        <td>' . htmlspecialchars($medecin['email']) . '</td>
+                        <td>' . htmlspecialchars($medecin['specialite']) . '</td>
+                        <td>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</td>
+                        <td>
+                            <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> Voir
+                            </a>
+                        </td>
+                    </tr>';
             }
-            $content .= '</div>';
+            $content .= '</tbody></table></div>';
         }
         $this->renderTemporaryView('Nos Médecins', $content);
     }
@@ -299,191 +119,35 @@ class FrontController {
             return;
         }
 
-        $avatarText = strtoupper(substr($medecin['prenom'] ?? 'M', 0, 1) . substr($medecin['nom'] ?? 'D', 0, 1));
-        $specialite = htmlspecialchars($medecin['specialite'] ?? 'Généraliste');
-
-        $userRole = $_SESSION['user_role'] ?? '';
-        $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
-
         $content = '
-        <style>
-            .doctor-profile-header {
-                background: linear-gradient(135deg, rgba(42, 127, 170, 0.1), rgba(76, 175, 80, 0.05));
-                border-radius: 20px;
-                padding: 40px;
-                margin-bottom: 30px;
-                display: flex;
-                align-items: center;
-                gap: 30px;
-                position: relative;
-                overflow: hidden;
-            }
-            .doctor-profile-avatar {
-                width: 120px;
-                height: 120px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #fff;
-                font-size: 48px;
-                font-weight: 700;
-                box-shadow: 0 10px 20px rgba(42, 127, 170, 0.2);
-                border: 4px solid #fff;
-                flex-shrink: 0;
-            }
-            .doctor-profile-info h2 {
-                color: #0f2b3d;
-                font-weight: 700;
-                margin-bottom: 5px;
-                font-size: 32px;
-            }
-            .doctor-profile-badge {
-                display: inline-flex;
-                align-items: center;
-                padding: 6px 15px;
-                background: rgba(42, 127, 170, 0.1);
-                color: #2A7FAA;
-                border-radius: 20px;
-                font-size: 14px;
-                font-weight: 600;
-                margin-bottom: 15px;
-            }
-            .doctor-details-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-            .detail-card {
-                background: #fff;
-                padding: 20px;
-                border-radius: 16px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-                border: 1px solid rgba(0,0,0,0.03);
-                display: flex;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            .detail-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 10px;
-                background: rgba(76, 175, 80, 0.1);
-                color: #4CAF50;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 18px;
-                flex-shrink: 0;
-            }
-            .detail-content h4 {
-                font-size: 12px;
-                text-transform: uppercase;
-                color: #6c757d;
-                font-weight: 700;
-                margin-bottom: 4px;
-                letter-spacing: 0.5px;
-            }
-            .detail-content p {
-                font-size: 15px;
-                color: #2c3e50;
-                font-weight: 500;
-                margin: 0;
-            }
-            .action-buttons {
-                display: flex;
-                gap: 15px;
-                justify-content: center;
-                margin-top: 30px;
-            }
-            .btn-appointment {
-                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
-                color: #fff;
-                padding: 12px 30px;
-                border-radius: 50px;
-                font-weight: 600;
-                text-decoration: none;
-                transition: all 0.3s;
-                border: none;
-                box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .btn-appointment:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
-                color: #fff;
-            }
-            .btn-back-profile {
-                background: #fff;
-                color: #6c757d;
-                padding: 12px 30px;
-                border-radius: 50px;
-                font-weight: 600;
-                text-decoration: none;
-                transition: all 0.3s;
-                border: 2px solid #e9ecef;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .btn-back-profile:hover {
-                background: #f8f9fa;
-                border-color: #dee2e6;
-                color: #495057;
-            }
-        </style>
-        
-        <div class="container mt-5 mb-5">
-            <div class="doctor-profile-header">
-                <div class="doctor-profile-avatar">' . $avatarText . '</div>
-                <div class="doctor-profile-info">
-                    <div class="doctor-profile-badge"><i class="fas fa-certificate me-2"></i> Professionnel de santé vérifié</div>
-                    <h2>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h2>
-                    <p class="text-muted mb-0"><i class="fas fa-stethoscope me-1"></i> ' . $specialite . '</p>
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
                 </div>
-            </div>
-            
-            <div class="doctor-details-grid">
-                <div class="detail-card">
-                    <div class="detail-icon" style="background:rgba(42, 127, 170, 0.1);color:#2A7FAA"><i class="fas fa-envelope"></i></div>
-                    <div class="detail-content">
-                        <h4>Email</h4>
-                        <p>' . htmlspecialchars($medecin['email']) . '</p>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-stethoscope"></i> Spécialité:</strong> ' . htmlspecialchars($medecin['specialite']) . '</p>
+                            <p><strong><i class="fas fa-envelope"></i> Email:</strong> ' . htmlspecialchars($medecin['email']) . '</p>
+                            <p><strong><i class="fas fa-phone"></i> Téléphone:</strong> ' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-map-marker-alt"></i> Adresse cabinet:</strong> ' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Non renseignée') . '</p>
+                            <p><strong><i class="fas fa-euro-sign"></i> Tarif:</strong> ' . ($medecin['consultation_prix'] ?? '50') . ' €</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <a href="index.php?page=prendre_rendez_vous&id=' . $id . '" class="btn btn-success btn-lg">
+                            <i class="fas fa-calendar-check"></i> Prendre rendez-vous
+                        </a>
+                        <a href="index.php?page=medecins" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Retour à la liste
+                        </a>
                     </div>
                 </div>
-                <div class="detail-card">
-                    <div class="detail-icon" style="background:rgba(76, 175, 80, 0.1);color:#4CAF50"><i class="fas fa-phone"></i></div>
-                    <div class="detail-content">
-                        <h4>Téléphone</h4>
-                        <p>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
-                    </div>
-                </div>
-                <div class="detail-card">
-                    <div class="detail-icon" style="background:rgba(255, 152, 0, 0.1);color:#FF9800"><i class="fas fa-map-marker-alt"></i></div>
-                    <div class="detail-content">
-                        <h4>Cabinet</h4>
-                        <p>' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Lieu non spécifié') . '</p>
-                    </div>
-                </div>
-                <div class="detail-card">
-                    <div class="detail-icon" style="background:rgba(156, 39, 176, 0.1);color:#9C27B0"><i class="fas fa-euro-sign"></i></div>
-                    <div class="detail-content">
-                        <h4>Tarif consultation</h4>
-                        <p>' . ($medecin['consultation_prix'] ?? 'Sur devis') . ($medecin['consultation_prix'] ? ' €' : '') . '</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="action-buttons">
-                <a href="index.php?page=medecins" class="btn-back-profile"><i class="fas fa-arrow-left"></i> Retour à la liste</a>
-                ' . ($showAppointmentBtn ? '<a href="index.php?page=prendre_rendez_vous&id=' . $id . '" class="btn-appointment"><i class="fas fa-calendar-check"></i> Prendre rendez-vous</a>' : '') . '
-            </div>
-        </div>';
-        $this->renderPublicView('Détail du médecin', $content);
+            </div>';
+        $this->renderTemporaryView('Détail du médecin', $content);
     }
 
     // =============================================
@@ -564,7 +228,7 @@ class FrontController {
                 $addButton = '
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2><i class="fas fa-newspaper"></i> Nos articles</h2>
-                    <a href="index.php?page=admin_article_create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
+                    <a href="index.php?page=articles_admin&action=create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
                         <i class="fas fa-plus"></i> Nouvel article
                     </a>
                 </div>';
@@ -587,7 +251,7 @@ class FrontController {
                     if ($canEdit || $canDelete) {
                         $crudButtons = '
                         <div style="position:absolute;top:15px;right:15px;display:flex;gap:8px;z-index:100;">
-                            ' . ($canEdit ? '<a href="index.php?page=admin_article_edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
+                            ' . ($canEdit ? '<a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
                             ' . ($canDelete ? '<button type="button" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
                         </div>';
                     }
@@ -640,10 +304,32 @@ class FrontController {
         $disponibiliteModel = new Disponibilite();
         $medecinModel = new Medecin();
         $medecins = $medecinModel->getAllWithUsers();
-        $filters = [];
-        if (!empty($_GET['medecin_id'])) $filters['medecin_id'] = (int)$_GET['medecin_id'];
-        if (!empty($_GET['jour'])) $filters['jour'] = $_GET['jour'];
-        $disponibilites = $disponibiliteModel->getDisponibilitesFront($filters);
+        $medecinId = !empty($_GET['medecin_id']) ? (int)$_GET['medecin_id'] : null;
+        $jourFiltre = !empty($_GET['jour']) ? $_GET['jour'] : null;
+        try {
+            $db = Database::getInstance()->getConnection();
+            $sql = "SELECT d.*, CONCAT(u.prenom, ' ', u.nom) AS medecin_nom, m.specialite
+                    FROM disponibilites d
+                    JOIN users u ON d.medecin_id = u.id
+                    LEFT JOIN medecins m ON d.medecin_id = m.user_id
+                    WHERE d.actif = 1";
+            $params = [];
+            if ($medecinId) {
+                $sql .= ' AND d.medecin_id = :medecin_id';
+                $params[':medecin_id'] = $medecinId;
+            }
+            if ($jourFiltre) {
+                $sql .= ' AND d.jour_semaine = :jour';
+                $params[':jour'] = $jourFiltre;
+            }
+            $sql .= " ORDER BY FIELD(d.jour_semaine,'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'), d.heure_debut ASC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $disponibilites = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur patientDisponibilites - ' . $e->getMessage());
+            $disponibilites = [];
+        }
         $content = $this->getPatientDisponibilitesHTML($disponibilites, $medecins);
         $this->renderPublicView('Disponibilités des médecins', $content);
     }
@@ -652,15 +338,9 @@ class FrontController {
         $this->requireLogin();
         $this->requireMedecin();
         require_once __DIR__ . '/../models/Disponibilite.php';
+        $disponibiliteModel = new Disponibilite();
         $medecinId = (int)$_SESSION['user_id'];
-        
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare(
-            "SELECT * FROM disponibilites WHERE medecin_id = :medecin_id ORDER BY jour_semaine ASC, heure_debut ASC"
-        );
-        $stmt->execute([':medecin_id' => $medecinId]);
-        $dispos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        
+        $dispos = $disponibiliteModel->getByMedecin($medecinId);
         $content = $this->getMedecinDisponibilitesHTML($dispos);
         $this->renderPublicView('Mes disponibilités', $content);
     }
@@ -672,56 +352,16 @@ class FrontController {
             header('Location: index.php?page=medecin_disponibilites');
             exit;
         }
-
-        // ========== RÉCUPÉRATION ET NETTOYAGE ==========
-        $jour_semaine = trim($_POST['jour_semaine'] ?? '');
-        $heure_debut  = trim($_POST['heure_debut'] ?? '');
-        $heure_fin    = trim($_POST['heure_fin'] ?? '');
-        $medecinId    = (int)$_SESSION['user_id'];
-
-        // ========== VALIDATION AVEC VALIDATOR ==========
-        $validator = new Validator();
-        $validator
-            ->required('jour_semaine', $jour_semaine, 'Jour de la semaine')
-            ->required('heure_debut', $heure_debut, 'Heure de début')
-            ->required('heure_fin', $heure_fin, 'Heure de fin');
-
-        $errors = $validator->getErrors();
-
-        // ========== VALIDATIONS PERSONNALISÉES ==========
-        // Vérifier format des heures (HH:MM)
-        if (empty($errors['heure_debut']) && !preg_match('/^\d{2}:\d{2}$/', $heure_debut)) {
-            $errors['heure_debut'] = 'Format d\'heure invalide (HH:MM)';
-        }
-        if (empty($errors['heure_fin']) && !preg_match('/^\d{2}:\d{2}$/', $heure_fin)) {
-            $errors['heure_fin'] = 'Format d\'heure invalide (HH:MM)';
-        }
-
-        // Vérifier que heure_fin > heure_debut
-        if (empty($errors['heure_debut']) && empty($errors['heure_fin']) && $heure_fin <= $heure_debut) {
-            $errors['heure_fin'] = 'L\'heure de fin doit être après l\'heure de début';
-        }
-
-        // Si erreurs
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old']    = $_POST;
-            header('Location: index.php?page=disponibilites&action=create');
-            exit;
-        }
-
-        // ========== CRÉATION ==========
         require_once __DIR__ . '/../models/Disponibilite.php';
         $data = [
-            'medecin_id'   => $medecinId,
-            'jour_semaine' => $jour_semaine,
-            'heure_debut'  => $heure_debut,
-            'heure_fin'    => $heure_fin,
+            'medecin_id'   => (int)$_SESSION['user_id'],
+            'jour_semaine' => $_POST['jour_semaine'],
+            'heure_debut'  => $_POST['heure_debut'],
+            'heure_fin'    => $_POST['heure_fin'],
             'actif'        => 1
         ];
         $disponibiliteModel = new Disponibilite();
         $result = $disponibiliteModel->create($data);
-        
         $_SESSION['flash'] = $result
             ? ['type' => 'success', 'message' => 'Disponibilité ajoutée avec succès.']
             : ['type' => 'error',   'message' => 'Erreur lors de l\'ajout.'];
@@ -787,8 +427,6 @@ class FrontController {
                 .main-content { padding: 20px; }
                 .top-bar { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             </style>
-            <script src="assets/js/theme-mode.js"></script>
-            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <div class="container-fluid">
@@ -801,7 +439,6 @@ class FrontController {
                             <a class="nav-link <?= $activePage == 'dashboard'      ? 'active' : '' ?>" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                             <a class="nav-link <?= $activePage == 'users'          ? 'active' : '' ?>" href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
                             <a class="nav-link <?= $activePage == 'patients'       ? 'active' : '' ?>" href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-                            <a class="nav-link <?= $activePage == 'avis'           ? 'active' : '' ?>" href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
                             <a class="nav-link <?= $activePage == 'medecins'       ? 'active' : '' ?>" href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
                             <a class="nav-link <?= $activePage == 'disponibilites' ? 'active' : '' ?>" href="index.php?page=disponibilites_admin"><i class="fas fa-clock"></i> Disponibilités</a>
                             <a class="nav-link <?= $activePage == 'rendezvous'     ? 'active' : '' ?>" href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
@@ -846,8 +483,6 @@ class FrontController {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
-            <script src="assets/js/theme-mode.js"></script>
-            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -910,7 +545,7 @@ class FrontController {
         $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']);
         $articleButtons = $isAuthor ? '
         <div class="mb-3 d-flex gap-2">
-            <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
+            <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
             <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer mon article</button>
             <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm ms-auto"><i class="fas fa-arrow-left"></i> Retour au blog</a>
         </div>'
@@ -1112,7 +747,7 @@ JS;
         <div class="row"><div class="col-md-12">
             <div class="mb-3">
                 <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Retour</a>
-                <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
+                <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
                 <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer</button>
             </div>
             <div class="article-header">
@@ -1319,7 +954,7 @@ JS;
         }
         function closeDeleteModal() { document.getElementById("deleteModal").classList.remove("show"); currentDeleteId = null; }
         document.getElementById("confirmDeleteBtn").onclick = function() {
-            if (currentDeleteId) window.location.href = "index.php?page=admin_article_delete&id=" + currentDeleteId;
+            if (currentDeleteId) window.location.href = "index.php?page=articles_admin&action=delete&id=" + currentDeleteId;
             closeDeleteModal();
         };
         document.getElementById("deleteModal").onclick = function(e) { if (e.target === this) closeDeleteModal(); };
@@ -1545,19 +1180,18 @@ JS;
         $contenuValue = $isEdit ? htmlspecialchars($article['contenu'] ?? '') : htmlspecialchars($oldData['contenu'] ?? '');
         $imageValue   = $isEdit ? htmlspecialchars($article['image']   ?? '') : '';
         $buttonText   = $isEdit ? 'Mettre à jour' : 'Publier';
-        
         $html = '
         <div style="background:white;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
             <h3 style="margin-bottom:25px;color:#2A7FAA;">' . htmlspecialchars($title) . '</h3>
             ' . (isset($errors['general']) ? '<div style="background:#ffe6e6;border-left:4px solid #dc3545;padding:12px;border-radius:8px;margin-bottom:20px;color:#dc3545;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['general']) . '</div>' : '') . '
-            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data" id="frontArticleForm">
+            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data">
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Titre <span style="color:red;">*</span></label>
                     <input type="text" name="titre" value="' . $titreValue . '" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['titre']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:15px;">
                     ' . (isset($errors['titre']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['titre']) . '</div>' : '') . '
                 </div>
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image de couverture (optionnel)</label>
+                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image (optionnel)</label>
                     ' . ($imageValue ? '<div style="margin-bottom:10px;"><img src="' . $imageValue . '" style="max-width:200px;border-radius:8px;"></div>' : '') . '
                     <input type="file" name="article_image" accept="image/*" style="width:100%;padding:8px;border:1px solid ' . (isset($errors['image']) ? '#dc3545' : '#ddd') . ';border-radius:8px;">
                     <small style="color:#999;">Formats acceptés : JPG, PNG, GIF. Max 2 Mo.</small>
@@ -1566,164 +1200,23 @@ JS;
                 </div>
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Contenu <span style="color:red;">*</span></label>
-                    
-                    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
-                        <button type="button" id="emojiBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
-                            <i class="fas fa-smile me-1"></i>Emoji
-                        </button>
-                        <button type="button" id="imgBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
-                            <i class="fas fa-image me-1"></i>Image (dans le texte)
-                        </button>
-                        <input type="file" id="imgUpload" accept="image/*" style="display:none">
-                        <small class="text-muted" style="flex-basis:100%">Cliquez sur les boutons pour ajouter du contenu enrichi au texte</small>
-                    </div>
-                    
-                    <!-- Emoji Picker -->
-                    <div id="emojiPicker" style="display:none;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;max-height:300px;overflow-y:auto">
-                        <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px"></div>
-                    </div>
-                    
-                    <!-- Image Preview -->
-                    <div id="imgPreview" style="display:none;margin-bottom:12px">
-                        <img id="imgPreviewImg" src="" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #dee2e6">
-                        <button type="button" id="removeImg" class="btn btn-sm btn-danger mt-2" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;">
-                            <i class="fas fa-trash me-1"></i>Supprimer
-                        </button>
-                    </div>
-
-                    <!-- Quill Editor -->
-                    <div id="editor-container" style="background:white;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;min-height:300px"></div>
-                    <input type="hidden" id="contenu" name="contenu" value="' . $contenuValue . '">
-                    <small style="color:#999;display:block;margin-top:8px;">✨ Texte • 🖼️ Images • 😊 Emoji • 📝 Formatage riche</small>
-
+                    <textarea name="contenu" rows="12" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:14px;resize:vertical;">' . $contenuValue . '</textarea>
+                    <small style="color:#999;">Vous pouvez utiliser du HTML pour formater votre contenu.</small>
                     ' . (isset($errors['contenu']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['contenu']) . '</div>' : '') . '
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:20px;">
                     <a href="index.php?page=blog_public" style="background:#6c757d;color:white;padding:10px 25px;border-radius:8px;text-decoration:none;"><i class="fas fa-arrow-left"></i> Annuler</a>
-                    <button type="submit" id="submitBtn" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
+                    <button type="submit" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
                 </div>
             </form>
         </div>';
-        
-        $html .= <<<JS
-        <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-        <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-        <style>
-            /* Quill overrides */
-            .ql-toolbar.ql-snow { border: 1px solid #ddd; border-top-left-radius: 8px; border-top-right-radius: 8px; background: #fafafa; }
-            .ql-container.ql-snow { border: 1px solid #ddd; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 15px; font-family: inherit; }
-        </style>
+        $html .= <<<'JS'
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // === INITIALIZE QUILL EDITOR ===
-            const quill = new Quill('#editor-container', {
-                theme: 'snow',
-                placeholder: 'Rédigez votre article ici...',
-                modules: {
-                    toolbar: [
-                        ['bold', 'italic', 'underline', 'strike'],
-                        ['blockquote', 'code-block'],
-                        [{ 'header': 1 }, { 'header': 2 }],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        ['link', 'image'],
-                        ['clean']
-                    ]
-                }
-            });
-
-            // Load existing content
-            const existingContent = document.getElementById('contenu').value;
-            if (existingContent) {
-                try {
-                    quill.setContents(JSON.parse(existingContent), 'api');
-                } catch(e) {
-                    quill.root.innerHTML = existingContent;
-                }
-            }
-
-            // Update hidden field on change
-            quill.on('text-change', function() {
-                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
-            });
-
-            // === EMOJI PICKER ===
-            const emojis = ['😀', '😂', '🤣', '😃', '😄', '😁', '😆', '😅', '🤭', '😉', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤎', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '👍', '👎', '👋', '👊', '✊', '🤚', '🖐️', '✋', '💪', '🦾', '🦿', '🦴', '👀', '👁️'];
-
-            const emojiBtn = document.getElementById('emojiBtn');
-            const emojiPicker = document.getElementById('emojiPicker');
-            const emojiGrid = document.getElementById('emojiGrid');
-
-            emojis.forEach(emoji => {
-                const span = document.createElement('span');
-                span.textContent = emoji;
-                span.style.cursor = 'pointer';
-                span.style.fontSize = '24px';
-                span.style.padding = '8px';
-                span.style.borderRadius = '4px';
-                span.style.transition = 'all 0.2s';
-                span.onmouseover = () => span.style.background = '#e0e0e0';
-                span.onmouseout = () => span.style.background = 'transparent';
-                span.onclick = () => {
-                    quill.insertText(quill.getSelection()?.index || quill.getLength(), emoji);
-                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + emoji.length);
-                };
-                emojiGrid.appendChild(span);
-            });
-
-            emojiBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'grid' : 'none';
-            });
-
-            // === IMAGE IN TEXT ===
-            const imgBtn = document.getElementById('imgBtn');
-            const imgUpload = document.getElementById('imgUpload');
-            const imgPreview = document.getElementById('imgPreview');
-            const imgPreviewImg = document.getElementById('imgPreviewImg');
-            const removeImg = document.getElementById('removeImg');
-
-            imgBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                imgUpload.click();
-            });
-
-            imgUpload.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('L\'image doit faire moins de 5MB');
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const imageDataUrl = event.target.result;
-                    const index = quill.getSelection()?.index || quill.getLength();
-                    quill.insertEmbed(index, 'image', imageDataUrl);
-                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + 1);
-                    imgPreviewImg.src = imageDataUrl;
-                    imgPreview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            });
-
-            removeImg.addEventListener('click', (e) => {
-                e.preventDefault();
-                imgPreview.style.display = 'none';
-                imgPreviewImg.src = '';
-                imgUpload.value = '';
-            });
-
-            // === FORM VALIDATION & SUBMISSION ===
-            document.getElementById('frontArticleForm').addEventListener('submit', function(e) {
-                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
-            });
-
-            document.querySelectorAll('input[type=text], textarea').forEach(function(field) {
-                field.addEventListener('input', function() {
-                    this.style.borderColor = '#ddd';
-                    var err = this.parentElement.querySelector('[style*=dc3545]');
-                    if (err) err.style.display = 'none';
-                });
+        document.querySelectorAll("input[type=text], textarea").forEach(function(field) {
+            field.addEventListener("input", function() {
+                this.style.borderColor = "#ddd";
+                var err = this.parentElement.querySelector("[style*=dc3545]");
+                if (err) err.style.display = "none";
             });
         });
         </script>
@@ -1736,15 +1229,11 @@ JS;
     // =============================================
 
     public function listeEvenements(): void {
-        $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare(
-            "SELECT * FROM events WHERE status = 'a venir' OR status = 'en cours' ORDER BY date_debut ASC"
-        );
-        $stmt->execute();
-        $events = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $eventRepo = new \App\Repositories\EventRepository();
-        $upcomingEvents = $eventRepo->getUpcoming();
-        $featuredEvents = $eventRepo->getFeatured();
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $events = $eventModel->getAll();
+        $upcomingEvents = $eventModel->getUpcoming();
+        $featuredEvents = $eventModel->getFeatured();
         
         $isLoggedIn = isset($_SESSION['user_id']);
         
@@ -1873,122 +1362,6 @@ JS;
             </div>
         </footer>
 
-        <!-- CHATBOT FLOTTANT -->
-        <div id="chatbotWidget" style="
-            position: fixed; bottom: 30px; right: 30px; width: 380px; z-index: 9999;
-            max-height: 80vh; display: flex; flex-direction: column;
-            box-shadow: 0 5px 40px rgba(0,0,0,0.16); border-radius: 12px; overflow: hidden;
-            background: white; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
-        ">
-            <div style="
-                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
-                padding: 16px; cursor: pointer; display: flex; justify-content: space-between;
-                align-items: center;
-            " onclick="toggleChatbot()">
-                <div>
-                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">💬 Assistant Médical</h3>
-                    <small style="opacity: 0.9;">Posez vos questions</small>
-                </div>
-                <button style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" onclick="closeChatbot(event)">✕</button>
-            </div>
-            <div id="chatMessages" style="
-                flex: 1; overflow-y: auto; padding: 15px; min-height: 300px;
-                background: #f8f9fa;
-            ">
-                <div style="
-                    background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
-                    padding: 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%;
-                ">
-                    <p style="margin: 0; font-size: 14px;">Bienvenue! 👋 Je suis votre assistant pour les événements médicaux. Comment puis-je vous aider?</p>
-                </div>
-            </div>
-            <div style="padding: 12px; border-top: 1px solid #e0e0e0;">
-                <form onsubmit="sendMessage(event)" style="display: flex; gap: 8px;">
-                    <input type="text" id="userInput" placeholder="Posez votre question..." style="
-                        flex: 1; border: 1px solid #ddd; border-radius: 20px;
-                        padding: 10px 15px; font-size: 14px; outline: none;
-                    " />
-                    <button type="submit" style="
-                        background: linear-gradient(135deg, #2A7FAA, #4CAF50); color: white;
-                        border: none; border-radius: 50%; width: 36px; height: 36px;
-                        cursor: pointer; font-size: 16px;
-                    ">➤</button>
-                </form>
-            </div>
-        </div>
-
-        <script>
-const chatbotWidget = document.getElementById("chatbotWidget");
-const chatMessages = document.getElementById("chatMessages");
-const userInput = document.getElementById("userInput");
-
-function toggleChatbot() {
-    chatbotWidget.style.opacity = chatbotWidget.classList.contains("closed") ? "1" : "0.1";
-    chatbotWidget.classList.toggle("closed");
-    chatMessages.style.display = chatbotWidget.classList.contains("closed") ? "none" : "flex";
-}
-
-function closeChatbot(e) {
-    e.stopPropagation();
-    chatbotWidget.style.display = "none";
-}
-
-function sendMessage(e) {
-    e.preventDefault();
-    if (!userInput.value.trim()) return;
-    
-    const userMsg = document.createElement("div");
-    userMsg.style.cssText = "background: #2A7FAA; color: white; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; margin-left: auto; word-break: break-word;";
-    userMsg.textContent = userInput.value;
-    chatMessages.appendChild(userMsg);
-    
-    const response = getResponse(userInput.value);
-    
-    setTimeout(() => {
-        const botMsg = document.createElement("div");
-        botMsg.style.cssText = "background: #e8f5e9; color: #333; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; word-break: break-word;";
-        botMsg.textContent = response;
-        chatMessages.appendChild(botMsg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, 500);
-    
-    userInput.value = "";
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function getResponse(message) {
-    const lower = message.toLowerCase();
-    const responses = {
-        "prix|cout|tarif": "Prix entre 25 DT et 200 DT selon les evenements!",
-        "lieu|adresse|ou": "Nous organisons a Hopital Europeen, Espace Sante, Centre International!",
-        "date|quand": "Cardiologie 15/06, Bien-etre 10/07, Formation 20-22/09, Pediatrie 12-14/11!",
-        "inscription|participer": "Cliquez sur Plus de details pour vous inscrire!",
-        "cardio": "Conference Cardiologie 15/06/2026 - 150 DT!",
-        "stress": "Atelier Bien-etre 10/07/2026 - 25 DT!",
-        "pediatrie": "Congres Pediatrie 12-14/11/2026 - 200 DT!",
-        "formation": "Formation Continue 20-22/09/2026 - 150 DT!",
-        "default": "Posez une autre question ou consultez nos evenements!"
-    };
-    
-    for (const [keyword, response] of Object.entries(responses)) {
-        const keywords = keyword.split("|");
-        for (const kw of keywords) {
-            if (lower.includes(kw)) {
-                return response;
-            }
-        }
-    }
-    
-    return responses["default"];
-}
-
-// Afficher le chatbot au chargement (fermé par défaut)
-document.addEventListener("DOMContentLoaded", () => {
-    chatbotWidget.classList.add("closed");
-    chatMessages.style.display = "none";
-});
-</script>
-
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         ';
 
@@ -1996,7 +1369,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     public function detailEvenement($id = null): void {
-        $eventRepo = new \App\Repositories\EventRepository();
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
         
         // Get slug from URL parameter
         $slug = isset($_GET['slug']) ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
@@ -2004,9 +1378,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Try to fetch event by slug first, then by ID
         $event = null;
         if ($slug) {
-            $event = $eventRepo->getBySlug($slug);
+            $event = $eventModel->getBySlug($slug);
         } elseif ($id) {
-            $event = $eventRepo->getById((int)$id);
+            $event = $eventModel->getById($id);
         }
         
         if (!$event) {
@@ -2239,7 +1613,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 fetch("index.php?page=event_register", {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    credentials: "include",
                     body: "event_id=" + eventId
                 })
                 .then(response => response.json())
@@ -2286,11 +1659,14 @@ document.addEventListener("DOMContentLoaded", () => {
             exit;
         }
         
-        $eventRepo = new \App\Repositories\EventRepository();
-        $participationRepo = new \App\Repositories\ParticipationRepository();
+        require_once __DIR__ . '/../models/Event.php';
+        require_once __DIR__ . '/../models/Participation.php';
+        
+        $eventModel = new Event();
+        $participationModel = new Participation();
         
         // Check if event exists
-        $event = $eventRepo->getById($eventId);
+        $event = $eventModel->getById($eventId);
         if (!$event) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
@@ -2298,7 +1674,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // Check if user is already registered
-        $alreadyRegistered = $participationRepo->checkUserEvent($userId, $eventId);
+        $alreadyRegistered = $participationModel->checkUserEvent($userId, $eventId);
         if ($alreadyRegistered) {
             http_response_code(409);
             echo json_encode(['success' => false, 'message' => 'Vous êtes déjà inscrit à cet événement.']);
@@ -2306,7 +1682,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         // Register user
-        $result = $participationRepo->create([
+        $result = $participationModel->create([
             'event_id' => $eventId,
             'user_id' => $userId,
             'statut' => 'inscrit'
@@ -2328,7 +1704,7 @@ document.addEventListener("DOMContentLoaded", () => {
     public function listSponsors(): void {
         require_once __DIR__ . '/../models/Sponsor.php';
         $sponsorModel = new Sponsor();
-        $sponsors = $sponsorModel->findAll();
+        $sponsors = $sponsorModel->getAll(0, 100, 'actif');
         
         // Map niveau enum values to French display names
         $levelMap = [
@@ -2595,44 +1971,84 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             </form>
         </div>';
-        $this->renderPublicView('Prendre rendez-vous', $content);
+        $this->renderPublicView('Prendre rendez-vous', $content . $this->getRendezVousChatbotHTML());
     }
 
     public function mesRendezVous(): void {
         $this->requireLogin();
         $userRole = $_SESSION['user_role'] ?? '';
         $userId   = (int)$_SESSION['user_id'];
+        $statut   = trim((string)($_GET['statut'] ?? ''));
+        $date     = trim((string)($_GET['date'] ?? ''));
+        $search   = trim((string)($_GET['search'] ?? ''));
         require_once __DIR__ . '/../models/RendezVous.php';
-        
-        $db = Database::getInstance()->getConnection();
-        $rendezVous = [];
-        
+        $rendezVousModel = new RendezVous();
         if ($userRole === 'medecin') {
-            // Get rendez-vous for medecin (by medecin_id)
-            $stmt = $db->prepare(
-                "SELECT * FROM rendez_vous WHERE medecin_id = :medecin_id ORDER BY date_rendezvous DESC"
-            );
-            $stmt->execute([':medecin_id' => $userId]);
-            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $rendezVous = $rendezVousModel->getByMedecin($userId, $statut !== '' ? $statut : null, $date !== '' ? $date : null);
             $title = 'Mes consultations';
         } elseif ($userRole === 'patient') {
-            // Get rendez-vous for patient (by patient_id)
-            $stmt = $db->prepare(
-                "SELECT * FROM rendez_vous WHERE patient_id = :patient_id ORDER BY date_rendezvous DESC"
-            );
-            $stmt->execute([':patient_id' => $userId]);
-            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $rendezVous = $rendezVousModel->getByPatient($userId, $statut !== '' ? $statut : null, $date !== '' ? $date : null);
             $title = 'Mes rendez-vous';
+
+            // Notification in-app: un slot libéré vous a été attribué depuis la liste d'attente.
+            $promotions = $rendezVousModel->popWaitlistPromotionNotifications($userId);
+            if (!empty($promotions)) {
+                $count = count($promotions);
+                $first = $promotions[0];
+                $doctor = trim((string)($first['medecin_nom'] ?? 'médecin'));
+                $dateLabel = !empty($first['date_rendezvous']) ? date('d/m/Y', strtotime((string)$first['date_rendezvous'])) : '';
+                $timeLabel = (string)($first['heure_rendezvous'] ?? '');
+                $_SESSION['success'] = $count === 1
+                    ? "Bonne nouvelle: une place s'est libérée (Dr. {$doctor}, {$dateLabel} {$timeLabel}) et votre demande a été transformée en rendez-vous."
+                    : "Bonne nouvelle: {$count} créneaux libérés ont été automatiquement attribués depuis votre liste d'attente.";
+            }
         } else {
             $this->page403(); return;
         }
+
+        // Recherche texte (nom patient/médecin, spécialité, motif)
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rendezVous = array_values(array_filter($rendezVous, static function(array $rdv) use ($needle, $userRole): bool {
+                $fields = [
+                    (string)($rdv['motif'] ?? ''),
+                    (string)($rdv['specialite'] ?? ''),
+                ];
+                if ($userRole === 'medecin') {
+                    $fields[] = (string)($rdv['patient_nom'] ?? '');
+                } else {
+                    $fields[] = (string)($rdv['medecin_nom'] ?? '');
+                }
+                $haystack = mb_strtolower(implode(' ', $fields));
+                return str_contains($haystack, $needle);
+            }));
+        }
+
         $content = $this->getRendezVousHTML($rendezVous, $userRole, $title);
+        if ($userRole === 'patient') {
+            $content .= $this->getRendezVousChatbotHTML();
+        }
         $this->renderPublicView($title, $content);
+    }
+
+    private function getRendezVousChatbotHTML(): string {
+        ob_start();
+        require __DIR__ . '/../views/partials/rendezvous_chatbot.php';
+        return ob_get_clean();
     }
 
     private function getRendezVousHTML($rendezVous, $userRole, $title): string {
         $isMedecin = ($userRole === 'medecin');
-        $html = '
+        // Bouton "Prendre un RDV" toujours visible pour les patients
+        $html = '';
+        if (!$isMedecin) {
+            $html .= '<div style="display:flex;justify-content:flex-end;margin-bottom:15px;">
+                <a href="index.php?page=prendre_rendez_vous" class="btn btn-success">
+                    <i class="fas fa-calendar-plus me-2"></i>Prendre un nouveau rendez-vous
+                </a>
+            </div>';
+        }
+        $html .= '
         <style>
             .rdv-card { background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-left:4px solid #2A7FAA;position:relative; }
             .rdv-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:10px;border-bottom:1px solid #eee; }
@@ -2648,6 +2064,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .btn-confirmer { background:#28a745;color:white; }
             .btn-annuler   { background:#dc3545;color:white; }
             .btn-terminer  { background:#17a2b8;color:white; }
+            .btn-nouveau-rdv { background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white; }
             .btn-details   { background:#6c757d;color:white; }
             .btn-modifier  { background:#ffc107;color:#000; }
             .btn-supprimer { background:#dc3545;color:white; }
@@ -2681,7 +2098,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     </select>
                 </div>
                 <div class="col-md-3"><input type="date" name="date" class="form-control" value="' . ($_GET['date'] ?? '') . '"></div>
-                <div class="col-md-4">
+                <div class="col-md-3"><input type="text" name="search" class="form-control" placeholder="Médecin, patient, motif..." value="' . htmlspecialchars($_GET['search'] ?? '') . '"></div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary">Filtrer</button>
                     <a href="index.php?page=mes_rendez_vous" class="btn btn-secondary">Réinitialiser</a>
                 </div>
@@ -2734,6 +2152,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 if ($isMedecin && $rdv['statut'] === 'confirmé') {
                     $html .= '<a href="index.php?page=terminer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-terminer" onclick="return confirm(\'Terminer ce rendez-vous ?\')"><i class="fas fa-check-double me-1"></i>Terminer</a>';
+                }
+                if (!$isMedecin && ($rdv['statut'] === 'terminé' || $rdv['statut'] === 'annulé')) {
+                    $html .= '<a href="index.php?page=patient_disponibilites&medecin_id=' . $rdv['medecin_id'] . '" class="btn-action btn-nouveau-rdv"><i class="fas fa-calendar-plus me-1"></i>Nouveau rendez-vous</a>';
                 }
                 $html .= '</div></div>';
             }
@@ -2811,8 +2232,167 @@ JS;
         return $html;
     }
 
-    public function annulerRendezVous($id): void { $this->requireLogin(); $this->renderTemporaryView('Annuler rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' annulé</p>'); }
-    public function confirmerRendezVous($id): void { $this->requireLogin(); $this->renderTemporaryView('Confirmer rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' confirmé</p>'); }
+    public function annulerRendezVous($id): void {
+        $this->requireLogin();
+        if (($_SESSION['user_role'] ?? '') !== 'medecin') {
+            $_SESSION['error'] = 'Accès réservé aux médecins.';
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
+
+        $rdvId = (int)$id;
+        if ($rdvId <= 0) {
+            $_SESSION['error'] = 'Rendez-vous invalide.';
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
+
+        try {
+            require_once __DIR__ . '/../models/RendezVous.php';
+            $db = Database::getInstance()->getConnection();
+            $medecinId = (int)($_SESSION['user_id'] ?? 0);
+
+            $check = $db->prepare("SELECT * FROM rendez_vous WHERE id = :id AND medecin_id = :medecin_id");
+            $check->execute([':id' => $rdvId, ':medecin_id' => $medecinId]);
+            $rdv = $check->fetch(PDO::FETCH_ASSOC);
+            if (!$rdv) {
+                $_SESSION['error'] = 'Rendez-vous non trouvé ou accès non autorisé.';
+                header('Location: index.php?page=mes_rendez_vous');
+                exit;
+            }
+
+            $stmt = $db->prepare("UPDATE rendez_vous SET statut = 'annulé', updated_at = NOW() WHERE id = :id");
+            $ok = $stmt->execute([':id' => $rdvId]);
+            if (!$ok) {
+                throw new Exception('Annulation échouée');
+            }
+
+            $this->sendAppointmentDecisionEmail($rdvId, 'annule');
+
+            $rdvModel = new RendezVous();
+            $rdvModel->fillWaitlistForFreedSlot(
+                (int)($rdv['medecin_id'] ?? 0),
+                (string)($rdv['date_rendezvous'] ?? ''),
+                (string)($rdv['heure_rendezvous'] ?? '')
+            );
+
+            $_SESSION['success'] = 'Rendez-vous annulé avec succès.';
+        } catch (Exception $e) {
+            error_log('Erreur FrontController::annulerRendezVous - ' . $e->getMessage());
+            $_SESSION['error'] = 'Erreur lors de l\'annulation du rendez-vous.';
+        }
+
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
+    }
+    public function confirmerRendezVous($id): void {
+        $this->requireLogin();
+        if (($_SESSION['user_role'] ?? '') !== 'medecin') {
+            $_SESSION['error'] = 'Accès réservé aux médecins.';
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE rendez_vous SET statut = 'confirmé', updated_at = NOW() WHERE id = :id");
+            $stmt->execute([':id' => (int)$id]);
+            if ($stmt->rowCount() > 0) {
+                $this->sendAppointmentDecisionEmail((int)$id, 'confirme');
+            }
+            $_SESSION['success'] = 'Rendez-vous confirmé avec succès.';
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'Erreur lors de la confirmation.';
+        }
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
+    }
+
+    private function sendAppointmentDecisionEmail(int $rdvId, string $decision): void {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare(
+                "SELECT rv.date_rendezvous, rv.heure_rendezvous, rv.motif, rv.statut,
+                        up.nom AS patient_nom, up.prenom AS patient_prenom, up.email AS patient_email, up.telephone AS patient_telephone,
+                        um.nom AS medecin_nom, um.prenom AS medecin_prenom, um.email AS medecin_email,
+                        m.specialite
+                 FROM rendez_vous rv
+                 JOIN users up ON rv.patient_id = up.id
+                 JOIN users um ON rv.medecin_id = um.id
+                 LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                 WHERE rv.id = :id"
+            );
+            $stmt->execute([':id' => $rdvId]);
+            $rdv = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$rdv) {
+                return;
+            }
+
+            $patientName = trim(($rdv['patient_prenom'] ?? '') . ' ' . ($rdv['patient_nom'] ?? ''));
+            $doctorName = 'Dr. ' . trim(($rdv['medecin_prenom'] ?? '') . ' ' . ($rdv['medecin_nom'] ?? ''));
+            $dateLabel = !empty($rdv['date_rendezvous']) ? date('d/m/Y', strtotime((string)$rdv['date_rendezvous'])) : '-';
+            $timeLabel = (string)($rdv['heure_rendezvous'] ?? '-');
+            $motif = trim((string)($rdv['motif'] ?? ''));
+            $specialite = trim((string)($rdv['specialite'] ?? 'Generaliste'));
+            $isConfirmed = $decision === 'confirme';
+            $title = $isConfirmed ? 'Rendez-vous confirme' : 'Rendez-vous annule';
+            $intro = $isConfirmed ? 'Le medecin vient de confirmer un rendez-vous.' : 'Le medecin vient d annuler un rendez-vous.';
+
+            $body = '
+                <div style="font-family:Arial,sans-serif;color:#1f2937;">
+                    <h2 style="color:#2A7FAA;">' . htmlspecialchars($title) . '</h2>
+                    <p>' . htmlspecialchars($intro) . '</p>
+                    <table cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:620px;">
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($patientName) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Email patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['patient_email'] ?? '-')) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Telephone patient</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['patient_telephone'] ?? '-')) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Medecin</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($doctorName) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Specialite</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($specialite) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Email medecin</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['medecin_email'] ?? '-')) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Date</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($dateLabel) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Heure</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars($timeLabel) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Statut</td><td style="border:1px solid #e5e7eb;">' . htmlspecialchars((string)($rdv['statut'] ?? ($isConfirmed ? 'confirme' : 'annule'))) . '</td></tr>
+                        <tr><td style="font-weight:bold;border:1px solid #e5e7eb;">Motif</td><td style="border:1px solid #e5e7eb;">' . nl2br(htmlspecialchars($motif !== '' ? $motif : '-')) . '</td></tr>
+                    </table>
+                </div>';
+
+            $altBody = $title . "\n"
+                . "Patient: " . $patientName . "\n"
+                . "Email patient: " . ($rdv['patient_email'] ?? '-') . "\n"
+                . "Telephone patient: " . ($rdv['patient_telephone'] ?? '-') . "\n"
+                . "Medecin: " . $doctorName . "\n"
+                . "Specialite: " . $specialite . "\n"
+                . "Email medecin: " . ($rdv['medecin_email'] ?? '-') . "\n"
+                . "Date: " . $dateLabel . "\n"
+                . "Heure: " . $timeLabel . "\n"
+                . "Statut: " . ($rdv['statut'] ?? ($isConfirmed ? 'confirme' : 'annule')) . "\n"
+                . "Motif: " . ($motif !== '' ? $motif : '-');
+
+            MailConfig::send('skanderdhaoui77@gmail.com', 'Skander Dhaoui', $title . ' - DocTime', $body, $altBody);
+        } catch (Throwable $e) {
+            error_log('Erreur sendAppointmentDecisionEmail - ' . $e->getMessage());
+        }
+    }
+
+    public function terminerRendezVous($id): void {
+        $this->requireLogin();
+        if (($_SESSION['user_role'] ?? '') !== 'medecin') {
+            $_SESSION['error'] = 'Accès réservé aux médecins.';
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE rendez_vous SET statut = 'terminé', updated_at = NOW() WHERE id = :id");
+            $stmt->execute([':id' => (int)$id]);
+            $_SESSION['success'] = 'Rendez-vous marqué comme terminé.';
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'Erreur lors de la mise à jour.';
+        }
+        header('Location: index.php?page=mes_rendez_vous');
+        exit;
+    }
+
     public function mesOrdonnances(): void { $this->requireLogin(); $this->renderTemporaryView('Mes ordonnances', '<p>Liste de vos ordonnances</p>'); }
     public function mesNotifications(): void { $this->requireLogin(); $this->renderTemporaryView('Mes notifications', '<p>Aucune notification</p>'); }
 
@@ -2829,243 +2409,90 @@ JS;
         $hasFaceId     = false;
         try {
             $db   = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT face_photo, face_descriptors FROM users WHERE id = :id");
+            $stmt = $db->prepare("SELECT face_descriptor FROM users WHERE id = :id");
             $stmt->execute([':id' => $userId]);
             $user      = $stmt->fetch(PDO::FETCH_ASSOC);
-            $hasFaceId = !empty($user['face_photo']) || !empty($user['face_descriptors']);
+            $hasFaceId = !empty($user['face_descriptor']);
         } catch (Exception $e) {
             error_log('Erreur vérification Face ID: ' . $e->getMessage());
         }
 
         $faceButtons = $hasFaceId
             ? '
-            <div class="custom-alert custom-alert-success mb-4"><i class="fas fa-check-circle fs-4"></i> Reconnaissance faciale configurée avec succès.</div>
-            <div class="d-flex gap-3 justify-content-center">
-                <button type="button" class="custom-btn custom-btn-warning" onclick="updateFaceId()"><i class="fas fa-sync-alt"></i> Mettre à jour</button>
-                <button type="button" class="custom-btn custom-btn-danger" onclick="deleteFaceId()"><i class="fas fa-trash"></i> Supprimer</button>
-            </div>'
-            : '<button type="button" class="custom-btn custom-btn-success" onclick="registerFaceId()"><i class="fas fa-camera"></i> Activer Face ID</button>';
+            <div class="alert alert-success"><i class="fas fa-check-circle me-2"></i> Vous avez déjà enregistré votre visage.</div>
+            <button type="button" class="btn btn-warning btn-lg" onclick="updateFaceId()"><i class="fas fa-sync-alt me-2"></i>Mettre à jour mon visage</button>
+            <button type="button" class="btn btn-danger btn-lg ms-2" onclick="deleteFaceId()"><i class="fas fa-trash me-2"></i>Supprimer mon visage</button>'
+            : '<button type="button" class="btn btn-success btn-lg" onclick="registerFaceId()"><i class="fas fa-camera me-2"></i>Enregistrer mon visage</button>';
 
         $content = '
-        <style>
-            .profile-card {
-                background: white;
-                border-radius: 20px;
-                padding: 35px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-                border: 1px solid rgba(0,0,0,0.02);
-                margin-bottom: 25px;
-                transition: transform 0.3s;
-            }
-            .profile-card:hover {
-                transform: translateY(-5px);
-            }
-            .profile-h5 {
-                color: #2c3e50;
-                font-weight: 700;
-                font-size: 1.4rem;
-                margin-bottom: 25px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .profile-h5 i {
-                background: rgba(42, 127, 170, 0.1);
-                color: #2A7FAA;
-                padding: 12px;
-                border-radius: 12px;
-                font-size: 1.2rem;
-            }
-            .custom-input {
-                background: #f8f9fa;
-                border: 2px solid transparent;
-                border-radius: 12px;
-                padding: 14px 20px;
-                font-size: 1rem;
-                font-weight: 500;
-                color: #2c3e50;
-                transition: all 0.3s;
-                width: 100%;
-            }
-            .custom-input:focus {
-                background: white;
-                border-color: #2A7FAA;
-                box-shadow: 0 0 0 4px rgba(42, 127, 170, 0.1);
-                outline: none;
-            }
-            .custom-label {
-                font-weight: 600;
-                color: #495057;
-                margin-bottom: 8px;
-                display: block;
-            }
-            .custom-btn {
-                padding: 12px 25px;
-                border-radius: 12px;
-                font-weight: 600;
-                transition: all 0.3s;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                border: none;
-                cursor: pointer;
-            }
-            .custom-btn-primary {
-                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
-                color: white;
-                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
-            }
-            .custom-btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(76,175,80,0.3);
-                color: white;
-            }
-            .custom-btn-secondary {
-                background: #f8f9fa;
-                color: #6c757d;
-                border: 2px solid #e9ecef;
-            }
-            .custom-btn-secondary:hover {
-                background: #e9ecef;
-                color: #495057;
-            }
-            .custom-btn-warning {
-                background: linear-gradient(135deg, #FF9800, #F57C00);
-                color: white;
-                box-shadow: 0 4px 15px rgba(255,152,0,0.2);
-            }
-            .custom-btn-danger {
-                background: linear-gradient(135deg, #dc3545, #c82333);
-                color: white;
-                box-shadow: 0 4px 15px rgba(220,53,69,0.2);
-            }
-            .custom-btn-success {
-                background: linear-gradient(135deg, #4CAF50, #43a047);
-                color: white;
-                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
-            }
-            .custom-alert {
-                border-radius: 12px;
-                padding: 15px 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                font-weight: 500;
-            }
-            .custom-alert-info {
-                background: rgba(42, 127, 170, 0.1);
-                color: #1a5676;
-            }
-            .custom-alert-success {
-                background: rgba(76, 175, 80, 0.1);
-                color: #2e7d32;
-            }
-            .face-id-box {
-                background: #f8f9fa;
-                border-radius: 16px;
-                padding: 40px;
-                text-align: center;
-                border: 2px dashed #e0e0e0;
-            }
-            .face-icon-large {
-                font-size: 4rem;
-                color: #2A7FAA;
-                margin-bottom: 20px;
-                opacity: 0.8;
-            }
-            .requirement-valid { color: #4CAF50; font-weight: 500; }
-            .requirement-invalid { color: #dc3545; font-weight: 500; }
-            .field-error { color: #dc3545; font-size: 13px; margin-top: 6px; font-weight: 500; }
-        </style>
-
-        <div class="container mt-5 mb-5">
-            <div class="row g-4 justify-content-center">
-                <div class="col-lg-8">
-                    
-                    <div class="profile-card">
-                        <div class="profile-h5"><i class="fas fa-user-edit"></i> Informations personnelles</div>
+        <div class="row g-4">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-edit text-primary me-2"></i>Modifier mes informations</h5></div>
+                    <div class="card-body">
                         <form method="POST" id="profileForm">
-                            <div class="row g-3">
-                                <div class="col-md-12 mb-3">
-                                    <label class="custom-label">Nom complet</label>
-                                    <input type="text" class="custom-input" name="nom" value="' . $userName . '" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="custom-label">Adresse email</label>
-                                    <input type="email" class="custom-input" name="email" value="' . $userEmail . '" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="custom-label">Numéro de téléphone</label>
-                                    <input type="tel" class="custom-input" name="telephone" value="' . $userTelephone . '">
-                                </div>
-                            </div>
-                            
-                            <div class="custom-alert custom-alert-info mt-4 mb-4">
-                                <i class="fas fa-info-circle fs-4"></i>
-                                Mettez à jour vos informations pour garantir un bon suivi avec vos patients et confrères.
-                            </div>
-                            
-                            <div class="d-flex justify-content-end gap-3 mt-2">
-                                <a href="index.php?page=mon_profil" class="custom-btn custom-btn-secondary"><i class="fas fa-times"></i> Annuler</a>
-                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-save"></i> Enregistrer les informations</button>
+                            <div class="mb-4"><label class="form-label"><i class="fas fa-user text-primary me-2"></i>Nom complet</label><input type="text" class="form-control form-control-lg" name="nom" value="' . $userName . '" required></div>
+                            <div class="mb-4"><label class="form-label"><i class="fas fa-envelope text-primary me-2"></i>Adresse email</label><input type="email" class="form-control form-control-lg" name="email" value="' . $userEmail . '" required></div>
+                            <div class="mb-4"><label class="form-label"><i class="fas fa-phone text-primary me-2"></i>Numéro de téléphone</label><input type="tel" class="form-control form-control-lg" name="telephone" value="' . $userTelephone . '"></div>
+                            <div class="mb-4"><label class="form-label"><i class="fas fa-lock text-primary me-2"></i>Mot de passe (optionnel)</label><input type="password" class="form-control form-control-lg" name="password" placeholder="Laisser vide pour ne pas changer"><small class="text-muted">Minimum 6 caractères</small></div>
+                            <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Conseil:</strong> Mettez à jour vos informations pour une meilleure expérience.</div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="index.php?page=mon_profil" class="btn btn-secondary btn-lg"><i class="fas fa-arrow-left me-2"></i>Annuler</a>
+                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer les modifications</button>
                             </div>
                         </form>
                     </div>
-
-                    <div class="profile-card">
-                        <div class="profile-h5"><i class="fas fa-shield-alt"></i> Sécurité & Mot de passe</div>
-                        <form method="POST" id="passwordForm">
-                            <input type="hidden" name="action" value="change_password">
-                            
-                            <div class="mb-4">
-                                <label class="custom-label">Mot de passe actuel <span class="text-danger">*</span></label>
-                                <input type="password" class="custom-input" name="current_password" required>
-                                <div id="currentPassword-error" class="field-error"></div>
-                            </div>
-                            
-                            <div class="row g-3">
-                                <div class="col-md-6 mb-3">
-                                    <label class="custom-label">Nouveau mot de passe <span class="text-danger">*</span></label>
-                                    <input type="password" id="newPassword" name="new_password" class="custom-input" required>
-                                    <div class="mt-3 p-3 bg-light rounded-3">
-                                        <div id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-2"></i>Au moins 8 caractères</div>
-                                        <div id="reqUpper" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins une majuscule</div>
-                                        <div id="reqNumber" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins un chiffre</div>
-                                    </div>
-                                    <div id="newPassword-error" class="field-error"></div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="custom-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label>
-                                    <input type="password" id="confirmPassword" name="confirm_password" class="custom-input" required>
-                                    <div id="confirmPassword-error" class="field-error"></div>
-                                </div>
-                            </div>
-
-                            <div class="d-flex justify-content-end gap-3 mt-4">
-                                <button type="button" class="custom-btn custom-btn-secondary" onclick="cancelPassword()">Effacer</button>
-                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-key"></i> Modifier le mot de passe</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="profile-card">
-                        <div class="profile-h5"><i class="fas fa-face-viewfinder"></i> Connexion Faciale (Face ID)</div>
-                        <div class="face-id-box">
-                            <i class="fas fa-camera face-icon-large"></i>
-                            <h4 class="mb-3" style="color: #2c3e50; font-weight: 700;">Reconnaissance Biométrique</h4>
-                            <p class="text-muted mb-4" style="font-size: 1.1rem; max-width: 500px; margin: 0 auto;">Connectez-vous instantanément et en toute sécurité à l\'aide de la reconnaissance faciale, sans avoir à taper votre mot de passe.</p>
-                            
-                            <div class="mt-4">
-                                ' . $faceButtons . '
-                            </div>
-                            <div id="faceIdStatus" class="mt-4 fw-semibold text-primary"></div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
-        </div>';
+        </div>
+        <div class="row g-4 mt-3">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-key text-primary me-2"></i>Changer le mot de passe</h5></div>
+                    <div class="card-body">
+                        <form method="POST" id="passwordForm">
+                            <input type="hidden" name="action" value="change_password">
+                            <div class="mb-4"><label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label><input type="password" class="form-control form-control-lg" name="current_password" required><div id="currentPassword-error"></div></div>
+                            <div class="mb-4">
+                                <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
+                                <input type="password" id="newPassword" name="new_password" class="form-control form-control-lg" required>
+                                <div class="mt-2">
+                                    <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
+                                    <span id="reqUpper"  class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
+                                    <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins un chiffre</span>
+                                </div>
+                                <div id="newPassword-error"></div>
+                            </div>
+                            <div class="mb-4"><label class="form-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label><input type="password" id="confirmPassword" name="confirm_password" class="form-control form-control-lg" required><div id="confirmPassword-error"></div></div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-secondary btn-lg" onclick="cancelPassword()">Annuler</button>
+                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer le nouveau mot de passe</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4 mt-3">
+            <div class="col-md-8 mx-auto">
+                <div class="card shadow">
+                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-face-smile text-primary me-2"></i>Reconnaissance faciale (Face ID)</h5></div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-camera fa-3x text-primary mb-2"></i>
+                            <p class="mb-3">Activez la reconnaissance faciale pour vous connecter plus facilement.</p>
+                            ' . $faceButtons . '
+                        </div>
+                        <div id="faceIdStatus" class="text-center mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <style>
+            .requirement-valid   { color:#28a745; }
+            .requirement-invalid { color:#dc3545; }
+            .field-error { color:#dc3545;font-size:12px;margin-top:5px; }
+        </style>';
 
         // Tout le JavaScript en NOWDOC pour éviter tout problème d'échappement
         $content .= <<<JS
@@ -3186,8 +2613,8 @@ public function monProfil(): void {
     $userRole = $_SESSION['user_role'];
     
     // Récupérer les infos utilisateur
-    $userRepo = new UserRepository();
-    $user = $userRepo->getUserById($userId);
+    $userModel = new User();
+    $user = $userModel->getUserById($userId);
     
     // Statistiques
     $rdvModel = new RendezVous();
@@ -3224,10 +2651,10 @@ public function monProfil(): void {
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Email invalide";
             
             if (empty($errors)) {
-                if ($userRepo->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
+                if ($userModel->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
                     $success = "Profil mis à jour avec succès";
                     // Recharger les données
-                    $user = $userRepo->getUserById($userId);
+                    $user = $userModel->getUserById($userId);
                     $_SESSION['user_name'] = $prenom . ' ' . $nom;
                     $_SESSION['user_email'] = $email;
                 } else {
@@ -3253,7 +2680,7 @@ public function monProfil(): void {
             if (!preg_match('/[0-9]/', $newPassword)) $errors[] = "Un chiffre requis";
             
             if (empty($errors)) {
-                if ($userRepo->changePassword($userId, $currentPassword, $newPassword)) {
+                if ($userModel->changePassword($userId, $currentPassword, $newPassword)) {
                     $successPassword = "Mot de passe modifié avec succès";
                 } else {
                     $errorPassword = "Mot de passe actuel incorrect";
@@ -3281,9 +2708,9 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (move_uploaded_file($file['tmp_name'], $filepath)) {
-                    if ($userRepo->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
+                    if ($userModel->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
                         $success = "Avatar mis à jour avec succès";
-                        $user = $userRepo->getUserById($userId);
+                        $user = $userModel->getUserById($userId);
                     } else {
                         $error = "Erreur lors de l'enregistrement";
                     }
@@ -3317,7 +2744,7 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (file_put_contents($filepath, $imageData)) {
-                    if ($userRepo->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
+                    if ($userModel->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Visage enregistré avec succès']);
                         return;
@@ -3380,8 +2807,6 @@ public function monProfil(): void {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
-            <script src="assets/js/theme-mode.js"></script>
-            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <?= $this->getPublicNavbar() ?>
@@ -3413,8 +2838,6 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <script src="assets/js/theme-mode.js"></script>
-            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -3482,8 +2905,6 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <script src="assets/js/theme-mode.js"></script>
-            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body class="bg-light">
             <div class="container mt-5">
@@ -3696,8 +3117,6 @@ public function monProfil(): void {
         if (empty($disponibilites)) {
             $html .= '<div class="col-12"><div class="alert alert-info text-center py-4">Aucune disponibilité pour le moment.</div></div>';
         } else {
-            $userRole = $_SESSION['user_role'] ?? '';
-            $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
             foreach ($disponibilites as $dispo) {
                 $html .= '
                 <div class="col-md-6 col-lg-4 mb-4">
@@ -3707,11 +3126,10 @@ public function monProfil(): void {
                             <p class="card-text text-muted">' . htmlspecialchars($dispo['specialite'] ?? 'Généraliste') . '</p>
                             <hr>
                             <p><i class="fas fa-calendar me-2 text-success"></i> ' . htmlspecialchars($dispo['jour_semaine']) . '</p>
-                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>' . 
-                            ($showAppointmentBtn ? '
+                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>
                             <a href="index.php?page=prendre_rendez_vous&id=' . $dispo['medecin_id'] . '" class="btn btn-primary btn-sm w-100">
                                 <i class="fas fa-calendar-check me-2"></i>Prendre rendez-vous
-                            </a>' : '') . '
+                            </a>
                         </div>
                     </div>
                 </div>';
@@ -3814,135 +3232,8 @@ public function monProfil(): void {
 
 
     /**
-     * Afficher la page d'enregistrement facial
-     */
-    public function renderRegisterFace(): void {
-        $this->requireLogin();
-        $userId = $_SESSION['user_id'];
-        
-        $content = '
-        <div class="row">
-            <div class="col-md-8 mx-auto text-center">
-                <div class="card shadow-sm">
-                    <div class="card-body p-5">
-                        <i class="fas fa-face-smile fa-4x text-primary mb-4"></i>
-                        <h3>Enregistrement de votre visage</h3>
-                        <p class="text-muted mb-4">Cette étape nous permet d\'extraire les caractéristiques de votre visage pour vous permettre de vous connecter sans mot de passe.</p>
-                        
-                        <div class="camera-container mb-4" style="position:relative; max-width:500px; margin:0 auto;">
-                            <video id="video" width="100%" height="auto" autoplay playsinline style="border-radius:15px; border:5px solid #f8f9fa;"></video>
-                            <canvas id="canvas" style="display:none;"></canvas>
-                            <div id="scanLine" style="position:absolute; top:0; left:0; width:100%; height:2px; background:rgba(0,123,255,0.5); display:none;"></div>
-                        </div>
-                        
-                        <div id="statusMessage" class="alert alert-info mb-4" style="display:none;"></div>
-                        
-                        <div class="d-grid gap-2">
-                            <button id="captureBtn" class="btn btn-primary btn-lg" onclick="startCapture()">
-                                <i class="fas fa-camera me-2"></i> Capturer mon visage
-                            </button>
-                            <a href="index.php?page=mon_profil" class="btn btn-link">Retour au profil</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-        <script>
-            let stream = null;
-            let modelsLoaded = false;
-            const video = document.getElementById("video");
-            const status = document.getElementById("statusMessage");
-            const scanLine = document.getElementById("scanLine");
+ * Afficher la page d'enregistrement facial
+ */
 
-            async function initCamera() {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-                    video.srcObject = stream;
-                } catch (err) {
-                    showStatus("Erreur d\'accès à la caméra: " + err.message, "danger");
-                }
-            }
-
-            function showStatus(msg, type = "info") {
-                status.innerHTML = msg;
-                status.className = "alert alert-" + type + " mb-4";
-                status.style.display = "block";
-            }
-
-            async function loadModels() {
-                if (modelsLoaded) return;
-                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Chargement de l\'intelligence artificielle...");
-                const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-                modelsLoaded = true;
-                showStatus("IA prête. Placez votre visage bien en face de la caméra.");
-            }
-
-            async function startCapture() {
-                const btn = document.getElementById("captureBtn");
-                btn.disabled = true;
-                
-                if (!modelsLoaded) await loadModels();
-                
-                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Analyse de votre visage...");
-                scanLine.style.display = "block";
-                
-                // Détection
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                    .withFaceLandmarks(true)
-                    .withFaceDescriptor();
-                
-                if (!detections) {
-                    showStatus("Aucun visage détecté. Veuillez bien vous placer face à la lumière.", "warning");
-                    btn.disabled = false;
-                    scanLine.style.display = "none";
-                    return;
-                }
-
-                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Enregistrement sur le serveur...");
-                
-                const canvas = document.getElementById("canvas");
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext("2d").drawImage(video, 0, 0);
-                const imageData = canvas.toDataURL("image/jpeg");
-                
-                const payload = {
-                    image: imageData,
-                    descriptor: Array.from(detections.descriptor) // Convert Float32Array to normal Array
-                };
-
-                try {
-                    const response = await fetch("index.php?page=register_face", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        showStatus("<i class=\'fas fa-check-circle me-2\'></i>" + result.message, "success");
-                        setTimeout(() => { window.location.href = "index.php?page=mon_profil"; }, 2000);
-                    } else {
-                        showStatus(result.message, "danger");
-                        btn.disabled = false;
-                    }
-                } catch (err) {
-                    showStatus("Erreur réseau: " + err.message, "danger");
-                    btn.disabled = false;
-                }
-                scanLine.style.display = "none";
-            }
-
-            initCamera();
-            loadModels();
-        </script>
-        ';
-        
-        $this->renderTemporaryView('Enregistrement Face ID', $content);
-    }
+    
 } // FIN DE LA CLASSE FrontController

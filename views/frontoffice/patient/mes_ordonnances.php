@@ -26,15 +26,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link active" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -58,7 +57,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
                     <p>Aucune ordonnance trouvée.</p>
-                    <a href="/valorys_Copie/index.php?page=prendre_rendezvous" class="btn btn-primary">Prendre un rendez-vous</a>
+                    <a href="index.php?page=prendre_rendezvous" class="btn btn-primary">Prendre un rendez-vous</a>
                 </div>
             </div>
         <?php else: ?>
@@ -157,4 +156,3 @@ function downloadPDF(id) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

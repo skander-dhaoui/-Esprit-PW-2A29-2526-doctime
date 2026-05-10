@@ -1,161 +1,264 @@
 <?php
-declare(strict_types=1);
+// models/Produit.php
 
-namespace App\Models;
+require_once __DIR__ . '/../config/database.php';
 
-final class Produit
-{
-    private int $id;
-    private string $nom;
-    private ?string $slug;
-    private ?string $description;
-    private ?int $categorieId;
-    private float $prix;
-    private int $stock;
-    private ?string $image;
-    private int $prescription;
-    private string $status;
-    private string $createdAt;
-    private string $updatedAt;
+class Produit {
 
-    public function __construct(array $data = [])
-    {
-        $this->id = (int) ($data['id'] ?? 0);
-        $this->nom = (string) ($data['nom'] ?? '');
-        $this->slug = $data['slug'] ?? null;
-        $this->description = $data['description'] ?? null;
-        $this->categorieId = ($data['categorie_id'] !== null ? (int) $data['categorie_id'] : null);
-        $this->prix = (float) ($data['prix'] ?? 0.0);
-        $this->stock = (int) ($data['stock'] ?? 0);
-        $this->image = $data['image'] ?? null;
-        $this->prescription = (int) ($data['prescription'] ?? 0);
-        $this->status = (string) ($data['status'] ?? 'actif');
-        $this->createdAt = (string) ($data['created_at'] ?? '');
-        $this->updatedAt = (string) ($data['updated_at'] ?? '');
+    private Database $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
     }
 
-    public function __destruct()
-    {
-        // Nettoyage des ressources si nécessaire
+    public function create(array $data): ?int {
+        try {
+            // Map the data to actual column names
+            $slug = $data['slug'] ?? $this->generateSlug($data['nom'] ?? '');
+            $status = $data['status'] ?? 'actif';
+            $prix = $data['prix'] ?? ($data['prix_vente'] ?? 0);
+            
+            $sql = "INSERT INTO produits
+                        (nom, slug, description, categorie_id, prix, stock, image, 
+                         prescription, status, created_at, updated_at)
+                    VALUES
+                        (:nom, :slug, :description, :categorie_id, :prix, :stock, :image,
+                         :prescription, :status, NOW(), NOW())";
+            
+            $params = [
+                'nom' => $data['nom'] ?? '',
+                'slug' => $slug,
+                'description' => $data['description'] ?? '',
+                'categorie_id' => $data['categorie_id'] ?? null,
+                'prix' => $prix,
+                'stock' => $data['stock'] ?? 0,
+                'image' => $data['image'] ?? null,
+                'prescription' => $data['prescription'] ?? 0,
+                'status' => $status,
+            ];
+            
+            $result = $this->db->execute($sql, $params);
+            return $result ? $this->db->lastInsertId() : null;
+        } catch (Exception $e) {
+            error_log('Erreur Produit::create - ' . $e->getMessage());
+            return null;
+        }
     }
 
-    public function getId(): int
-    {
-        return $this->id;
+    private function generateSlug(string $text): string {
+        $text = strtolower(trim($text));
+        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+        return trim($text, '-');
     }
 
-    public function getNom(): string
-    {
-        return $this->nom;
+    public function getById(int $id): ?array {
+        try {
+            $sql = "SELECT p.*, c.nom AS categorie_nom
+                    FROM produits p
+                    LEFT JOIN categories c ON p.categorie_id = c.id
+                    WHERE p.id = :id";
+            $result = $this->db->query($sql, ['id' => $id]);
+            return $result ? $result[0] : null;
+        } catch (Exception $e) {
+            error_log('Erreur Produit::getById - ' . $e->getMessage());
+            return null;
+        }
     }
 
-    public function getSlug(): ?string
-    {
-        return $this->slug;
+    public function getAll(string $search = '', int $categorieId = 0, string $statut = ''): array {
+        try {
+            $where  = "WHERE 1=1";
+            $params = [];
+
+            if (!empty($search)) {
+                $where .= " AND (p.nom LIKE :search OR p.slug LIKE :search OR p.description LIKE :search)";
+                $params['search'] = "%$search%";
+            }
+            if ($categorieId > 0) {
+                $where .= " AND p.categorie_id = :cat";
+                $params['cat'] = $categorieId;
+            }
+            if ($statut === 'actif') {
+                $where .= " AND p.status = 'actif'";
+            } elseif ($statut === 'inactif') {
+                $where .= " AND p.status = 'inactif'";
+            } elseif ($statut === 'rupture') {
+                $where .= " AND p.status = 'rupture'";
+            }
+
+            $sql = "SELECT p.*, c.nom AS categorie_nom
+                    FROM produits p
+                    LEFT JOIN categories c ON p.categorie_id = c.id
+                    $where
+                    ORDER BY p.created_at DESC";
+            return $this->db->query($sql, $params);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::getAll - ' . $e->getMessage());
+            return [];
+        }
     }
 
-    public function getDescription(): ?string
-    {
-        return $this->description;
+    public function getActifs(): array {
+        try {
+            $sql = "SELECT p.*, c.nom AS categorie_nom
+                    FROM produits p
+                    LEFT JOIN categories c ON p.categorie_id = c.id
+                    WHERE p.status = 'actif'
+                    ORDER BY p.nom ASC";
+            return $this->db->query($sql);
+        } catch (Exception $e) {
+            return [];
+        }
     }
 
-    public function getCategorieId(): ?int
-    {
-        return $this->categorieId;
+    public function update(int $id, array $data): bool {
+        try {
+            // Map data to actual column names
+            $slug = $data['slug'] ?? ($data['nom'] ? $this->generateSlug($data['nom']) : null);
+            $status = $data['status'] ?? 'actif';
+            $prix = $data['prix'] ?? ($data['prix_vente'] ?? null);
+            
+            $sql = "UPDATE produits SET
+                        nom          = :nom,
+                        slug         = :slug,
+                        description  = :description,
+                        categorie_id = :categorie_id,
+                        prix         = :prix,
+                        stock        = :stock,
+                        image        = :image,
+                        prescription = :prescription,
+                        status       = :status,
+                        updated_at   = NOW()
+                    WHERE id = :id";
+            
+            $params = [
+                'id' => $id,
+                'nom' => $data['nom'] ?? '',
+                'slug' => $slug,
+                'description' => $data['description'] ?? '',
+                'categorie_id' => $data['categorie_id'] ?? null,
+                'prix' => $prix,
+                'stock' => $data['stock'] ?? 0,
+                'image' => $data['image'] ?? null,
+                'prescription' => $data['prescription'] ?? 0,
+                'status' => $status,
+            ];
+            
+            return $this->db->execute($sql, $params);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::update - ' . $e->getMessage());
+            return false;
+        }
     }
 
-    public function getPrix(): float
-    {
-        return $this->prix;
+    public function delete(int $id): bool {
+        try {
+            // Vérifier s'il est dans une commande
+            $nb = (int)$this->db->queryScalar(
+                "SELECT COUNT(*) FROM commande_details WHERE produit_id = :id", ['id' => $id]
+            );
+            if ($nb > 0) return false;
+            return $this->db->execute("DELETE FROM produits WHERE id = :id", ['id' => $id]);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::delete - ' . $e->getMessage());
+            return false;
+        }
     }
 
-    public function getStock(): int
-    {
-        return $this->stock;
+    public function referenceExists(string $ref, int $excludeId = 0): bool {
+        try {
+            $n = (int)$this->db->queryScalar(
+                "SELECT COUNT(*) FROM produits WHERE slug = :slug AND id != :id",
+                ['slug' => $ref, 'id' => $excludeId]
+            );
+            return $n > 0;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
-    public function getImage(): ?string
-    {
-        return $this->image;
+    public function getStats(): array {
+        try {
+            return [
+                'total'        => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits"),
+                'actifs'       => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE status='actif'"),
+                'rupture'      => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE stock=0"),
+                'alerte'       => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE status='rupture'"),
+                'valeur_stock' => (float)$this->db->queryScalar("SELECT COALESCE(SUM(stock * prix),0) FROM produits WHERE status='actif'"),
+            ];
+        } catch (Exception $e) {
+            return ['total'=>0,'actifs'=>0,'rupture'=>0,'alerte'=>0,'valeur_stock'=>0];
+        }
     }
 
-    public function getPrescription(): int
-    {
-        return $this->prescription;
+    /**
+     * Récupère les produits d'une catégorie spécifique via une JOINTURE
+     * 
+     * @param int $categorieId ID de la catégorie
+     * @return array Liste des produits avec informations de catégorie
+     */
+    public function getProduitsByCategorie(int $categorieId): array {
+        try {
+            $sql = "SELECT p.id, p.nom, p.slug, p.description, p.prix, p.stock, 
+                           p.image, p.prescription, p.status, p.created_at,
+                           c.id AS categorie_id, c.nom AS categorie_nom
+                    FROM produits p
+                    INNER JOIN categories c ON p.categorie_id = c.id
+                    WHERE p.categorie_id = :categorie_id
+                    AND p.status = 'actif'
+                    ORDER BY p.nom ASC";
+            
+            return $this->db->query($sql, ['categorie_id' => $categorieId]);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::getProduitsByCategorie - ' . $e->getMessage());
+            return [];
+        }
     }
 
-    public function getStatus(): string
-    {
-        return $this->status;
+    /**
+     * Récupère toutes les catégories avec le nombre de produits actifs
+     * Utilisé pour le formulaire de sélection de catégorie
+     * 
+     * @return array Liste des catégories avec comptage
+     */
+    /**
+     * Recherche rapide de produits par nom/description (pour l'API JSON)
+     */
+    public function search(string $query, int $limit = 10): array {
+        try {
+            $sql = "SELECT p.id, p.nom, p.slug, p.prix, p.stock, p.image, p.status,
+                           c.nom AS categorie_nom
+                    FROM produits p
+                    LEFT JOIN categories c ON p.categorie_id = c.id
+                    WHERE p.status = 'actif'
+                      AND (p.nom LIKE :q OR p.description LIKE :q OR p.slug LIKE :q)
+                    ORDER BY p.nom ASC
+                    LIMIT :limit";
+            $stmt = $this->db->getConnection()->prepare($sql);
+            $stmt->bindValue(':q', '%' . $query . '%');
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::search - ' . $e->getMessage());
+            return [];
+        }
     }
 
-    public function getCreatedAt(): string
-    {
-        return $this->createdAt;
-    }
 
-    public function getUpdatedAt(): string
-    {
-        return $this->updatedAt;
-    }
-
-    public function setId(int $id): void
-    {
-        $this->id = $id;
-    }
-
-    public function setNom(string $nom): void
-    {
-        $this->nom = $nom;
-    }
-
-    public function setSlug(?string $slug): void
-    {
-        $this->slug = $slug;
-    }
-
-    public function setDescription(?string $description): void
-    {
-        $this->description = $description;
-    }
-
-    public function setCategorieId(?int $categorieId): void
-    {
-        $this->categorieId = $categorieId;
-    }
-
-    public function setPrix(float $prix): void
-    {
-        $this->prix = $prix;
-    }
-
-    public function setStock(int $stock): void
-    {
-        $this->stock = $stock;
-    }
-
-    public function setImage(?string $image): void
-    {
-        $this->image = $image;
-    }
-
-    public function setPrescription(int $prescription): void
-    {
-        $this->prescription = $prescription;
-    }
-
-    public function setStatus(string $status): void
-    {
-        $this->status = $status;
-    }
-
-    public function setCreatedAt(string $createdAt): void
-    {
-        $this->createdAt = $createdAt;
-    }
-
-    public function setUpdatedAt(string $updatedAt): void
-    {
-        $this->updatedAt = $updatedAt;
+    public function getAllCategories(): array {
+        try {
+            $sql = "SELECT c.id, c.nom, c.slug,
+                           COUNT(p.id) AS nombre_produits
+                    FROM categories c
+                    LEFT JOIN produits p ON c.id = p.categorie_id AND p.status = 'actif'
+                    GROUP BY c.id, c.nom, c.slug
+                    ORDER BY c.nom ASC";
+            
+            return $this->db->query($sql);
+        } catch (Exception $e) {
+            error_log('Erreur Produit::getAllCategories - ' . $e->getMessage());
+            return [];
+        }
     }
 }

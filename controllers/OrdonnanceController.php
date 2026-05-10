@@ -30,6 +30,17 @@ class OrdonnanceController {
         $this->db = Database::getInstance();
     }
 
+    public function __destruct() {
+        unset(
+            $this->ordonnanceModel,
+            $this->rdvModel,
+            $this->medecinModel,
+            $this->patientModel,
+            $this->auth,
+            $this->db
+        );
+    }
+
     // ─────────────────────────────────────────
     //  Liste des ordonnances (patient)
     // ─────────────────────────────────────────
@@ -50,7 +61,7 @@ class OrdonnanceController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/frontoffice/ordonnance_list_patient.php';
+            require_once __DIR__ . '/../views/frontoffice/patient/mes_ordonnances.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::indexPatient - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des ordonnances.');
@@ -83,7 +94,7 @@ class OrdonnanceController {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/ordonnance_list_medecin.php';
+            require_once __DIR__ . '/../views/frontoffice/medecin/mes_ordonnances.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::indexMedecin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
@@ -553,7 +564,7 @@ public function indexAdmin(): void {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/ordonnance_form_medecin.php';
+            require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::createMedecin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
@@ -662,7 +673,7 @@ public function indexAdmin(): void {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/frontoffice/ordonnance_show_patient.php';
+            require_once __DIR__ . '/../views/backoffice/ordonnance/show.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::showPatient - ' . $e->getMessage());
             http_response_code(500);
@@ -690,7 +701,7 @@ public function indexAdmin(): void {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/ordonnance_show_medecin.php';
+            require_once __DIR__ . '/../views/backoffice/ordonnance/show.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::showMedecin - ' . $e->getMessage());
             http_response_code(500);
@@ -727,7 +738,7 @@ public function indexAdmin(): void {
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['old'], $_SESSION['flash']);
 
-            require_once __DIR__ . '/../views/backoffice/ordonnance_form_medecin_edit.php';
+            require_once __DIR__ . '/../views/backoffice/ordonnance/form.php';
         } catch (Exception $e) {
             error_log('Erreur OrdonnanceController::editMedecin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
@@ -885,6 +896,30 @@ public function indexAdmin(): void {
         }
     }
 
+    public function downloadMedecin(int $id): void {
+        $this->auth->requireRole('medecin');
+
+        try {
+            $medecinUserId = (int)$_SESSION['user_id'];
+            $ordonnance = $this->ordonnanceModel->getById($id);
+
+            if (!$ordonnance || (int)$ordonnance['medecin_id'] !== $medecinUserId) {
+                http_response_code(403);
+                die('Accès refusé.');
+            }
+
+            $medicaments = $this->ordonnanceModel->getMedicaments($id);
+            $medecin = $this->medecinModel->findByUserId($medecinUserId);
+            $patient = $this->patientModel->findByUserId((int)$ordonnance['patient_id']);
+
+            $this->generatePDF($ordonnance, $medicaments, $medecin, $patient);
+        } catch (Exception $e) {
+            error_log('Erreur downloadMedecin - ' . $e->getMessage());
+            http_response_code(500);
+            die('Erreur lors du téléchargement.');
+        }
+    }
+
     // ─────────────────────────────────────────
     //  Archiver une ordonnance (patient)
     // ─────────────────────────────────────────
@@ -1006,96 +1041,130 @@ public function indexAdmin(): void {
     }
 
     private function generatePDF($ordonnance, $medicaments, $medecin, $patient): void {
-        // Utiliser une librairie comme TCPDF ou mPDF
-        // Exemple avec génération HTML simple convertie en PDF
-        
+        $date = $ordonnance['date_prescription'] ?? date('Y-m-d');
+        $ordId = $ordonnance['id'] ?? '';
+        $diagnostic = htmlspecialchars($ordonnance['diagnostic'] ?? '');
+        $notes = htmlspecialchars($ordonnance['notes_medicales'] ?? '');
+        $nomMedecin = htmlspecialchars('Dr. ' . ($medecin['nom'] ?? '') . ' ' . ($medecin['prenom'] ?? ''));
+        $specialite = htmlspecialchars($medecin['specialite'] ?? '');
+        $nomPatient = htmlspecialchars(($patient['nom'] ?? '') . ' ' . ($patient['prenom'] ?? ''));
+        $telPatient = htmlspecialchars($patient['telephone'] ?? '');
+
+        // Build medicaments rows
+        $rows = '';
+        foreach ($medicaments as $med) {
+            $nom      = htmlspecialchars($med['nom'] ?? '');
+            $dosage   = htmlspecialchars($med['dosage'] ?? '');
+            $freq     = htmlspecialchars($med['frequence'] ?? '');
+            $duree    = htmlspecialchars($med['duree_jours'] ?? '');
+            $indic    = htmlspecialchars($med['indication'] ?? '');
+            $rows .= "<tr><td>$nom</td><td>$dosage</td><td>$freq</td><td>{$duree} jours</td><td>$indic</td></tr>";
+        }
+
+        // Pure PHP PDF using FPDF embedded as base64 — fallback: print-ready HTML with print JS
         $html = <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <title>Ordonnance #{$ordId}</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .medecin-info, .patient-info { margin: 20px 0; }
-        .medicaments { margin-top: 30px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f0f0f0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #222; padding: 30px; }
+        .page { max-width: 750px; margin: auto; border: 2px solid #1a5276; padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a5276; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { font-size: 22px; color: #1a5276; }
+        .header .date { font-size: 13px; color: #555; }
+        .section { margin-bottom: 18px; }
+        .section h3 { background: #1a5276; color: white; padding: 6px 12px; font-size: 13px; margin-bottom: 8px; }
+        .section p { padding: 0 12px; line-height: 1.7; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th { background: #1a5276; color: white; padding: 8px; font-size: 12px; text-align: left; }
+        td { border: 1px solid #ccc; padding: 7px 8px; font-size: 12px; }
+        tr:nth-child(even) td { background: #f4f8fb; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; color: #555; }
+        .signature { border-top: 1px solid #333; width: 200px; padding-top: 5px; text-align: center; }
+        .no-print { text-align: center; margin-bottom: 20px; }
+        .btn-print { background: #1a5276; color: white; border: none; padding: 10px 30px; font-size: 14px; border-radius: 5px; cursor: pointer; }
+        @media print { .no-print { display: none; } body { padding: 0; } }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>ORDONNANCE MÉDICALE</h1>
-        <p>Date: {$ordonnance['date_prescription']}</p>
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
     </div>
+    <div class="page">
+        <div class="header">
+            <div>
+                <h1>ORDONNANCE MÉDICALE</h1>
+                <p style="color:#1a5276; font-size:12px;">DocTime — Plateforme Médicale</p>
+            </div>
+            <div class="date">
+                <p><strong>N° :</strong> ORD-{$ordId}</p>
+                <p><strong>Date :</strong> {$date}</p>
+            </div>
+        </div>
 
-    <h2>Informations Médecin</h2>
-    <div class="medecin-info">
-        <p><strong>Dr. {$medecin['nom']} {$medecin['prenom']}</strong></p>
-        <p>Spécialité: {$medecin['specialite']}</p>
+        <div style="display:flex; gap:20px; margin-bottom:18px;">
+            <div class="section" style="flex:1;">
+                <h3>👨‍⚕️ Médecin</h3>
+                <p><strong>{$nomMedecin}</strong></p>
+                <p>{$specialite}</p>
+            </div>
+            <div class="section" style="flex:1;">
+                <h3>🧑 Patient</h3>
+                <p><strong>{$nomPatient}</strong></p>
+                <p>Tél : {$telPatient}</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🩺 Diagnostic</h3>
+            <p style="padding:10px 12px;">{$diagnostic}</p>
+        </div>
+
+        <div class="section">
+            <h3>💊 Médicaments prescrits</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Médicament</th>
+                        <th>Dosage</th>
+                        <th>Fréquence</th>
+                        <th>Durée</th>
+                        <th>Indication</th>
+                    </tr>
+                </thead>
+                <tbody>{$rows}</tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h3>📝 Notes médicales</h3>
+            <p style="padding:10px 12px;">{$notes}</p>
+        </div>
+
+        <div class="footer">
+            <p>Document généré le {$date} via DocTime</p>
+            <div class="signature">
+                <p>Signature du médecin</p>
+                <p style="margin-top:30px;">{$nomMedecin}</p>
+            </div>
+        </div>
     </div>
-
-    <h2>Informations Patient</h2>
-    <div class="patient-info">
-        <p><strong>{$patient['nom']} {$patient['prenom']}</strong></p>
-        <p>Tél: {$patient['telephone']}</p>
-    </div>
-
-    <h2>Diagnostic</h2>
-    <p>{$ordonnance['diagnostic']}</p>
-
-    <h2>Médicaments</h2>
-    <div class="medicaments">
-        <table>
-            <thead>
-                <tr>
-                    <th>Médicament</th>
-                    <th>Dosage</th>
-                    <th>Fréquence</th>
-                    <th>Durée</th>
-                    <th>Indication</th>
-                </tr>
-            </thead>
-            <tbody>
-HTML;
-
-        foreach ($medicaments as $med) {
-            $html .= <<<HTML
-                <tr>
-                    <td>{$med['nom']}</td>
-                    <td>{$med['dosage']}</td>
-                    <td>{$med['frequence']}</td>
-                    <td>{$med['duree_jours']} jours</td>
-                    <td>{$med['indication']}</td>
-                </tr>
-HTML;
-        }
-
-        $html .= <<<HTML
-            </tbody>
-        </table>
-    </div>
-
-    <div style="margin-top: 50px;">
-        <p><strong>Notes:</strong></p>
-        <p>{$ordonnance['notes_medicales']}</p>
-    </div>
+    <script>
+        // Auto-trigger print dialog for PDF save
+        window.onload = function() {
+            // Small delay so page renders first
+            setTimeout(function(){ window.print(); }, 500);
+        };
+    </script>
 </body>
 </html>
 HTML;
 
-        // Sauvegarder et télécharger
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="ordonnance_' . $ordonnance['id'] . '.pdf"');
-        
-        // Utiliser une vraie librairie comme mPDF:
-        // require_once __DIR__ . '/../vendor/autoload.php';
-        // $mpdf = new \Mpdf\Mpdf();
-        // $mpdf->WriteHTML($html);
-        // $mpdf->Output();
-        
-        // Pour l'instant, retourner l'HTML
+        // Send as HTML — browser print dialog allows "Save as PDF"
+        header('Content-Type: text/html; charset=UTF-8');
         echo $html;
         exit;
     }

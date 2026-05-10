@@ -2,7 +2,6 @@
 // Vue de contenu pour ajouter/éditer un médecin
 // Variables disponibles: $errors (array), $medecin (array optionnel), $isEdit (bool)
 $isEdit = isset($medecin);
-$medecinId = $medecin['user_id'] ?? $medecin['id'] ?? null;
 ?>
 
 <div class="container-fluid">
@@ -10,66 +9,52 @@ $medecinId = $medecin['user_id'] ?? $medecin['id'] ?? null;
         <div class="col-lg-8">
             <h2><?php echo $isEdit ? 'Modifier le médecin' : 'Ajouter un médecin'; ?></h2>
             
-            <form method="POST" action="<?php echo $isEdit ? 'index.php?page=medecins_admin&action=edit&id=' . $medecinId : 'index.php?page=medecins_admin&action=add'; ?>">
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Erreurs :</strong>
+                    <ul class="mb-0">
+                        <?php foreach ($errors as $field => $message): ?>
+                            <li><?php echo htmlspecialchars($message); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="<?php echo $isEdit ? 'index.php?page=medecins_admin&action=edit&id=' . $medecin['user_id'] : 'index.php?page=medecins_admin&action=add'; ?>">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control <?php echo !empty($errors['nom']) ? 'is-invalid' : ''; ?>" id="nom" name="nom" 
-                                   value="<?php echo htmlspecialchars($isEdit ? $medecin['nom'] : ($_POST['nom'] ?? '')); ?>">
-                            <?php if (!empty($errors['nom'])): ?>
-                                <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['nom']); ?></div>
-                            <?php endif; ?>
+                            <label for="nom" class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="nom" name="nom" 
+                                   value="<?php echo htmlspecialchars($isEdit ? $medecin['nom'] : ($_POST['nom'] ?? '')); ?>" required>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="prenom" class="form-label">Prénom <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control <?php echo !empty($errors['prenom']) ? 'is-invalid' : ''; ?>" id="prenom" name="prenom" 
-                                   value="<?php echo htmlspecialchars($isEdit ? $medecin['prenom'] : ($_POST['prenom'] ?? '')); ?>">
-                            <?php if (!empty($errors['prenom'])): ?>
-                                <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['prenom']); ?></div>
-                            <?php endif; ?>
+                            <label for="prenom" class="form-label">Prénom *</label>
+                            <input type="text" class="form-control" id="prenom" name="prenom" 
+                                   value="<?php echo htmlspecialchars($isEdit ? $medecin['prenom'] : ($_POST['prenom'] ?? '')); ?>" required>
                         </div>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control <?php echo !empty($errors['email']) ? 'is-invalid' : ''; ?>" id="email" name="email" 
-                           value="<?php echo htmlspecialchars($isEdit ? $medecin['email'] : ($_POST['email'] ?? '')); ?>">
-                    <?php if (!empty($errors['email'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['email']); ?></div>
-                    <?php endif; ?>
+                    <label for="email" class="form-label">Email *</label>
+                    <input type="email" class="form-control" id="email" name="email" 
+                           value="<?php echo htmlspecialchars($isEdit ? $medecin['email'] : ($_POST['email'] ?? '')); ?>" required>
                 </div>
 
                 <div class="mb-3">
                     <label for="telephone" class="form-label">Téléphone</label>
-                    <input type="tel" class="form-control <?php echo !empty($errors['telephone']) ? 'is-invalid' : ''; ?>" id="telephone" name="telephone" 
+                    <input type="tel" class="form-control" id="telephone" name="telephone" 
                            value="<?php echo htmlspecialchars($isEdit ? $medecin['telephone'] : ($_POST['telephone'] ?? '')); ?>">
-                    <?php if (!empty($errors['telephone'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['telephone']); ?></div>
-                    <?php endif; ?>
                 </div>
 
                 <div class="mb-3">
-                    <label for="password" class="form-label"><?php echo $isEdit ? 'Nouveau mot de passe' : 'Mot de passe'; ?> <span class="text-danger">*</span></label>
-                    <input type="password" class="form-control <?php echo !empty($errors['password']) ? 'is-invalid' : ''; ?>" id="password" name="password">
-                    <?php if (!empty($errors['password'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['password']); ?></div>
-                    <?php endif; ?>
-                    <small class="form-text text-muted">
-                        <?php echo $isEdit ? 'Laisser vide pour conserver le mot de passe actuel.' : 'Minimum 6 caract&egrave;res.'; ?>
-                    </small>
-                </div>
-
-                <div class="mb-3">
-                    <label for="specialite" class="form-label">Spécialité <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control <?php echo !empty($errors['specialite']) ? 'is-invalid' : ''; ?>" id="specialite" name="specialite" 
-                           value="<?php echo htmlspecialchars($isEdit ? $medecin['specialite'] : ($_POST['specialite'] ?? '')); ?>">
-                    <?php if (!empty($errors['specialite'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['specialite']); ?></div>
-                    <?php endif; ?>
+                    <label for="specialite" class="form-label">Spécialité *</label>
+                    <input type="text" class="form-control" id="specialite" name="specialite" 
+                           value="<?php echo htmlspecialchars($isEdit ? $medecin['specialite'] : ($_POST['specialite'] ?? '')); ?>" required>
                 </div>
 
                 <div class="mb-3">
@@ -79,21 +64,15 @@ $medecinId = $medecin['user_id'] ?? $medecin['id'] ?? null;
                 </div>
 
                 <div class="mb-3">
-                    <label for="annee_experience" class="form-label">Années d'expérience <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control <?php echo !empty($errors['annee_experience']) ? 'is-invalid' : ''; ?>" id="annee_experience" name="annee_experience" 
+                    <label for="annee_experience" class="form-label">Années d'expérience</label>
+                    <input type="number" class="form-control" id="annee_experience" name="annee_experience" 
                            value="<?php echo htmlspecialchars($isEdit ? $medecin['annee_experience'] : ($_POST['annee_experience'] ?? '')); ?>">
-                    <?php if (!empty($errors['annee_experience'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['annee_experience']); ?></div>
-                    <?php endif; ?>
                 </div>
 
                 <div class="mb-3">
-                    <label for="consultation_prix" class="form-label">Prix de consultation (€) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control <?php echo !empty($errors['consultation_prix']) ? 'is-invalid' : ''; ?>" id="consultation_prix" name="consultation_prix" 
+                    <label for="consultation_prix" class="form-label">Prix de consultation (€)</label>
+                    <input type="number" step="0.01" class="form-control" id="consultation_prix" name="consultation_prix" 
                            value="<?php echo htmlspecialchars($isEdit ? $medecin['consultation_prix'] : ($_POST['consultation_prix'] ?? '')); ?>">
-                    <?php if (!empty($errors['consultation_prix'])): ?>
-                        <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['consultation_prix']); ?></div>
-                    <?php endif; ?>
                 </div>
 
                 <div class="mb-3">
@@ -113,7 +92,7 @@ $medecinId = $medecin['user_id'] ?? $medecin['id'] ?? null;
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-save"></i> <?php echo $isEdit ? 'Mettre à jour' : 'Créer'; ?>
                     </button>
-                    <a href="index.php?page=medecins_admin" class="btn btn-secondary">
+                    <a href="index.php?page=medecins" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Annuler
                     </a>
                 </div>
@@ -121,4 +100,3 @@ $medecinId = $medecin['user_id'] ?? $medecin['id'] ?? null;
         </div>
     </div>
 </div>
-

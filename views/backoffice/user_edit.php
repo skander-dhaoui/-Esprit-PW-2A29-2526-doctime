@@ -29,17 +29,20 @@
     </style>
 </head>
 <body>
-<?php 
-// Messages d'erreur par défaut
-$fieldErrors = [
-    'nom' => 'Le nom est obligatoire',
-    'prenom' => 'Le prénom est obligatoire', 
-    'email' => 'L\'email est obligatoire et doit être valide',
-    'password' => 'Le mot de passe est obligatoire (minimum 6 caractères)',
-    'role' => 'Le rôle est obligatoire'
-];
+<div class="sidebar">
+    <div class="sidebar-header">
+        <i class="fas fa-stethoscope"></i>
+        <h3>MediConnect</h3>
+        <small>Back Office</small>
+    </div>
+    <div class="sidebar-menu">
+        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a>
+        <a href="index.php?page=users" class="active"><i class="fas fa-users"></i> Utilisateurs</a>
+        <a href="index.php?page=medecins"><i class="fas fa-user-md"></i> Médecins</a>
+        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+    </div>
+</div>
 
-require_once __DIR__ . '/layout_header_simple.php'; ?>
 <div class="main-content">
     <div class="navbar-top">
         <h4>
@@ -53,18 +56,16 @@ require_once __DIR__ . '/layout_header_simple.php'; ?>
 
     <div class="content-card">
 
-        <?php /* if (!empty($error)): ?>
+        <?php if (!empty($error)): ?>
             <div class="alert-box alert-error">
                 <i class="fas fa-exclamation-circle me-2"></i><?= $error ?>
             </div>
-        <?php endif; */ ?>
+        <?php endif; ?>
 
         <?php
             // Valeurs à afficher : priorité aux données soumises ($old), sinon données existantes ($user/$extra)
             $v = $old ?? [];
             $currentRole = $v['role'] ?? ($user['role'] ?? 'patient');
-            // Corriger la variable d'erreur
-            $errors = $error ?? [];
         ?>
 
         <form method="POST"
@@ -79,54 +80,46 @@ require_once __DIR__ . '/layout_header_simple.php'; ?>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Nom <span class="text-danger">*</span></label>
-                    <input type="text" id="nom" name="nom" class="form-control <?= !empty($errors['nom']) ? 'is-invalid' : '' ?>"
+                    <input type="text" id="nom" name="nom" class="form-control"
                            value="<?= htmlspecialchars($v['nom'] ?? $user['nom'] ?? '') ?>">
-                    <?php if (!empty($errors['nom'])): ?>
-                        <div class="invalid-feedback d-block"><?= $fieldErrors['nom'] ?></div>
-                    <?php endif; ?>
+                    <div class="invalid-feedback" id="nom-error"></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                    <input type="text" id="prenom" name="prenom" class="form-control <?= !empty($errors['prenom']) ? 'is-invalid' : '' ?>"
+                    <input type="text" id="prenom" name="prenom" class="form-control"
                            value="<?= htmlspecialchars($v['prenom'] ?? $user['prenom'] ?? '') ?>">
-                    <?php if (!empty($errors['prenom'])): ?>
-                        <div class="invalid-feedback d-block"><?= $fieldErrors['prenom'] ?></div>
-                    <?php endif; ?>
+                    <div class="invalid-feedback" id="prenom-error"></div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="text" id="email" name="email" class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
+                    <input type="text" id="email" name="email" class="form-control"
                            value="<?= htmlspecialchars($v['email'] ?? $user['email'] ?? '') ?>">
-                    <?php if (!empty($errors['email'])): ?>
-                        <div class="invalid-feedback d-block"><?= $fieldErrors['email'] ?></div>
-                    <?php endif; ?>
+                    <div class="invalid-feedback" id="email-error"></div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Téléphone</label>
                     <input type="text" id="telephone" name="telephone" class="form-control"
                            value="<?= htmlspecialchars($v['telephone'] ?? $user['telephone'] ?? '') ?>">
+                    <div class="invalid-feedback" id="telephone-error"></div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Date de naissance</label>
-                    <input type="date" name="date_naissance" class="form-control"
+                    <input type="text" name="date_naissance" class="form-control" placeholder="YYYY-MM-DD"
                            value="<?= htmlspecialchars($v['date_naissance'] ?? $user['date_naissance'] ?? '') ?>">
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Rôle <span class="text-danger">*</span></label>
-                    <select name="role" id="roleSelect" class="form-select <?= !empty($errors['role']) ? 'is-invalid' : '' ?>">
+                    <label class="form-label">Rôle</label>
+                    <select name="role" id="roleSelect" class="form-select">
                         <?php foreach (['patient','medecin','admin'] as $r): ?>
                             <option value="<?= $r ?>" <?= $currentRole===$r ? 'selected':'' ?>>
                                 <?= ucfirst($r) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <?php if (!empty($errors['role'])): ?>
-                        <div class="invalid-feedback d-block"><?= $fieldErrors['role'] ?></div>
-                    <?php endif; ?>
                 </div>
             </div>
             <div class="row">
@@ -146,10 +139,8 @@ require_once __DIR__ . '/layout_header_simple.php'; ?>
                 <?php if (!isset($user)): // Mot de passe seulement à la création ?>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
-                    <input type="password" id="password" name="password" class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>" placeholder="Min. 6 caractères">
-                    <?php if (!empty($errors['password'])): ?>
-                        <div class="invalid-feedback d-block"><?= $fieldErrors['password'] ?></div>
-                    <?php endif; ?>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Min. 6 caractères">
+                    <div class="invalid-feedback" id="password-error"></div>
                 </div>
                 <?php endif; ?>
             </div>

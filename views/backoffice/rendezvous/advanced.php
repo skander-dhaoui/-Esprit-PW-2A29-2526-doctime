@@ -207,7 +207,7 @@ $f = $filtres ?? [];
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead><tr>
-                        <th>ID</th><th>Patient</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif</th><th>Statut</th><th>Actions</th>
+                        <th>Patient</th><th>Médecin</th><th>Date</th><th>Heure</th><th>Motif</th><th>Statut</th><th>Actions</th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ($searchResults as $rdv): ?>
@@ -218,7 +218,6 @@ $f = $filtres ?? [];
                         };
                     ?>
                     <tr>
-                        <td>#<?= $rdv['id'] ?></td>
                         <td><?= htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']) ?></td>
                         <td>Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></td>
                         <td><?= date('d/m/Y', strtotime($rdv['date_rendezvous'])) ?></td>
@@ -292,4 +291,3 @@ function toggleSearch() {
 </script>
 </body>
 </html>
-

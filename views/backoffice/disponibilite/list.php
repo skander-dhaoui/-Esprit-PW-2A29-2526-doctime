@@ -126,7 +126,7 @@ $jours = [
     <!-- Filtres -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
+            <form method="GET" class="row g-3" id="dispoFiltersForm">
                 <input type="hidden" name="page" value="disponibilites_admin">
                 <div class="col-md-3">
                     <select name="medecin_id" class="form-select">
@@ -151,7 +151,7 @@ $jours = [
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                    <input type="text" name="search" id="dispoSearchInput" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                 </div>
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-primary w-100">Filtrer</button>
@@ -213,5 +213,22 @@ $jours = [
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('dispoFiltersForm');
+    const searchInput = document.getElementById('dispoSearchInput');
+    if (!form || !searchInput) return;
+
+    let timer = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => form.submit(), 450);
+    });
+
+    form.querySelectorAll('select').forEach(el => {
+        el.addEventListener('change', () => form.submit());
+    });
+});
+</script>
 </body>
 </html>

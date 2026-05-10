@@ -113,9 +113,9 @@ $expirees = count(array_filter($ordonnances, fn($o) =>
                 <a href="index.php?page=ordonnances&action=create" class="btn btn-success">
                     <i class="fas fa-plus me-2"></i>Nouvelle ordonnance
                 </a>
-                <form method="GET" class="d-flex gap-2">
+                <form method="GET" class="d-flex gap-2" id="ordonnanceSearchForm">
                     <input type="hidden" name="page" value="ordonnances">
-                    <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>" style="width: 250px;">
+                    <input type="text" name="search" id="ordonnanceSearchInput" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>" style="width: 250px;">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
                 </form>
             </div>
@@ -193,5 +193,18 @@ $expirees = count(array_filter($ordonnances, fn($o) =>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('ordonnanceSearchForm');
+    const input = document.getElementById('ordonnanceSearchInput');
+    if (!form || !input) return;
+
+    let timer = null;
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => form.submit(), 450);
+    });
+});
+</script>
 </body>
 </html>

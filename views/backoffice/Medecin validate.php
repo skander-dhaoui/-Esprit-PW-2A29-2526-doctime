@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<?php // Vue déprécée ?>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">

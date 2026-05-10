@@ -186,12 +186,12 @@ $f = $filtres ?? [];
                     </div>
                     <div class="col-md-2">
                         <label class="form-label-sm">Prix min (TND)</label>
-                        <input type="text" name="prix_min" class="form-control" step="1" 
+                        <input type="number" name="prix_min" class="form-control" step="1" min="0"
                                value="<?= htmlspecialchars($f['prix_min'] ?? '') ?>" placeholder="0">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label-sm">Prix max (TND)</label>
-                        <input type="text" name="prix_max" class="form-control" step="1" 
+                        <input type="number" name="prix_max" class="form-control" step="1" min="0"
                                value="<?= htmlspecialchars($f['prix_max'] ?? '') ?>" placeholder="∞">
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
@@ -489,4 +489,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-

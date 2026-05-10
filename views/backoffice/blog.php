@@ -85,7 +85,20 @@
     </style>
 </head>
 <body>
-<?php include __DIR__ . '/sidebar.php'; ?>
+<div class="sidebar">
+    <div class="sidebar-header"><div class="logo">Valorys</div><small>Back Office</small></div>
+    <div class="sidebar-menu">
+        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+        <a href="index.php?page=users"><i class="fas fa-users"></i><span>Utilisateurs</span></a>
+        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i><span>Médecins</span></a>
+        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i><span>Patients</span></a>
+        <a href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i><span>Rendez-vous</span></a>
+        <a href="index.php?page=blog" class="active"><i class="fas fa-blog"></i><span>Blog / Forum</span></a>
+        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i><span>Statistiques</span></a>
+        <a href="index.php?page=settings"><i class="fas fa-cog"></i><span>Paramètres</span></a>
+        <a href="index.php?page=logout" style="margin-top:10px"><i class="fas fa-sign-out-alt"></i><span>Déconnexion</span></a>
+    </div>
+</div>
 
 <div class="main">
     <div class="topbar">

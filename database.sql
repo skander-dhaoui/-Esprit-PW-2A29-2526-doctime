@@ -1,11 +1,7 @@
--- =============================================
--- UTILISATION DE LA BASE
--- =============================================
+
 USE doctime_db;
 
--- =============================================
--- TABLE DES UTILISATEURS (CENTRALE)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
@@ -27,9 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_statut (statut)
 );
 
--- =============================================
--- TABLE DES PATIENTS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS patients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -51,9 +45,7 @@ CREATE TABLE IF NOT EXISTS patients (
     INDEX idx_groupe_sanguin (groupe_sanguin)
 );
 
--- =============================================
--- TABLE DES MÉDECINS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS medecins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -82,9 +74,7 @@ CREATE TABLE IF NOT EXISTS medecins (
     INDEX idx_actif (actif)
 );
 
--- =============================================
--- TABLE DES RENDEZ-VOUS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS rendez_vous (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patient_id INT NOT NULL,
@@ -105,9 +95,7 @@ CREATE TABLE IF NOT EXISTS rendez_vous (
     INDEX idx_medecin (medecin_id)
 );
 
--- =============================================
--- TABLE DES DISPONIBILITÉS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS disponibilites (
     id INT AUTO_INCREMENT PRIMARY KEY,
     medecin_id INT NOT NULL,
@@ -124,9 +112,7 @@ CREATE TABLE IF NOT EXISTS disponibilites (
     INDEX idx_jour (jour_semaine)
 );
 
--- =============================================
--- TABLE DES ARTICLES (BLOG)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS articles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     titre VARCHAR(255) NOT NULL,
@@ -149,9 +135,7 @@ CREATE TABLE IF NOT EXISTS articles (
     INDEX idx_categorie (categorie)
 );
 
--- =============================================
--- TABLE DES REPONSES (COMMENTAIRES DU BLOG)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS replies (
     id INT AUTO_INCREMENT PRIMARY KEY,
     article_id INT NOT NULL,
@@ -165,9 +149,7 @@ CREATE TABLE IF NOT EXISTS replies (
     INDEX idx_status (status)
 );
 
--- =============================================
--- TABLE DES ÉVÉNEMENTS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY,
     titre VARCHAR(255) NOT NULL,
@@ -190,9 +172,7 @@ CREATE TABLE IF NOT EXISTS events (
     INDEX idx_slug (slug)
 );
 
--- =============================================
--- TABLE DES SPONSORS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS sponsors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
@@ -206,9 +186,7 @@ CREATE TABLE IF NOT EXISTS sponsors (
     INDEX idx_niveau (niveau)
 );
 
--- =============================================
--- TABLE DES PARTICIPATIONS (ÉVÉNEMENTS)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS participations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     event_id INT NOT NULL,
@@ -223,9 +201,7 @@ CREATE TABLE IF NOT EXISTS participations (
     INDEX idx_statut (statut)
 );
 
--- =============================================
--- TABLE DES CATÉGORIES (PRODUITS)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
@@ -239,9 +215,7 @@ CREATE TABLE IF NOT EXISTS categories (
     INDEX idx_slug (slug)
 );
 
--- =============================================
--- TABLE DES PRODUITS (PHARMACIE)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS produits (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(255) NOT NULL,
@@ -263,9 +237,7 @@ CREATE TABLE IF NOT EXISTS produits (
     INDEX idx_prix (prix)
 );
 
--- =============================================
--- TABLE DES COMMANDES
--- =============================================
+
 CREATE TABLE IF NOT EXISTS commandes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     numero_commande VARCHAR(50) NOT NULL UNIQUE,
@@ -287,9 +259,7 @@ CREATE TABLE IF NOT EXISTS commandes (
     INDEX idx_numero (numero_commande)
 );
 
--- =============================================
--- TABLE DES DÉTAILS DE COMMANDE
--- =============================================
+
 CREATE TABLE IF NOT EXISTS commande_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
     commande_id INT NOT NULL,
@@ -302,9 +272,7 @@ CREATE TABLE IF NOT EXISTS commande_details (
     INDEX idx_commande (commande_id)
 );
 
--- =============================================
--- TABLE DES ORDONNANCES (CORRIGÉE)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS ordonnances (
     id INT AUTO_INCREMENT PRIMARY KEY,
     numero_ordonnance VARCHAR(50) NOT NULL UNIQUE,
@@ -325,9 +293,7 @@ CREATE TABLE IF NOT EXISTS ordonnances (
     INDEX idx_date (date_ordonnance)
 );
 
--- =============================================
--- TABLE DES MÉDICAMENTS (DANS ORDONNANCE)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS ordonnance_medicaments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ordonnance_id INT NOT NULL,
@@ -340,9 +306,7 @@ CREATE TABLE IF NOT EXISTS ordonnance_medicaments (
     INDEX idx_ordonnance (ordonnance_id)
 );
 
--- =============================================
--- TABLE DES RÉCLAMATIONS
--- =============================================
+
 CREATE TABLE IF NOT EXISTS reclamations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patient_id INT NOT NULL,
@@ -358,9 +322,7 @@ CREATE TABLE IF NOT EXISTS reclamations (
     INDEX idx_statut (statut)
 );
 
--- =============================================
--- TABLE DES AVIS (MÉDECINS)
--- =============================================
+
 CREATE TABLE IF NOT EXISTS avis (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patient_id INT NOT NULL,
@@ -377,11 +339,7 @@ CREATE TABLE IF NOT EXISTS avis (
     INDEX idx_note (note)
 );
 
--- =============================================
--- DONNÉES INITIALES
--- =============================================
 
--- Insertion des catégories de produits
 INSERT INTO categories (nom, slug, description) VALUES 
 ('Médicaments', 'medicaments', 'Médicaments sur ordonnance et en libre accès'),
 ('Parapharmacie', 'parapharmacie', 'Produits de parapharmacie'),

@@ -146,7 +146,7 @@ $csrf_token = $_SESSION['csrf_token'];
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Date de naissance</label>
-                            <input type="date" name="date_naissance" class="form-control">
+                            <input type="text" name="date_naissance" class="form-control" placeholder="YYYY-MM-DD">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Statut</label>

@@ -20,6 +20,10 @@ class MedecinController {
         $this->auth         = new AuthController();
     }
 
+    public function __destruct() {
+        unset($this->medecinModel, $this->userModel, $this->auth);
+    }
+
     // ─────────────────────────────────────────
     //  Dashboard médecin
     // ─────────────────────────────────────────

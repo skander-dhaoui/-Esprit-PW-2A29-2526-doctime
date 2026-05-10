@@ -91,7 +91,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                     <!-- Date prescription -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Date de prescription</label>
-                        <input type="date" name="date_ordonnance" id="date_ordonnance" class="form-control <?= isset($errors['date_ordonnance']) ? 'error' : '' ?>" 
+                        <input type="text" name="date_ordonnance" id="date_ordonnance" class="form-control <?= isset($errors['date_ordonnance']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['date_ordonnance'] ?? ($ordonnance['date_ordonnance'] ?? date('Y-m-d'))) ?>">
                         <div class="error-container" id="date_ordonnance-error">
                             <?php if (isset($errors['date_ordonnance'])): ?>
@@ -103,7 +103,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
                     <!-- Date expiration -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Date d'expiration</label>
-                        <input type="date" name="date_expiration" id="date_expiration" class="form-control <?= isset($errors['date_expiration']) ? 'error' : '' ?>" 
+                        <input type="text" name="date_expiration" id="date_expiration" class="form-control <?= isset($errors['date_expiration']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['date_expiration'] ?? ($ordonnance['date_expiration'] ?? '')) ?>">
                         <div class="error-container" id="date_expiration-error">
                             <?php if (isset($errors['date_expiration'])): ?>

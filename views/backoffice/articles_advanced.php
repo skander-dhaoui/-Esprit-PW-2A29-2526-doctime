@@ -197,7 +197,7 @@ $f = $filtres ?? [];
                     </div>
                     <div class="col-md-2">
                         <label class="form-label-sm">Vues min</label>
-                        <input type="text" name="vues_min" class="form-control" value="<?= htmlspecialchars($f['vues_min'] ?? '') ?>" placeholder="0">
+                        <input type="number" name="vues_min" class="form-control" min="0" value="<?= htmlspecialchars($f['vues_min'] ?? '') ?>" placeholder="0">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label-sm">Trier par</label>
@@ -445,4 +445,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-

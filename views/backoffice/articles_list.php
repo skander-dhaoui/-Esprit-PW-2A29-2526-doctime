@@ -163,4 +163,3 @@ $current_page = 'articles_admin';
 </script>
 </body>
 </html>
-
