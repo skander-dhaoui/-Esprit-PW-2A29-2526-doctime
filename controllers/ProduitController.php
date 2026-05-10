@@ -1,8 +1,11 @@
 <?php
 
 require_once __DIR__ . '/../models/Produit.php';
+require_once __DIR__ . '/../repositories/ProduitRepository.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
+
+use App\Repositories\ProduitRepository;
 
 class ProduitController {
 

@@ -1,4 +1,6 @@
 <?php
+namespace App\Repositories;
+
 require_once __DIR__ . '/../config/database.php';
 
 class CommandeRepository
@@ -7,7 +9,7 @@ class CommandeRepository
 
     public function __construct()
     {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db = \Database::getInstance()->getConnection();
     }
 
     public function getAll(string $filter = 'all', int $offset = 0, int $limit = 20, string $search = '', string $dateDebut = '', string $dateFin = ''): array
@@ -41,8 +43,8 @@ class CommandeRepository
         $sql .= " ORDER BY c.date_commande DESC LIMIT :offset, :limit";
         
         $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }

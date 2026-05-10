@@ -2476,6 +2476,88 @@ document.addEventListener("DOMContentLoaded", () => {
 
         $this->renderPublicView('Nos Sponsors', $content);
     }
+
+    public function parapharmacie(): void {
+        require_once __DIR__ . '/../models/Produit.php';
+        require_once __DIR__ . '/../models/Categorie.php';
+        require_once __DIR__ . '/../repositories/ProduitRepository.php';
+        require_once __DIR__ . '/../repositories/CategorieRepository.php';
+
+        $produitRepo = new \App\Repositories\ProduitRepository();
+        $categorieRepo = new \App\Repositories\CategorieRepository();
+
+        $produits = $produitRepo->getAll('', 0, 'actif');
+        $categories = $categorieRepo->getActives();
+
+        $chatbotQuery = $_SESSION['chatbot_query'] ?? null;
+        $chatbotAnswer = $_SESSION['chatbot_answer'] ?? null;
+        $chatbotSuggestions = $_SESSION['chatbot_suggestions'] ?? [];
+
+        unset($_SESSION['chatbot_query'], $_SESSION['chatbot_answer'], $_SESSION['chatbot_suggestions']);
+
+        require_once __DIR__ . '/../views/frontoffice/pharmacie/index.php';
+    }
+
+    public function chatbotPharmacie(): void {
+        require_once __DIR__ . '/../repositories/ProduitRepository.php';
+
+        $query = $_POST['chatbot_query'] ?? '';
+        $query = strtolower(trim($query));
+
+        $_SESSION['chatbot_query'] = $query;
+
+        $produitRepo = new \App\Repositories\ProduitRepository();
+        $allProduits = $produitRepo->getAll('', 0, 'actif');
+
+        $suggestions = [];
+        $answer = '';
+
+        // Mots-clés pour la recherche
+        $keywords = [
+            'peau' => ['crème', 'lotion', 'hydratant', 'sérum', 'peau'],
+            'cheveux' => ['shampoing', 'conditioner', 'masque', 'cheveux', 'capillaire'],
+            'douleur' => ['douleur', 'mal', 'articulation', 'muscle'],
+            'vitamine' => ['vitamine', 'complément', 'supplément'],
+            'digestion' => ['digestion', 'estomac', 'ventre', 'intestin'],
+            'sommeil' => ['sommeil', 'dormir', 'insomnie'],
+            'stress' => ['stress', 'anxiété', 'calme'],
+            'immunité' => ['immunité', 'défense', 'santé'],
+        ];
+
+        foreach ($keywords as $category => $words) {
+            foreach ($words as $word) {
+                if (strpos($query, $word) !== false) {
+                    foreach ($allProduits as $produit) {
+                        $produitNom = strtolower($produit['nom'] ?? '');
+                        $produitDesc = strtolower($produit['description'] ?? '');
+                        if (strpos($produitNom, $word) !== false || strpos($produitDesc, $word) !== false) {
+                            $suggestions[] = $produit;
+                        }
+                    }
+                    $answer = "Voici des produits qui pourraient vous aider pour : " . ucfirst($category);
+                    break 2;
+                }
+            }
+        }
+
+        if (empty($suggestions)) {
+            $answer = "Je n'ai pas trouvé de produits correspondants. Essayez d'autres mots-clés comme 'peau', 'cheveux', 'douleur', 'vitamine', etc.";
+        }
+
+        $_SESSION['chatbot_answer'] = $answer;
+        $_SESSION['chatbot_suggestions'] = $suggestions;
+
+        header('Location: index.php?page=parapharmacie');
+        exit;
+    }
+
+    public function panier(): void {
+        require_once __DIR__ . '/../views/frontoffice/pharmacie/panier.php';
+    }
+
+    public function mesCommandes(): void {
+        require_once __DIR__ . '/../views/frontoffice/pharmacie/mes_commandes.php';
+    }
     
     private function getSponsorCard($sponsor, $levelClass): string {
         $logo = $sponsor['logo'] ?? 'https://via.placeholder.com/80?text=' . htmlspecialchars(substr($sponsor['nom'], 0, 2));
@@ -3413,47 +3495,12 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <?= $this->getCustomStyles() ?>
             <script src="assets/js/theme-mode.js"></script>
             <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
-            <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-                <div class="container">
-                    <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-hospital-user"></i> Valorys</a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=evenements">Événements</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
-                        </ul>
-                        <ul class="navbar-nav">
-                            <?php if (isset($_SESSION['user_id'])): ?>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user-circle"></i> <?= htmlspecialchars($_SESSION['user_name'] ?? 'Compte') ?>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="index.php?page=mon_profil"><i class="fas fa-id-card"></i> Mon profil</a></li>
-                                    <li><a class="dropdown-item" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar-check"></i> Mes rendez-vous</a></li>
-                                    <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Administration</a></li>
-                                    <?php endif; ?>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a></li>
-                                </ul>
-                            </li>
-                            <?php else: ?>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
+            <?= $this->getPublicNavbar() ?>
             <div class="container mt-4">
                 <?= $this->getFlashMessages() ?>
                 <div class="row">
@@ -3546,6 +3593,7 @@ public function monProfil(): void {
     }
 
     private function getPublicNavbar(): string {
+        global $page;
         $isLoggedIn = !empty($_SESSION['user_id']);
         $userName   = htmlspecialchars($_SESSION['user_name'] ?? 'Compte');
         $userRole   = $_SESSION['user_role'] ?? 'guest';
@@ -3573,12 +3621,12 @@ public function monProfil(): void {
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=sponsors"><i class="fas fa-handshake me-1"></i>Sponsors</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'accueil' ? 'active fw-bold' : '') . '" href="index.php?page=accueil"><i class="fas fa-home me-1"></i>Accueil</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'medecins' ? 'active fw-bold' : '') . '" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'blog_public' ? 'active fw-bold' : '') . '" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'evenements' ? 'active fw-bold' : '') . '" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'parapharmacie' ? 'active fw-bold' : '') . '" href="index.php?page=parapharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a></li>
+                        <li class="nav-item"><a class="nav-link ' . ($page === 'contact' ? 'active fw-bold' : '') . '" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
                     </ul>
                     <ul class="navbar-nav ms-auto">' . $rightLinks . '</ul>
                 </div>
@@ -3620,6 +3668,7 @@ public function monProfil(): void {
                 <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-clock fa-3x text-info mb-3"></i><h5>Disponibilités</h5><a href="index.php?page=disponibilites" class="btn btn-info btn-sm">Gérer</a></div></div></div>';
             }
             $roleContent .= '
+            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-pills fa-3x text-info mb-3"></i><h5>Parapharmacie</h5><a href="index.php?page=parapharmacie" class="btn btn-info btn-sm">Acheter</a></div></div></div>
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-blog fa-3x text-warning mb-3"></i><h5>Blog médical</h5><a href="index.php?page=blog_public" class="btn btn-warning btn-sm">Lire le blog</a></div></div></div>
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-user-circle fa-3x text-secondary mb-3"></i><h5>Mon profil</h5><a href="index.php?page=mon_profil" class="btn btn-secondary btn-sm">Mon profil</a></div></div></div>';
             return '
@@ -3635,8 +3684,8 @@ public function monProfil(): void {
         <div class="row g-4 mb-5">
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-calendar-check fa-3x text-primary mb-3"></i><h5>Prendre Rendez-vous</h5><a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a></div></div></div>
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-prescription fa-3x text-success mb-3"></i><h5>Ordonnances</h5><a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a></div></div></div>
+            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-pills fa-3x text-info mb-3"></i><h5>Parapharmacie</h5><a href="index.php?page=parapharmacie" class="btn btn-info btn-sm">Acheter</a></div></div></div>
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-blog fa-3x text-warning mb-3"></i><h5>Blog médical</h5><a href="index.php?page=blog_public" class="btn btn-warning btn-sm">Lire le blog</a></div></div></div>
-            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i><h5>Réclamations</h5><a href="index.php?page=login" class="btn btn-primary btn-sm">Se connecter</a></div></div></div>
         </div>
         <div class="row g-4">
             <div class="col-md-6"><div class="card"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Prochain Rendez-vous</h5></div><div class="card-body text-center py-4"><p class="text-muted">Connectez-vous pour voir vos rendez-vous</p><a href="index.php?page=login" class="btn btn-primary">Se connecter</a></div></div></div>

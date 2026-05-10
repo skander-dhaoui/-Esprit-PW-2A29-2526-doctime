@@ -3,67 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon profil - MediConnect</title>
+    <title>Mon profil - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?= (new FrontController())->getCustomStyles() ?>
     <style>
-        :root {
-            --primary: #2A7FAA;
-            --primary-dark: #1e5f80;
-            --secondary: #4CAF50;
-            --secondary-dark: #3d8b40;
-            --gray-bg: #f5f7fb;
-            --card-shadow: 0 10px 40px rgba(0,0,0,0.08);
-            --transition: all 0.3s ease;
-        }
-
-        body {
-            background: var(--gray-bg);
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Navbar */
-        .navbar {
-            background: white;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.05);
-            padding: 12px 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent !important;
-        }
-        .navbar-brand i {
-            background: none;
-            -webkit-background-clip: unset;
-            background-clip: unset;
-            color: var(--primary);
-        }
-        .nav-link {
-            color: #4a5568 !important;
-            font-weight: 500;
-            transition: var(--transition);
-            margin: 0 5px;
-            border-radius: 10px;
-            padding: 8px 16px;
-        }
-        .nav-link:hover, .nav-link.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white !important;
-            transform: translateY(-2px);
-        }
-        .nav-link i {
-            margin-right: 8px;
-        }
-
         /* Profile Header */
         .profile-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -423,35 +367,10 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
-                <i class="fas fa-stethoscope"></i> MediConnect
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-home"></i> Accueil</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/valorys_Copie/index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/valorys_Copie/index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php 
+    $front = new FrontController();
+    echo $front->getPublicNavbar(); 
+    ?>
 
     <!-- Profile Header -->
     <div class="profile-header">

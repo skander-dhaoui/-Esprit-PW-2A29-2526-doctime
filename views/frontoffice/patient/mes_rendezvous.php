@@ -14,6 +14,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
     <title>Mes rendez-vous - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?php 
+    global $front;
+    if (!$front) $front = new FrontController();
+    echo $front->getCustomStyles();
+    ?>
     <style>
         body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: #1a2035; }
@@ -40,25 +45,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php 
+global $front;
+if (!$front) $front = new FrontController();
+echo $front->getPublicNavbar(); 
+?>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">

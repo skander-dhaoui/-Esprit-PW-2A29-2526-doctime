@@ -3,23 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modifier mon profil - MediConnect</title>
+    <title>Modifier mon profil - Valorys</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?= (new FrontController())->getCustomStyles() ?>
     <style>
-        :root {
-            --primary: #2A7FAA;
-            --primary-dark: #1e5f80;
-            --secondary: #4CAF50;
-            --secondary-dark: #3d8b40;
-            --card-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            --transition: all 0.3s ease;
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Segoe UI', sans-serif;
             min-height: 100vh;
             display: flex;
@@ -294,6 +285,7 @@
     </style>
 </head>
 <body>
+    <?php echo (new FrontController())->getPublicNavbar(); ?>
 
 <?php
 // Ce fichier est une VUE - Il ne contient PAS la logique métier

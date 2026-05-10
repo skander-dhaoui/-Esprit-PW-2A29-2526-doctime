@@ -35,29 +35,37 @@
         <div class="collapse navbar-collapse" id="navMenu">
             <ul class="navbar-nav ms-auto gap-1">
                 <li class="nav-item">
-                    <a class="nav-link <?= ($_GET['controller'] ?? 'home') === 'home' ? 'active fw-semibold' : '' ?>"
-                       href="/valorys_Copie/index.php">Accueil</a>
+                    <a class="nav-link <?= ($page === 'accueil') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=accueil">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= ($_GET['controller'] ?? '') === 'evenement' ? 'active fw-semibold' : '' ?>"
-                       href="/valorys_Copie/index.php?controller=evenement&action=list">Événements</a>
+                    <a class="nav-link <?= ($page === 'medecins') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=medecins">Médecins</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= ($_GET['controller'] ?? '') === 'sponsor' ? 'active fw-semibold' : '' ?>"
-                       href="/valorys_Copie/index.php?controller=sponsor&action=list">Sponsors</a>
+                    <a class="nav-link <?= ($page === 'blog_public') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=blog_public">Blog</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= ($_GET['controller'] ?? '') === 'mesinscriptions' ? 'active fw-semibold' : '' ?>"
-                       href="/valorys_Copie/index.php?controller=mesinscriptions&action=search">
-                        <i class="bi bi-calendar-check me-1"></i>Mes Inscriptions
-                    </a>
+                    <a class="nav-link <?= ($page === 'evenements') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=evenements">Événements</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= ($page === 'parapharmacie') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=parapharmacie">Parapharmacie</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= ($page === 'contact') ? 'active fw-semibold' : '' ?>"
+                       href="index.php?page=contact">Contact</a>
+                </li>
+                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
                 <li class="nav-item ms-2">
                     <a class="nav-link btn btn-outline-light btn-sm px-3"
-                       href="/valorys_Copie/index.php?controller=evenement&action=index">
+                       href="index.php?page=dashboard">
                         <i class="bi bi-gear me-1"></i>Admin
                     </a>
                 </li>
+                <?php endif; ?>
             </ul>
         </div>
     </div>

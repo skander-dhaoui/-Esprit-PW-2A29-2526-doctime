@@ -1,6 +1,6 @@
 <?php
 $pageTitle = 'Parapharmacie - Valorys';
-$activePage = 'pharmacie';
+$activePage = 'parapharmacie';
 $extraStyles = "
     .produit-card {
         background: white; border-radius: 16px; overflow: hidden;
@@ -99,7 +99,7 @@ require __DIR__ . '/partials/header.php';
                     <div class="fw-semibold"><?= htmlspecialchars($suggestion['nom']) ?></div>
                     <small class="text-muted d-block mb-2"><?= htmlspecialchars($suggestion['categorie_nom'] ?? '') ?></small>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold"><?= number_format((float)$suggestion['prix_vente'], 2) ?> TND</span>
+                        <span class="fw-bold"><?= number_format((float)($suggestion['prix'] ?? 0), 2) ?> TND</span>
                         <a href="index.php?page=produit_detail&id=<?= (int)$suggestion['id'] ?>" class="btn btn-sm btn-outline-primary">Voir</a>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ require __DIR__ . '/partials/header.php';
                         <?php endif; ?>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div class="produit-prix"><?= number_format($p['prix_vente'], 2) ?> TND</div>
+                        <div class="produit-prix"><?= number_format($p['prix'] ?? 0, 2) ?> TND</div>
                         <a href="index.php?page=produit_detail&id=<?= $p['id'] ?>"
                            class="btn btn-sm" style="background:#2A7FAA;color:white;border-radius:20px">
                             Détails

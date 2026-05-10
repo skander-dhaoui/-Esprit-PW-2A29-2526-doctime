@@ -4361,3 +4361,1319 @@ Stack trace:
 [09-May-2026 20:08:33 Europe/Berlin] === SOCIAL CALLBACK SUCCESS ===
 [09-May-2026 20:08:33 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
 [09-May-2026 20:09:28 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:18:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[10-May-2026 12:18:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:18:48] [2] Undefined array key "parent_id" in C:\4xampp\htdocs\valorys_Copie\models\Categorie.php:22
+[10-May-2026 12:18:48 Europe/Berlin] PHP Warning:  Undefined array key "parent_id" in C:\4xampp\htdocs\valorys_Copie\models\Categorie.php on line 22
+[2026-05-10 12:18:48] [2] Undefined array key "categorie_id" in C:\4xampp\htdocs\valorys_Copie\models\Produit.php:27
+[10-May-2026 12:18:48 Europe/Berlin] PHP Warning:  Undefined array key "categorie_id" in C:\4xampp\htdocs\valorys_Copie\models\Produit.php on line 27
+[10-May-2026 12:18:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method App\Models\Categorie::getAll() in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php:28
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(927): CategorieController->index()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php on line 28
+[10-May-2026 12:22:27 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:22:32 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:22:33 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Models\Produit" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php:20
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(921): CategorieController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php on line 20
+[10-May-2026 12:22:37 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:22:37] [2] require_once(C:\4xampp\htdocs\valorys_Copie\controllers/../views/backoffice/commande_list.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:61
+[10-May-2026 12:22:37 Europe/Berlin] PHP Warning:  require_once(C:\4xampp\htdocs\valorys_Copie\controllers/../views/backoffice/commande_list.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 61
+[10-May-2026 12:22:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\controllers/../views/backoffice/commande_list.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:61
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 61
+[10-May-2026 12:22:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:23:00 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:23:01 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Models\Produit" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php:20
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(921): CategorieController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php on line 20
+[10-May-2026 12:23:04 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=ordonnances] ===
+[10-May-2026 12:23:04 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method App\Models\Ordonnance::getAll() in C:\4xampp\htdocs\valorys_Copie\controllers\OrdonnanceController.php:483
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(690): OrdonnanceController->indexAdmin()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\OrdonnanceController.php on line 483
+[10-May-2026 12:23:37 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:37] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:23:37 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:23:37 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:23:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:23:40 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Models\Produit" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php:20
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(921): CategorieController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php on line 20
+[10-May-2026 12:23:41 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:23:41] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:23:41 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:23:41 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:23:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:23:43] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:23:43] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:23:43] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:23:43] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:23:43] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:23:43] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:23:43] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:23:43] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:23:43 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:23:43 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(61): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:23:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:23:49 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Models\Produit" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php:20
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(921): CategorieController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php on line 20
+[10-May-2026 12:25:05 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:25:05] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:25:05 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:25:05] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:25:05 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:25:05] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:25:05 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:25:05] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:25:05 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:25:05] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:25:05 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:25:05 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(31): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:25:09 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:25:10] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:25:10 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:25:10 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(140): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:25:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:25:11] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:25:11] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:25:11] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:25:11] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:25:11] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:25:11] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:25:11] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:25:11] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:25:11 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:25:11 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(55): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:25:16 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=users] ===
+[10-May-2026 12:25:20 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=medecins_admin] ===
+[10-May-2026 12:25:21 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=patients] ===
+[10-May-2026 12:25:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:25:56 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\CommandeRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:23
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 23
+[10-May-2026 12:25:59 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:25:59 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\CommandeRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:23
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 23
+[10-May-2026 12:26:02 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[10-May-2026 12:26:02 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\CommandeRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:23
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 23
+[10-May-2026 12:26:20 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:26:20 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\CommandeRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:23
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 23
+[10-May-2026 12:26:31 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:26:31 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\CommandeRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php:23
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php on line 23
+[10-May-2026 12:26:59 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[10-May-2026 12:26:59 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:27:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:27:25 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:27:32 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:27:32 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:27:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[10-May-2026 12:27:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:28:11 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:13 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:28:13 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:15 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[10-May-2026 12:28:15 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:17 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:28:17 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:18 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[10-May-2026 12:28:18 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "App\Repositories\Database" not found in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php:12
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(23): App\Repositories\CommandeRepository->__construct()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(118): CommandeController->__construct()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\repositories\CommandeRepository.php on line 12
+[10-May-2026 12:28:21 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:28:21] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:28:21] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:28:21] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:28:21] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:28:21] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:28:21] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:28:21] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:21] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:28:21 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:21 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(61): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:22 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:28:22] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:28:22 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:28:22] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:28:22 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:28:22] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:22 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:22] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:22 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:22] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:28:22 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:22 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:23 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:24] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:28:24 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:24 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:28:25] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:28:25] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:28:25] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:28:25] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:28:25] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:28:25] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:28:25] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:25] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:28:25 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:25 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(61): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:39] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:28:39 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:39 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:40 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:28:40] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:28:40 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:28:40] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:28:40 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:28:40] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:40 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:40] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:40 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:40] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:28:40 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:40 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:41 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:28:41] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:28:41] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:28:41] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:28:41] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:28:41] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:28:41] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:28:41] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:28:41] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:28:41 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:41 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(61): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:28:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:28:45] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:28:45 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:28:45] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:28:45 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:28:45] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:45 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:45] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:45 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:45] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:28:45 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:45 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:46 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:46] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:28:46 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:46 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:47 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:28:47] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:28:47 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:28:47] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:28:47 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:28:47] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:47 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:47] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:47 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:47] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:28:47 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:47 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:49] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:28:49 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:49 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:51 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:28:51] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:28:51 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:28:51] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:28:51 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:28:51] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:51 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:51] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:28:51 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:28:51] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:28:51 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:51 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:28:53 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:28:53] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:28:53 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:28:53 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:29:17 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[10-May-2026 12:29:17 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[10-May-2026 12:29:20 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_login&provider=google] ===
+[10-May-2026 12:29:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=produits_admin] ===
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:21
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 21
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:30
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 30
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:39
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 39
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:48
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 48
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Undefined variable $stats in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:320
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  Trying to access array offset on value of type null in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 320
+[2026-05-10 12:29:43] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+[10-May-2026 12:29:43 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:29:43 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php:330
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\ProduitController.php(143): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(915): ProduitController->manage()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\produits_list.php on line 330
+[10-May-2026 12:29:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[2026-05-10 12:29:49] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:29
+[10-May-2026 12:29:49 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 29
+[2026-05-10 12:29:49] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:38
+[10-May-2026 12:29:49 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 38
+[2026-05-10 12:29:49] [2] Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:29:49 Europe/Berlin] PHP Warning:  Undefined array key "actives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:29:49] [2] Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:195
+[10-May-2026 12:29:49 Europe/Berlin] PHP Warning:  Undefined array key "inactives" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 195
+[2026-05-10 12:29:49] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+[10-May-2026 12:29:49 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:29:49 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php:205
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CategorieController.php(33): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(930): CategorieController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\categories_list.php on line 205
+[10-May-2026 12:29:54 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=commandes_admin] ===
+[2026-05-10 12:29:54] [2] Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:16
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 16
+[2026-05-10 12:29:54] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:17
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 17
+[2026-05-10 12:29:54] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:18
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 18
+[2026-05-10 12:29:54] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:19
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 19
+[2026-05-10 12:29:54] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:20
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 20
+[2026-05-10 12:29:54] [2] Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:21
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "ca_total" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 21
+[2026-05-10 12:29:54] [2] Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "en_attente" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "confirmees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "en_preparation" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "expediees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "livrees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:201
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  Undefined array key "annulees" in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 201
+[2026-05-10 12:29:54] [2] require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+[10-May-2026 12:29:54 Europe/Berlin] PHP Warning:  require(C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php): Failed to open stream: No such file or directory in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:29:54 Europe/Berlin] PHP Fatal error:  Uncaught Error: Failed opening required 'C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie/_layout_bottom.php' (include_path='C:\4xampp\php\PEAR') in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php:211
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\controllers\CommandeController.php(61): require_once()
+#1 C:\4xampp\htdocs\valorys_Copie\index.php(944): CommandeController->index()
+#2 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\views\backoffice\pharmacie\commandes_list.php on line 211
+[10-May-2026 12:30:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=logout] ===
+[10-May-2026 12:30:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login&logout=1] ===
+[10-May-2026 12:30:52 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_login&provider=facebook] ===
+[10-May-2026 12:30:58 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_login&provider=google] ===
+[10-May-2026 12:31:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_callback&provider=google&state=1724f5d04c2fe8ea2c7308320b27d004&iss=https%3A%2F%2Faccounts.google.com&code=4%2F0AeoWuM_oJPuYmYvkqO2NiakCSQI_YRuLb1RpGgL-zMwnV64WbscxVH_9GTc65sBfAysSDg&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent] ===
+[10-May-2026 12:31:39 Europe/Berlin] === SOCIAL CALLBACK START ===
+[10-May-2026 12:31:39 Europe/Berlin] Provider: google
+[10-May-2026 12:31:39 Europe/Berlin] GET params: {"page":"social_callback","provider":"google","state":"1724f5d04c2fe8ea2c7308320b27d004","iss":"https:\/\/accounts.google.com","code":"4\/0AeoWuM_oJPuYmYvkqO2NiakCSQI_YRuLb1RpGgL-zMwnV64WbscxVH_9GTc65sBfAysSDg","scope":"email profile https:\/\/www.googleapis.com\/auth\/userinfo.profile https:\/\/www.googleapis.com\/auth\/userinfo.email openid","authuser":"0","prompt":"consent"}
+[10-May-2026 12:31:39 Europe/Berlin] Session state: 1724f5d04c2fe8ea2c7308320b27d004
+[10-May-2026 12:31:39 Europe/Berlin] State validation: expected=1724f5d04c2fe8ea2c7308320b27d004 | received=1724f5d04c2fe8ea2c7308320b27d004
+[10-May-2026 12:31:39 Europe/Berlin] Attempting to exchange code for token...
+[10-May-2026 12:31:39 Europe/Berlin] === OAUTH TOKEN EXCHANGE START ===
+[10-May-2026 12:31:39 Europe/Berlin] Provider: google
+[10-May-2026 12:31:39 Europe/Berlin] Code: 4/0AeoWuM_oJPuYmYvkq...
+[10-May-2026 12:31:39 Europe/Berlin] Callback URL: http://localhost/valorys_Copie/index.php?page=social_callback&provider=google
+[10-May-2026 12:31:39 Europe/Berlin] Payload: {"client_id":"1072884902221-848u5vreq5su3dsqjc3n8ai2ofvtp4b9.apps.googleusercontent.com","client_secret":"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","redirect_uri":"http:\/\/localhost\/valorys_Copie\/index.php?page=social_callback&provider=google","code":"4\/0AeoWuM_oJPuYmYvkqO2NiakCSQI_YRuLb1RpGgL-zMwnV64WbscxVH_9GTc65sBfAysSDg","grant_type":"authorization_code"}
+[10-May-2026 12:31:40 Europe/Berlin] HTTP Response [200]: {
+  "access_token": "ya29.a0AQvPyIMLM271GpzKv-l903bnr7Ys8FsCGVeA4ARl7TVwIp592wiZ96pvwbFGBfRYiXH55fvfNqF5ZMqwVwgO-ZXETJ_MYkKt1Y-pIlWD1v5wh6_o7NZ6KWRXuBlZGGd0B_OsusnpJMDoo0ErbE7q2bHtAX-UGSEmVazRegY5t2dASdjNY3Dme-rDD-Fr2yfiQRXcavQaCgYKAcYSARQSFQHGX2MiURmEKCZnkMEJ4U5gekxnfQ0206",
+  "expires_in": 3599,
+  "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid",
+  "token_type": "Bearer",
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjgwNzZkZGJhYjQ
+[10-May-2026 12:31:40 Europe/Berlin] Token response: {"access_token":"ya29.a0AQvPyIMLM271GpzKv-l903bnr7Ys8FsCGVeA4ARl7TVwIp592wiZ96pvwbFGBfRYiXH55fvfNqF5ZMqwVwgO-ZXETJ_MYkKt1Y-pIlWD1v5wh6_o7NZ6KWRXuBlZGGd0B_OsusnpJMDoo0ErbE7q2bHtAX-UGSEmVazRegY5t2dASdjNY3Dme-rDD-Fr2yfiQRXcavQaCgYKAcYSARQSFQHGX2MiURmEKCZnkMEJ4U5gekxnfQ0206","expires_in":3599,"scope":"https:\/\/www.googleapis.com\/auth\/userinfo.profile https:\/\/www.googleapis.com\/auth\/userinfo.email openid","token_type":"Bearer","id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6IjgwNzZkZGJhYjQxNTU1NmUxNjkxNTRjNmE0YTBiZGJkNDQ2OWI3OWMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIxMDcyODg0OTAyMjIxLTg0OHU1dnJlcTVzdTNkc3FqYzNuOGFpMm9mdnRwNGI5LmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiYXVkIjoiMTA3Mjg4NDkwMjIyMS04NDh1NXZyZXE1c3UzZHNxamMzbjhhaTJvZnZ0cDRiOS5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjExMDAyMzMxNTk2Njc2MTE4NzU0OSIsImVtYWlsIjoiYWZuZW5nb3JhaUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFzaCI6Ijg4QUw1UnhzQlNWVEctN2h0UnQ1VGciLCJuYW1lIjoiYWZuZW4gZ29yYWkiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWJfWGktN0dRd0ZsVGpnNXJtUFFBNXAzVXhMRTgteXlWNTNiaWVMSTNMNEdIcTJnPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6ImFmbmVuIiwiZmFtaWx5X25hbWUiOiJnb3JhaSIsImlhdCI6MTc3ODQwOTA5OSwiZXhwIjoxNzc4NDEyNjk5fQ.K2W-I_9l_adSGYkXlosOfK7-qeRDkf4k7GpvqP5HOju3RC78EHh8wYXFadGPfKddJjOqlgFj9A2jOu7rpMU77wE_UCrElxd52l4I_7jgSBjstGN7ci2WfKcNYvvsqQvRZLhPMzYptojY8g-Ak34Frhul3rm9ddMiGsxnVs2hzuW7vFUhHTNcV-5Uu0Ori0grhNCt_fdY-y6aUey6WbmyJhivEVkoqdleKwy5tvOhYVbCEWtkWJHZBT7jBDCkVz9CY4fEm9U6dHeH6DcfLlGcZVpx83wtEygmF1tXVT-0fv__VsUqeJy6olKSWYBTwvb5UviZGCEyh0Jspb3ibOGjRQ"}
+[10-May-2026 12:31:40 Europe/Berlin] === OAUTH TOKEN EXCHANGE SUCCESS ===
+[10-May-2026 12:31:40 Europe/Berlin] Successfully got token data
+[10-May-2026 12:31:40 Europe/Berlin] HTTP Response [200]: {
+  "sub": "110023315966761187549",
+  "name": "afnen gorai",
+  "given_name": "afnen",
+  "family_name": "gorai",
+  "picture": "https://lh3.googleusercontent.com/a/ACg8ocIb_Xi-7GQwFlTjg5rmPQA5p3UxLE8-yyV53bieLI3L4GHq2g\u003ds96-c",
+  "email": "afnengorai@gmail.com",
+  "email_verified": true
+}
+[10-May-2026 12:31:40 Europe/Berlin] Successfully fetched profile: {"sub":"110023315966761187549","name":"afnen gorai","given_name":"afnen","family_name":"gorai","picture":"https:\/\/lh3.googleusercontent.com\/a\/ACg8ocIb_Xi-7GQwFlTjg5rmPQA5p3UxLE8-yyV53bieLI3L4GHq2g=s96-c","email":"afnengorai@gmail.com","email_verified":true}
+[10-May-2026 12:31:40 Europe/Berlin] User found/created: id=2
+[10-May-2026 12:31:40 Europe/Berlin] === SOCIAL CALLBACK SUCCESS ===
+[10-May-2026 12:31:40 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:36:40 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:37:21 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:39:38 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:40:12 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:40:14 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:40:46 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:40:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:40:51 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:41:31 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:41:31 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method FrontController::parapharmacie() in C:\4xampp\htdocs\valorys_Copie\index.php:423
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 423
+[10-May-2026 12:41:46 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:41:46 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method FrontController::parapharmacie() in C:\4xampp\htdocs\valorys_Copie\index.php:423
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 423
+[10-May-2026 12:42:22 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:42:22 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "ProduitRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2486
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(423): FrontController->parapharmacie()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2486
+[10-May-2026 12:42:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:42:43 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "ProduitRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2486
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(423): FrontController->parapharmacie()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2486
+[10-May-2026 12:42:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:42:48 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "ProduitRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2486
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(423): FrontController->parapharmacie()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2486
+[10-May-2026 12:42:53 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:42:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login] ===
+[10-May-2026 12:43:00 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_login&provider=facebook] ===
+[10-May-2026 12:43:07 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=social_callback&provider=facebook&code=AQDuYOKKChJiFwtlMAMT8i-Xidf3dEr4wNbbUOE8lr_q6m8bnxOMFQydtiEJwHlRplnhcLmEAO5e7VM_sfqzFEIpt4shEK202fPLLOgXxjUSMhUZCcg8AdSnDqxX1NExS2QpHpiTKm02lqCQA9zh_mVue0Kgg3jJImnap-YzbZY_hmIb7inHw4P22tIbEf33vVij57UMR0kIgV7RtxROy5NTtM5C_nbRBMDwryF-bbt0MmMsSEtaIx-CQqqAYdhkmhmmct9LH8DCjdR4Unklnn97xDfLW8i9cN97Fvmps4btSDfnXEW9VwvAtnI2I1Nqc2hFKcSJNEI7hAOhEG7_xycXEEtELIbj7EWghCpw0qyFn_0xPgRTdeX2kmCw46_E_lH8c9-YV77D953oywUGClqu2lmqgP8mGBeIJfHJa3xcTk6DqqWjm694zMwUxpxjnCM&state=d2dede18109bdadb06a3aaaa8827bd55] ===
+[10-May-2026 12:43:07 Europe/Berlin] === SOCIAL CALLBACK START ===
+[10-May-2026 12:43:07 Europe/Berlin] Provider: facebook
+[10-May-2026 12:43:07 Europe/Berlin] GET params: {"page":"social_callback","provider":"facebook","code":"AQDuYOKKChJiFwtlMAMT8i-Xidf3dEr4wNbbUOE8lr_q6m8bnxOMFQydtiEJwHlRplnhcLmEAO5e7VM_sfqzFEIpt4shEK202fPLLOgXxjUSMhUZCcg8AdSnDqxX1NExS2QpHpiTKm02lqCQA9zh_mVue0Kgg3jJImnap-YzbZY_hmIb7inHw4P22tIbEf33vVij57UMR0kIgV7RtxROy5NTtM5C_nbRBMDwryF-bbt0MmMsSEtaIx-CQqqAYdhkmhmmct9LH8DCjdR4Unklnn97xDfLW8i9cN97Fvmps4btSDfnXEW9VwvAtnI2I1Nqc2hFKcSJNEI7hAOhEG7_xycXEEtELIbj7EWghCpw0qyFn_0xPgRTdeX2kmCw46_E_lH8c9-YV77D953oywUGClqu2lmqgP8mGBeIJfHJa3xcTk6DqqWjm694zMwUxpxjnCM","state":"d2dede18109bdadb06a3aaaa8827bd55"}
+[10-May-2026 12:43:07 Europe/Berlin] Session state: d2dede18109bdadb06a3aaaa8827bd55
+[10-May-2026 12:43:07 Europe/Berlin] State validation: expected=d2dede18109bdadb06a3aaaa8827bd55 | received=d2dede18109bdadb06a3aaaa8827bd55
+[10-May-2026 12:43:07 Europe/Berlin] Attempting to exchange code for token...
+[10-May-2026 12:43:07 Europe/Berlin] === OAUTH TOKEN EXCHANGE START ===
+[10-May-2026 12:43:07 Europe/Berlin] Provider: facebook
+[10-May-2026 12:43:07 Europe/Berlin] Code: AQDuYOKKChJiFwtlMAMT...
+[10-May-2026 12:43:07 Europe/Berlin] Callback URL: http://localhost/valorys_Copie/index.php?page=social_callback&provider=facebook
+[10-May-2026 12:43:07 Europe/Berlin] Payload: {"client_id":"1599945557754745","client_secret":"8509fef55f6d189d00088becf0dd489f","redirect_uri":"http:\/\/localhost\/valorys_Copie\/index.php?page=social_callback&provider=facebook","code":"AQDuYOKKChJiFwtlMAMT8i-Xidf3dEr4wNbbUOE8lr_q6m8bnxOMFQydtiEJwHlRplnhcLmEAO5e7VM_sfqzFEIpt4shEK202fPLLOgXxjUSMhUZCcg8AdSnDqxX1NExS2QpHpiTKm02lqCQA9zh_mVue0Kgg3jJImnap-YzbZY_hmIb7inHw4P22tIbEf33vVij57UMR0kIgV7RtxROy5NTtM5C_nbRBMDwryF-bbt0MmMsSEtaIx-CQqqAYdhkmhmmct9LH8DCjdR4Unklnn97xDfLW8i9cN97Fvmps4btSDfnXEW9VwvAtnI2I1Nqc2hFKcSJNEI7hAOhEG7_xycXEEtELIbj7EWghCpw0qyFn_0xPgRTdeX2kmCw46_E_lH8c9-YV77D953oywUGClqu2lmqgP8mGBeIJfHJa3xcTk6DqqWjm694zMwUxpxjnCM","grant_type":"authorization_code"}
+[10-May-2026 12:43:08 Europe/Berlin] HTTP Response [200]: {"access_token":"EAAWvJFqhQ3kBRZADruehjkVwQLFM8v5xZAneE6zRkN8El4ggoS0od3adV7kQMeJcy0K9kRTQuwIZAcahHP7ILmXks4TpmZC5Pn4iG27vj1ZBGeZCbseoRpatouZA3ZBB4GZBjjeEZC2VetP9lxXaOoXoYVOznoQBvFOWhqVkeZBfbFZBorQSgKaYv3XP9xgZAqZAFy5lxCcsp6indi8PnNIbhjGgQUBJo4iIZBpOXHeSjXAMR7KNBZBo5KnnTaQP5OQQZABoUsWIr4PPvHFngUHZCR4bZCVhP3F1uvxDGmmfSzVLdr6EZCm6SPJQGosomGQB","token_type":"bearer","expires_in":5146399}
+[10-May-2026 12:43:08 Europe/Berlin] Token response: {"access_token":"EAAWvJFqhQ3kBRZADruehjkVwQLFM8v5xZAneE6zRkN8El4ggoS0od3adV7kQMeJcy0K9kRTQuwIZAcahHP7ILmXks4TpmZC5Pn4iG27vj1ZBGeZCbseoRpatouZA3ZBB4GZBjjeEZC2VetP9lxXaOoXoYVOznoQBvFOWhqVkeZBfbFZBorQSgKaYv3XP9xgZAqZAFy5lxCcsp6indi8PnNIbhjGgQUBJo4iIZBpOXHeSjXAMR7KNBZBo5KnnTaQP5OQQZABoUsWIr4PPvHFngUHZCR4bZCVhP3F1uvxDGmmfSzVLdr6EZCm6SPJQGosomGQB","token_type":"bearer","expires_in":5146399}
+[10-May-2026 12:43:08 Europe/Berlin] === OAUTH TOKEN EXCHANGE SUCCESS ===
+[10-May-2026 12:43:08 Europe/Berlin] Successfully got token data
+[10-May-2026 12:43:08 Europe/Berlin] HTTP Response [200]: {"id":"2166696240789189","first_name":"Afnen","last_name":"Gora\u00ef","name":"Afnen Gora\u00ef","email":"afnengorai\u0040gmail.com","picture":{"data":{"height":200,"is_silhouette":false,"url":"https:\/\/platform-lookaside.fbsbx.com\/platform\/profilepic\/?asid=2166696240789189&height=200&width=200&ext=1781001787&hash=AftNF7G3mpy8zEHbbEgP3MfN","width":200}}}
+[10-May-2026 12:43:08 Europe/Berlin] Successfully fetched profile: {"id":"2166696240789189","first_name":"Afnen","last_name":"Gora\u00ef","name":"Afnen Gora\u00ef","email":"afnengorai@gmail.com","picture":{"data":{"height":200,"is_silhouette":false,"url":"https:\/\/platform-lookaside.fbsbx.com\/platform\/profilepic\/?asid=2166696240789189&height=200&width=200&ext=1781001787&hash=AftNF7G3mpy8zEHbbEgP3MfN","width":200}}}
+[10-May-2026 12:43:08 Europe/Berlin] User found/created: id=2
+[10-May-2026 12:43:08 Europe/Berlin] === SOCIAL CALLBACK SUCCESS ===
+[10-May-2026 12:43:15 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=categories_admin] ===
+[10-May-2026 12:43:15 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=login] ===
+[10-May-2026 12:43:15 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:43:27 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:43:27 Europe/Berlin] PHP Fatal error:  Uncaught Error: Class "ProduitRepository" not found in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2486
+Stack trace:
+#0 C:\4xampp\htdocs\valorys_Copie\index.php(423): FrontController->parapharmacie()
+#1 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2486
+[10-May-2026 12:44:26 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:44:26] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:44:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:44:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:44:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:44:38 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:45:25 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie&ajax=1&search=&categorie=4] ===
+[2026-05-10 12:45:25] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:25] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:25] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:25 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:45:26 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie&search=&categorie=4] ===
+[2026-05-10 12:45:26] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:26] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:26] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:26 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:45:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie&search=&categorie=4] ===
+[2026-05-10 12:45:48] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:48] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:48] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:48 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:45:54 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:45:54 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:45:54] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:45:54] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:45:54] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:45:54 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:46:07 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:46:07 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:46:07] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:07] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:07] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:07 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:46:10 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:46:11] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:11] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:11] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:11 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:46:14 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:46:14 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:46:14] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[2026-05-10 12:46:14] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:46:14] [2] Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:148
+[10-May-2026 12:46:14 Europe/Berlin] PHP Warning:  Undefined array key "prix_vente" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 148
+[10-May-2026 12:47:34 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:47:34 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "<", expecting "function" or "const" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3513
+[10-May-2026 12:47:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:47:43 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "<", expecting "function" or "const" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3513
+[10-May-2026 12:48:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:48:11 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "<", expecting "function" or "const" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3513
+[10-May-2026 12:48:50 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:48:50 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "private", expecting end of file in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3515
+[10-May-2026 12:48:56 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:48:56 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "private", expecting end of file in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3515
+[10-May-2026 12:49:12 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:49:12 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:35 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:49:35 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:38 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:49:38 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:49:39 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie&search=&categorie=4] ===
+[10-May-2026 12:49:39 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:40 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[10-May-2026 12:49:40 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:41 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:49:41 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:49:43 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:49:43 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:50:09 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:50:10 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:50:45 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:50:45 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:51:00 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:51:00 Europe/Berlin] PHP Parse error:  syntax error, unexpected identifier "accueil", expecting ";" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 3616
+[10-May-2026 12:51:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:51:42 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:51:42] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:51:42] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:51:42 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:51:48 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_commandes] ===
+[10-May-2026 12:52:05 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:52:07 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_rendez_vous] ===
+[2026-05-10 12:52:07] [2] Undefined array key "medecin_nom" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2785
+[10-May-2026 12:52:07 Europe/Berlin] PHP Warning:  Undefined array key "medecin_nom" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2785
+[2026-05-10 12:52:07] [2] Undefined array key "medecin_nom" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php:2785
+[10-May-2026 12:52:07 Europe/Berlin] PHP Warning:  Undefined array key "medecin_nom" in C:\4xampp\htdocs\valorys_Copie\controllers\FrontController.php on line 2785
+[10-May-2026 12:52:18 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:52:18] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:18] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:18 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:52:22 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=panier] ===
+[10-May-2026 12:52:47 Europe/Berlin] === REQUEST START [POST /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:52:47 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:52:47] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:52:47] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:52:47 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:52:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=panier] ===
+[10-May-2026 12:53:03 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_commandes] ===
+[10-May-2026 12:54:16 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_commandes] ===
+[10-May-2026 12:54:16 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method FrontController::mesCommandes() in C:\4xampp\htdocs\valorys_Copie\index.php:442
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 442
+[10-May-2026 12:54:20 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=panier] ===
+[10-May-2026 12:54:20 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined method FrontController::panier() in C:\4xampp\htdocs\valorys_Copie\index.php:437
+Stack trace:
+#0 {main}
+  thrown in C:\4xampp\htdocs\valorys_Copie\index.php on line 437
+[10-May-2026 12:54:46 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=panier] ===
+[2026-05-10 12:54:46] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\panier.php:24
+[10-May-2026 12:54:46 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\panier.php on line 24
+[10-May-2026 12:54:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:54:49 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:54:50] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:50] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:50 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:54:51 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_commandes] ===
+[2026-05-10 12:54:51] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\mes_commandes.php:30
+[10-May-2026 12:54:51 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\mes_commandes.php on line 30
+[10-May-2026 12:54:53 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=pharmacie] ===
+[10-May-2026 12:54:53 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:54:53] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:54:53] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:54:53 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:54:58 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:56:38 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:56:39 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:56:39] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:56:39] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:56:39 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:57:00 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:57:00] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:57:00] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:57:00 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:57:11 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:58:21 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:58:29 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=mes_ordonnances] ===
+[10-May-2026 12:58:33 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=parapharmacie] ===
+[2026-05-10 12:58:33] [2] Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:33
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined variable $flash in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 33
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[2026-05-10 12:58:33] [2] Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php:140
+[10-May-2026 12:58:33 Europe/Berlin] PHP Warning:  Undefined array key "prescription" in C:\4xampp\htdocs\valorys_Copie\views\frontoffice\pharmacie\catalogue.php on line 140
+[10-May-2026 12:58:57 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===
+[10-May-2026 12:59:02 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=medecins] ===
+[10-May-2026 12:59:05 Europe/Berlin] === REQUEST START [GET /valorys_Copie/index.php?page=accueil] ===

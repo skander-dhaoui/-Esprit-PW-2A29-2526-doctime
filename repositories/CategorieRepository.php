@@ -1,4 +1,6 @@
 <?php
+namespace App\Repositories;
+
 require_once __DIR__ . '/../config/database.php';
 
 class CategorieRepository
@@ -7,7 +9,7 @@ class CategorieRepository
 
     public function __construct()
     {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db = \Database::getInstance()->getConnection();
     }
 
     public function getAll(string $search = ''): array

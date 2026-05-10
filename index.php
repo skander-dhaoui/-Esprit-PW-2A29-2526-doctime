@@ -54,10 +54,12 @@ require_once __DIR__ . '/repositories/ArticleRepository.php';
 require_once __DIR__ . '/repositories/UserRepository.php';
 require_once __DIR__ . '/repositories/EventRepository.php';
 require_once __DIR__ . '/repositories/ParticipationRepository.php';
+require_once __DIR__ . '/repositories/ProduitRepository.php';
+require_once __DIR__ . '/repositories/CategorieRepository.php';
+require_once __DIR__ . '/repositories/CommandeRepository.php';
 
-// Modèles optionnels
 $optionalModels = [
-    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance', 'Participation', 'Sponsor', 'Categorie',
+    'RendezVous', 'Disponibilite', 'Event', 'Produit', 'Ordonnance', 'Participation', 'Sponsor', 'Categorie', 'Commande', 'Client',
 ];
 foreach ($optionalModels as $model) {
     $path = __DIR__ . "/models/{$model}.php";
@@ -79,7 +81,7 @@ require_once __DIR__ . '/controllers/ReplyController.php';
 // Contrôleurs optionnels
 $optionalControllers = [
     'RendezVousController', 'EventController', 'MapController',
-    'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController', 'CategorieController',
+    'ProduitController', 'OrdonnanceController', 'DisponibiliteController', 'ParticipationController', 'SponsorController', 'CategorieController', 'CommandeController',
 ];
 foreach ($optionalControllers as $ctrl) {
     $path = __DIR__ . "/controllers/{$ctrl}.php";
@@ -113,6 +115,7 @@ $patientCtrl = new PatientController();
 $medecinCtrl = new MedecinController();
 $articleCtrl = new ArticleController();
 $replyCtrl   = new ReplyController();
+$commandeCtrl = class_exists('CommandeController') ? new CommandeController() : null;
 
 $rendezVousCtrl    = class_exists('RendezVousController')    ? new RendezVousController()    : null;
 $ordonnanceCtrl    = class_exists('OrdonnanceController')    ? new OrdonnanceController()    : null;
@@ -414,6 +417,29 @@ switch ($page) {
     // ─── Sponsors : page FRONT publique ────────────────────────────────────
     case 'sponsors':
         $front->listSponsors();
+        break;
+
+    case 'parapharmacie':
+        $front->parapharmacie();
+        break;
+
+    case 'pharmacie':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $front->chatbotPharmacie();
+        } else {
+            header('Location: index.php?page=parapharmacie');
+            exit;
+        }
+        break;
+
+    case 'panier':
+        requireLogin();
+        $front->panier();
+        break;
+
+    case 'mes_commandes':
+        requireLogin();
+        $front->mesCommandes();
         break;
 
     case 'contact':
@@ -925,6 +951,20 @@ switch ($page) {
             $catCtrl->delete($id);
         } else {
             $catCtrl->index();
+        }
+        break;
+
+    case 'commandes_admin':
+        adminOnly();
+        if (!$commandeCtrl) { $front->page404(); break; }
+        if ($action === 'show' && $id) {
+            $commandeCtrl->show($id);
+        } elseif ($action === 'edit' && $id) {
+            $commandeCtrl->edit($id);
+        } elseif ($action === 'delete' && $id) {
+            $commandeCtrl->delete($id);
+        } else {
+            $commandeCtrl->index();
         }
         break;
 

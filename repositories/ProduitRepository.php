@@ -1,4 +1,6 @@
 <?php
+namespace App\Repositories;
+
 require_once __DIR__ . '/../config/database.php';
 
 class ProduitRepository
@@ -7,7 +9,7 @@ class ProduitRepository
 
     public function __construct()
     {
-        $this->db = Database::getInstance()->getConnection();
+        $this->db = \Database::getInstance()->getConnection();
     }
 
     public function getAll(string $search = '', int $categorieId = 0, string $status = ''): array
@@ -50,8 +52,8 @@ class ProduitRepository
     public function search(string $query, int $limit = 10): array
     {
         $stmt = $this->db->prepare("SELECT id, nom, prix, image FROM produits WHERE nom LIKE :query OR description LIKE :query LIMIT :limit");
-        $stmt->bindValue(':query', "%$query%", PDO::PARAM_STR);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':query', "%$query%", \PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     }
@@ -144,7 +146,7 @@ class ProduitRepository
     public function getTopProduits(int $limit = 10): array
     {
         $stmt = $this->db->prepare("SELECT p.*, COUNT(cd.id) as total_ventes FROM produits p JOIN commande_details cd ON p.id = cd.produit_id GROUP BY p.id ORDER BY total_ventes DESC LIMIT :limit");
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     }
