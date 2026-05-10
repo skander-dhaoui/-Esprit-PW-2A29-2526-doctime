@@ -3,15 +3,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     header('Location: index.php?page=login');
     exit;
 }
-$errors = $errors ?? [];
-$isEdit = isset($rendezvous) && is_array($rendezvous);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $isEdit ? 'Modifier' : 'Ajouter' ?> un rendez-vous - Valorys Admin</title>
+    <title>Ajouter un rendez-vous - Valorys Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -35,7 +33,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
 <body>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-plus"></i> <?= $isEdit ? 'Modifier' : 'Ajouter' ?> un rendez-vous</h2>
+        <h2><i class="fas fa-calendar-plus"></i> Ajouter un rendez-vous</h2>
         <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Retour
         </a>
@@ -50,7 +48,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" novalidate action="index.php?page=admin_rendezvous&action=<?= $isEdit ? 'edit&id=' . (int)$rendezvous['id'] : 'create' ?>">
+            <form method="POST" action="index.php?page=admin_rendezvous&action=create">
                 <div class="row">
                     <!-- Patient -->
                     <div class="col-md-6 mb-3">
@@ -58,7 +56,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                         <select name="patient_id" id="patient_id" class="form-select <?= isset($errors['patient_id']) ? 'error' : '' ?>">
                             <option value="">-- Sélectionner un patient --</option>
                             <?php foreach ($patients as $patient): ?>
-                                <option value="<?= $patient['id'] ?>" <?= (isset($old['patient_id']) && (string)$old['patient_id'] === (string)$patient['id']) ? 'selected' : '' ?>>
+                                <option value="<?= $patient['id'] ?>" <?= (isset($old['patient_id']) && $old['patient_id'] == $patient['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($patient['prenom'] . ' ' . $patient['nom']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -76,7 +74,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                         <select name="medecin_id" id="medecin_id" class="form-select <?= isset($errors['medecin_id']) ? 'error' : '' ?>">
                             <option value="">-- Sélectionner un médecin --</option>
                             <?php foreach ($medecins as $medecin): ?>
-                                <option value="<?= $medecin['id'] ?>" <?= (isset($old['medecin_id']) && (string)$old['medecin_id'] === (string)$medecin['id']) ? 'selected' : '' ?>>
+                                <option value="<?= $medecin['id'] ?>" <?= (isset($old['medecin_id']) && $old['medecin_id'] == $medecin['id']) ? 'selected' : '' ?>>
                                     Dr. <?= htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) ?> - <?= htmlspecialchars($medecin['specialite'] ?? 'Généraliste') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -93,7 +91,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                     <!-- Date -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Date <span class="text-danger">*</span></label>
-                        <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'error' : '' ?>"
+                        <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['date_rendezvous'] ?? '') ?>">
                         <div class="error-container" id="date_rendezvous-error">
                             <?php if (isset($errors['date_rendezvous'])): ?>
@@ -105,7 +103,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                     <!-- Heure -->
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Heure <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'error' : '' ?>"
+                        <input type="time" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'error' : '' ?>" 
                                value="<?= htmlspecialchars($old['heure_rendezvous'] ?? '') ?>">
                         <div class="error-container" id="heure_rendezvous-error">
                             <?php if (isset($errors['heure_rendezvous'])): ?>
@@ -118,7 +116,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                 <!-- Motif -->
                 <div class="mb-3">
                     <label class="form-label">Motif</label>
-                    <textarea name="motif" id="motif" class="form-control" rows="3"
+                    <textarea name="motif" id="motif" class="form-control" rows="3" 
                               placeholder="Motif de la consultation..."><?= htmlspecialchars($old['motif'] ?? '') ?></textarea>
                     <div class="error-container" id="motif-error"></div>
                 </div>
@@ -127,13 +125,10 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                 <div class="mb-3">
                     <label class="form-label">Statut</label>
                     <select name="statut" id="statut" class="form-select">
-                        <?php
-                        $st = $old['statut'] ?? 'en_attente';
-                        ?>
-                        <option value="en_attente" <?= $st === 'en_attente' ? 'selected' : '' ?>>En attente</option>
-                        <option value="confirmé" <?= $st === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
-                        <option value="terminé" <?= $st === 'terminé' ? 'selected' : '' ?>>Terminé</option>
-                        <option value="annulé" <?= $st === 'annulé' ? 'selected' : '' ?>>Annulé</option>
+                        <option value="en_attente" <?= (isset($old['statut']) && $old['statut'] === 'en_attente') ? 'selected' : '' ?>>En attente</option>
+                        <option value="confirmé" <?= (isset($old['statut']) && $old['statut'] === 'confirmé') ? 'selected' : '' ?>>Confirmé</option>
+                        <option value="terminé" <?= (isset($old['statut']) && $old['statut'] === 'terminé') ? 'selected' : '' ?>>Terminé</option>
+                        <option value="annulé" <?= (isset($old['statut']) && $old['statut'] === 'annulé') ? 'selected' : '' ?>>Annulé</option>
                     </select>
                     <div class="error-container" id="statut-error"></div>
                 </div>
@@ -141,7 +136,7 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
                 <div class="d-flex justify-content-end gap-2">
                     <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary">Annuler</a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <?= $isEdit ? 'Mettre à jour' : 'Créer' ?>
+                        <i class="fas fa-save"></i> Créer
                     </button>
                 </div>
             </form>
@@ -152,34 +147,34 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
 <script>
 document.querySelector('form').addEventListener('submit', function(e) {
     let isValid = true;
-
+    
     document.querySelectorAll('.field-error').forEach(el => el.remove());
     document.querySelectorAll('.form-control, .form-select').forEach(el => el.classList.remove('error'));
-
+    
     const patient = document.getElementById('patient_id');
     if (!patient.value) {
         showError('patient_id', 'Veuillez sélectionner un patient.');
         isValid = false;
     }
-
+    
     const medecin = document.getElementById('medecin_id');
     if (!medecin.value) {
         showError('medecin_id', 'Veuillez sélectionner un médecin.');
         isValid = false;
     }
-
+    
     const date = document.getElementById('date_rendezvous');
     if (!date.value) {
         showError('date_rendezvous', 'Veuillez sélectionner une date.');
         isValid = false;
     }
-
+    
     const heure = document.getElementById('heure_rendezvous');
     if (!heure.value) {
         showError('heure_rendezvous', 'Veuillez sélectionner une heure.');
         isValid = false;
     }
-
+    
     if (!isValid) {
         e.preventDefault();
         const firstError = document.querySelector('.field-error');
@@ -190,7 +185,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
 function showError(fieldId, message) {
     const field = document.getElementById(fieldId);
     if (field) field.classList.add('error');
-
+    
     const errorContainer = document.getElementById(fieldId + '-error');
     if (errorContainer) {
         const errorDiv = document.createElement('div');
@@ -213,4 +208,3 @@ document.querySelectorAll('#patient_id, #medecin_id, #date_rendezvous, #heure_re
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

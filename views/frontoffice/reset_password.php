@@ -1,9 +1,10 @@
 <?php
 // views/frontoffice/reset_password.php
-$error = $_SESSION['error'] ?? null;
-$validToken = $_SESSION['valid_token'] ?? false;
-$token = $_GET['token'] ?? null;
-unset($_SESSION['error'], $_SESSION['valid_token']);
+// $error, $validToken, et $token sont passés par AuthController::showResetPassword()
+// Si ce ne sont pas définis, c'est une erreur
+$error = $error ?? null;
+$validToken = $validToken ?? false;
+$token = $token ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -42,10 +43,19 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="index.php?page=reset_password">
+            <?php if (!$validToken): ?>
+                <div class="alert-error-custom">
+                    <i class="fas fa-exclamation-circle me-2"></i> Ce lien est invalide ou a expiré.
+                </div>
+                <a href="/valorys_Copie/index.php?page=forgot_password" class="btn btn-primary w-100">
+                    Demander un nouveau lien
+                </a>
+            <?php else: ?>
+            <form method="POST" action="/valorys_Copie/index.php?page=reset_password">
+                <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
                 <div class="mb-3">
                     <label class="form-label">Nouveau mot de passe</label>
-                    <input type="password" name="password" id="password" class="form-control" required>
+                    <input type="password" name="password" id="password" class="form-control">
                     <div class="password-requirements">
                         <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                         <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
@@ -54,12 +64,13 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
                 </div>
                 <div class="mb-4">
                     <label class="form-label">Confirmer le mot de passe</label>
-                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control">
                 </div>
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-key me-2"></i> Réinitialiser
                 </button>
             </form>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -93,3 +104,4 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
     </script>
 </body>
 </html>
+

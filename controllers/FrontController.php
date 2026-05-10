@@ -1,5 +1,17 @@
 <?php
 
+use App\Models\Medecin;
+use App\Models\Article;
+use App\Models\Reply;
+use App\Models\Disponibilite;
+use App\Models\User;
+use App\Models\Produit;
+use App\Models\Event;
+use App\Repositories\UserRepository;
+use App\Repositories\ArticleRepository;
+
+require_once __DIR__ . '/../config/Validator.php';
+
 class FrontController {
     
     private function requireLogin(): void {
@@ -40,7 +52,56 @@ class FrontController {
     }
 
     public function accueilPublic(): void {
+        require_once __DIR__ . '/../models/Review.php';
+        
+        try {
+            $reviewModel = new Review();
+            $page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+            $perPage = 6;
+            $offset = ($page - 1) * $perPage;
+            
+            // Récupérer les données
+            $reviews = $reviewModel->getApproved($perPage, $offset);
+            $totalCount = $reviewModel->count(true);
+            $totalPages = ceil($totalCount / $perPage);
+            
+            // Enrichir avec emojis
+            foreach ($reviews as &$review) {
+                $review['emojis'] = $reviewModel->getEmojis($review['id']);
+            }
+            
+            $stats = $reviewModel->getStats();
+            
+            $reviewData = [
+                'reviews' => $reviews,
+                'stats' => $stats,
+                'pagination' => [
+                    'current_page' => $page,
+                    'total_pages' => $totalPages,
+                ]
+            ];
+        } catch (\Exception $e) {
+            // En cas d'erreur, utiliser des données vides
+            $reviewData = [
+                'reviews' => [],
+                'stats' => ['total' => 0, 'average_rating' => 0, 'by_sentiment' => []],
+                'pagination' => ['current_page' => 1, 'total_pages' => 1]
+            ];
+        }
+        
+        // Préparer le contenu avec la section d'avis
         $content = $this->getPublicDashboardHTML();
+        
+        // Inclure la section d'avis
+        ob_start();
+        $stats = $reviewData['stats'];
+        $reviews = $reviewData['reviews'];
+        $pagination = $reviewData['pagination'];
+        include __DIR__ . '/../views/frontoffice/reviews_section.php';
+        $reviewsContent = ob_get_clean();
+        
+        $content .= $reviewsContent;
+        
         $this->renderPublicView('Accueil', $content);
     }
 
@@ -65,78 +126,168 @@ class FrontController {
         $this->renderPublicView('Accès refusé', $content);
     }
 
-public function listeMedecins(): void {
-    require_once __DIR__ . '/../models/Medecin.php';
-    $medecinModel = new Medecin();
-    $medecins = $medecinModel->getAllWithUsers();
+    public function listeMedecins(): void {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT m.*, u.prenom, u.nom, u.email FROM medecins m
+             JOIN users u ON m.user_id = u.id WHERE u.statut = 'actif' ORDER BY u.nom ASC"
+        );
+        $stmt->execute();
+        $medecins = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    if (empty($medecins)) {
-        $content = '<div class="alert alert-info">Aucun médecin disponible pour le moment.</div>';
-    } else {
-        $content = '
-        <style>
-            .medecins-container { padding: 20px 0; }
-            .medecins-header { text-align: center; margin-bottom: 40px; }
-            .medecins-header h1 { color: #2A7FAA; font-size: 2.5rem; margin-bottom: 10px; }
-            .medecins-header p { color: #6c757d; font-size: 1.1rem; }
-            .medecin-card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.08); transition: all 0.3s ease; margin-bottom: 25px; border: none; }
-            .medecin-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(42,127,170,0.15); }
-            .medecin-card-header { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); padding: 20px; text-align: center; color: white; }
-            .medecin-card-header i { font-size: 3rem; margin-bottom: 10px; }
-            .medecin-card-header h3 { margin: 0; font-size: 1.3rem; }
-            .medecin-card-body { padding: 20px; }
-            .medecin-info { margin-bottom: 15px; }
-            .medecin-info i { width: 25px; color: #2A7FAA; margin-right: 10px; }
-            .medecin-info span { color: #555; }
-            .specialite-badge { display: inline-block; background: #e8f4f8; color: #2A7FAA; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; }
-            .btn-voir { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white; border: none; padding: 10px 25px; border-radius: 25px; width: 100%; transition: all 0.3s; }
-            .btn-voir:hover { transform: scale(1.02); opacity: 0.9; color: white; }
-            .empty-state { text-align: center; padding: 60px; background: white; border-radius: 15px; }
-        </style>
-        <div class="medecins-container">
-            <div class="medecins-header">
-                <h1><i class="fas fa-user-md me-2"></i>Nos Médecins</h1>
-                <p>Découvrez notre équipe de professionnels de santé</p>
+        if (empty($medecins)) {
+            $content = '<div class="alert alert-info py-5 text-center shadow-sm" style="border-radius: 15px;"><i class="fas fa-user-md fa-4x text-muted mb-3"></i><br><h4 class="text-muted">Aucun médecin disponible pour le moment.</h4></div>';
+        } else {
+            $content = '
+            <style>
+                .medecin-grid { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; padding: 20px 0; }
+                .medecin-card {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                    width: 320px;
+                    overflow: hidden;
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    position: relative;
+                }
+                .medecin-card:hover {
+                    transform: translateY(-10px);
+                    box-shadow: 0 15px 40px rgba(42, 127, 170, 0.2);
+                }
+                .medecin-avatar-wrapper {
+                    background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                    height: 120px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-end;
+                    position: relative;
+                }
+                .medecin-avatar {
+                    width: 90px;
+                    height: 90px;
+                    background: white;
+                    border-radius: 50%;
+                    border: 4px solid white;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 2.5rem;
+                    color: #2A7FAA;
+                    margin-bottom: -45px;
+                    font-weight: bold;
+                }
+                .medecin-info {
+                    padding: 60px 25px 30px;
+                    text-align: center;
+                }
+                .medecin-name {
+                    font-size: 1.3rem;
+                    font-weight: 800;
+                    color: #2c3e50;
+                    margin-bottom: 8px;
+                }
+                .medecin-specialty {
+                    background: #e3f2fd;
+                    color: #1976d2;
+                    padding: 6px 15px;
+                    border-radius: 20px;
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    display: inline-block;
+                    margin-bottom: 20px;
+                }
+                .medecin-contact {
+                    color: #6c757d;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                    margin-bottom: 25px;
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 12px;
+                }
+                .medecin-contact div {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                }
+                .medecin-contact div:last-child {
+                    margin-bottom: 0;
+                }
+                .medecin-contact i {
+                    width: 25px;
+                    color: #4CAF50;
+                    font-size: 1rem;
+                }
+                .btn-view-profile {
+                    background: linear-gradient(135deg, #2A7FAA, #175476);
+                    color: white;
+                    border: none;
+                    border-radius: 25px;
+                    padding: 12px 25px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    font-size: 0.85rem;
+                    letter-spacing: 1px;
+                    transition: all 0.3s;
+                    text-decoration: none;
+                    display: inline-block;
+                    width: 100%;
+                }
+                .btn-view-profile:hover {
+                    background: linear-gradient(135deg, #175476, #0d3851);
+                    color: white;
+                    box-shadow: 0 5px 15px rgba(42, 127, 170, 0.4);
+                }
+                .page-header {
+                    text-align: center;
+                    margin-bottom: 3rem;
+                }
+                .page-header h2 {
+                    color: #2c3e50;
+                    font-weight: 800;
+                    font-size: 2.5rem;
+                }
+                .page-header p {
+                    color: #6c757d;
+                    font-size: 1.2rem;
+                }
+            </style>
+            <div class="page-header">
+                <h2><i class="fas fa-user-md text-primary me-3"></i>Nos Médecins Spécialistes</h2>
+                <p>Découvrez notre équipe de professionnels de santé à votre écoute</p>
             </div>
-            <div class="row">';
-        
-        foreach ($medecins as $medecin) {
-            $userId = $medecin['user_id'] ?? $medecin['id'] ?? 0;
-            $content .= '
-                <div class="col-md-6 col-lg-4">
-                    <div class="medecin-card">
-                        <div class="medecin-card-header">
-                            <i class="fas fa-user-md"></i>
-                            <h3>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
-                        </div>
-                        <div class="medecin-card-body">
-                            <div class="medecin-info">
-                                <i class="fas fa-envelope"></i>
-                                <span>' . htmlspecialchars($medecin['email']) . '</span>
-                            </div>
-                            <div class="medecin-info">
-                                <i class="fas fa-stethoscope"></i>
-                                <span>' . htmlspecialchars($medecin['specialite']) . '</span>
-                            </div>
-                            <div class="medecin-info">
-                                <i class="fas fa-phone"></i>
-                                <span>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</span>
-                            </div>
-                            <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn btn-voir">
-                                <i class="fas fa-calendar-check me-2"></i>Prendre rendez-vous
-                            </a>
+            <div class="medecin-grid">';
+            
+            foreach ($medecins as $medecin) {
+                $userId = $medecin['user_id'] ?? $medecin['id'] ?? 0;
+                $initialKey = strtoupper(substr($medecin['prenom'], 0, 1) . substr($medecin['nom'], 0, 1));
+                
+                $content .= '
+                <div class="medecin-card">
+                    <div class="medecin-avatar-wrapper">
+                        <div class="medecin-avatar">
+                            ' . htmlspecialchars($initialKey) . '
                         </div>
                     </div>
+                    <div class="medecin-info">
+                        <h3 class="medecin-name">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h3>
+                        <div class="medecin-specialty">' . htmlspecialchars($medecin['specialite']) . '</div>
+                        <div class="medecin-contact text-start">
+                            <div><i class="fas fa-envelope"></i> ' . htmlspecialchars($medecin['email']) . '</div>
+                            <div><i class="fas fa-phone-alt"></i> ' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</div>
+                        </div>
+                        <a href="index.php?page=detail_medecin&id=' . $userId . '" class="btn-view-profile">
+                            <i class="fas fa-user-circle me-2"></i> Voir le profil
+                        </a>
+                    </div>
                 </div>';
+            }
+            $content .= '</div>';
         }
-        
-        $content .= '
-            </div>
-        </div>';
+        $this->renderTemporaryView('Nos Médecins', $content);
     }
-    
-    $this->renderPublicView('Nos Médecins', $content);
-}
 
     public function detailMedecin($id): void {
         require_once __DIR__ . '/../models/Medecin.php';
@@ -148,87 +299,191 @@ public function listeMedecins(): void {
             return;
         }
 
+        $avatarText = strtoupper(substr($medecin['prenom'] ?? 'M', 0, 1) . substr($medecin['nom'] ?? 'D', 0, 1));
+        $specialite = htmlspecialchars($medecin['specialite'] ?? 'Généraliste');
+
+        $userRole = $_SESSION['user_role'] ?? '';
+        $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
+
         $content = '
-            <div style="background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);padding:40px 0;margin-bottom:40px;border-radius:15px;color:white;">
-                <div class="container">
-                    <div class="row align-items-center">
-                        <div class="col-md-3 text-center">
-                            <div style="width:150px;height:150px;margin:0 auto;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:60px;color:#2A7FAA;box-shadow:0 4px 15px rgba(0,0,0,0.2);">
-                                <i class="fas fa-user-md"></i>
-                            </div>
-                        </div>
-                        <div class="col-md-9">
-                            <h1 style="margin-bottom:10px;font-size:2.5rem;font-weight:700;">Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h1>
-                            <p style="font-size:1.2rem;margin-bottom:0;opacity:0.95;">
-                                <i class="fas fa-stethoscope me-2"></i>' . htmlspecialchars($medecin['specialite']) . '
-                            </p>
-                        </div>
+        <style>
+            .doctor-profile-header {
+                background: linear-gradient(135deg, rgba(42, 127, 170, 0.1), rgba(76, 175, 80, 0.05));
+                border-radius: 20px;
+                padding: 40px;
+                margin-bottom: 30px;
+                display: flex;
+                align-items: center;
+                gap: 30px;
+                position: relative;
+                overflow: hidden;
+            }
+            .doctor-profile-avatar {
+                width: 120px;
+                height: 120px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-size: 48px;
+                font-weight: 700;
+                box-shadow: 0 10px 20px rgba(42, 127, 170, 0.2);
+                border: 4px solid #fff;
+                flex-shrink: 0;
+            }
+            .doctor-profile-info h2 {
+                color: #0f2b3d;
+                font-weight: 700;
+                margin-bottom: 5px;
+                font-size: 32px;
+            }
+            .doctor-profile-badge {
+                display: inline-flex;
+                align-items: center;
+                padding: 6px 15px;
+                background: rgba(42, 127, 170, 0.1);
+                color: #2A7FAA;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: 600;
+                margin-bottom: 15px;
+            }
+            .doctor-details-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .detail-card {
+                background: #fff;
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+                border: 1px solid rgba(0,0,0,0.03);
+                display: flex;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .detail-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                background: rgba(76, 175, 80, 0.1);
+                color: #4CAF50;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+            .detail-content h4 {
+                font-size: 12px;
+                text-transform: uppercase;
+                color: #6c757d;
+                font-weight: 700;
+                margin-bottom: 4px;
+                letter-spacing: 0.5px;
+            }
+            .detail-content p {
+                font-size: 15px;
+                color: #2c3e50;
+                font-weight: 500;
+                margin: 0;
+            }
+            .action-buttons {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-top: 30px;
+            }
+            .btn-appointment {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: #fff;
+                padding: 12px 30px;
+                border-radius: 50px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.3s;
+                border: none;
+                box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .btn-appointment:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+                color: #fff;
+            }
+            .btn-back-profile {
+                background: #fff;
+                color: #6c757d;
+                padding: 12px 30px;
+                border-radius: 50px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.3s;
+                border: 2px solid #e9ecef;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .btn-back-profile:hover {
+                background: #f8f9fa;
+                border-color: #dee2e6;
+                color: #495057;
+            }
+        </style>
+        
+        <div class="container mt-5 mb-5">
+            <div class="doctor-profile-header">
+                <div class="doctor-profile-avatar">' . $avatarText . '</div>
+                <div class="doctor-profile-info">
+                    <div class="doctor-profile-badge"><i class="fas fa-certificate me-2"></i> Professionnel de santé vérifié</div>
+                    <h2>Dr. ' . htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) . '</h2>
+                    <p class="text-muted mb-0"><i class="fas fa-stethoscope me-1"></i> ' . $specialite . '</p>
+                </div>
+            </div>
+            
+            <div class="doctor-details-grid">
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(42, 127, 170, 0.1);color:#2A7FAA"><i class="fas fa-envelope"></i></div>
+                    <div class="detail-content">
+                        <h4>Email</h4>
+                        <p>' . htmlspecialchars($medecin['email']) . '</p>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(76, 175, 80, 0.1);color:#4CAF50"><i class="fas fa-phone"></i></div>
+                    <div class="detail-content">
+                        <h4>Téléphone</h4>
+                        <p>' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(255, 152, 0, 0.1);color:#FF9800"><i class="fas fa-map-marker-alt"></i></div>
+                    <div class="detail-content">
+                        <h4>Cabinet</h4>
+                        <p>' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Lieu non spécifié') . '</p>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-icon" style="background:rgba(156, 39, 176, 0.1);color:#9C27B0"><i class="fas fa-euro-sign"></i></div>
+                    <div class="detail-content">
+                        <h4>Tarif consultation</h4>
+                        <p>' . ($medecin['consultation_prix'] ?? 'Sur devis') . ($medecin['consultation_prix'] ? ' €' : '') . '</p>
                     </div>
                 </div>
             </div>
-
-            <div class="container mb-5">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div style="background:white;border-radius:12px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:20px;">
-                            <h5 style="color:#2A7FAA;font-weight:700;margin-bottom:20px;">
-                                <i class="fas fa-info-circle me-2"></i>Informations Professionnelles
-                            </h5>
-                            <div style="margin-bottom:15px;">
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">📧 Email</p>
-                                <p style="font-weight:600;color:#333;">' . htmlspecialchars($medecin['email']) . '</p>
-                            </div>
-                            <div style="margin-bottom:15px;">
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">📞 Téléphone</p>
-                                <p style="font-weight:600;color:#333;">' . htmlspecialchars($medecin['telephone'] ?? 'Non renseigné') . '</p>
-                            </div>
-                            <div>
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">💰 Tarif Consultation</p>
-                                <p style="font-weight:600;color:#2A7FAA;font-size:1.3rem;">' . ($medecin['consultation_prix'] ?? '50') . ' €</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div style="background:white;border-radius:12px;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.08);margin-bottom:20px;">
-                            <h5 style="color:#2A7FAA;font-weight:700;margin-bottom:20px;">
-                                <i class="fas fa-map-location-dot me-2"></i>Localisation
-                            </h5>
-                            <div style="margin-bottom:15px;">
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">🏥 Adresse Cabinet</p>
-                                <p style="font-weight:600;color:#333;">' . htmlspecialchars($medecin['cabinet_adresse'] ?? 'Non renseignée') . '</p>
-                            </div>
-                            ' . (!empty($medecin['numero_ordre']) ? '
-                            <div style="margin-bottom:15px;">
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">📋 Numéro Ordre</p>
-                                <p style="font-weight:600;color:#333;">' . htmlspecialchars($medecin['numero_ordre']) . '</p>
-                            </div>' : '') . '
-                            ' . (!empty($medecin['annee_experience']) ? '
-                            <div>
-                                <p style="color:#666;font-size:0.95rem;margin-bottom:5px;">📅 Expérience</p>
-                                <p style="font-weight:600;color:#333;">' . htmlspecialchars($medecin['annee_experience']) . ' ans</p>
-                            </div>' : '') . '
-                        </div>
-                    </div>
-                </div>
-
-                <div style="background:linear-gradient(135deg,rgba(42,127,170,0.05) 0%,rgba(76,175,80,0.05) 100%);border-radius:12px;padding:25px;margin:30px 0;border-left:4px solid #2A7FAA;">
-                    <h5 style="color:#2A7FAA;font-weight:700;margin-bottom:15px;">
-                        <i class="fas fa-clipboard-check me-2"></i>Prendre un rendez-vous
-                    </h5>
-                    <p style="color:#666;margin-bottom:0;">Sélectionnez le bouton ci-dessous pour réserver une consultation avec ce médecin. Choisissez la date et l\'heure qui vous convient le mieux.</p>
-                </div>
-
-                <div style="display:flex;gap:15px;justify-content:center;flex-wrap:wrap;">
-                    <a href="index.php?page=prendre_rendez_vous&id=' . $id . '" style="background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);color:white;padding:15px 40px;border-radius:25px;text-decoration:none;font-weight:600;font-size:1.1rem;box-shadow:0 4px 15px rgba(42,127,170,0.3);transition:all 0.3s;display:inline-block;">
-                        <i class="fas fa-calendar-check me-2"></i>Prendre un rendez-vous
-                    </a>
-                    <a href="index.php?page=medecins" style="background:#f0f0f0;color:#333;padding:15px 40px;border-radius:25px;text-decoration:none;font-weight:600;font-size:1.1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:all 0.3s;display:inline-block;">
-                        <i class="fas fa-arrow-left me-2"></i>Retour à la liste
-                    </a>
-                </div>
-            </div>';
-        $this->renderTemporaryView('Détail du médecin', $content);
+            
+            <div class="action-buttons">
+                <a href="index.php?page=medecins" class="btn-back-profile"><i class="fas fa-arrow-left"></i> Retour à la liste</a>
+                ' . ($showAppointmentBtn ? '<a href="index.php?page=prendre_rendez_vous&id=' . $id . '" class="btn-appointment"><i class="fas fa-calendar-check"></i> Prendre rendez-vous</a>' : '') . '
+            </div>
+        </div>';
+        $this->renderPublicView('Détail du médecin', $content);
     }
 
     // =============================================
@@ -242,89 +497,66 @@ public function listeMedecins(): void {
                 throw new Exception("La classe Article n'existe pas");
             }
             $articleModel = new Article();
-            $articles = $articleModel->getAll();
+            $keyword = $_GET['keyword'] ?? '';
+            $categorie = $_GET['categorie'] ?? '';
+            $date_min = $_GET['date_min'] ?? '';
+            $tag = $_GET['tag'] ?? '';
+            $isSearch = ($keyword !== '' || $categorie !== '' || $date_min !== '' || $tag !== '');
+
+            if ($isSearch && method_exists($articleModel, 'advancedSearch')) {
+                $articles = $articleModel->advancedSearch([
+                    'keyword' => $keyword,
+                    'categorie' => $categorie,
+                    'date_min' => $date_min,
+                    'tag' => $tag
+                ]);
+            } else {
+                $articles = $articleModel->getAll();
+            }
+
+            $searchForm = '
+            <div style="background:#f8f9fa; border-radius:8px; padding:20px; margin-bottom:20px; border:1px solid #ddd;">
+                <h4 style="margin-top:0; margin-bottom:15px; cursor:pointer; color:#2A7FAA; display:flex; justify-content:space-between;" onclick="var f=document.getElementById(\'advanced-search-form\'); f.style.display=(f.style.display===\'none\'?\'block\':\'none\');">
+                    <span><i class="fas fa-search"></i> Recherche Avancée</span>
+                    <i class="fas fa-chevron-down" style="font-size:16px;"></i>
+                </h4>
+                <div id="advanced-search-form" style="display:' . ($isSearch ? 'block' : 'none') . ';">
+                    <form method="GET" action="index.php">
+                        <input type="hidden" name="page" value="blog_public">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Mot clé</label>
+                                <input type="text" name="keyword" value="' . htmlspecialchars($keyword) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Rechercher dans le titre ou le contenu...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Catégorie</label>
+                                <input type="text" name="categorie" value="' . htmlspecialchars($categorie) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Ex: Santé, Sport...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Tag</label>
+                                <input type="text" name="tag" value="' . htmlspecialchars($tag) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Ex: nutrition...">
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">Date (à partir de)</label>
+                                <input type="date" name="date_min" value="' . htmlspecialchars($date_min) . '" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                            </div>
+                            <div style="width:100%; display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                                <a href="index.php?page=blog_public" style="background:#6c757d; color:white; text-decoration:none; padding:10px 20px; border-radius:5px;"><i class="fas fa-times"></i> Réinitialiser</a>
+                                <button type="submit" style="background:#2A7FAA; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;"><i class="fas fa-search"></i> Filtrer les articles</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>';
             $isLoggedIn = isset($_SESSION['user_id']);
             $userId = $_SESSION['user_id'] ?? null;
             $userRole = $_SESSION['user_role'] ?? '';
             $isAdmin = ($userRole === 'admin');
 
+            // Les admins sont redirigés vers la page de gestion des articles
             if ($isAdmin) {
-                $totalArticles = count($articles);
-                $totalVues = array_sum(array_column($articles, 'vues'));
-                $totalComments = array_sum(array_column($articles, 'nb_replies'));
-                $statsHtml = '
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total articles</h6><h2 class="mb-0">' . $totalArticles . '</h2></div>
-                                    <i class="fas fa-newspaper fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total vues</h6><h2 class="mb-0">' . $totalVues . '</h2></div>
-                                    <i class="fas fa-eye fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card card-stats bg-info text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total commentaires</h6><h2 class="mb-0">' . $totalComments . '</h2></div>
-                                    <i class="fas fa-comments fa-3x opacity-50"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>';
-                $addButton = '
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Liste des articles</h4>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Nouvel article
-                    </a>
-                </div>';
-                if (empty($articles)) {
-                    $content = '<div class="alert alert-info">Aucun article disponible pour le moment.</div>';
-                } else {
-                    $content = '
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr><th>ID</th><th>Titre</th><th>Auteur</th><th>Date</th><th>Vues</th><th>Commentaires</th><th>Actions</th></tr>
-                            </thead>
-                            <tbody>';
-                    foreach ($articles as $article) {
-                        $content .= '
-                        <tr>
-                            <td>' . $article['id'] . '</td>
-                            <td><strong>' . htmlspecialchars(substr($article['titre'], 0, 50)) . (strlen($article['titre']) > 50 ? '...' : '') . '</strong></td>
-                            <td>' . htmlspecialchars($article['auteur_name'] ?? 'Valorys') . '</td>
-                            <td>' . date('d/m/Y H:i', strtotime($article['created_at'])) . '</td>
-                            <td><span class="badge bg-info">' . ($article['vues'] ?? 0) . '</span></td>
-                            <td><span class="badge bg-secondary">' . ($article['nb_replies'] ?? 0) . '</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="index.php?page=detail_article_public&id=' . $article['id'] . '" class="btn btn-sm btn-info btn-action" title="Voir"><i class="fas fa-eye"></i></a>
-                                    <a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" class="btn btn-sm btn-warning btn-action" title="Modifier"><i class="fas fa-edit"></i></a>
-                                    <button type="button" class="btn btn-sm btn-danger btn-action" title="Supprimer" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>';
-                    }
-                    $content .= '</tbody></table></div>';
-                }
-                $fullContent = $statsHtml . $addButton . $content . $this->getDeleteScript();
-                $this->renderAdminLayout('Gestion des articles', $fullContent, 'articles');
-                return;
+                header('Location: index.php?page=articles_admin');
+                exit;
             }
 
             $addButton = '';
@@ -332,7 +564,7 @@ public function listeMedecins(): void {
                 $addButton = '
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                     <h2><i class="fas fa-newspaper"></i> Nos articles</h2>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
+                    <a href="index.php?page=admin_article_create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
                         <i class="fas fa-plus"></i> Nouvel article
                     </a>
                 </div>';
@@ -355,7 +587,7 @@ public function listeMedecins(): void {
                     if ($canEdit || $canDelete) {
                         $crudButtons = '
                         <div style="position:absolute;top:15px;right:15px;display:flex;gap:8px;z-index:100;">
-                            ' . ($canEdit ? '<a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
+                            ' . ($canEdit ? '<a href="index.php?page=admin_article_edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
                             ' . ($canDelete ? '<button type="button" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
                         </div>';
                     }
@@ -384,9 +616,9 @@ public function listeMedecins(): void {
                     <i class="fas fa-info-circle"></i>
                     <a href="index.php?page=login" style="color:#1976d2;">Connectez-vous</a> pour créer, modifier ou supprimer vos propres articles.
                 </div>';
-                $fullContent = $infoMessage . $addButton . $content . $this->getDeleteScript();
+                $fullContent = $infoMessage . $searchForm . $addButton . $content . $this->getDeleteScript();
             } else {
-                $fullContent = $addButton . $content . $this->getDeleteScript();
+                $fullContent = $searchForm . $addButton . $content . $this->getDeleteScript();
             }
             $this->renderPublicView('Blog Valorys', $fullContent);
 
@@ -403,26 +635,6 @@ public function listeMedecins(): void {
 
     public function patientDisponibilites(): void {
         $this->requireLogin();
-        
-        // Traiter les actions (toggle, delete)
-        $action = $_GET['action'] ?? null;
-        $id = (int)($_GET['id'] ?? 0);
-        
-        if ($action === 'toggle' && $id > 0) {
-            $this->patientToggleDisponibilite($id);
-            return;
-        }
-        
-        if ($action === 'delete' && $id > 0) {
-            $this->patientDeleteDisponibilite($id);
-            return;
-        }
-        
-        if ($action === 'store') {
-            $this->patientStoreDisponibilite();
-            return;
-        }
-        
         require_once __DIR__ . '/../models/Disponibilite.php';
         require_once __DIR__ . '/../models/Medecin.php';
         $disponibiliteModel = new Disponibilite();
@@ -440,9 +652,15 @@ public function listeMedecins(): void {
         $this->requireLogin();
         $this->requireMedecin();
         require_once __DIR__ . '/../models/Disponibilite.php';
-        $disponibiliteModel = new Disponibilite();
         $medecinId = (int)$_SESSION['user_id'];
-        $dispos = $disponibiliteModel->getByMedecin($medecinId);
+        
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT * FROM disponibilites WHERE medecin_id = :medecin_id ORDER BY jour_semaine ASC, heure_debut ASC"
+        );
+        $stmt->execute([':medecin_id' => $medecinId]);
+        $dispos = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
         $content = $this->getMedecinDisponibilitesHTML($dispos);
         $this->renderPublicView('Mes disponibilités', $content);
     }
@@ -454,16 +672,56 @@ public function listeMedecins(): void {
             header('Location: index.php?page=medecin_disponibilites');
             exit;
         }
+
+        // ========== RÉCUPÉRATION ET NETTOYAGE ==========
+        $jour_semaine = trim($_POST['jour_semaine'] ?? '');
+        $heure_debut  = trim($_POST['heure_debut'] ?? '');
+        $heure_fin    = trim($_POST['heure_fin'] ?? '');
+        $medecinId    = (int)$_SESSION['user_id'];
+
+        // ========== VALIDATION AVEC VALIDATOR ==========
+        $validator = new Validator();
+        $validator
+            ->required('jour_semaine', $jour_semaine, 'Jour de la semaine')
+            ->required('heure_debut', $heure_debut, 'Heure de début')
+            ->required('heure_fin', $heure_fin, 'Heure de fin');
+
+        $errors = $validator->getErrors();
+
+        // ========== VALIDATIONS PERSONNALISÉES ==========
+        // Vérifier format des heures (HH:MM)
+        if (empty($errors['heure_debut']) && !preg_match('/^\d{2}:\d{2}$/', $heure_debut)) {
+            $errors['heure_debut'] = 'Format d\'heure invalide (HH:MM)';
+        }
+        if (empty($errors['heure_fin']) && !preg_match('/^\d{2}:\d{2}$/', $heure_fin)) {
+            $errors['heure_fin'] = 'Format d\'heure invalide (HH:MM)';
+        }
+
+        // Vérifier que heure_fin > heure_debut
+        if (empty($errors['heure_debut']) && empty($errors['heure_fin']) && $heure_fin <= $heure_debut) {
+            $errors['heure_fin'] = 'L\'heure de fin doit être après l\'heure de début';
+        }
+
+        // Si erreurs
+        if (!empty($errors)) {
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old']    = $_POST;
+            header('Location: index.php?page=disponibilites&action=create');
+            exit;
+        }
+
+        // ========== CRÉATION ==========
         require_once __DIR__ . '/../models/Disponibilite.php';
         $data = [
-            'user_id'      => (int)$_SESSION['user_id'],
-            'jour_semaine' => $_POST['jour_semaine'],
-            'heure_debut'  => $_POST['heure_debut'],
-            'heure_fin'    => $_POST['heure_fin'],
+            'medecin_id'   => $medecinId,
+            'jour_semaine' => $jour_semaine,
+            'heure_debut'  => $heure_debut,
+            'heure_fin'    => $heure_fin,
             'actif'        => 1
         ];
         $disponibiliteModel = new Disponibilite();
         $result = $disponibiliteModel->create($data);
+        
         $_SESSION['flash'] = $result
             ? ['type' => 'success', 'message' => 'Disponibilité ajoutée avec succès.']
             : ['type' => 'error',   'message' => 'Erreur lors de l\'ajout.'];
@@ -471,104 +729,38 @@ public function listeMedecins(): void {
         exit;
     }
 
-public function medecinToggleDisponibilite(int $id): void {
-    if (empty($_SESSION['user_id'])) {
-        header('Location: index.php?page=login');
-        exit;
-    }
-    if (($_SESSION['user_role'] ?? '') !== 'medecin') {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Accès réservé aux médecins.'];
-        header('Location: index.php?page=accueil');
-        exit;
-    }
-
-    require_once __DIR__ . '/../models/Disponibilite.php';
-    $disponibiliteModel = new Disponibilite();
-    $dispo = $disponibiliteModel->getById($id);
-
-    if (!$dispo) {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => "Disponibilité #$id introuvable."];
+    public function medecinToggleDisponibilite(int $id): void {
+        $this->requireLogin();
+        $this->requireMedecin();
+        require_once __DIR__ . '/../models/Disponibilite.php';
+        $disponibiliteModel = new Disponibilite();
+        $dispo = $disponibiliteModel->getById($id);
+        if ($dispo && $dispo['medecin_id'] == $_SESSION['user_id']) {
+            $newStatus = $dispo['actif'] ? 0 : 1;
+            $disponibiliteModel->update($id, ['actif' => $newStatus]);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Statut mis à jour.'];
+        } else {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Accès non autorisé.'];
+        }
         header('Location: index.php?page=medecin_disponibilites');
         exit;
     }
 
-    if ((int)$dispo['user_id'] !== (int)$_SESSION['user_id']) {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Action non autorisée.'];
+    public function medecinDeleteDisponibilite(int $id): void {
+        $this->requireLogin();
+        $this->requireMedecin();
+        require_once __DIR__ . '/../models/Disponibilite.php';
+        $disponibiliteModel = new Disponibilite();
+        $dispo = $disponibiliteModel->getById($id);
+        if ($dispo && $dispo['medecin_id'] == $_SESSION['user_id']) {
+            $disponibiliteModel->delete($id);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Disponibilité supprimée.'];
+        } else {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Accès non autorisé.'];
+        }
         header('Location: index.php?page=medecin_disponibilites');
         exit;
     }
-
-    $newStatus = $dispo['actif'] ? 0 : 1;
-    $label     = $newStatus ? 'activée' : 'désactivée';
-    $result    = $disponibiliteModel->update($id, ['actif' => $newStatus]);
-
-    $_SESSION['flash'] = $result
-        ? ['type' => 'success', 'message' => "Disponibilité $label avec succès."]
-        : ['type' => 'error',   'message' => "Erreur lors de la mise à jour (id=$id)."];
-
-    header('Location: index.php?page=medecin_disponibilites');
-    exit;
-}
-
-public function medecinDeleteDisponibilite(int $id): void {
-    if (empty($_SESSION['user_id'])) {
-        header('Location: index.php?page=login');
-        exit;
-    }
-    if (($_SESSION['user_role'] ?? '') !== 'medecin') {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => 'Accès réservé aux médecins.'];
-        header('Location: index.php?page=accueil');
-        exit;
-    }
-
-    require_once __DIR__ . '/../models/Disponibilite.php';
-    $disponibiliteModel = new Disponibilite();
-    $dispo = $disponibiliteModel->getById($id);
-
-    if (!$dispo) {
-        $_SESSION['flash'] = ['type' => 'error', 'message' => "Disponibilité #$id introuvable."];
-        header('Location: index.php?page=medecin_disponibilites');
-        exit;
-    }
-
-if ((int)$dispo['medecin_id'] !== (int)$_SESSION['user_id']) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Vous n\'êtes pas autorisé à supprimer cette disponibilité.'];
-        header('Location: index.php?page=medecin_disponibilites');
-        exit;
-    }
-
-    $result = $disponibiliteModel->delete($id);
-
-    $_SESSION['flash'] = $result
-        ? ['type' => 'success', 'message' => 'Disponibilité supprimée avec succès.']
-        : ['type' => 'error',   'message' => "Erreur lors de la suppression (id=$id)."];
-
-    header('Location: index.php?page=medecin_disponibilites');
-    exit;
-}
-
-// ===== FONCTIONS PATIENT DISPONIBILITES =====
-
-public function patientStoreDisponibilite(): void {
-    // Les patients ne peuvent pas ajouter de disponibilités
-    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Action non autorisée.'];
-    header('Location: index.php?page=patient_disponibilites');
-    exit;
-}
-
-public function patientToggleDisponibilite(int $id): void {
-    // Les patients ne peuvent pas modifier les disponibilités
-    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Action non autorisée.'];
-    header('Location: index.php?page=patient_disponibilites');
-    exit;
-}
-
-public function patientDeleteDisponibilite(int $id): void {
-    // Les patients ne peuvent pas supprimer les disponibilités
-    $_SESSION['flash'] = ['type' => 'error', 'message' => 'Action non autorisée.'];
-    header('Location: index.php?page=patient_disponibilites');
-    exit;
-}
 
     // =============================================
     // RENDU ADMIN AVEC SIDEBAR
@@ -595,6 +787,8 @@ public function patientDeleteDisponibilite(int $id): void {
                 .main-content { padding: 20px; }
                 .top-bar { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             </style>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <div class="container-fluid">
@@ -607,6 +801,7 @@ public function patientDeleteDisponibilite(int $id): void {
                             <a class="nav-link <?= $activePage == 'dashboard'      ? 'active' : '' ?>" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                             <a class="nav-link <?= $activePage == 'users'          ? 'active' : '' ?>" href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
                             <a class="nav-link <?= $activePage == 'patients'       ? 'active' : '' ?>" href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
+                            <a class="nav-link <?= $activePage == 'avis'           ? 'active' : '' ?>" href="index.php?page=avis_admin"><i class="fas fa-star"></i> Avis</a>
                             <a class="nav-link <?= $activePage == 'medecins'       ? 'active' : '' ?>" href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
                             <a class="nav-link <?= $activePage == 'disponibilites' ? 'active' : '' ?>" href="index.php?page=disponibilites_admin"><i class="fas fa-clock"></i> Disponibilités</a>
                             <a class="nav-link <?= $activePage == 'rendezvous'     ? 'active' : '' ?>" href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
@@ -651,6 +846,8 @@ public function patientDeleteDisponibilite(int $id): void {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -704,15 +901,16 @@ public function patientDeleteDisponibilite(int $id): void {
         $userId     = $_SESSION['user_id'] ?? null;
         $userRole   = $_SESSION['user_role'] ?? '';
         $isAdmin    = ($userRole === 'admin');
+        
+        // Les admins sont redirigés vers la page de détail admin
         if ($isAdmin) {
-            $content = $this->getAdminArticleDetailHTML($article, $replies, $id);
-            $this->renderAdminLayout('Détail de l\'article - Administration', $content, 'articles');
-            return;
+            header('Location: index.php?page=articles_admin&action=show&id=' . $id);
+            exit;
         }
         $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']);
         $articleButtons = $isAuthor ? '
         <div class="mb-3 d-flex gap-2">
-            <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
+            <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
             <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer mon article</button>
             <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm ms-auto"><i class="fas fa-arrow-left"></i> Retour au blog</a>
         </div>'
@@ -733,16 +931,8 @@ public function patientDeleteDisponibilite(int $id): void {
             .reply-actions { margin-top:10px;display:flex;gap:10px; }
             .btn-edit-reply { background:#ffc107;color:#000;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px; }
             .btn-delete-reply { background:#dc3545;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px; }
-#editDispoModal, #addDispoModal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: transparent;
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-    }            .modal-content { background-color:#fff;margin:10% auto;padding:20px;border-radius:10px;width:90%;max-width:500px;position:relative; }
+            .modal { display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5); }
+            .modal-content { background-color:#fff;margin:10% auto;padding:20px;border-radius:10px;width:90%;max-width:500px;position:relative; }
             .close { position:absolute;right:15px;top:10px;font-size:25px;cursor:pointer; }
             .form-group { margin-bottom:15px; }
             .form-group label { display:block;margin-bottom:5px;font-weight:bold; }
@@ -922,7 +1112,7 @@ JS;
         <div class="row"><div class="col-md-12">
             <div class="mb-3">
                 <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Retour</a>
-                <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
+                <a href="index.php?page=admin_article_edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier</a>
                 <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer</button>
             </div>
             <div class="article-header">
@@ -1129,7 +1319,7 @@ JS;
         }
         function closeDeleteModal() { document.getElementById("deleteModal").classList.remove("show"); currentDeleteId = null; }
         document.getElementById("confirmDeleteBtn").onclick = function() {
-            if (currentDeleteId) window.location.href = "index.php?page=articles_admin&action=delete&id=" + currentDeleteId;
+            if (currentDeleteId) window.location.href = "index.php?page=admin_article_delete&id=" + currentDeleteId;
             closeDeleteModal();
         };
         document.getElementById("deleteModal").onclick = function(e) { if (e.target === this) closeDeleteModal(); };
@@ -1177,12 +1367,11 @@ JS;
             }
         }
         if ($isAdmin) {
-            $content = $this->getAdminArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
-            $this->renderAdminLayout('Créer un article', $content, 'articles');
-        } else {
-            $content = $this->getUserArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
-            $this->renderPublicView('Créer un article', $content);
+            header('Location: index.php?page=articles_admin&action=create');
+            exit;
         }
+        $content = $this->getUserArticleFormHTML('Créer un article', 'admin_article_create', null, $errors, $oldData);
+        $this->renderPublicView('Créer un article', $content);
     }
 
     public function adminArticleEdit($id): void {
@@ -1224,12 +1413,11 @@ JS;
             }
         }
         if ($isAdmin) {
-            $content = $this->getAdminArticleFormHTML('Modifier l\'article', 'admin_article_edit&id=' . $id, $article, $errors);
-            $this->renderAdminLayout('Modifier un article', $content, 'articles');
-        } else {
-            $content = $this->getUserArticleFormHTML('Modifier mon article', 'admin_article_edit&id=' . $id, $article, $errors);
-            $this->renderPublicView('Modifier mon article', $content);
+            header('Location: index.php?page=articles_admin&action=edit&id=' . $id);
+            exit;
         }
+        $content = $this->getUserArticleFormHTML('Modifier mon article', 'admin_article_edit&id=' . $id, $article, $errors);
+        $this->renderPublicView('Modifier mon article', $content);
     }
 
     public function adminArticleDelete($id): void {
@@ -1357,18 +1545,19 @@ JS;
         $contenuValue = $isEdit ? htmlspecialchars($article['contenu'] ?? '') : htmlspecialchars($oldData['contenu'] ?? '');
         $imageValue   = $isEdit ? htmlspecialchars($article['image']   ?? '') : '';
         $buttonText   = $isEdit ? 'Mettre à jour' : 'Publier';
+        
         $html = '
         <div style="background:white;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
             <h3 style="margin-bottom:25px;color:#2A7FAA;">' . htmlspecialchars($title) . '</h3>
             ' . (isset($errors['general']) ? '<div style="background:#ffe6e6;border-left:4px solid #dc3545;padding:12px;border-radius:8px;margin-bottom:20px;color:#dc3545;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['general']) . '</div>' : '') . '
-            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data">
+            <form method="POST" action="index.php?page=' . $action . '" enctype="multipart/form-data" id="frontArticleForm">
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Titre <span style="color:red;">*</span></label>
                     <input type="text" name="titre" value="' . $titreValue . '" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['titre']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:15px;">
                     ' . (isset($errors['titre']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['titre']) . '</div>' : '') . '
                 </div>
                 <div style="margin-bottom:20px;">
-                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image (optionnel)</label>
+                    <label style="display:block;font-weight:bold;margin-bottom:8px;">Image de couverture (optionnel)</label>
                     ' . ($imageValue ? '<div style="margin-bottom:10px;"><img src="' . $imageValue . '" style="max-width:200px;border-radius:8px;"></div>' : '') . '
                     <input type="file" name="article_image" accept="image/*" style="width:100%;padding:8px;border:1px solid ' . (isset($errors['image']) ? '#dc3545' : '#ddd') . ';border-radius:8px;">
                     <small style="color:#999;">Formats acceptés : JPG, PNG, GIF. Max 2 Mo.</small>
@@ -1377,23 +1566,164 @@ JS;
                 </div>
                 <div style="margin-bottom:20px;">
                     <label style="display:block;font-weight:bold;margin-bottom:8px;">Contenu <span style="color:red;">*</span></label>
-                    <textarea name="contenu" rows="12" style="width:100%;padding:10px;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;font-size:14px;resize:vertical;">' . $contenuValue . '</textarea>
-                    <small style="color:#999;">Vous pouvez utiliser du HTML pour formater votre contenu.</small>
+                    
+                    <div style="display:flex;gap:10px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+                        <button type="button" id="emojiBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
+                            <i class="fas fa-smile me-1"></i>Emoji
+                        </button>
+                        <button type="button" id="imgBtn" class="btn btn-sm btn-outline-secondary" style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:14px;background:#f8f9fa;">
+                            <i class="fas fa-image me-1"></i>Image (dans le texte)
+                        </button>
+                        <input type="file" id="imgUpload" accept="image/*" style="display:none">
+                        <small class="text-muted" style="flex-basis:100%">Cliquez sur les boutons pour ajouter du contenu enrichi au texte</small>
+                    </div>
+                    
+                    <!-- Emoji Picker -->
+                    <div id="emojiPicker" style="display:none;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;max-height:300px;overflow-y:auto">
+                        <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:5px"></div>
+                    </div>
+                    
+                    <!-- Image Preview -->
+                    <div id="imgPreview" style="display:none;margin-bottom:12px">
+                        <img id="imgPreviewImg" src="" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #dee2e6">
+                        <button type="button" id="removeImg" class="btn btn-sm btn-danger mt-2" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;">
+                            <i class="fas fa-trash me-1"></i>Supprimer
+                        </button>
+                    </div>
+
+                    <!-- Quill Editor -->
+                    <div id="editor-container" style="background:white;border:1px solid ' . (isset($errors['contenu']) ? '#dc3545' : '#ddd') . ';border-radius:8px;min-height:300px"></div>
+                    <input type="hidden" id="contenu" name="contenu" value="' . $contenuValue . '">
+                    <small style="color:#999;display:block;margin-top:8px;">✨ Texte • 🖼️ Images • 😊 Emoji • 📝 Formatage riche</small>
+
                     ' . (isset($errors['contenu']) ? '<div style="color:#dc3545;font-size:12px;margin-top:5px;"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($errors['contenu']) . '</div>' : '') . '
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-top:20px;">
                     <a href="index.php?page=blog_public" style="background:#6c757d;color:white;padding:10px 25px;border-radius:8px;text-decoration:none;"><i class="fas fa-arrow-left"></i> Annuler</a>
-                    <button type="submit" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
+                    <button type="submit" id="submitBtn" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:15px;"><i class="fas fa-save"></i> ' . $buttonText . '</button>
                 </div>
             </form>
         </div>';
-        $html .= <<<'JS'
+        
+        $html .= <<<JS
+        <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+        <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+        <style>
+            /* Quill overrides */
+            .ql-toolbar.ql-snow { border: 1px solid #ddd; border-top-left-radius: 8px; border-top-right-radius: 8px; background: #fafafa; }
+            .ql-container.ql-snow { border: 1px solid #ddd; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-size: 15px; font-family: inherit; }
+        </style>
         <script>
-        document.querySelectorAll("input[type=text], textarea").forEach(function(field) {
-            field.addEventListener("input", function() {
-                this.style.borderColor = "#ddd";
-                var err = this.parentElement.querySelector("[style*=dc3545]");
-                if (err) err.style.display = "none";
+        document.addEventListener('DOMContentLoaded', function() {
+            // === INITIALIZE QUILL EDITOR ===
+            const quill = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: 'Rédigez votre article ici...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'header': 1 }, { 'header': 2 }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // Load existing content
+            const existingContent = document.getElementById('contenu').value;
+            if (existingContent) {
+                try {
+                    quill.setContents(JSON.parse(existingContent), 'api');
+                } catch(e) {
+                    quill.root.innerHTML = existingContent;
+                }
+            }
+
+            // Update hidden field on change
+            quill.on('text-change', function() {
+                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
+            });
+
+            // === EMOJI PICKER ===
+            const emojis = ['😀', '😂', '🤣', '😃', '😄', '😁', '😆', '😅', '🤭', '😉', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤎', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '👍', '👎', '👋', '👊', '✊', '🤚', '🖐️', '✋', '💪', '🦾', '🦿', '🦴', '👀', '👁️'];
+
+            const emojiBtn = document.getElementById('emojiBtn');
+            const emojiPicker = document.getElementById('emojiPicker');
+            const emojiGrid = document.getElementById('emojiGrid');
+
+            emojis.forEach(emoji => {
+                const span = document.createElement('span');
+                span.textContent = emoji;
+                span.style.cursor = 'pointer';
+                span.style.fontSize = '24px';
+                span.style.padding = '8px';
+                span.style.borderRadius = '4px';
+                span.style.transition = 'all 0.2s';
+                span.onmouseover = () => span.style.background = '#e0e0e0';
+                span.onmouseout = () => span.style.background = 'transparent';
+                span.onclick = () => {
+                    quill.insertText(quill.getSelection()?.index || quill.getLength(), emoji);
+                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + emoji.length);
+                };
+                emojiGrid.appendChild(span);
+            });
+
+            emojiBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'grid' : 'none';
+            });
+
+            // === IMAGE IN TEXT ===
+            const imgBtn = document.getElementById('imgBtn');
+            const imgUpload = document.getElementById('imgUpload');
+            const imgPreview = document.getElementById('imgPreview');
+            const imgPreviewImg = document.getElementById('imgPreviewImg');
+            const removeImg = document.getElementById('removeImg');
+
+            imgBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                imgUpload.click();
+            });
+
+            imgUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('L\'image doit faire moins de 5MB');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const imageDataUrl = event.target.result;
+                    const index = quill.getSelection()?.index || quill.getLength();
+                    quill.insertEmbed(index, 'image', imageDataUrl);
+                    quill.setSelection((quill.getSelection()?.index || quill.getLength()) + 1);
+                    imgPreviewImg.src = imageDataUrl;
+                    imgPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+
+            removeImg.addEventListener('click', (e) => {
+                e.preventDefault();
+                imgPreview.style.display = 'none';
+                imgPreviewImg.src = '';
+                imgUpload.value = '';
+            });
+
+            // === FORM VALIDATION & SUBMISSION ===
+            document.getElementById('frontArticleForm').addEventListener('submit', function(e) {
+                document.getElementById('contenu').value = JSON.stringify(quill.getContents());
+            });
+
+            document.querySelectorAll('input[type=text], textarea').forEach(function(field) {
+                field.addEventListener('input', function() {
+                    this.style.borderColor = '#ddd';
+                    var err = this.parentElement.querySelector('[style*=dc3545]');
+                    if (err) err.style.display = 'none';
+                });
             });
         });
         </script>
@@ -1405,8 +1735,772 @@ JS;
     // ÉVÉNEMENTS / CONTACT / À PROPOS
     // =============================================
 
-    public function listeEvenements(): void { $this->renderTemporaryView('Événements', '<p>Page des événements en construction...</p>'); }
-    public function detailEvenement($id): void { $this->renderTemporaryView('Détail de l\'événement', '<p>Événement ID: ' . htmlspecialchars($id) . '</p>'); }
+    public function listeEvenements(): void {
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            "SELECT * FROM events WHERE status = 'a venir' OR status = 'en cours' ORDER BY date_debut ASC"
+        );
+        $stmt->execute();
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $eventRepo = new \App\Repositories\EventRepository();
+        $upcomingEvents = $eventRepo->getUpcoming();
+        $featuredEvents = $eventRepo->getFeatured();
+        
+        $isLoggedIn = isset($_SESSION['user_id']);
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .event-header {
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+                color: white; padding: 60px 0; text-align: center; margin-bottom: 40px;
+            }
+            .event-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .event-header .lead { font-size: 1.2rem; opacity: 0.9; }
+            .event-card {
+                background: white; border-radius: 16px; padding: 0;
+                margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+                transition: transform 0.3s; overflow: hidden; position: relative;
+            }
+            .event-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+            .event-image { height: 200px; background-size: cover; background-position: center; background-color: #e9ecef; }
+            .event-status-badge {
+                position: absolute; top: 10px; left: 10px; background: #4CAF50;
+                color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            }
+            .event-body { padding: 20px; }
+            .event-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+            .event-title a { color: #1a2035; text-decoration: none; }
+            .event-title a:hover { color: #2A7FAA; }
+            .event-meta { font-size: 13px; color: #6c757d; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+            .event-meta i { color: #2A7FAA; width: 16px; }
+            .event-excerpt { color: #555; font-size: 14px; margin-bottom: 15px; line-height: 1.5; }
+            .event-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee; }
+            .event-price { font-size: 18px; font-weight: bold; color: #2A7FAA; }
+            .event-price .tnf { font-size: 12px; color: #6c757d; }
+            .btn-register {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: white; border: none; border-radius: 25px;
+                padding: 8px 20px; font-size: 13px; text-decoration: none; display: inline-block;
+                transition: opacity 0.3s;
+            }
+            .btn-register:hover { opacity: 0.9; color: white; }
+            .no-events { text-align: center; padding: 40px 20px; color: #6c757d; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- EN-TÊTE -->
+        <div class="event-header">
+            <div class="container">
+                <h1><i class="fas fa-calendar-alt me-3"></i>Événements médicaux</h1>
+                <p class="lead">Conférences, ateliers et rencontres médicales</p>
+            </div>
+        </div>
+
+        <!-- SPONSORS SHOWCASE -->
+        <div style="background: white; padding: 30px 0; border-bottom: 1px solid #e0e0e0;">
+            <div class="container">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                    <div>
+                        <h5 style="color: #2A7FAA; font-weight: 700; margin-bottom: 5px;"><i class="fas fa-handshake me-2"></i>Nos Sponsors</h5>
+                        <p style="margin: 0; color: #666; font-size: 14px;">Partenaires qui soutiennent nos événements</p>
+                    </div>
+                    <a href="index.php?page=sponsors" class="btn btn-primary" style="background: linear-gradient(135deg, #2A7FAA, #4CAF50); border: none; border-radius: 25px; padding: 10px 25px; font-weight: 600; text-decoration: none;">
+                        <i class="fas fa-arrow-right me-2"></i>Voir tous les sponsors
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENU -->
+        <div class="container mb-5">
+            <div class="row" id="eventsList">';
+
+        if (empty($upcomingEvents)) {
+            $content .= '<div class="col-12"><div class="no-events"><i class="fas fa-calendar-check fa-3x mb-3"></i><p>Aucun événement disponible pour le moment.</p></div></div>';
+        } else {
+            foreach ($upcomingEvents as $event) {
+                $dateDebut = date('d/m/Y', strtotime($event['date_debut']));
+                $dateFin = date('d/m/Y', strtotime($event['date_fin']));
+                $prix = $event['prix'] ?? 0;
+                $prixText = $prix > 0 ? $prix . ' DT' : 'GRATUIT';
+                $lieu = $event['lieu'] ?? 'À déterminer';
+                $description = htmlspecialchars(substr($event['description'] ?? '', 0, 150)) . '...';
+                $image = htmlspecialchars($event['image'] ?? 'https://via.placeholder.com/400x200?text=Event');
+                
+                $content .= '
+                <div class="col-md-6 col-lg-4 event-item">
+                    <div class="event-card">
+                        <div class="event-status-badge">Planifié</div>
+                        <div class="event-image" style="background-image: url(\'' . $image . '\')"></div>
+                        <div class="event-body">
+                            <h3 class="event-title">
+                                <a href="index.php?page=detail_evenement&slug=' . htmlspecialchars($event['slug']) . '">
+                                    ' . htmlspecialchars($event['titre']) . '
+                                </a>
+                            </h3>
+                            <div class="event-meta">
+                                <i class="fas fa-calendar"></i>
+                                <span>' . $dateDebut . ' - ' . $dateFin . '</span>
+                            </div>
+                            <div class="event-meta">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>' . $lieu . '</span>
+                            </div>
+                            <p class="event-excerpt">' . $description . '</p>
+                            ' . (!empty($event['sponsor_nom']) ? '<div class="event-meta"><i class="fas fa-handshake"></i><span>Sponsor: ' . htmlspecialchars($event['sponsor_nom']) . '</span></div>' : '') . '
+                            <div class="event-footer">
+                                <div class="event-price">' . $prixText . '</div>
+                                <a href="index.php?page=detail_evenement&slug=' . htmlspecialchars($event['slug']) . '" class="btn-register">
+                                    <i class="fas fa-info-circle"></i> Plus de détails
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>';
+            }
+        }
+
+        $content .= '
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <!-- CHATBOT FLOTTANT -->
+        <div id="chatbotWidget" style="
+            position: fixed; bottom: 30px; right: 30px; width: 380px; z-index: 9999;
+            max-height: 80vh; display: flex; flex-direction: column;
+            box-shadow: 0 5px 40px rgba(0,0,0,0.16); border-radius: 12px; overflow: hidden;
+            background: white; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+        ">
+            <div style="
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
+                padding: 16px; cursor: pointer; display: flex; justify-content: space-between;
+                align-items: center;
+            " onclick="toggleChatbot()">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">💬 Assistant Médical</h3>
+                    <small style="opacity: 0.9;">Posez vos questions</small>
+                </div>
+                <button style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;" onclick="closeChatbot(event)">✕</button>
+            </div>
+            <div id="chatMessages" style="
+                flex: 1; overflow-y: auto; padding: 15px; min-height: 300px;
+                background: #f8f9fa;
+            ">
+                <div style="
+                    background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white;
+                    padding: 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%;
+                ">
+                    <p style="margin: 0; font-size: 14px;">Bienvenue! 👋 Je suis votre assistant pour les événements médicaux. Comment puis-je vous aider?</p>
+                </div>
+            </div>
+            <div style="padding: 12px; border-top: 1px solid #e0e0e0;">
+                <form onsubmit="sendMessage(event)" style="display: flex; gap: 8px;">
+                    <input type="text" id="userInput" placeholder="Posez votre question..." style="
+                        flex: 1; border: 1px solid #ddd; border-radius: 20px;
+                        padding: 10px 15px; font-size: 14px; outline: none;
+                    " />
+                    <button type="submit" style="
+                        background: linear-gradient(135deg, #2A7FAA, #4CAF50); color: white;
+                        border: none; border-radius: 50%; width: 36px; height: 36px;
+                        cursor: pointer; font-size: 16px;
+                    ">➤</button>
+                </form>
+            </div>
+        </div>
+
+        <script>
+const chatbotWidget = document.getElementById("chatbotWidget");
+const chatMessages = document.getElementById("chatMessages");
+const userInput = document.getElementById("userInput");
+
+function toggleChatbot() {
+    chatbotWidget.style.opacity = chatbotWidget.classList.contains("closed") ? "1" : "0.1";
+    chatbotWidget.classList.toggle("closed");
+    chatMessages.style.display = chatbotWidget.classList.contains("closed") ? "none" : "flex";
+}
+
+function closeChatbot(e) {
+    e.stopPropagation();
+    chatbotWidget.style.display = "none";
+}
+
+function sendMessage(e) {
+    e.preventDefault();
+    if (!userInput.value.trim()) return;
+    
+    const userMsg = document.createElement("div");
+    userMsg.style.cssText = "background: #2A7FAA; color: white; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; margin-left: auto; word-break: break-word;";
+    userMsg.textContent = userInput.value;
+    chatMessages.appendChild(userMsg);
+    
+    const response = getResponse(userInput.value);
+    
+    setTimeout(() => {
+        const botMsg = document.createElement("div");
+        botMsg.style.cssText = "background: #e8f5e9; color: #333; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; word-break: break-word;";
+        botMsg.textContent = response;
+        chatMessages.appendChild(botMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 500);
+    
+    userInput.value = "";
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function getResponse(message) {
+    const lower = message.toLowerCase();
+    const responses = {
+        "prix|cout|tarif": "Prix entre 25 DT et 200 DT selon les evenements!",
+        "lieu|adresse|ou": "Nous organisons a Hopital Europeen, Espace Sante, Centre International!",
+        "date|quand": "Cardiologie 15/06, Bien-etre 10/07, Formation 20-22/09, Pediatrie 12-14/11!",
+        "inscription|participer": "Cliquez sur Plus de details pour vous inscrire!",
+        "cardio": "Conference Cardiologie 15/06/2026 - 150 DT!",
+        "stress": "Atelier Bien-etre 10/07/2026 - 25 DT!",
+        "pediatrie": "Congres Pediatrie 12-14/11/2026 - 200 DT!",
+        "formation": "Formation Continue 20-22/09/2026 - 150 DT!",
+        "default": "Posez une autre question ou consultez nos evenements!"
+    };
+    
+    for (const [keyword, response] of Object.entries(responses)) {
+        const keywords = keyword.split("|");
+        for (const kw of keywords) {
+            if (lower.includes(kw)) {
+                return response;
+            }
+        }
+    }
+    
+    return responses["default"];
+}
+
+// Afficher le chatbot au chargement (fermé par défaut)
+document.addEventListener("DOMContentLoaded", () => {
+    chatbotWidget.classList.add("closed");
+    chatMessages.style.display = "none";
+});
+</script>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        ';
+
+        $this->renderPublicView('Événements', $content);
+    }
+    
+    public function detailEvenement($id = null): void {
+        $eventRepo = new \App\Repositories\EventRepository();
+        
+        // Get slug from URL parameter
+        $slug = isset($_GET['slug']) ? preg_replace('/[^a-z0-9-]/', '', trim($_GET['slug'])) : null;
+        
+        // Try to fetch event by slug first, then by ID
+        $event = null;
+        if ($slug) {
+            $event = $eventRepo->getBySlug($slug);
+        } elseif ($id) {
+            $event = $eventRepo->getById((int)$id);
+        }
+        
+        if (!$event) {
+            $this->page404();
+            return;
+        }
+        
+        $isLoggedIn = isset($_SESSION['user_id']);
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        // Format dates
+        $dateDebut = date('d/m/Y H:i', strtotime($event['date_debut']));
+        $dateFin = date('d/m/Y H:i', strtotime($event['date_fin']));
+        $dateDebutFull = date('d F Y', strtotime($event['date_debut']));
+        
+        // Format pricing
+        $prix = $event['prix'] ?? 0;
+        $prixText = $prix > 0 ? number_format($prix, 2, ',', ' ') . ' DT' : 'GRATUIT';
+        
+        // Get sponsor info
+        $sponsor = $event['sponsor_nom'] ?? null;
+        
+        // Participants
+        $participants = $event['nb_participants'] ?? 0;
+        $capacite = $event['capacite_max'] ?? 0;
+        $placesDisponibles = $capacite > 0 ? max(0, $capacite - $participants) : '∞';
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .event-hero { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white; padding: 40px 0; margin-bottom: 30px; }
+            .event-hero h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .event-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 30px; }
+            .event-header-section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+            .event-meta-row { display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 20px; }
+            .event-meta-item { display: flex; align-items: center; gap: 10px; }
+            .event-meta-item i { color: #2A7FAA; font-size: 20px; width: 30px; text-align: center; }
+            .event-meta-item span { font-size: 16px; color: #333; }
+            .event-meta-label { color: #6c757d; font-size: 13px; }
+            .event-price-section { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); color: white; border-radius: 12px; padding: 25px; text-align: center; }
+            .event-price { font-size: 36px; font-weight: bold; margin-bottom: 10px; }
+            .register-btn { background: white; color: #2A7FAA; border: none; border-radius: 25px; padding: 12px 35px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; margin-top: 15px; }
+            .register-btn:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+            .event-description { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); line-height: 1.8; color: #333; }
+            .event-description h3 { color: #2A7FAA; margin-bottom: 15px; font-size: 1.5rem; }
+            .info-card { background: #f8f9fa; border-left: 4px solid #2A7FAA; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .info-card h4 { color: #2A7FAA; margin-bottom: 10px; }
+            .back-btn { display: inline-block; margin-bottom: 20px; }
+            .back-btn a { color: #2A7FAA; text-decoration: none; font-weight: 600; transition: all 0.3s; }
+            .back-btn a:hover { color: #4CAF50; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- NAVBAR -->
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a class="navbar-brand" href="index.php?page=accueil">
+                    <i class="fas fa-stethoscope me-2"></i>Valorys
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="index.php?page=evenements">Événements</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=sponsors">Sponsors</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                        ' . ($isLoggedIn ? '
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                        ' : '
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
+                        ') . '
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- HERO SECTION -->
+        <div class="event-hero">
+            <div class="container">
+                <div class="back-btn">
+                    <a href="index.php?page=evenements"><i class="fas fa-arrow-left me-2"></i>Retour aux événements</a>
+                </div>
+                <h1><i class="fas fa-calendar-alt me-3"></i>' . htmlspecialchars($event['titre']) . '</h1>
+                <p class="lead">' . date('d F Y', strtotime($event['date_debut'])) . '</p>
+            </div>
+        </div>
+
+        <!-- CONTENU PRINCIPAL -->
+        <div class="container mb-5">
+            <div class="row">
+                <div class="col-lg-8">
+                    ' . (!empty($event['image']) ? '<img src="' . htmlspecialchars($event['image']) . '" alt="' . htmlspecialchars($event['titre']) . '" class="event-image">' : '') . '
+
+                    <!-- Description -->
+                    <div class="event-description">
+                        <h3><i class="fas fa-file-alt me-2"></i>Description</h3>
+                        ' . nl2br(htmlspecialchars($event['description'] ?? 'Aucune description disponible.')) . '
+                    </div>
+
+                    <!-- Détails -->
+                    <div class="event-header-section">
+                        <h3 class="mb-4"><i class="fas fa-info-circle me-2"></i>Détails de l\'événement</h3>
+                        
+                        <div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <div>
+                                    <div class="event-meta-label">Date de début</div>
+                                    <span>' . $dateDebut . '</span>
+                                </div>
+                            </div>
+                            <div class="event-meta-item">
+                                <i class="fas fa-calendar-check"></i>
+                                <div>
+                                    <div class="event-meta-label">Date de fin</div>
+                                    <span>' . $dateFin . '</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <div>
+                                    <div class="event-meta-label">Lieu</div>
+                                    <span>' . htmlspecialchars($event['lieu'] ?? 'À déterminer') . '</span>
+                                </div>
+                            </div>
+                            <div class="event-meta-item">
+                                <i class="fas fa-location-dot"></i>
+                                <div>
+                                    <div class="event-meta-label">Adresse</div>
+                                    <span>' . htmlspecialchars($event['adresse'] ?? 'Non renseignée') . '</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ' . ($sponsor ? '<div class="event-meta-row">
+                            <div class="event-meta-item">
+                                <i class="fas fa-handshake"></i>
+                                <div>
+                                    <div class="event-meta-label">Sponsor</div>
+                                    <span>' . htmlspecialchars($sponsor) . '</span>
+                                </div>
+                            </div>
+                        </div>' : '') . '
+                    </div>
+
+                    <!-- Places disponibles -->
+                    <div class="info-card">
+                        <h4><i class="fas fa-chair me-2"></i>Capacité & Inscription</h4>
+                        <p><strong>Capacité maximale:</strong> ' . ($capacite > 0 ? $capacite . ' personnes' : 'Illimitée') . '</p>
+                        <p><strong>Participants actuels:</strong> ' . $participants . '</p>
+                        <p><strong>Places disponibles:</strong> ' . ($placesDisponibles === '∞' ? 'Illimitées' : $placesDisponibles) . '</p>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR -->
+                <div class="col-lg-4">
+                    <!-- Prix & Inscription -->
+                    <div class="event-price-section">
+                        <div>Tarif</div>
+                        <div class="event-price">' . $prixText . '</div>
+                        <button class="register-btn">
+                            <i class="fas fa-check-circle me-2"></i>' . ($isLoggedIn ? 'S\'inscrire' : 'Se connecter pour s\'inscrire') . '
+                        </button>
+                    </div>
+
+                    <!-- Informations supplémentaires -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                        <h4 class="mb-3"><i class="fas fa-star me-2"></i>À propos de cet événement</h4>
+                        
+                        <div class="info-card" style="border-left-color: #4CAF50;">
+                            <p><strong>Status:</strong> <span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">' . ucfirst($event['status'] ?? 'à venir') . '</span></p>
+                        </div>
+
+                        <div class="info-card" style="border-left-color: #2A7FAA;">
+                            <p><small><i class="fas fa-question-circle me-2"></i>Vous avez une question sur cet événement? <a href="index.php?page=contact" style="color: #2A7FAA; font-weight: 600;">Contactez-nous</a></small></p>
+                        </div>
+                    </div>
+
+                    <!-- Partage social -->
+                    <div style="background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                        <h4 class="mb-3"><i class="fas fa-share-alt me-2"></i>Partager</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="https://www.facebook.com/sharer/sharer.php?u=' . urlencode($_SERVER['REQUEST_URI']) . '" target="_blank" class="btn btn-sm btn-primary" style="flex: 1; text-align: center;">
+                                <i class="fab fa-facebook"></i> Facebook
+                            </a>
+                            <a href="https://twitter.com/intent/tweet?url=' . urlencode($_SERVER['REQUEST_URI']) . '&text=' . urlencode($event['titre']) . '" target="_blank" class="btn btn-sm btn-info" style="flex: 1; text-align: center;">
+                                <i class="fab fa-twitter"></i> Twitter
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            const eventId = ' . (int)$event['id'] . ';
+            const isLoggedIn = ' . ($isLoggedIn ? 'true' : 'false') . ';
+            
+            document.querySelector(".register-btn").addEventListener("click", function() {
+                if (isLoggedIn) {
+                    registerForEvent(eventId);
+                } else {
+                    window.location.href = "index.php?page=login";
+                }
+            });
+            
+            function registerForEvent(eventId) {
+                const btn = document.querySelector(".register-btn");
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = \'<i class="fas fa-spinner fa-spin me-2"></i>Inscription en cours...\';
+                
+                fetch("index.php?page=event_register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    credentials: "include",
+                    body: "event_id=" + eventId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.innerHTML = \'<i class="fas fa-check-circle me-2"></i>Inscription confirmée!\';
+                        btn.style.background = "#4CAF50";
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        alert("Erreur: " + (data.message || "Impossible de s\'inscrire"));
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                })
+                .catch(err => {
+                    console.error("Erreur:", err);
+                    alert("Erreur de connexion. Veuillez réessayer.");
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                });
+            }
+        </script>
+        ';
+
+        $this->renderPublicView(htmlspecialchars($event['titre']), $content);
+    }
+    
+    public function registerEventAction(): void {
+        header('Content-Type: application/json');
+        
+        // Check if user is logged in
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter.']);
+            exit;
+        }
+        
+        $eventId = isset($_POST['event_id']) ? (int)$_POST['event_id'] : null;
+        $userId = $_SESSION['user_id'];
+        
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'ID d\'événement invalide.']);
+            exit;
+        }
+        
+        $eventRepo = new \App\Repositories\EventRepository();
+        $participationRepo = new \App\Repositories\ParticipationRepository();
+        
+        // Check if event exists
+        $event = $eventRepo->getById($eventId);
+        if (!$event) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
+            exit;
+        }
+        
+        // Check if user is already registered
+        $alreadyRegistered = $participationRepo->checkUserEvent($userId, $eventId);
+        if ($alreadyRegistered) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Vous êtes déjà inscrit à cet événement.']);
+            exit;
+        }
+        
+        // Register user
+        $result = $participationRepo->create([
+            'event_id' => $eventId,
+            'user_id' => $userId,
+            'statut' => 'inscrit'
+        ]);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Inscription confirmée!',
+                'participation_id' => $result
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'inscription.']);
+        }
+        exit;
+    }
+    
+    public function listSponsors(): void {
+        require_once __DIR__ . '/../models/Sponsor.php';
+        $sponsorModel = new Sponsor();
+        $sponsors = $sponsorModel->findAll();
+        
+        // Map niveau enum values to French display names
+        $levelMap = [
+            'platinium' => 'Platine',
+            'gold' => 'Or',
+            'silver' => 'Argent',
+            'bronze' => 'Bronze'
+        ];
+        
+        // Group by niveau (level) using mapped names
+        $sponsorsByLevel = [];
+        foreach ($sponsors as $sponsor) {
+            $levelKey = $levelMap[$sponsor['niveau']] ?? 'autre';
+            if (!isset($sponsorsByLevel[$levelKey])) {
+                $sponsorsByLevel[$levelKey] = [];
+            }
+            $sponsorsByLevel[$levelKey][] = $sponsor;
+        }
+        
+        $content = '
+        <style>
+            body { background: #f5f7fb; font-family: \'Segoe UI\', sans-serif; }
+            .navbar { background: #1a2035; }
+            .navbar-brand, .nav-link { color: white !important; }
+            .sponsors-header {
+                background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
+                color: white; padding: 60px 0; text-align: center; margin-bottom: 40px;
+            }
+            .sponsors-header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+            .sponsors-header .lead { font-size: 1.1rem; opacity: 0.9; }
+            .sponsor-card {
+                background: white; border-radius: 12px; padding: 30px 20px;
+                margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                transition: transform 0.3s, box-shadow 0.3s;
+                display: flex; flex-direction: column; align-items: center; text-align: center;
+            }
+            .sponsor-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+            .sponsor-icon {
+                width: 80px; height: 80px; background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                color: white; font-size: 40px; flex-shrink: 0; margin-bottom: 15px;
+            }
+            .sponsor-info { width: 100%; }
+            .sponsor-name { font-size: 18px; font-weight: 700; color: #333; margin-bottom: 10px; }
+            .sponsor-level {
+                display: inline-block; padding: 5px 14px; border-radius: 20px;
+                font-size: 12px; font-weight: bold; margin-bottom: 12px;
+            }
+            .level-platine { background: #e0d4f7; color: #6f4e8f; }
+            .level-or { background: #ffd700; color: #8b7500; }
+            .level-argent { background: #e8e8e8; color: #5a5a5a; }
+            .level-bronze { background: #f0a875; color: #7a4d2f; }
+            .sponsor-contact { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+            .sponsor-contact a { color: #2A7FAA; text-decoration: none; transition: color 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+            .sponsor-contact a:hover { color: #4CAF50; }
+            .section-title {
+                font-size: 1.8rem; font-weight: 700; color: #333;
+                margin-top: 40px; margin-bottom: 30px; padding-bottom: 15px;
+                border-bottom: 3px solid #2A7FAA;
+            }
+            .row { margin-bottom: 30px; }
+            footer { background: #1a2035; color: white; text-align: center; padding: 30px; margin-top: 50px; }
+        </style>
+
+        <!-- HEADER -->
+        <div class="sponsors-header">
+            <div class="container">
+                <h1><i class="fas fa-handshake me-3"></i>Nos Sponsors</h1>
+                <p class="lead">Partenaires qui soutiennent les événements médicaux</p>
+            </div>
+        </div>
+
+        <!-- SPONSORS LIST -->
+        <div class="container mb-5">';
+
+        // Platinum sponsors
+        if (!empty($sponsorsByLevel['Platine'])) {
+            $content .= '<div class="section-title"><i class="fas fa-crown me-2" style="color: #e0d4f7;"></i>Sponsors Platine</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Platine'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-platine');
+            }
+            $content .= '</div>';
+        }
+
+        // Gold sponsors
+        if (!empty($sponsorsByLevel['Or'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #ffd700;"></i>Sponsors Or</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Or'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-or');
+            }
+            $content .= '</div>';
+        }
+
+        // Silver sponsors
+        if (!empty($sponsorsByLevel['Argent'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #a9a9a9;"></i>Sponsors Argent</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Argent'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-argent');
+            }
+            $content .= '</div>';
+        }
+
+        // Bronze sponsors
+        if (!empty($sponsorsByLevel['Bronze'])) {
+            $content .= '<div class="section-title"><i class="fas fa-medal me-2" style="color: #cd7f32;"></i>Sponsors Bronze</div>
+            <div class="row">';
+            foreach ($sponsorsByLevel['Bronze'] as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-bronze');
+            }
+            $content .= '</div>';
+        }
+
+        // Other sponsors
+        if (!empty($sponsorsByLevel['autre']) || (count($sponsorsByLevel) === 1 && !empty($sponsorsByLevel['autre']))) {
+            $content .= '<div class="section-title"><i class="fas fa-building me-2"></i>Autres Partenaires</div>
+            <div class="row">';
+            $otherSponsors = $sponsorsByLevel['autre'] ?? [];
+            foreach ($otherSponsors as $sponsor) {
+                $content .= $this->getSponsorCard($sponsor, 'level-autre');
+            }
+            $content .= '</div>';
+        }
+
+        if (empty($sponsors)) {
+            $content .= '<div class="alert alert-info text-center" style="padding: 40px;">
+                <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
+                <p>Aucun sponsor disponible pour le moment.</p>
+            </div>';
+        }
+
+        $content .= '
+        </div>
+
+        <footer>
+            <div class="container">
+                <p>&copy; 2026 Valorys - Tous droits réservés</p>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        ';
+
+        $this->renderPublicView('Nos Sponsors', $content);
+    }
+    
+    private function getSponsorCard($sponsor, $levelClass): string {
+        $logo = $sponsor['logo'] ?? 'https://via.placeholder.com/80?text=' . htmlspecialchars(substr($sponsor['nom'], 0, 2));
+        $email = $sponsor['email'] ?? null;
+        $phone = $sponsor['telephone'] ?? null;
+        $website = $sponsor['site_web'] ?? null;
+        $niveau = $sponsor['niveau'] ?? 'Partenaire';
+        
+        return '
+        <div class="col-md-6 col-lg-4">
+            <div class="sponsor-card">
+                <div class="sponsor-icon" style="background: url(\'' . htmlspecialchars($logo) . '\') center/contain no-repeat, linear-gradient(135deg, #2A7FAA, #4CAF50);"><i class="fas fa-building"></i></div>
+                <div class="sponsor-info">
+                    <div class="sponsor-name">' . htmlspecialchars($sponsor['nom']) . '</div>
+                    <div class="sponsor-level ' . $levelClass . '">' . ucfirst($niveau) . '</div>
+                    <div class="sponsor-contact">
+                        ' . ($email ? '<a href="mailto:' . htmlspecialchars($email) . '" title="Email"><i class="fas fa-envelope"></i>' . htmlspecialchars($email) . '</a>' : '') . '
+                        ' . ($phone ? '<a href="tel:' . htmlspecialchars($phone) . '" title="Téléphone"><i class="fas fa-phone"></i>' . htmlspecialchars($phone) . '</a>' : '') . '
+                        ' . ($website ? '<a href="' . htmlspecialchars($website) . '" target="_blank" title="Site web"><i class="fas fa-link"></i></a>' : '') . '
+                    </div>
+                </div>
+            </div>
+        </div>';
+    }
+    
     public function contact(): void {
         $this->renderTemporaryView('Contact', '
             <form method="POST">
@@ -1509,12 +2603,25 @@ JS;
         $userRole = $_SESSION['user_role'] ?? '';
         $userId   = (int)$_SESSION['user_id'];
         require_once __DIR__ . '/../models/RendezVous.php';
-        $rendezVousModel = new RendezVous();
+        
+        $db = Database::getInstance()->getConnection();
+        $rendezVous = [];
+        
         if ($userRole === 'medecin') {
-            $rendezVous = $rendezVousModel->getByMedecin($userId);
+            // Get rendez-vous for medecin (by medecin_id)
+            $stmt = $db->prepare(
+                "SELECT * FROM rendez_vous WHERE medecin_id = :medecin_id ORDER BY date_rendezvous DESC"
+            );
+            $stmt->execute([':medecin_id' => $userId]);
+            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $title = 'Mes consultations';
         } elseif ($userRole === 'patient') {
-            $rendezVous = $rendezVousModel->getByPatient($userId);
+            // Get rendez-vous for patient (by patient_id)
+            $stmt = $db->prepare(
+                "SELECT * FROM rendez_vous WHERE patient_id = :patient_id ORDER BY date_rendezvous DESC"
+            );
+            $stmt->execute([':patient_id' => $userId]);
+            $rendezVous = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             $title = 'Mes rendez-vous';
         } else {
             $this->page403(); return;
@@ -1622,6 +2729,9 @@ JS;
                 if ($isMedecin && $rdv['statut'] === 'en_attente') {
                     $html .= '<a href="index.php?page=confirmer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-confirmer" onclick="return confirm(\'Confirmer ce rendez-vous ?\')"><i class="fas fa-check me-1"></i>Confirmer</a>';
                 }
+                if ($rdv['statut'] !== 'annulé' && $rdv['statut'] !== 'terminé') {
+                    $html .= '<a href="index.php?page=annuler_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-annuler" onclick="return confirm(\'Annuler ce rendez-vous ?\')"><i class="fas fa-times me-1"></i>Annuler</a>';
+                }
                 if ($isMedecin && $rdv['statut'] === 'confirmé') {
                     $html .= '<a href="index.php?page=terminer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-terminer" onclick="return confirm(\'Terminer ce rendez-vous ?\')"><i class="fas fa-check-double me-1"></i>Terminer</a>';
                 }
@@ -1719,90 +2829,243 @@ JS;
         $hasFaceId     = false;
         try {
             $db   = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT face_descriptor FROM users WHERE id = :id");
+            $stmt = $db->prepare("SELECT face_photo, face_descriptors FROM users WHERE id = :id");
             $stmt->execute([':id' => $userId]);
             $user      = $stmt->fetch(PDO::FETCH_ASSOC);
-            $hasFaceId = !empty($user['face_descriptor']);
+            $hasFaceId = !empty($user['face_photo']) || !empty($user['face_descriptors']);
         } catch (Exception $e) {
             error_log('Erreur vérification Face ID: ' . $e->getMessage());
         }
 
         $faceButtons = $hasFaceId
             ? '
-            <div class="alert alert-success"><i class="fas fa-check-circle me-2"></i> Vous avez déjà enregistré votre visage.</div>
-            <button type="button" class="btn btn-warning btn-lg" onclick="updateFaceId()"><i class="fas fa-sync-alt me-2"></i>Mettre à jour mon visage</button>
-            <button type="button" class="btn btn-danger btn-lg ms-2" onclick="deleteFaceId()"><i class="fas fa-trash me-2"></i>Supprimer mon visage</button>'
-            : '<button type="button" class="btn btn-success btn-lg" onclick="registerFaceId()"><i class="fas fa-camera me-2"></i>Enregistrer mon visage</button>';
+            <div class="custom-alert custom-alert-success mb-4"><i class="fas fa-check-circle fs-4"></i> Reconnaissance faciale configurée avec succès.</div>
+            <div class="d-flex gap-3 justify-content-center">
+                <button type="button" class="custom-btn custom-btn-warning" onclick="updateFaceId()"><i class="fas fa-sync-alt"></i> Mettre à jour</button>
+                <button type="button" class="custom-btn custom-btn-danger" onclick="deleteFaceId()"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>'
+            : '<button type="button" class="custom-btn custom-btn-success" onclick="registerFaceId()"><i class="fas fa-camera"></i> Activer Face ID</button>';
 
         $content = '
-        <div class="row g-4">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-edit text-primary me-2"></i>Modifier mes informations</h5></div>
-                    <div class="card-body">
+        <style>
+            .profile-card {
+                background: white;
+                border-radius: 20px;
+                padding: 35px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                border: 1px solid rgba(0,0,0,0.02);
+                margin-bottom: 25px;
+                transition: transform 0.3s;
+            }
+            .profile-card:hover {
+                transform: translateY(-5px);
+            }
+            .profile-h5 {
+                color: #2c3e50;
+                font-weight: 700;
+                font-size: 1.4rem;
+                margin-bottom: 25px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .profile-h5 i {
+                background: rgba(42, 127, 170, 0.1);
+                color: #2A7FAA;
+                padding: 12px;
+                border-radius: 12px;
+                font-size: 1.2rem;
+            }
+            .custom-input {
+                background: #f8f9fa;
+                border: 2px solid transparent;
+                border-radius: 12px;
+                padding: 14px 20px;
+                font-size: 1rem;
+                font-weight: 500;
+                color: #2c3e50;
+                transition: all 0.3s;
+                width: 100%;
+            }
+            .custom-input:focus {
+                background: white;
+                border-color: #2A7FAA;
+                box-shadow: 0 0 0 4px rgba(42, 127, 170, 0.1);
+                outline: none;
+            }
+            .custom-label {
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 8px;
+                display: block;
+            }
+            .custom-btn {
+                padding: 12px 25px;
+                border-radius: 12px;
+                font-weight: 600;
+                transition: all 0.3s;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border: none;
+                cursor: pointer;
+            }
+            .custom-btn-primary {
+                background: linear-gradient(135deg, #2A7FAA, #4CAF50);
+                color: white;
+                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
+            }
+            .custom-btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(76,175,80,0.3);
+                color: white;
+            }
+            .custom-btn-secondary {
+                background: #f8f9fa;
+                color: #6c757d;
+                border: 2px solid #e9ecef;
+            }
+            .custom-btn-secondary:hover {
+                background: #e9ecef;
+                color: #495057;
+            }
+            .custom-btn-warning {
+                background: linear-gradient(135deg, #FF9800, #F57C00);
+                color: white;
+                box-shadow: 0 4px 15px rgba(255,152,0,0.2);
+            }
+            .custom-btn-danger {
+                background: linear-gradient(135deg, #dc3545, #c82333);
+                color: white;
+                box-shadow: 0 4px 15px rgba(220,53,69,0.2);
+            }
+            .custom-btn-success {
+                background: linear-gradient(135deg, #4CAF50, #43a047);
+                color: white;
+                box-shadow: 0 4px 15px rgba(76,175,80,0.2);
+            }
+            .custom-alert {
+                border-radius: 12px;
+                padding: 15px 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-weight: 500;
+            }
+            .custom-alert-info {
+                background: rgba(42, 127, 170, 0.1);
+                color: #1a5676;
+            }
+            .custom-alert-success {
+                background: rgba(76, 175, 80, 0.1);
+                color: #2e7d32;
+            }
+            .face-id-box {
+                background: #f8f9fa;
+                border-radius: 16px;
+                padding: 40px;
+                text-align: center;
+                border: 2px dashed #e0e0e0;
+            }
+            .face-icon-large {
+                font-size: 4rem;
+                color: #2A7FAA;
+                margin-bottom: 20px;
+                opacity: 0.8;
+            }
+            .requirement-valid { color: #4CAF50; font-weight: 500; }
+            .requirement-invalid { color: #dc3545; font-weight: 500; }
+            .field-error { color: #dc3545; font-size: 13px; margin-top: 6px; font-weight: 500; }
+        </style>
+
+        <div class="container mt-5 mb-5">
+            <div class="row g-4 justify-content-center">
+                <div class="col-lg-8">
+                    
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-user-edit"></i> Informations personnelles</div>
                         <form method="POST" id="profileForm">
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-user text-primary me-2"></i>Nom complet</label><input type="text" class="form-control form-control-lg" name="nom" value="' . $userName . '" required></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-envelope text-primary me-2"></i>Adresse email</label><input type="email" class="form-control form-control-lg" name="email" value="' . $userEmail . '" required></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-phone text-primary me-2"></i>Numéro de téléphone</label><input type="tel" class="form-control form-control-lg" name="telephone" value="' . $userTelephone . '"></div>
-                            <div class="mb-4"><label class="form-label"><i class="fas fa-lock text-primary me-2"></i>Mot de passe (optionnel)</label><input type="password" class="form-control form-control-lg" name="password" placeholder="Laisser vide pour ne pas changer"><small class="text-muted">Minimum 6 caractères</small></div>
-                            <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Conseil:</strong> Mettez à jour vos informations pour une meilleure expérience.</div>
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="index.php?page=mon_profil" class="btn btn-secondary btn-lg"><i class="fas fa-arrow-left me-2"></i>Annuler</a>
-                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer les modifications</button>
+                            <div class="row g-3">
+                                <div class="col-md-12 mb-3">
+                                    <label class="custom-label">Nom complet</label>
+                                    <input type="text" class="custom-input" name="nom" value="' . $userName . '" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Adresse email</label>
+                                    <input type="email" class="custom-input" name="email" value="' . $userEmail . '" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Numéro de téléphone</label>
+                                    <input type="tel" class="custom-input" name="telephone" value="' . $userTelephone . '">
+                                </div>
+                            </div>
+                            
+                            <div class="custom-alert custom-alert-info mt-4 mb-4">
+                                <i class="fas fa-info-circle fs-4"></i>
+                                Mettez à jour vos informations pour garantir un bon suivi avec vos patients et confrères.
+                            </div>
+                            
+                            <div class="d-flex justify-content-end gap-3 mt-2">
+                                <a href="index.php?page=mon_profil" class="custom-btn custom-btn-secondary"><i class="fas fa-times"></i> Annuler</a>
+                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-save"></i> Enregistrer les informations</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row g-4 mt-3">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-key text-primary me-2"></i>Changer le mot de passe</h5></div>
-                    <div class="card-body">
+
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-shield-alt"></i> Sécurité & Mot de passe</div>
                         <form method="POST" id="passwordForm">
                             <input type="hidden" name="action" value="change_password">
-                            <div class="mb-4"><label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label><input type="password" class="form-control form-control-lg" name="current_password" required><div id="currentPassword-error"></div></div>
+                            
                             <div class="mb-4">
-                                <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
-                                <input type="password" id="newPassword" name="new_password" class="form-control form-control-lg" required>
-                                <div class="mt-2">
-                                    <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
-                                    <span id="reqUpper"  class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
-                                    <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins un chiffre</span>
-                                </div>
-                                <div id="newPassword-error"></div>
+                                <label class="custom-label">Mot de passe actuel <span class="text-danger">*</span></label>
+                                <input type="password" class="custom-input" name="current_password" required>
+                                <div id="currentPassword-error" class="field-error"></div>
                             </div>
-                            <div class="mb-4"><label class="form-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label><input type="password" id="confirmPassword" name="confirm_password" class="form-control form-control-lg" required><div id="confirmPassword-error"></div></div>
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button type="button" class="btn btn-secondary btn-lg" onclick="cancelPassword()">Annuler</button>
-                                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-save me-2"></i>Enregistrer le nouveau mot de passe</button>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Nouveau mot de passe <span class="text-danger">*</span></label>
+                                    <input type="password" id="newPassword" name="new_password" class="custom-input" required>
+                                    <div class="mt-3 p-3 bg-light rounded-3">
+                                        <div id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-2"></i>Au moins 8 caractères</div>
+                                        <div id="reqUpper" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins une majuscule</div>
+                                        <div id="reqNumber" class="requirement-invalid mt-1"><i class="fas fa-circle me-2"></i>Au moins un chiffre</div>
+                                    </div>
+                                    <div id="newPassword-error" class="field-error"></div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="custom-label">Confirmer le nouveau mot de passe <span class="text-danger">*</span></label>
+                                    <input type="password" id="confirmPassword" name="confirm_password" class="custom-input" required>
+                                    <div id="confirmPassword-error" class="field-error"></div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-3 mt-4">
+                                <button type="button" class="custom-btn custom-btn-secondary" onclick="cancelPassword()">Effacer</button>
+                                <button type="submit" class="custom-btn custom-btn-primary"><i class="fas fa-key"></i> Modifier le mot de passe</button>
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row g-4 mt-3">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow">
-                    <div class="card-header"><h5 class="mb-0"><i class="fas fa-face-smile text-primary me-2"></i>Reconnaissance faciale (Face ID)</h5></div>
-                    <div class="card-body">
-                        <div class="text-center mb-3">
-                            <i class="fas fa-camera fa-3x text-primary mb-2"></i>
-                            <p class="mb-3">Activez la reconnaissance faciale pour vous connecter plus facilement.</p>
-                            ' . $faceButtons . '
+
+                    <div class="profile-card">
+                        <div class="profile-h5"><i class="fas fa-face-viewfinder"></i> Connexion Faciale (Face ID)</div>
+                        <div class="face-id-box">
+                            <i class="fas fa-camera face-icon-large"></i>
+                            <h4 class="mb-3" style="color: #2c3e50; font-weight: 700;">Reconnaissance Biométrique</h4>
+                            <p class="text-muted mb-4" style="font-size: 1.1rem; max-width: 500px; margin: 0 auto;">Connectez-vous instantanément et en toute sécurité à l\'aide de la reconnaissance faciale, sans avoir à taper votre mot de passe.</p>
+                            
+                            <div class="mt-4">
+                                ' . $faceButtons . '
+                            </div>
+                            <div id="faceIdStatus" class="mt-4 fw-semibold text-primary"></div>
                         </div>
-                        <div id="faceIdStatus" class="text-center mt-3"></div>
                     </div>
+
                 </div>
             </div>
-        </div>
-        <style>
-            .requirement-valid   { color:#28a745; }
-            .requirement-invalid { color:#dc3545; }
-            .field-error { color:#dc3545;font-size:12px;margin-top:5px; }
-        </style>';
+        </div>';
 
         // Tout le JavaScript en NOWDOC pour éviter tout problème d'échappement
         $content .= <<<JS
@@ -1923,8 +3186,8 @@ public function monProfil(): void {
     $userRole = $_SESSION['user_role'];
     
     // Récupérer les infos utilisateur
-    $userModel = new User();
-    $user = $userModel->getUserById($userId);
+    $userRepo = new UserRepository();
+    $user = $userRepo->getUserById($userId);
     
     // Statistiques
     $rdvModel = new RendezVous();
@@ -1961,10 +3224,10 @@ public function monProfil(): void {
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Email invalide";
             
             if (empty($errors)) {
-                if ($userModel->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
+                if ($userRepo->updateProfile($userId, $nom, $prenom, $email, $telephone, $date_naissance, $groupe_sanguin, $adresse)) {
                     $success = "Profil mis à jour avec succès";
                     // Recharger les données
-                    $user = $userModel->getUserById($userId);
+                    $user = $userRepo->getUserById($userId);
                     $_SESSION['user_name'] = $prenom . ' ' . $nom;
                     $_SESSION['user_email'] = $email;
                 } else {
@@ -1990,7 +3253,7 @@ public function monProfil(): void {
             if (!preg_match('/[0-9]/', $newPassword)) $errors[] = "Un chiffre requis";
             
             if (empty($errors)) {
-                if ($userModel->changePassword($userId, $currentPassword, $newPassword)) {
+                if ($userRepo->changePassword($userId, $currentPassword, $newPassword)) {
                     $successPassword = "Mot de passe modifié avec succès";
                 } else {
                     $errorPassword = "Mot de passe actuel incorrect";
@@ -2018,9 +3281,9 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (move_uploaded_file($file['tmp_name'], $filepath)) {
-                    if ($userModel->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
+                    if ($userRepo->updateAvatar($userId, 'uploads/avatars/' . $filename)) {
                         $success = "Avatar mis à jour avec succès";
-                        $user = $userModel->getUserById($userId);
+                        $user = $userRepo->getUserById($userId);
                     } else {
                         $error = "Erreur lors de l'enregistrement";
                     }
@@ -2054,7 +3317,7 @@ public function monProfil(): void {
                 $filepath = $uploadDir . $filename;
                 
                 if (file_put_contents($filepath, $imageData)) {
-                    if ($userModel->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
+                    if ($userRepo->updateFaceEncoding($userId, 'uploads/faces/' . $filename)) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Visage enregistré avec succès']);
                         return;
@@ -2117,6 +3380,8 @@ public function monProfil(): void {
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <?= $this->getPublicNavbar() ?>
@@ -2148,6 +3413,8 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body>
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -2160,7 +3427,6 @@ public function monProfil(): void {
                             <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=evenements">Événements</a></li>
-                            <li class="nav-item"><a class="nav-link" href="index.php?page=parapharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a></li>
                             <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
                         </ul>
                         <ul class="navbar-nav">
@@ -2216,6 +3482,8 @@ public function monProfil(): void {
             <title><?= htmlspecialchars($title) ?> - Valorys</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="assets/js/theme-mode.js"></script>
+            <link rel="stylesheet" href="assets/css/theme-mode.css">
         </head>
         <body class="bg-light">
             <div class="container mt-5">
@@ -2232,41 +3500,18 @@ public function monProfil(): void {
         <?php
     }
 
-private function getFlashMessages(): string {
-    $html = '';
- 
-    // Flash simple (success / error)
-    if (isset($_SESSION['success'])) {
-        $html .= '<div class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-check-circle me-2"></i>'
-            . htmlspecialchars($_SESSION['success'])
-            . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-        unset($_SESSION['success']);
+    private function getFlashMessages(): string {
+        $html = '';
+        if (isset($_SESSION['success'])) {
+            $html .= '<div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle"></i> ' . htmlspecialchars($_SESSION['success']) . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+            unset($_SESSION['success']);
+        }
+        if (isset($_SESSION['error'])) {
+            $html .= '<div class="alert alert-danger alert-dismissible fade show"><i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($_SESSION['error']) . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+            unset($_SESSION['error']);
+        }
+        return $html;
     }
-    if (isset($_SESSION['error'])) {
-        $html .= '<div class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-exclamation-circle me-2"></i>'
-            . htmlspecialchars($_SESSION['error'])
-            . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-        unset($_SESSION['error']);
-    }
- 
-    // Flash structuré ['type' => ..., 'message' => ...]
-    if (isset($_SESSION['flash'])) {
-        $f   = $_SESSION['flash'];
-        $map = ['success' => 'success', 'error' => 'danger', 'warning' => 'warning', 'info' => 'info'];
-        $ico = ['success' => 'check-circle', 'error' => 'exclamation-circle', 'warning' => 'exclamation-triangle', 'info' => 'info-circle'];
-        $bc  = $map[$f['type']]  ?? 'secondary';
-        $ic  = $ico[$f['type']]  ?? 'info-circle';
-        $html .= '<div class="alert alert-' . $bc . ' alert-dismissible fade show">
-            <i class="fas fa-' . $ic . ' me-2"></i>'
-            . htmlspecialchars($f['message'])
-            . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-        unset($_SESSION['flash']);
-    }
- 
-    return $html;
-}
 
     // =============================================
     // COMPOSANTS HTML
@@ -2282,7 +3527,7 @@ private function getFlashMessages(): string {
                 --shadow:0 4px 12px rgba(42,127,170,0.15);--shadow-lg:0 10px 30px rgba(42,127,170,0.2);
             }
             body { font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif;background:var(--bg-light);color:var(--text-dark); }
-            .navbar-custom { background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);box-shadow:var(--shadow);padding:0.8rem 2rem; }
+            .navbar-custom { background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%);box-shadow:var(--shadow);padding:0.8rem 2rem; }
             .navbar-custom .navbar-brand { font-size:1.5rem;font-weight:700; }
             .dropdown-menu { border:none;border-radius:12px;box-shadow:var(--shadow-lg); }
             .dropdown-item { padding:0.75rem 1rem;transition:all 0.2s; }
@@ -2332,7 +3577,7 @@ private function getFlashMessages(): string {
                         <li class="nav-item"><a class="nav-link" href="index.php?page=medecins"><i class="fas fa-user-md me-1"></i>Médecins</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public"><i class="fas fa-blog me-1"></i>Blog</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=evenements"><i class="fas fa-calendar-alt me-1"></i>Événements</a></li>
-                        <li class="nav-item"><a class="nav-link" href="index.php?page=pharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a></li>
+                        <li class="nav-item"><a class="nav-link" href="index.php?page=sponsors"><i class="fas fa-handshake me-1"></i>Sponsors</a></li>
                         <li class="nav-item"><a class="nav-link" href="index.php?page=contact"><i class="fas fa-envelope me-1"></i>Contact</a></li>
                     </ul>
                     <ul class="navbar-nav ms-auto">' . $rightLinks . '</ul>
@@ -2376,8 +3621,7 @@ private function getFlashMessages(): string {
             }
             $roleContent .= '
             <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-blog fa-3x text-warning mb-3"></i><h5>Blog médical</h5><a href="index.php?page=blog_public" class="btn btn-warning btn-sm">Lire le blog</a></div></div></div>
-            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-user-circle fa-3x text-secondary mb-3"></i><h5>Mon profil</h5><a href="index.php?page=mon_profil" class="btn btn-secondary btn-sm">Mon profil</a></div></div></div>
-            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-pills fa-3x mb-3" style="color:#2A7FAA"></i><h5>Parapharmacie</h5><p class="text-muted small">Achetez vos produits de soin</p><a href="index.php?page=parapharmacie" class="btn btn-sm" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none">Découvrir</a></div></div></div>';
+            <div class="col-md-3"><div class="card h-100 text-center p-3"><div class="card-body"><i class="fas fa-user-circle fa-3x text-secondary mb-3"></i><h5>Mon profil</h5><a href="index.php?page=mon_profil" class="btn btn-secondary btn-sm">Mon profil</a></div></div></div>';
             return '
             <div class="text-center mb-5"><h1 class="display-4 mb-3">Bonjour, ' . $userName . '&nbsp;!</h1><p class="lead text-muted">Bienvenue sur votre espace Valorys</p></div>
             <div class="row g-4 mb-5">' . $roleContent . '</div>
@@ -2452,6 +3696,8 @@ private function getFlashMessages(): string {
         if (empty($disponibilites)) {
             $html .= '<div class="col-12"><div class="alert alert-info text-center py-4">Aucune disponibilité pour le moment.</div></div>';
         } else {
+            $userRole = $_SESSION['user_role'] ?? '';
+            $showAppointmentBtn = ($userRole === '' || $userRole === 'patient');
             foreach ($disponibilites as $dispo) {
                 $html .= '
                 <div class="col-md-6 col-lg-4 mb-4">
@@ -2461,10 +3707,11 @@ private function getFlashMessages(): string {
                             <p class="card-text text-muted">' . htmlspecialchars($dispo['specialite'] ?? 'Généraliste') . '</p>
                             <hr>
                             <p><i class="fas fa-calendar me-2 text-success"></i> ' . htmlspecialchars($dispo['jour_semaine']) . '</p>
-                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>
+                            <p><i class="fas fa-clock me-2 text-success"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '</p>' . 
+                            ($showAppointmentBtn ? '
                             <a href="index.php?page=prendre_rendez_vous&id=' . $dispo['medecin_id'] . '" class="btn btn-primary btn-sm w-100">
                                 <i class="fas fa-calendar-check me-2"></i>Prendre rendez-vous
-                            </a>
+                            </a>' : '') . '
                         </div>
                     </div>
                 </div>';
@@ -2475,286 +3722,227 @@ private function getFlashMessages(): string {
         return $html;
     }
 
-private function getMedecinDisponibilitesHTML($dispos): string {
-    $html = '
-    <style>
-    .dispo-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(4px);
-        z-index: 9998;
-    }
-    .dispo-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 480px;
-        z-index: 9999;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-        animation: popIn 0.25s ease;
-    }
-    @keyframes popIn {
-        from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
-        to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-    .dispo-modal .modal-header {
-        padding: 20px 24px;
-        border: none;
-    }
-    .dispo-modal .modal-header h5 {
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin: 0;
-    }
-    .dispo-modal .modal-body {
-        background: #fff;
-        padding: 24px;
-    }
-    .dispo-modal .modal-footer {
-        background: #f8f9fa;
-        padding: 16px 24px;
-        border-top: 1px solid #eee;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-    .dispo-modal .form-label {
-        font-weight: 600;
-        color: #444;
-        font-size: 0.875rem;
-        margin-bottom: 6px;
-    }
-    .dispo-modal .form-control,
-    .dispo-modal .form-select {
-        border-radius: 10px;
-        border: 1.5px solid #dee2e6;
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        transition: border-color 0.2s;
-    }
-    .dispo-modal .form-control:focus,
-    .dispo-modal .form-select:focus {
-        border-color: #2A7FAA;
-        box-shadow: 0 0 0 3px rgba(42,127,170,0.12);
-    }
-    .dispo-modal .btn {
-        border-radius: 25px;
-        padding: 8px 24px;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    .dispo-card {
-        border: none;
-        border-radius: 14px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.07);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .dispo-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 25px rgba(42,127,170,0.15);
-    }
-    .dispo-card .card-body {
-        padding: 20px;
-    }
-    .dispo-time {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #2A7FAA;
-        margin: 10px 0;
-    }
-    .dispo-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 15px;
-    }
-    .dispo-actions .btn {
-        border-radius: 20px;
-        font-size: 0.8rem;
-        padding: 6px 16px;
-        font-weight: 600;
-    }
-    </style>
-
-    <div id="dispoOverlay" class="dispo-overlay" onclick="closeAllModals()"></div>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 style="color:#2A7FAA;font-weight:700;">
-            <i class="fas fa-clock me-2"></i>Mes disponibilités
-        </h2>
-        <button class="btn btn-success px-4" style="border-radius:25px;font-weight:600;" onclick="openAddModal()">
-            <i class="fas fa-plus me-2"></i>Ajouter un créneau
-        </button>
-    </div>';
-
-    if (empty($dispos)) {
-        $html .= '
-        <div class="text-center py-5">
-            <i class="fas fa-calendar-times fa-4x mb-3" style="color:#ccc;"></i>
-            <h5 class="text-muted">Aucune disponibilité définie</h5>
-            <p class="text-muted">Cliquez sur "Ajouter un créneau" pour commencer.</p>
+    private function getMedecinDisponibilitesHTML($dispos): string {
+        $html = '
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-clock me-2"></i>Mes disponibilités</h2>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDispoModal">
+                <i class="fas fa-plus me-2"></i>Ajouter un créneau
+            </button>
         </div>';
-    } else {
-        $html .= '<div class="row g-4">';
-        foreach ($dispos as $dispo) {
-            $badgeColor = $dispo['actif'] ? 'bg-success' : 'bg-secondary';
-            $badgeLabel = $dispo['actif'] ? 'Actif' : 'Inactif';
-            $html .= '
-            <div class="col-md-6 col-lg-4">
-                <div class="card dispo-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0 fw-bold text-dark">' . htmlspecialchars($dispo['jour_semaine']) . '</h5>
-                            <span class="badge ' . $badgeColor . ' rounded-pill px-3">' . $badgeLabel . '</span>
-                        </div>
-                        <div class="dispo-time">
-                            <i class="fas fa-clock me-1" style="font-size:1rem;"></i>
-                            ' . substr($dispo['heure_debut'], 0, 5) . ' – ' . substr($dispo['heure_fin'], 0, 5) . '
-                        </div>
-                        <div class="dispo-actions">
-                            <button type="button" class="btn btn-warning"
-                                onclick="openEditModal(
-                                    ' . $dispo['id'] . ',
-                                    \'' . htmlspecialchars($dispo['jour_semaine']) . '\',
-                                    \'' . substr($dispo['heure_debut'], 0, 5) . '\',
-                                    \'' . substr($dispo['heure_fin'], 0, 5) . '\'
-                                )">
-                                <i class="fas fa-edit me-1"></i>Modifier
-                            </button>
-                            <a href="index.php?page=medecin_disponibilites&action=delete&id=' . $dispo['id'] . '"
-                               class="btn btn-danger"
-                               onclick="return confirm(\'Supprimer ce créneau ?\')">
-                                <i class="fas fa-trash me-1"></i>Supprimer
-                            </a>
+        
+        if (empty($dispos)) {
+            $html .= '<div class="alert alert-info text-center py-5">Aucune disponibilité définie.</div>';
+        } else {
+            $html .= '<div class="row">';
+            foreach ($dispos as $dispo) {
+                $html .= '
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title text-primary">' . htmlspecialchars($dispo['jour_semaine']) . '</h5>
+                                <span class="badge ' . ($dispo['actif'] ? 'bg-success' : 'bg-secondary') . '">
+                                    ' . ($dispo['actif'] ? 'Actif' : 'Inactif') . '
+                                </span>
+                            </div>
+                            <p class="card-text mt-3">
+                                <i class="fas fa-clock me-2"></i> ' . date('H:i', strtotime($dispo['heure_debut'])) . ' - ' . date('H:i', strtotime($dispo['heure_fin'])) . '
+                            </p>
+                            <div class="mt-3">
+                                <a href="index.php?page=medecin_disponibilites&action=toggle&id=' . $dispo['id'] . '" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-exchange-alt me-1"></i>' . ($dispo['actif'] ? 'Désactiver' : 'Activer') . '
+                                </a>
+                                <a href="index.php?page=medecin_disponibilites&action=delete&id=' . $dispo['id'] . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Supprimer ce créneau ?\')">
+                                    <i class="fas fa-trash me-1"></i>Supprimer
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>';
+                </div>';
+            }
+            $html .= '</div>';
         }
-        $html .= '</div>';
-    }
-
-    // Modal Modifier
-    $html .= '
-    <div id="editDispoModal" class="dispo-modal">
-        <div class="modal-header" style="background:linear-gradient(135deg,#f6a623,#f0810f);color:white;">
-            <h5><i class="fas fa-edit me-2"></i>Modifier la disponibilité</h5>
-            <button type="button" class="btn-close btn-close-white ms-auto" onclick="closeModal(\'editDispoModal\')"></button>
-        </div>
-        <form method="POST" action="index.php?page=medecin_disponibilites&action=update">
-            <div class="modal-body">
-                <input type="hidden" name="dispo_id" id="edit_dispo_id">
-                <div class="mb-3">
-                    <label class="form-label">Jour <span class="text-danger">*</span></label>
-                    <select name="jour_semaine" id="edit_jour" class="form-select" required>
-                        <option value="Lundi">Lundi</option>
-                        <option value="Mardi">Mardi</option>
-                        <option value="Mercredi">Mercredi</option>
-                        <option value="Jeudi">Jeudi</option>
-                        <option value="Vendredi">Vendredi</option>
-                        <option value="Samedi">Samedi</option>
-                        <option value="Dimanche">Dimanche</option>
-                    </select>
-                </div>
-                <div class="row g-3">
-                    <div class="col-6">
-                        <label class="form-label">Heure début <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_debut" id="edit_heure_debut" class="form-control" required>
+        
+        // Modal pour ajouter une disponibilité
+        $html .= '
+        <div class="modal fade" id="addDispoModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Ajouter une disponibilité</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label">Heure fin <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_fin" id="edit_heure_fin" class="form-control" required>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal(\'editDispoModal\')">Annuler</button>
-                <button type="submit" class="btn btn-warning text-white">
-                    <i class="fas fa-save me-1"></i>Enregistrer
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Modal Ajouter -->
-    <div id="addDispoModal" class="dispo-modal">
-        <div class="modal-header" style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;">
-            <h5><i class="fas fa-plus-circle me-2"></i>Ajouter une disponibilité</h5>
-            <button type="button" class="btn-close btn-close-white ms-auto" onclick="closeModal(\'addDispoModal\')"></button>
-        </div>
-        <form method="POST" action="index.php?page=medecin_disponibilites&action=store">
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Jour <span class="text-danger">*</span></label>
-                    <select name="jour_semaine" class="form-select" required>
-                        <option value="">— Sélectionner un jour —</option>
-                        <option value="Lundi">Lundi</option>
-                        <option value="Mardi">Mardi</option>
-                        <option value="Mercredi">Mercredi</option>
-                        <option value="Jeudi">Jeudi</option>
-                        <option value="Vendredi">Vendredi</option>
-                        <option value="Samedi">Samedi</option>
-                        <option value="Dimanche">Dimanche</option>
-                    </select>
-                </div>
-                <div class="row g-3">
-                    <div class="col-6">
-                        <label class="form-label">Heure début <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_debut" class="form-control" required>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label">Heure fin <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_fin" class="form-control" required>
-                    </div>
+                    <form method="POST" action="index.php?page=medecin_disponibilites&action=store">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Jour <span class="text-danger">*</span></label>
+                                <select name="jour_semaine" class="form-select" required>
+                                    <option value="">Sélectionner un jour</option>
+                                    <option value="Lundi">Lundi</option>
+                                    <option value="Mardi">Mardi</option>
+                                    <option value="Mercredi">Mercredi</option>
+                                    <option value="Jeudi">Jeudi</option>
+                                    <option value="Vendredi">Vendredi</option>
+                                    <option value="Samedi">Samedi</option>
+                                    <option value="Dimanche">Dimanche</option>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Heure début <span class="text-danger">*</span></label>
+                                    <input type="time" name="heure_debut" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Heure fin <span class="text-danger">*</span></label>
+                                    <input type="time" name="heure_fin" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="submit" class="btn btn-primary">Ajouter</button>
+                        </div>
+                    </form>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal(\'addDispoModal\')">Annuler</button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>Ajouter
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>';
+        
+        return $html;
+    }
 
-    <script>
-    function openEditModal(id, jour, heureDebut, heureFin) {
-        document.getElementById("edit_dispo_id").value = id;
-        document.getElementById("edit_jour").value = jour;
-        document.getElementById("edit_heure_debut").value = heureDebut;
-        document.getElementById("edit_heure_fin").value = heureFin;
-        document.getElementById("editDispoModal").style.display = "block";
-        document.getElementById("dispoOverlay").style.display = "block";
-    }
-    function openAddModal() {
-        document.getElementById("addDispoModal").style.display = "block";
-        document.getElementById("dispoOverlay").style.display = "block";
-    }
-    function closeModal(id) {
-        document.getElementById(id).style.display = "none";
-        document.getElementById("dispoOverlay").style.display = "none";
-    }
-    function closeAllModals() {
-        ["editDispoModal", "addDispoModal"].forEach(function(id) {
-            document.getElementById(id).style.display = "none";
-        });
-        document.getElementById("dispoOverlay").style.display = "none";
-    }
-    </script>';
 
-    return $html;
-}
 
     /**
- * Afficher la page d'enregistrement facial
- */
+     * Afficher la page d'enregistrement facial
+     */
+    public function renderRegisterFace(): void {
+        $this->requireLogin();
+        $userId = $_SESSION['user_id'];
+        
+        $content = '
+        <div class="row">
+            <div class="col-md-8 mx-auto text-center">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5">
+                        <i class="fas fa-face-smile fa-4x text-primary mb-4"></i>
+                        <h3>Enregistrement de votre visage</h3>
+                        <p class="text-muted mb-4">Cette étape nous permet d\'extraire les caractéristiques de votre visage pour vous permettre de vous connecter sans mot de passe.</p>
+                        
+                        <div class="camera-container mb-4" style="position:relative; max-width:500px; margin:0 auto;">
+                            <video id="video" width="100%" height="auto" autoplay playsinline style="border-radius:15px; border:5px solid #f8f9fa;"></video>
+                            <canvas id="canvas" style="display:none;"></canvas>
+                            <div id="scanLine" style="position:absolute; top:0; left:0; width:100%; height:2px; background:rgba(0,123,255,0.5); display:none;"></div>
+                        </div>
+                        
+                        <div id="statusMessage" class="alert alert-info mb-4" style="display:none;"></div>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="captureBtn" class="btn btn-primary btn-lg" onclick="startCapture()">
+                                <i class="fas fa-camera me-2"></i> Capturer mon visage
+                            </button>
+                            <a href="index.php?page=mon_profil" class="btn btn-link">Retour au profil</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+        <script>
+            let stream = null;
+            let modelsLoaded = false;
+            const video = document.getElementById("video");
+            const status = document.getElementById("statusMessage");
+            const scanLine = document.getElementById("scanLine");
 
-    
+            async function initCamera() {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                    video.srcObject = stream;
+                } catch (err) {
+                    showStatus("Erreur d\'accès à la caméra: " + err.message, "danger");
+                }
+            }
+
+            function showStatus(msg, type = "info") {
+                status.innerHTML = msg;
+                status.className = "alert alert-" + type + " mb-4";
+                status.style.display = "block";
+            }
+
+            async function loadModels() {
+                if (modelsLoaded) return;
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Chargement de l\'intelligence artificielle...");
+                const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                modelsLoaded = true;
+                showStatus("IA prête. Placez votre visage bien en face de la caméra.");
+            }
+
+            async function startCapture() {
+                const btn = document.getElementById("captureBtn");
+                btn.disabled = true;
+                
+                if (!modelsLoaded) await loadModels();
+                
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Analyse de votre visage...");
+                scanLine.style.display = "block";
+                
+                // Détection
+                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks(true)
+                    .withFaceDescriptor();
+                
+                if (!detections) {
+                    showStatus("Aucun visage détecté. Veuillez bien vous placer face à la lumière.", "warning");
+                    btn.disabled = false;
+                    scanLine.style.display = "none";
+                    return;
+                }
+
+                showStatus("<i class=\'fas fa-spinner fa-spin me-2\'></i>Enregistrement sur le serveur...");
+                
+                const canvas = document.getElementById("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext("2d").drawImage(video, 0, 0);
+                const imageData = canvas.toDataURL("image/jpeg");
+                
+                const payload = {
+                    image: imageData,
+                    descriptor: Array.from(detections.descriptor) // Convert Float32Array to normal Array
+                };
+
+                try {
+                    const response = await fetch("index.php?page=register_face", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showStatus("<i class=\'fas fa-check-circle me-2\'></i>" + result.message, "success");
+                        setTimeout(() => { window.location.href = "index.php?page=mon_profil"; }, 2000);
+                    } else {
+                        showStatus(result.message, "danger");
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    showStatus("Erreur réseau: " + err.message, "danger");
+                    btn.disabled = false;
+                }
+                scanLine.style.display = "none";
+            }
+
+            initCamera();
+            loadModels();
+        </script>
+        ';
+        
+        $this->renderTemporaryView('Enregistrement Face ID', $content);
+    }
 } // FIN DE LA CLASSE FrontController

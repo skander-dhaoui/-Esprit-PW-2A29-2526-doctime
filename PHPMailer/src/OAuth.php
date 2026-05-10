@@ -137,4 +137,3 @@ class OAuth implements OAuthTokenProvider
         );
     }
 }
-

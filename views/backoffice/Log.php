@@ -22,21 +22,7 @@
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <div class="sidebar-header">
-        <i class="fas fa-stethoscope"></i>
-        <h3>MediConnect</h3>
-        <small>Back Office</small>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <a href="index.php?page=medecins"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=stats"><i class="fas fa-chart-line"></i> Statistiques</a>
-        <a href="index.php?page=logs" class="active"><i class="fas fa-history"></i> Historique</a>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </div>
-</div>
+<?php include __DIR__ . '/sidebar.php'; ?>
 <div class="main-content">
     <div class="navbar-top">
         <h4><i class="fas fa-history me-2"></i> Historique des actions</h4>
@@ -48,13 +34,14 @@
             <table id="logsTable" class="table table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>Utilisateur</th><th>Action</th>
+                        <th>ID</th><th>Utilisateur</th><th>Action</th>
                         <th>Description</th><th>IP</th><th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php foreach ($logs as $log): ?>
                     <tr>
+                        <td><?= $log['id'] ?></td>
                         <td>
                             <?php if (!empty($log['prenom'])): ?>
                                 <?= htmlspecialchars($log['prenom'] . ' ' . $log['nom']) ?>
@@ -82,7 +69,7 @@
     $(document).ready(function() {
         $('#logsTable').DataTable({
             language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
-            pageLength: 15, order: [[4, 'desc']]
+            pageLength: 15, order: [[5, 'desc']]
         });
     });
 </script>

@@ -35,4 +35,3 @@
  $PHPMAILER_LANG['no_smtputf8']          = 'Serveren støtter ikke SMTPUTF8, som er nødvendig for å sende til Unicode-adresser.';
  $PHPMAILER_LANG['imap_recommended']     = 'Det anbefales ikke å bruke forenklet adresseanalyse. Installer PHP IMAP-utvidelsen for full RFC822-analyse.';
  $PHPMAILER_LANG['deprecated_argument']  = 'Avviklet argument: ';
-

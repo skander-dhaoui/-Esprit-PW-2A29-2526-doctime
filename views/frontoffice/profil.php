@@ -383,12 +383,49 @@
             max-width: 100%;
             height: auto;
         }
+
+        /* Drag & Drop Avatar */
+        .avatar-drop-zone {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(42,127,170,0.8);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+            z-index: 5;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .profile-avatar-wrapper.drag-over .avatar-drop-zone,
+        body.dragging-global .profile-avatar-wrapper .avatar-drop-zone { opacity: 1; }
+        .profile-avatar-wrapper.drag-over { transform: scale(1.05); }
+
+        /* Password strength bar in profil */
+        .strength-bar { height: 5px; border-radius: 10px; background: #e9ecef; overflow: hidden; margin-top: 8px; }
+        .strength-fill { height: 100%; border-radius: 10px; transition: all 0.4s ease; width: 0%; }
+        .strength-fill.weak   { width: 33%; background: #dc3545; }
+        .strength-fill.medium { width: 66%; background: #f6c23e; }
+        .strength-fill.strong { width: 100%; background: #1cc88a; }
+        .strength-label-profil { font-size: 11px; font-weight: 600; margin-top: 3px; }
+        .strength-label-profil.weak   { color: #dc3545; }
+        .strength-label-profil.medium { color: #f6c23e; }
+        .strength-label-profil.strong { color: #1cc88a; }
+        .btn-gen-pwd { font-size: 11px; padding: 3px 9px; border-radius: 8px; border: 1px solid #4CAF50; color: #4CAF50; background: transparent; cursor: pointer; transition: all 0.2s; }
+        .btn-gen-pwd:hover { background: #4CAF50; color: white; }
+        .pwd-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="index.php?page=accueil">
+            <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil">
                 <i class="fas fa-stethoscope"></i> MediConnect
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -397,16 +434,19 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home"></i> Accueil</a>
+                        <a class="nav-link" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-home"></i> Accueil</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
+                        <a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendez_vous"><i class="fas fa-calendar"></i> Mes RDV</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
+                        <a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+                        <a class="nav-link active" href="/valorys_Copie/index.php?page=profil"><i class="fas fa-user"></i> Profil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/valorys_Copie/index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
                     </li>
                 </ul>
             </div>
@@ -416,7 +456,7 @@
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="container text-center">
-            <div class="profile-avatar-wrapper">
+            <div class="profile-avatar-wrapper" id="avatarDropWrapper">
                 <?php
                     $prenom = $user['prenom'] ?? $_SESSION['user_name'] ?? '';
                     $nom    = $user['nom']    ?? '';
@@ -431,10 +471,15 @@
                         <span style="font-size: 52px;"><?= $initiales ?: '👤' ?></span>
                     <?php endif; ?>
                 </div>
-                <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()">
+                <!-- Zone drag & drop -->
+                <div class="avatar-drop-zone" onclick="document.getElementById('avatarInput').click()">
+                    <i class="fas fa-cloud-upload-alt" style="font-size:20px;"></i>
+                    <span>Déposer</span>
+                </div>
+                <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()" title="Changer la photo">
                     <i class="fas fa-camera"></i>
                 </div>
-                <form id="avatarForm" method="POST" action="index.php?page=profil" enctype="multipart/form-data">
+                <form id="avatarForm" method="POST" action="/valorys_Copie/index.php?page=profil" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_avatar">
                     <input type="file" name="avatar" id="avatarInput" 
                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" 
@@ -485,7 +530,7 @@
                 <i class="fas fa-user-circle"></i> Informations personnelles
             </div>
             <div class="card-body">
-                <form method="POST" action="index.php?page=profil" id="profileForm" novalidate>
+                <form method="POST" action="/valorys_Copie/index.php?page=profil" id="profileForm" novalidate>
                     <input type="hidden" name="action" value="update_profile">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -502,7 +547,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
+                            <input type="text" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>" placeholder="exemple@email.com">
                             <div class="error-container" id="email-error"></div>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -545,7 +590,7 @@
                         <button type="submit" class="btn-save">
                             <i class="fas fa-save me-2"></i> Enregistrer
                         </button>
-                        <a href="index.php?page=profil" class="btn-cancel">
+                        <a href="/valorys_Copie/index.php?page=profil" class="btn-cancel">
                             <i class="fas fa-undo me-2"></i> Annuler
                         </a>
                     </div>
@@ -559,7 +604,7 @@
                 <i class="fas fa-lock"></i> Sécurité
             </div>
             <div class="card-body">
-                <form method="POST" action="index.php?page=profil" id="passwordForm" novalidate>
+                <form method="POST" action="/valorys_Copie/index.php?page=profil" id="passwordForm" novalidate>
                     <input type="hidden" name="action" value="change_password">
                     <div class="mb-3">
                         <label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label>
@@ -567,9 +612,21 @@
                         <div class="error-container" id="currentPassword-error"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Entrez votre nouveau mot de passe">
-                        <div class="password-requirements">
+                        <div class="pwd-label-row">
+                            <label class="form-label mb-0">Nouveau mot de passe <span class="text-danger">*</span></label>
+                            <button type="button" class="btn-gen-pwd" onclick="generatePwdProfil()">
+                                <i class="fas fa-magic me-1"></i>Générer
+                            </button>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Entrez votre nouveau mot de passe" oninput="updateStrengthProfil()">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePwdVisibility('newPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="strength-bar"><div class="strength-fill" id="profilStrengthFill"></div></div>
+                        <div class="strength-label-profil" id="profilStrengthLabel"></div>
+                        <div class="password-requirements mt-1">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle"></i> 8 caractères</span>
                             <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle"></i> 1 majuscule</span>
                             <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle"></i> 1 chiffre</span>
@@ -578,7 +635,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Confirmer le mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Confirmez votre nouveau mot de passe">
+                        <div class="input-group">
+                            <input type="password" id="confirmPassword" name="confirm_password" class="form-control" placeholder="Confirmez votre nouveau mot de passe">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePwdVisibility('confirmPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
                         <div class="error-container" id="confirmPassword-error"></div>
                     </div>
                     <div class="d-flex gap-3 mt-3">
@@ -599,13 +661,27 @@
                 <i class="fas fa-camera"></i> Reconnaissance faciale
             </div>
             <div class="card-body">
-                <?php if (!empty($user['face_encoding'])): ?>
+                <?php if (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])): ?>
                     <div class="alert-success-custom mb-3" style="background: #d4edda; border-left-color: #28a745;">
                         <i class="fas fa-check-circle me-2"></i> ✅ Visage enregistré
                     </div>
                 <?php endif; ?>
                 
-                <div id="faceCaptureSection" style="<?= !empty($user['face_encoding']) ? 'display:none;' : '' ?>">
+                <div id="faceCaptureSection" style="<?= (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])) ? 'display:none;' : '' ?>">
+                    <div class="text-center">
+                        <div id="faceVideoContainer">
+                            <video id="faceVideo" width="450" height="340" autoplay playsinline style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
+                            <canvas id="faceCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn-save" onclick="captureFace()" id="captureFaceBtn">
+                                <i class="fas fa-camera me-2"></i> Enregistrer mon visage
+                            </button>
+                            <button type="button" class="btn-cancel" onclick="stopFaceCamera()" id="stopCameraBtn" style="display:none;">
+                                <i class="fas fa-stop me-2"></i> Arrêter
+                            </button>
+                        </div>
+                        <div id="faceStatus" class="mt-3"></div>
                     <div class="text-center">
                         <div id="faceVideoContainer">
                             <video id="faceVideo" width="450" height="340" autoplay playsinline style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
@@ -627,7 +703,7 @@
                     </div>
                 </div>
                 
-                <?php if (!empty($user['face_encoding'])): ?>
+                <?php if (!empty($user['face_photo']) || !empty($user['face_descriptors']) || !empty($user['face_descriptor']) || !empty($user['face_encoding'])): ?>
                     <div class="text-center">
                         <button type="button" class="btn-cancel" onclick="deleteFace()">
                             <i class="fas fa-trash-alt me-2"></i> Supprimer mon visage
@@ -658,204 +734,35 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script>
-        // ═══ FUNCTIONS ═══
-        function showFieldError(fieldId, message) {
-            const container = document.getElementById(fieldId + '-error');
-            if (container) {
-                container.innerHTML = '<div class="field-error">' + message + '</div>';
-            }
-        }
-
-        function clearFieldError(fieldId) {
-            const container = document.getElementById(fieldId + '-error');
-            if (container) {
-                container.innerHTML = '';
-            }
-        }
-
-        function showToast(message, type = 'error') {
-            let toastEl = document.getElementById('customToast');
-            
-            if (!toastEl) {
-                const toastDiv = document.createElement('div');
-                toastDiv.id = 'customToast';
-                toastDiv.className = 'toast-message ' + (type === 'error' ? 'toast-error' : 'toast-success');
-                toastDiv.innerHTML = `
-                    <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
-                    <div class="toast-content">
-                        <div class="toast-title">${type === 'error' ? 'Erreur' : 'Succès'}</div>
-                        <div class="toast-text"></div>
-                    </div>
-                    <i class="fas fa-times toast-close"></i>
-                `;
-                document.body.appendChild(toastDiv);
-                toastEl = document.getElementById('customToast');
-            }
-            
-            toastEl.className = 'toast-message ' + (type === 'error' ? 'toast-error' : 'toast-success');
-            toastEl.querySelector('.toast-title').textContent = type === 'error' ? 'Erreur' : 'Succès';
-            toastEl.querySelector('.toast-text').textContent = message;
-            toastEl.style.display = 'flex';
-            
-            if (toastEl.timeoutId) clearTimeout(toastEl.timeoutId);
-            toastEl.timeoutId = setTimeout(() => {
-                toastEl.style.display = 'none';
-            }, 5000);
-            
-            toastEl.querySelector('.toast-close').onclick = () => {
-                toastEl.style.display = 'none';
-                if (toastEl.timeoutId) clearTimeout(toastEl.timeoutId);
-            };
-        }
-
-        // Avatar Upload
-        function uploadAvatarOnly() {
-            const input = document.getElementById('avatarInput');
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-                
-                if (!allowedTypes.includes(file.type)) {
-                    showToast('Format non supporté. Utilisez JPG, PNG, GIF ou WEBP.', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                if (file.size > 2 * 1024 * 1024) {
-                    showToast('L\'image ne doit pas dépasser 2 Mo.', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                document.getElementById('avatarForm').submit();
-            }
-        }
-
-        // Profile Validation
-        function validateProfileForm() {
-            let isValid = true;
-            
-            clearFieldError('nom');
-            clearFieldError('prenom');
-            clearFieldError('email');
-            
-            const nom = document.getElementById('nom').value.trim();
-            const prenom = document.getElementById('prenom').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            
-            if (!nom) {
-                showFieldError('nom', 'Le nom est obligatoire.');
-                isValid = false;
-            }
-            
-            if (!prenom) {
-                showFieldError('prenom', 'Le prénom est obligatoire.');
-                isValid = false;
-            }
-            
-            if (!email) {
-                showFieldError('email', 'L\'email est obligatoire.');
-                isValid = false;
-            } else if (!emailRegex.test(email)) {
-                showFieldError('email', 'Email invalide.');
-                isValid = false;
-            }
-            
-            return isValid;
-        }
-
-        // Password Validation
-        function validatePasswordForm() {
-            let isValid = true;
-            
-            clearFieldError('currentPassword');
-            clearFieldError('newPassword');
-            clearFieldError('confirmPassword');
-            
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (!currentPassword) {
-                showFieldError('currentPassword', 'Mot de passe actuel requis.');
-                isValid = false;
-            }
-            
-            if (!newPassword) {
-                showFieldError('newPassword', 'Nouveau mot de passe requis.');
-                isValid = false;
-            } else if (newPassword.length < 8) {
-                showFieldError('newPassword', '8 caractères minimum.');
-                isValid = false;
-            } else if (!/[A-Z]/.test(newPassword)) {
-                showFieldError('newPassword', 'Une majuscule requise.');
-                isValid = false;
-            } else if (!/[0-9]/.test(newPassword)) {
-                showFieldError('newPassword', 'Un chiffre requis.');
-                isValid = false;
-            }
-            
-            if (!confirmPassword) {
-                showFieldError('confirmPassword', 'Confirmation requise.');
-                isValid = false;
-            } else if (newPassword !== confirmPassword) {
-                showFieldError('confirmPassword', 'Les mots de passe ne correspondent pas.');
-                isValid = false;
-            }
-            
-            return isValid;
-        }
-
-        function updatePasswordRequirements() {
-            const password = document.getElementById('newPassword').value;
-            const checks = {
-                Length: password.length >= 8,
-                Upper: /[A-Z]/.test(password),
-                Number: /[0-9]/.test(password)
-            };
-            const labels = {
-                Length: '8 caractères',
-                Upper: '1 majuscule',
-                Number: '1 chiffre'
-            };
-            Object.keys(checks).forEach(k => {
-                const el = document.getElementById('req' + k);
-                const ok = checks[k];
-                el.className = ok ? 'requirement-valid' : 'requirement-invalid';
-                el.innerHTML = '<i class="fas fa-' + (ok ? 'check-circle' : 'circle') + '"></i> ' + labels[k];
-            });
-        }
-
-        function cancelPassword() {
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-            updatePasswordRequirements();
-            clearFieldError('currentPassword');
-            clearFieldError('newPassword');
-            clearFieldError('confirmPassword');
-        }
-
-        // Face Recognition
+        // ═══ Face Recognition ═══
         let faceStream = null;
-        let faceVideo = null;
+        let faceVideo = document.getElementById('faceVideo');
+        let modelsLoaded = false;
 
-        function startFaceCamera() {
+        async function startFaceCamera() {
             faceVideo = document.getElementById('faceVideo');
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        faceStream = stream;
-                        faceVideo.srcObject = stream;
-                        faceVideo.play();
-                        document.getElementById('captureFaceBtn').style.display = 'inline-block';
-                        document.getElementById('stopCameraBtn').style.display = 'inline-block';
-                    })
-                    .catch(function(err) {
-                        document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger">Erreur caméra: ' + err.message + '</div>';
-                    });
+            if (!faceVideo) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                faceStream = stream;
+                faceVideo.srcObject = stream;
+                faceVideo.play();
+                document.getElementById('captureFaceBtn').style.display = 'inline-block';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
+                
+                if (!modelsLoaded) {
+                    showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Chargement de l\'IA...');
+                    const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+                    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                    modelsLoaded = true;
+                    showFaceStatus('<i class="fas fa-check-circle text-success me-2"></i>IA prête. Placez-vous bien en face.');
+                }
+            } catch (err) {
+                showFaceStatus('Erreur caméra: ' + err.message, 'danger');
             }
         }
 
@@ -864,113 +771,204 @@
                 faceStream.getTracks().forEach(track => track.stop());
                 faceStream = null;
             }
-            if (faceVideo) {
-                faceVideo.srcObject = null;
-            }
+            if (faceVideo) faceVideo.srcObject = null;
             document.getElementById('captureFaceBtn').style.display = 'none';
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
-        function captureFace() {
-            let video = document.getElementById('faceVideo');
-            let canvas = document.getElementById('faceCanvas');
-            let context = canvas.getContext('2d');
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            let imageData = canvas.toDataURL('image/jpeg', 0.8);
-            
-            document.getElementById('faceStatus').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Envoi...</div>';
-            
-            fetch('index.php?page=profil', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageData, action: 'register_face' })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('faceStatus').innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
-                    stopFaceCamera();
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' + data.message + '</div>';
+        function showFaceStatus(html, type = 'info') {
+            const status = document.getElementById('faceStatus');
+            if (status) status.innerHTML = `<div class="alert alert-${type} mb-0">${html}</div>`;
+        }
+
+        async function captureFace() {
+            const btn = document.getElementById('captureFaceBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Analyse du visage...');
+
+            try {
+                console.log('[FACE] captureFace started');
+                const detections = await faceapi.detectSingleFace(faceVideo, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks(true)
+                    .withFaceDescriptor();
+
+                if (!detections) {
+                    showFaceStatus('Visage non détecté. Assurez-vous d\'être bien éclairé.', 'warning');
+                    btn.disabled = false;
+                    return;
                 }
-            })
-            .catch(error => {
-                document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger">Erreur: ' + error + '</div>';
-            });
+
+                console.log('[FACE] Face detected, descriptor dimensions:', detections.descriptor.length);
+                
+                showFaceStatus('<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...');
+                const canvas = document.getElementById('faceCanvas');
+                canvas.width = faceVideo.videoWidth;
+                canvas.height = faceVideo.videoHeight;
+                canvas.getContext('2d').drawImage(faceVideo, 0, 0);
+                
+                const descriptorArray = Array.from(detections.descriptor);
+                console.log('[FACE] Descriptor array created, length:', descriptorArray.length);
+                
+                const payload = {
+                    image: canvas.toDataURL('image/jpeg', 0.8),
+                    descriptor: descriptorArray
+                };
+                
+                console.log('[FACE] Payload has descriptor:', 'descriptor' in payload);
+
+                const response = await fetch('index.php?page=register_face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                console.log('[FACE] Server response:', data);
+                
+                if (data.success) {
+                    localStorage.setItem('valorys_face_email', '<?= htmlspecialchars($user['email'] ?? $_SESSION['user_email'] ?? '') ?>');
+                    localStorage.setItem('valorys_face_registered', 'true');
+                    showFaceStatus(data.message, 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showFaceStatus(data.message, 'danger');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error('[FACE] Error:', err);
+                showFaceStatus('Erreur: ' + err.message, 'danger');
+                btn.disabled = false;
+            }
         }
 
         function deleteFace() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer votre visage enregistré ?')) {
+            if (confirm('Supprimer votre visage ?')) {
                 fetch('index.php?page=api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'delete_face' })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        showToast(data.message || 'Erreur lors de la suppression', 'error');
-                    }
-                })
-                .catch(error => {
-                    showToast('Erreur réseau', 'error');
+                }).then(() => {
+                    localStorage.removeItem('valorys_face_email');
+                    location.reload();
                 });
             }
         }
 
-        // Event Listeners
-        const profileForm = document.getElementById('profileForm');
-        if (profileForm) {
-            profileForm.addEventListener('submit', function(e) {
-                if (!validateProfileForm()) {
-                    e.preventDefault();
-                    const firstError = document.querySelector('.field-error');
-                    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // ═══ Other UI Functions ═══
+        function uploadAvatarOnly() { document.getElementById('avatarForm').submit(); }
+        function cancelPassword() {
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        // ═══ Drag & Drop Avatar ═══
+        const dropWrapper = document.getElementById('avatarDropWrapper');
+        if (dropWrapper) {
+            // Highlight on drag over anywhere on page
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                document.body.classList.add('dragging-global');
+            });
+            document.addEventListener('dragleave', (e) => {
+                if (e.relatedTarget === null) document.body.classList.remove('dragging-global');
+            });
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                document.body.classList.remove('dragging-global');
+            });
+
+            dropWrapper.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropWrapper.classList.add('drag-over');
+            });
+            dropWrapper.addEventListener('dragleave', () => {
+                dropWrapper.classList.remove('drag-over');
+            });
+            dropWrapper.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropWrapper.classList.remove('drag-over');
+                document.body.classList.remove('dragging-global');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('avatarInput').files = dt.files;
+                    uploadAvatarOnly();
                 }
             });
         }
 
-        const passwordForm = document.getElementById('passwordForm');
-        if (passwordForm) {
-            passwordForm.addEventListener('submit', function(e) {
-                if (!validatePasswordForm()) {
-                    e.preventDefault();
-                    const firstError = document.querySelector('.field-error');
-                    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // ═══ Password Strength on Profil Page ═══
+        function calcProfilScore(p) {
+            let s = 0;
+            if (p.length >= 8) s++;
+            if (p.length >= 12) s++;
+            if (/[A-Z]/.test(p)) s++;
+            if (/[0-9]/.test(p)) s++;
+            if (/[^A-Za-z0-9]/.test(p)) s++;
+            return s;
+        }
+        function updateStrengthProfil() {
+            const p = document.getElementById('newPassword').value;
+            const fill = document.getElementById('profilStrengthFill');
+            const lbl  = document.getElementById('profilStrengthLabel');
+            if (!fill || !lbl) return;
+            // requirements
+            const map = {
+                reqLength: p.length >= 8,
+                reqUpper:  /[A-Z]/.test(p),
+                reqNumber: /[0-9]/.test(p)
+            };
+            Object.entries(map).forEach(([id, ok]) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = ok ? 'requirement-valid' : 'requirement-invalid';
+                    el.querySelector('i').className = ok ? 'fas fa-check-circle' : 'fas fa-circle';
                 }
             });
+            // strength bar
+            const score = calcProfilScore(p);
+            fill.className = 'strength-fill';
+            lbl.className  = 'strength-label-profil';
+            if (p.length === 0) { fill.style.width = '0'; lbl.textContent = ''; return; }
+            if (score <= 2) { fill.classList.add('weak');   lbl.classList.add('weak');   lbl.textContent = '🔴 Faible'; }
+            else if (score <= 3) { fill.classList.add('medium'); lbl.classList.add('medium'); lbl.textContent = '🟡 Moyen'; }
+            else { fill.classList.add('strong'); lbl.classList.add('strong'); lbl.textContent = '🟢 Fort'; }
         }
 
-        if (document.getElementById('newPassword')) {
-            document.getElementById('newPassword').addEventListener('input', updatePasswordRequirements);
+        function generatePwdProfil() {
+            const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ', lower = 'abcdefghjkmnpqrstuvwxyz', digits = '23456789', special = '@#$!%*?&';
+            let pwd = upper[Math.floor(Math.random()*upper.length)] + lower[Math.floor(Math.random()*lower.length)] + digits[Math.floor(Math.random()*digits.length)] + special[Math.floor(Math.random()*special.length)];
+            const all = upper+lower+digits+special;
+            for(let i=4;i<12;i++) pwd += all[Math.floor(Math.random()*all.length)];
+            pwd = pwd.split('').sort(()=>Math.random()-0.5).join('');
+            document.getElementById('newPassword').value = pwd;
+            document.getElementById('confirmPassword').value = pwd;
+            document.getElementById('newPassword').type = 'text';
+            updateStrengthProfil();
+            navigator.clipboard.writeText(pwd).catch(()=>{});
+            const btn = document.querySelector('.btn-gen-pwd');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copié !';
+            btn.style.cssText = 'background:#4CAF50;color:white;';
+            setTimeout(()=>{ btn.innerHTML=orig; btn.style.cssText=''; }, 2000);
         }
 
-        // Auto-hide alerts
-        setTimeout(() => {
-            document.querySelectorAll('.alert-success-custom, .alert-error-custom').forEach(el => {
-                if (el !== document.getElementById('faceStatus')?.querySelector('.alert')) {
-                    el.style.opacity = '0';
-                    setTimeout(() => { if(el.parentNode) el.style.display = 'none'; }, 300);
-                }
-            });
-        }, 5000);
+        function togglePwdVisibility(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (inp.type === 'password') { inp.type = 'text'; icon.classList.replace('fa-eye','fa-eye-slash'); }
+            else { inp.type = 'password'; icon.classList.replace('fa-eye-slash','fa-eye'); }
+        }
 
-        // Start face camera if needed
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php if (empty($user['face_encoding'])): ?>
+        document.addEventListener('DOMContentLoaded', () => {
+            <?php if (empty($user['face_photo']) && empty($user['face_descriptors'])): ?>
             startFaceCamera();
             <?php endif; ?>
         });
     </script>
 </body>
 </html>
+
+

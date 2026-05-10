@@ -30,16 +30,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=prendre_rendezvous">Prendre RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_rendezvous">Mes RDV</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mes_ordonnances">Ordonnances</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=prendre_rendezvous">Prendre RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_rendezvous">Mes RDV</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mes_ordonnances">Ordonnances</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -61,10 +62,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                         <?php unset($_SESSION['flash']); ?>
                     <?php endif; ?>
 
-<form method="POST" action="index.php?page=prendre_rendez_vous">
+<form method="POST" action="/valorys_Copie/index.php?page=prendre_rendez_vous">
                         <div class="mb-3">
                             <label class="form-label">Médecin *</label>
-                            <select name="medecin_id" id="medecin_id" class="form-select" required>
+                            <select name="medecin_id" id="medecin_id" class="form-select">
                                 <option value="">Sélectionner un médecin</option>
                                 <?php foreach ($medecins as $medecin): ?>
                                     <option value="<?= $medecin['id'] ?>" <?= ($medecinId == $medecin['id']) ? 'selected' : '' ?>>
@@ -76,12 +77,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
                         <div class="mb-3">
                             <label class="form-label">Date *</label>
-                            <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>" required>
+                            <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control" value="<?= htmlspecialchars($date) ?>">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Heure *</label>
-                            <select name="heure_rendezvous" id="heure_rendezvous" class="form-select" required>
+                            <select name="heure_rendezvous" id="heure_rendezvous" class="form-select">
                                 <option value="">Sélectionner une heure</option>
                                 <?php foreach ($slots as $slot): ?>
                                     <option value="<?= $slot ?>"><?= $slot ?></option>
@@ -100,7 +101,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                             <button type="submit" class="btn-submit">
                                 <i class="fas fa-check-circle me-2"></i>Confirmer le rendez-vous
                             </button>
-                            <a href="index.php?page=mes_rendezvous" class="btn btn-secondary">Annuler</a>
+                            <a href="/valorys_Copie/index.php?page=mes_rendezvous" class="btn btn-secondary">Annuler</a>
                         </div>
                     </form>
                 </div>
@@ -156,3 +157,5 @@ dateInput.addEventListener('change', loadSlots);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
+

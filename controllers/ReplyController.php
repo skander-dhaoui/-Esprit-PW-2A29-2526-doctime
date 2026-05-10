@@ -4,6 +4,9 @@ require_once __DIR__ . '/../models/Reply.php';
 require_once __DIR__ . '/../models/Article.php';
 require_once __DIR__ . '/AuthController.php';
 
+use App\Models\Reply;
+use App\Models\Article;
+
 class ReplyController {
 
     private Reply $replyModel;

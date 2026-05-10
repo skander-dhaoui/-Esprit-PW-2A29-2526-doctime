@@ -1,11 +1,12 @@
 <?php
 
 require_once __DIR__ . '/../models/Commande.php';
-require_once __DIR__ . '/../models/CommandeLigne.php';
 require_once __DIR__ . '/../models/Produit.php';
-require_once __DIR__ . '/../models/Client.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
+
+use App\Models\CommandeLigne;
+use App\Models\Produit;
 
 class CommandeController {
 
@@ -88,7 +89,7 @@ class CommandeController {
                 die('Accès refusé.');
             }
 
-            $lignes = $this->getLignesByCommande($id);
+            $lignes = $this->commandeLigneModel->getByCommande($id);
             $client = $this->clientModel->findById($commande['client_id']);
             $historique = $this->commandeModel->getHistorique($id);
             $flash = $_SESSION['flash'] ?? null;
@@ -382,12 +383,12 @@ class CommandeController {
             foreach ($panier as $item) {
                 $produit = $this->produitModel->getById($item['produit_id']);
                 
-                $this->createLigne([
+                $this->commandeLigneModel->create([
                     'commande_id' => $commandeId,
                     'produit_id' => $item['produit_id'],
                     'quantite' => $item['quantite'],
                     'prix_unitaire' => $item['prix_unitaire'],
-                    'total_ligne' => $item['quantite'] * $item['prix_unitaire'],
+                    'montant_ligne' => $item['quantite'] * $item['prix_unitaire'],
                 ]);
 
                 // Mettre à jour le stock
@@ -532,7 +533,7 @@ class CommandeController {
             $raison = htmlspecialchars(trim($_POST['raison'] ?? ''), ENT_QUOTES, 'UTF-8');
 
             // Restaurer le stock
-            $lignes = $this->getLignesByCommande($id);
+            $lignes = $this->commandeLigneModel->getByCommande($id);
             foreach ($lignes as $ligne) {
                 $this->produitModel->incrementStock($ligne['produit_id'], $ligne['quantite']);
             }
@@ -580,7 +581,7 @@ class CommandeController {
                 die('Accès refusé.');
             }
 
-            $lignes = $this->getLignesByCommande($id);
+            $lignes = $this->commandeLigneModel->getByCommande($id);
             $client = $this->clientModel->findById($commande['client_id']);
 
             // Inclure la classe PDF (exemple avec TCPDF ou FPDF)
@@ -779,26 +780,6 @@ class CommandeController {
             }
         }
         return round($total, 2);
-    }
-
-    private function createLigne(array $data): bool {
-        $sql = "INSERT INTO commande_details (commande_id, produit_id, quantite, prix_unitaire, total_ligne) VALUES (:commande_id, :produit_id, :quantite, :prix_unitaire, :total_ligne)";
-        return $this->db->execute($sql, [
-            'commande_id' => $data['commande_id'],
-            'produit_id' => $data['produit_id'],
-            'quantite' => $data['quantite'],
-            'prix_unitaire' => $data['prix_unitaire'],
-            'total_ligne' => $data['total_ligne'] ?? $data['total'] ?? 0,
-        ]);
-    }
-
-    private function getLignesByCommande(int $commandeId): array {
-        $sql = "SELECT cd.*, cd.total_ligne AS montant_ligne, p.nom AS produit_nom, p.reference
-                FROM commande_details cd
-                LEFT JOIN produits p ON p.id = cd.produit_id
-                WHERE cd.commande_id = :commande_id
-                ORDER BY cd.id ASC";
-        return $this->db->query($sql, ['commande_id' => $commandeId]);
     }
 
     private function generateNumeroCommande(): string {

@@ -30,15 +30,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand" href="index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
+        <a class="navbar-brand" href="/valorys_Copie/index.php?page=accueil"><i class="fas fa-stethoscope me-2"></i>Valorys</a>
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=patient_disponibilites">Disponibilités</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=mon_profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=patient_disponibilites">Disponibilités</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=avis"><i class="fas fa-star"></i> Avis</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=mon_profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
             </ul>
         </div>
     </div>
@@ -78,7 +79,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                 <button type="submit" class="btn btn-primary w-100">Filtrer</button>
             </div>
             <div class="col-md-2">
-                <a href="index.php?page=patient_disponibilites" class="btn btn-secondary w-100">Réinitialiser</a>
+                <a href="/valorys_Copie/index.php?page=patient_disponibilites" class="btn btn-secondary w-100">Réinitialiser</a>
             </div>
         </form>
     </div>
@@ -111,7 +112,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                         <div class="mb-3">
                             <i class="fas fa-clock me-2 text-success"></i> <?= date('H:i', strtotime($dispo['heure_debut'])) ?> - <?= date('H:i', strtotime($dispo['heure_fin'])) ?>
                         </div>
-                        <a href="index.php?page=prendre_rendez_vous&id=<?= $dispo['medecin_id'] ?>" class="btn-rdv">
+                        <a href="/valorys_Copie/index.php?page=prendre_rendez_vous&id=<?= $dispo['medecin_id'] ?>" class="btn-rdv">
                             <i class="fas fa-calendar-check me-1"></i> Prendre RDV
                         </a>
                     </div>
@@ -132,3 +133,4 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

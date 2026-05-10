@@ -35,4 +35,3 @@ PHPMailer 1.7.2 and earlier contained a possible DDoS vulnerability reported in 
 
 PHPMailer 1.7 and earlier (June 2003) have a possible vulnerability in the `SendmailSend` method where shell commands may not be sanitised. Reported in [CVE-2007-3215](https://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2007-3215).
 
-// update

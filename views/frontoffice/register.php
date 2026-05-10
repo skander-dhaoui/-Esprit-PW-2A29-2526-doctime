@@ -1,6 +1,5 @@
 <?php
-// $errors (tableau champ => message), $old : AuthController::showRegister()
-$errors = $errors ?? [];
+// Les variables $errors et $old sont passées par AuthController::showRegister()
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -13,36 +12,80 @@ $errors = $errors ?? [];
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
+
         .register-card { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; width: 100%; max-width: 600px; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
         .register-header { background: linear-gradient(135deg, #2A7FAA 0%, #3e8e41 100%); color: white; padding: 25px; text-align: center; }
         .register-header .logo-container { display: flex; justify-content: center; margin-bottom: 8px; }
         .register-header .logo-container img { height: 80px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.2)); }
         .register-header p { font-size: 13px; opacity: 0.9; }
+
         .register-body { padding: 30px; }
+
         .form-control, .form-select { border-radius: 10px; padding: 10px 15px; border: 1px solid #ddd; transition: all 0.3s; }
         .form-control:focus, .form-select:focus { border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.1); }
+        .form-control.is-invalid, .form-select.is-invalid { border-color: #dc3545 !important; background-color: #fff5f5; background-image: none; }
+        .form-control.is-invalid:focus, .form-select.is-invalid:focus { border-color: #dc3545; box-shadow: 0 0 0 3px rgba(220,53,69,0.1); }
+
+        .field-error { color: #dc3545; font-size: 12px; margin-top: 5px; font-weight: 500; display: none; align-items: center; gap: 4px; }
+        .field-error.show { display: flex; }
+
         .btn-register { background: #4CAF50; color: white; border-radius: 10px; padding: 12px; width: 100%; font-weight: bold; font-size: 16px; border: none; transition: all 0.3s; }
         .btn-register:hover { background: #2A7FAA; transform: translateY(-2px); }
+        .btn-register:disabled { opacity: 0.7; transform: none; cursor: not-allowed; }
+
         .role-selector { display: flex; gap: 15px; margin-bottom: 25px; }
         .role-option { flex: 1; text-align: center; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s; background: #f9f9f9; }
         .role-option i { font-size: 24px; margin-bottom: 5px; display: block; }
         .role-option.active { border-color: #4CAF50; background: #e8f5e9; color: #4CAF50; }
         .role-option:hover { border-color: #4CAF50; transform: translateY(-2px); }
+
         .section-title { font-size: 14px; font-weight: bold; margin: 20px 0 15px 0; color: #2A7FAA; border-left: 4px solid #4CAF50; padding-left: 10px; }
+
         .password-requirements { font-size: 12px; color: #999; margin-top: 5px; }
         .requirement-valid { color: #4CAF50; }
         .requirement-invalid { color: #dc3545; }
-        .alert-php { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; }
-        .alert-success-js { background: #d4edda; color: #155724; border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: none; }
-        .field-error { font-size: 12px; margin-top: 5px; color: #dc3545; font-weight: normal; }
-        .field-error i { margin-right: 5px; }
-        .form-control.error, .form-select.error { border-color: #dc3545 !important; }
-        .form-check.error-wrap { outline: 1px solid #dc3545; border-radius: 8px; padding: 8px; }
+
+        /* Password strength bar */
+        .strength-bar-container { margin-top: 8px; }
+        .strength-bar { height: 6px; border-radius: 10px; background: #e9ecef; overflow: hidden; transition: all 0.3s; }
+        .strength-fill { height: 100%; border-radius: 10px; transition: all 0.4s ease; width: 0%; }
+        .strength-fill.weak   { width: 33%; background: #dc3545; }
+        .strength-fill.medium { width: 66%; background: #f6c23e; }
+        .strength-fill.strong { width: 100%; background: #1cc88a; }
+        .strength-label { font-size: 11px; font-weight: 600; margin-top: 3px; }
+        .strength-label.weak   { color: #dc3545; }
+        .strength-label.medium { color: #f6c23e; }
+        .strength-label.strong { color: #1cc88a; }
+
+        /* Generate password button */
+        .btn-generate-pwd { font-size: 11px; padding: 4px 10px; border-radius: 8px; border: 1px solid #4CAF50; color: #4CAF50; background: transparent; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .btn-generate-pwd:hover { background: #4CAF50; color: white; }
+        .password-label-row { display: flex; align-items: center; justify-content: space-between; }
+
+        /* Alert session PHP uniquement (succès) */
+        .alert-session { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .alert-session-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
         .login-link { color: #2A7FAA; text-decoration: none; }
         .login-link:hover { color: #4CAF50; text-decoration: underline; }
         hr { margin: 20px 0; }
+
         .medecin-fields { display: none; animation: fadeIn 0.3s ease; }
+
+        /* Checkbox error */
+        .terms-error { color: #dc3545; font-size: 12px; margin-top: 5px; font-weight: 500; display: none; align-items: center; gap: 4px; }
+        .terms-error.show { display: flex; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .shake { animation: shake 0.35s ease-in-out; }
     </style>
 </head>
 <body>
@@ -58,25 +101,13 @@ $errors = $errors ?? [];
 
         <div class="register-body">
 
-            <?php if (!empty($errors['__form'])): ?>
-                <div class="alert alert-danger alert-php">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    <?= htmlspecialchars($errors['__form']) ?>
-                </div>
-            <?php endif; ?>
-
             <?php if (!empty($_SESSION['success'])): ?>
-                <div class="alert alert-success alert-php">
-                    <i class="fas fa-check-circle me-2"></i>
+                <div class="alert-session alert-session-success">
+                    <i class="fas fa-check-circle"></i>
                     <?= htmlspecialchars($_SESSION['success']) ?>
                 </div>
                 <?php unset($_SESSION['success']); ?>
             <?php endif; ?>
-
-            <div id="successMessage" class="alert-success-js">
-                <i class="fas fa-check-circle me-2"></i>
-                <span id="successText"></span>
-            </div>
 
             <div class="role-selector">
                 <div class="role-option active" data-role="patient">
@@ -87,85 +118,111 @@ $errors = $errors ?? [];
                 </div>
             </div>
 
-            <form id="registerForm" method="POST" action="index.php?page=register">
-                <input type="hidden" name="role" id="selectedRole" value="patient">
+            <form id="registerForm" method="POST" action="/valorys_Copie/index.php?page=register" novalidate>
+                <input type="hidden" name="role" id="selectedRole" value="<?= htmlspecialchars($old['role'] ?? 'patient') ?>">
 
                 <div class="section-title"><i class="fas fa-user-circle me-1"></i> Informations personnelles</div>
 
                 <div class="row">
+                    <!-- Nom -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Nom <span class="text-danger">*</span></label>
-                        <input type="text" name="nom" id="nom" class="form-control <?= !empty($errors['nom']) ? 'error' : '' ?>"
+                        <label class="form-label" for="nom">Nom <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" id="nom"
+                               class="form-control <?= !empty($errors['nom']) ? 'is-invalid' : '' ?>"
                                placeholder="Votre nom"
-                               value="<?= htmlspecialchars($old['nom'] ?? '') ?>" required>
-                        <div class="error-container" id="nom-errors">
-                            <?php if (!empty($errors['nom'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['nom']) ?></div>
-                            <?php endif; ?>
+                               value="<?= htmlspecialchars($old['nom'] ?? '') ?>"
+                               autocomplete="family-name">
+                        <div class="field-error <?= !empty($errors['nom']) ? 'show' : '' ?>" id="nomError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="nomErrorText"><?= htmlspecialchars($errors['nom'] ?? '') ?></span>
                         </div>
                     </div>
+                    <!-- Prénom -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                        <input type="text" name="prenom" id="prenom" class="form-control <?= !empty($errors['prenom']) ? 'error' : '' ?>"
+                        <label class="form-label" for="prenom">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" name="prenom" id="prenom"
+                               class="form-control <?= !empty($errors['prenom']) ? 'is-invalid' : '' ?>"
                                placeholder="Votre prénom"
-                               value="<?= htmlspecialchars($old['prenom'] ?? '') ?>" required>
-                        <div class="error-container" id="prenom-errors">
-                            <?php if (!empty($errors['prenom'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['prenom']) ?></div>
-                            <?php endif; ?>
+                               value="<?= htmlspecialchars($old['prenom'] ?? '') ?>"
+                               autocomplete="given-name">
+                        <div class="field-error <?= !empty($errors['prenom']) ? 'show' : '' ?>" id="prenomError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="prenomErrorText"><?= htmlspecialchars($errors['prenom'] ?? '') ?></span>
                         </div>
                     </div>
                 </div>
 
                 <div class="row">
+                    <!-- Email -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" name="email" id="email" class="form-control <?= !empty($errors['email']) ? 'error' : '' ?>"
+                        <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+                        <input type="text" name="email" id="email"
+                               class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
                                placeholder="exemple@email.com"
-                               value="<?= htmlspecialchars($old['email'] ?? '') ?>" required>
-                        <div class="error-container" id="email-errors">
-                            <?php if (!empty($errors['email'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['email']) ?></div>
-                            <?php endif; ?>
+                               value="<?= htmlspecialchars($old['email'] ?? '') ?>"
+                               autocomplete="email">
+                        <div class="field-error <?= !empty($errors['email']) ? 'show' : '' ?>" id="emailError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="emailErrorText"><?= htmlspecialchars($errors['email'] ?? '') ?></span>
                         </div>
                     </div>
+                    <!-- Téléphone -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Téléphone <span class="text-danger">*</span></label>
-                        <input type="tel" name="telephone" id="telephone" class="form-control <?= !empty($errors['telephone']) ? 'error' : '' ?>"
+                        <label class="form-label" for="telephone">Téléphone <span class="text-danger">*</span></label>
+                        <input type="text" name="telephone" id="telephone"
+                               class="form-control <?= !empty($errors['telephone']) ? 'is-invalid' : '' ?>"
                                placeholder="+216 XX XXX XXX"
-                               value="<?= htmlspecialchars($old['telephone'] ?? '') ?>" required>
-                        <div class="error-container" id="telephone-errors">
-                            <?php if (!empty($errors['telephone'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['telephone']) ?></div>
-                            <?php endif; ?>
+                               value="<?= htmlspecialchars($old['telephone'] ?? '') ?>"
+                               autocomplete="tel">
+                        <div class="field-error <?= !empty($errors['telephone']) ? 'show' : '' ?>" id="telephoneError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="telephoneErrorText"><?= htmlspecialchars($errors['telephone'] ?? '') ?></span>
                         </div>
                     </div>
                 </div>
 
                 <div class="row">
+                    <!-- Mot de passe -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" name="password" id="password" class="form-control <?= !empty($errors['password']) ? 'error' : '' ?>"
-                               placeholder="••••••••" required>
-                        <div class="error-container" id="password-errors">
-                            <?php if (!empty($errors['password'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['password']) ?></div>
-                            <?php endif; ?>
+                        <div class="password-label-row">
+                            <label class="form-label mb-0" for="password">Mot de passe <span class="text-danger">*</span></label>
+                            <button type="button" class="btn-generate-pwd" onclick="generateStrongPassword()">
+                                <i class="fas fa-magic me-1"></i>Générer
+                            </button>
                         </div>
-                        <div class="password-requirements">
+                        <div class="input-group mt-1">
+                            <input type="password" name="password" id="password"
+                                   class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
+                                   placeholder="•••••••••"
+                                   autocomplete="new-password">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('password', this)" title="Afficher/Masquer">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="field-error <?= !empty($errors['password']) ? 'show' : '' ?>" id="passwordError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="passwordErrorText"><?= htmlspecialchars($errors['password'] ?? '') ?></span>
+                        </div>
+                        <div id="strengthBarContainer" class="strength-bar-container" style="display:none;">
+                            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                            <div class="strength-label" id="strengthLabel"></div>
+                        </div>
+                        <div class="password-requirements mt-1" id="passwordRequirements" style="<?= !empty($errors['password']) ? 'display:none' : '' ?>">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
-                            <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
+                            <span id="reqUpper"  class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
                             <span id="reqNumber" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins un chiffre</span>
                         </div>
                     </div>
+                    <!-- Confirmation mot de passe -->
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Confirmer mot de passe <span class="text-danger">*</span></label>
-                        <input type="password" name="password_confirm" id="passwordConfirm" class="form-control <?= !empty($errors['password_confirm']) ? 'error' : '' ?>"
-                               placeholder="••••••••" required>
-                        <div class="error-container" id="password_confirm-errors">
-                            <?php if (!empty($errors['password_confirm'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['password_confirm']) ?></div>
-                            <?php endif; ?>
+                        <label class="form-label" for="passwordConfirm">Confirmer mot de passe <span class="text-danger">*</span></label>
+                        <input type="password" name="password_confirm" id="passwordConfirm"
+                               class="form-control <?= !empty($errors['password_confirm']) ? 'is-invalid' : '' ?>"
+                               placeholder="•••••••••"
+                               autocomplete="new-password">
+                        <div class="field-error <?= !empty($errors['password_confirm']) ? 'show' : '' ?>" id="passwordConfirmError">
+                            <i class="fas fa-times-circle"></i>
+                            <span id="passwordConfirmErrorText"><?= htmlspecialchars($errors['password_confirm'] ?? '') ?></span>
                         </div>
                     </div>
                 </div>
@@ -174,207 +231,440 @@ $errors = $errors ?? [];
                 <div id="medecinFields" class="medecin-fields">
                     <div class="section-title"><i class="fas fa-stethoscope me-1"></i> Informations professionnelles</div>
                     <div class="row">
+                        <!-- Spécialité -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Spécialité <span class="text-danger">*</span></label>
-                            <select name="specialite" id="specialite" class="form-select <?= !empty($errors['specialite']) ? 'error' : '' ?>">
+                            <label class="form-label" for="specialite">Spécialité <span class="text-danger">*</span></label>
+                            <select name="specialite" id="specialite"
+                                    class="form-select <?= !empty($errors['specialite']) ? 'is-invalid' : '' ?>">
                                 <option value="">Sélectionner une spécialité</option>
-                                <option>Cardiologue</option>
-                                <option>Dermatologue</option>
-                                <option>Gynécologue</option>
-                                <option>Pédiatre</option>
-                                <option>Généraliste</option>
-                                <option>Ophtalmologue</option>
-                                <option>Orthopédiste</option>
-                                <option>Neurologue</option>
-                                <option>Psychiatre</option>
-                                <option>Dentiste</option>
+                                <?php
+                                $specialites = ['Cardiologue','Dermatologue','Gynécologue','Pédiatre','Généraliste','Ophtalmologue','Orthopédiste','Neurologue','Psychiatre','Dentiste'];
+                                foreach ($specialites as $s):
+                                    $selected = (($old['specialite'] ?? '') === $s) ? 'selected' : '';
+                                ?>
+                                    <option <?= $selected ?>><?= $s ?></option>
+                                <?php endforeach; ?>
                             </select>
-                            <div class="error-container" id="specialite-errors">
-                                <?php if (!empty($errors['specialite'])): ?>
-                                    <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['specialite']) ?></div>
-                                <?php endif; ?>
+                            <div class="field-error <?= !empty($errors['specialite']) ? 'show' : '' ?>" id="specialiteError">
+                                <i class="fas fa-times-circle"></i>
+                                <span id="specialiteErrorText"><?= htmlspecialchars($errors['specialite'] ?? '') ?></span>
                             </div>
                         </div>
+                        <!-- Numéro d'ordre -->
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Numéro d'ordre <span class="text-danger">*</span></label>
-                            <input type="text" name="numero_ordre" id="numeroOrdre" class="form-control <?= !empty($errors['numero_ordre']) ? 'error' : '' ?>"
+                            <label class="form-label" for="numeroOrdre">Numéro d'ordre <span class="text-danger">*</span></label>
+                            <input type="text" name="numero_ordre" id="numeroOrdre"
+                                   class="form-control <?= !empty($errors['numero_ordre']) ? 'is-invalid' : '' ?>"
                                    placeholder="Ex: 12345"
                                    value="<?= htmlspecialchars($old['numero_ordre'] ?? '') ?>">
-                            <div class="error-container" id="numero_ordre-errors">
-                                <?php if (!empty($errors['numero_ordre'])): ?>
-                                    <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['numero_ordre']) ?></div>
-                                <?php endif; ?>
+                            <div class="field-error <?= !empty($errors['numero_ordre']) ? 'show' : '' ?>" id="numeroOrdreError">
+                                <i class="fas fa-times-circle"></i>
+                                <span id="numeroOrdreErrorText"><?= htmlspecialchars($errors['numero_ordre'] ?? '') ?></span>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Tarif de consultation (DT)</label>
-                            <input type="number" name="tarif" id="tarif" class="form-control"
+                            <label class="form-label" for="tarif">Tarif de consultation (DT)</label>
+                            <input type="text" name="tarif" id="tarif" class="form-control"
                                    placeholder="50" step="5"
                                    value="<?= htmlspecialchars($old['tarif'] ?? '') ?>">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Années d'expérience</label>
-                            <input type="number" name="experience" id="experience" class="form-control"
+                            <label class="form-label" for="experience">Années d'expérience</label>
+                            <input type="text" name="experience" id="experience" class="form-control"
                                    placeholder="5"
                                    value="<?= htmlspecialchars($old['experience'] ?? '') ?>">
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Adresse du cabinet</label>
+                        <label class="form-label" for="adresseCabinet">Adresse du cabinet</label>
                         <textarea name="adresse_cabinet" id="adresseCabinet" class="form-control" rows="2"
                                   placeholder="Adresse complète du cabinet"><?= htmlspecialchars($old['adresse_cabinet'] ?? '') ?></textarea>
                     </div>
                 </div>
 
-                <div class="form-check mb-3 <?= !empty($errors['terms']) ? 'error-wrap' : '' ?>">
-                    <input type="checkbox" class="form-check-input" name="terms" value="1" id="terms" required
-                        <?= !empty($old['terms']) ? 'checked' : '' ?>>
+                <!-- CGU -->
+                <div class="form-check mb-1">
+                    <input type="checkbox" class="form-check-input" id="terms" name="terms" value="1">
                     <label class="form-check-label" for="terms">
                         J'accepte les <a href="#" class="login-link">conditions d'utilisation</a>
                         et la <a href="#" class="login-link">politique de confidentialité</a>
                     </label>
                 </div>
-                <div class="error-container mb-2" id="terms-errors">
-                    <?php if (!empty($errors['terms'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['terms']) ?></div>
-                    <?php endif; ?>
+                <div class="terms-error" id="termsError">
+                    <i class="fas fa-times-circle"></i>
+                    <span id="termsErrorText"></span>
                 </div>
 
-                <button type="submit" class="btn-register">
-                    <i class="fas fa-user-plus me-2"></i> S'inscrire
-                </button>
+                <div class="mt-3">
+                    <button type="submit" class="btn-register" id="submitBtn">
+                        <i class="fas fa-user-plus me-2"></i> S'inscrire
+                    </button>
+                </div>
             </form>
 
             <hr>
             <div class="text-center">
-                <p class="mb-0">Déjà un compte ? <a href="index.php?page=login" class="login-link">Se connecter</a></p>
+                <p class="mb-0">Déjà un compte ? <a href="/valorys_Copie/index.php?page=login" class="login-link">Se connecter</a></p>
             </div>
         </div>
     </div>
 
     <script>
-        // ── RÔLE ─────────────────────────────────────
-        function setMedecinSectionVisible(isMedecin) {
-            const mf = document.getElementById('medecinFields');
-            if (isMedecin) {
-                mf.style.display = 'block';
-                document.getElementById('specialite').required = true;
-                document.getElementById('numeroOrdre').required = true;
-            } else {
-                mf.style.display = 'none';
-                document.getElementById('specialite').required = false;
-                document.getElementById('numeroOrdre').required = false;
+        // ── HELPERS ERREUR CHAMP ──────────────────────────────────────────────
+        function showFieldError(inputId, errorDivId, errorTextId, message) {
+            const input    = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorDivId);
+            const errorTxt = document.getElementById(errorTextId);
+
+            if (input) {
+                input.classList.add('is-invalid');
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 350);
+            }
+            if (errorTxt) errorTxt.innerText = message;
+            if (errorDiv) errorDiv.classList.add('show');
+        }
+
+        function clearFieldError(inputId, errorDivId) {
+            const input    = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorDivId);
+            if (input)    input.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.classList.remove('show');
+                const span = errorDiv.querySelector('span');
+                if (span) span.innerText = '';
             }
         }
+
+        function clearAllErrors() {
+            const fields = [
+                ['nom',             'nomError'],
+                ['prenom',          'prenomError'],
+                ['email',           'emailError'],
+                ['telephone',       'telephoneError'],
+                ['password',        'passwordError'],
+                ['passwordConfirm', 'passwordConfirmError'],
+                ['specialite',      'specialiteError'],
+                ['numeroOrdre',     'numeroOrdreError'],
+            ];
+            fields.forEach(([inp, err]) => clearFieldError(inp, err));
+            // Terms
+            const tErr = document.getElementById('termsError');
+            if (tErr) tErr.classList.remove('show');
+        }
+
+        // ── VALIDATION EN TEMPS RÉEL ─────────────────────────────────────────
+        const realtimeFields = [
+            ['nom',             'nomError'],
+            ['prenom',          'prenomError'],
+            ['email',           'emailError'],
+            ['telephone',       'telephoneError'],
+            ['password',        'passwordError'],
+            ['passwordConfirm', 'passwordConfirmError'],
+            ['specialite',      'specialiteError'],
+            ['numeroOrdre',     'numeroOrdreError'],
+        ];
+        realtimeFields.forEach(([inputId, errorDivId]) => {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+            el.addEventListener(evt, function () {
+                if (this.classList.contains('is-invalid')) {
+                    clearFieldError(inputId, errorDivId);
+                }
+            });
+        });
+
+        // ── RÔLE ─────────────────────────────────────────────────────────────
+        const savedRole = document.getElementById('selectedRole').value;
+        if (savedRole === 'medecin') activateMedecinRole();
+
         document.querySelectorAll('.role-option').forEach(o => {
             o.addEventListener('click', function () {
                 document.querySelectorAll('.role-option').forEach(x => x.classList.remove('active'));
                 this.classList.add('active');
-                const r = this.dataset.role;
-                document.getElementById('selectedRole').value = r;
-                setMedecinSectionVisible(r === 'medecin');
+                document.getElementById('selectedRole').value = this.dataset.role;
+                if (this.dataset.role === 'medecin') {
+                    activateMedecinRole();
+                } else {
+                    deactivateMedecinRole();
+                }
             });
         });
-        (function restoreRoleFromServer() {
-            const role = <?= json_encode($old['role'] ?? 'patient', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            if (role === 'medecin') {
-                const opt = document.querySelector('.role-option[data-role="medecin"]');
-                if (opt) opt.click();
-            }
-        })();
-        (function restoreSpecialite() {
-            const s = <?= json_encode($old['specialite'] ?? '', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-            const sel = document.getElementById('specialite');
-            if (s && sel) sel.value = s;
-        })();
 
-        // ── MOT DE PASSE ─────────────────────────────
-        function validatePassword(p) {
+        function activateMedecinRole() {
+            document.getElementById('medecinFields').style.display = 'block';
+            // Marquer le bon onglet actif au rechargement PHP
+            document.querySelectorAll('.role-option').forEach(o => {
+                o.classList.toggle('active', o.dataset.role === 'medecin');
+            });
+        }
+
+        function deactivateMedecinRole() {
+            document.getElementById('medecinFields').style.display = 'none';
+            clearFieldError('specialite',  'specialiteError');
+            clearFieldError('numeroOrdre', 'numeroOrdreError');
+        }
+
+        // ── INDICATEUR MOT DE PASSE ───────────────────────────────────────────
+        function getPasswordStrength(p) {
             return { length: p.length >= 8, upper: /[A-Z]/.test(p), number: /[0-9]/.test(p) };
         }
-        function updatePasswordRequirements() {
-            const p = document.getElementById('password').value, v = validatePassword(p);
-            const checks = { Length: v.length, Upper: v.upper, Number: v.number };
-            const labels = { Length: 'Au moins 8 caractères', Upper: 'Au moins une majuscule', Number: 'Au moins un chiffre' };
-            Object.keys(checks).forEach(k => {
-                const el = document.getElementById('req' + k), ok = checks[k];
-                el.className = ok ? 'requirement-valid' : 'requirement-invalid';
-                el.innerHTML = `<i class="fas fa-${ok ? 'check-' : ''}circle me-1"></i> ${labels[k]}`;
-            });
-        }
-        document.getElementById('password').addEventListener('input', updatePasswordRequirements);
-        document.getElementById('passwordConfirm').addEventListener('input', function () {
-            const p = document.getElementById('password').value;
-            this.style.borderColor = p && this.value && p !== this.value ? '#dc3545' : '#ddd';
-        });
 
-        function escapeHtml(text) {
-            const d = document.createElement('div');
-            d.textContent = text;
-            return d.innerHTML;
+        function calcStrengthScore(p) {
+            let score = 0;
+            if (p.length >= 8)  score++;
+            if (p.length >= 12) score++;
+            if (/[A-Z]/.test(p)) score++;
+            if (/[0-9]/.test(p)) score++;
+            if (/[^A-Za-z0-9]/.test(p)) score++;
+            return score; // 0-5
         }
-        function clearClientFieldErrors() {
-            document.querySelectorAll('#registerForm .error-container').forEach(c => { c.innerHTML = ''; });
-            document.querySelectorAll('#registerForm .form-control, #registerForm .form-select').forEach(el => el.classList.remove('error'));
-            document.querySelectorAll('#registerForm .form-check').forEach(fc => fc.classList.remove('error-wrap'));
-        }
-        function showFieldError(fieldKey, message) {
-            const box = document.getElementById(fieldKey + '-errors');
-            if (!box) return;
-            box.innerHTML = '<div class="field-error"><i class="fas fa-exclamation-circle"></i> ' + escapeHtml(message) + '</div>';
-            const idMap = { nom: 'nom', prenom: 'prenom', email: 'email', telephone: 'telephone', password: 'password', password_confirm: 'passwordConfirm', specialite: 'specialite', numero_ordre: 'numeroOrdre', terms: 'terms' };
-            const iid = idMap[fieldKey] || fieldKey;
-            const inp = document.getElementById(iid) || document.querySelector('#registerForm [name="' + fieldKey + '"]');
-            if (inp && fieldKey !== 'terms') inp.classList.add('error');
-            if (fieldKey === 'terms') {
-                const wrap = document.getElementById('terms') && document.getElementById('terms').closest('.form-check');
-                if (wrap) wrap.classList.add('error-wrap');
+
+        function updatePasswordRequirements() {
+            const p = document.getElementById('password').value;
+            const v = getPasswordStrength(p);
+            const map = { Length: [v.length, 'Au moins 8 caractères'], Upper: [v.upper, 'Au moins une majuscule'], Number: [v.number, 'Au moins un chiffre'] };
+            Object.entries(map).forEach(([k, [ok, label]]) => {
+                const el = document.getElementById('req' + k);
+                if (!el) return;
+                el.className = ok ? 'requirement-valid' : 'requirement-invalid';
+                el.innerHTML = `<i class="fas fa-${ok ? 'check-' : ''}circle me-1"></i> ${label}`;
+            });
+
+            // Barre de force
+            const container = document.getElementById('strengthBarContainer');
+            const fill      = document.getElementById('strengthFill');
+            const label     = document.getElementById('strengthLabel');
+            if (p.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            const score = calcStrengthScore(p);
+            fill.className = 'strength-fill';
+            label.className = 'strength-label';
+            if (score <= 2) {
+                fill.classList.add('weak');
+                label.classList.add('weak');
+                label.textContent = '🔴 Faible';
+            } else if (score <= 3) {
+                fill.classList.add('medium');
+                label.classList.add('medium');
+                label.textContent = '🟡 Moyen';
+            } else {
+                fill.classList.add('strong');
+                label.classList.add('strong');
+                label.textContent = '🟢 Fort';
             }
         }
 
-        // ── SOUMISSION → PHP ──────────────────────────
-        document.getElementById('registerForm').addEventListener('submit', function (e) {
-            clearClientFieldErrors();
+        function generateStrongPassword() {
+            const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            const lower   = 'abcdefghjkmnpqrstuvwxyz';
+            const digits  = '23456789';
+            const special = '@#$!%*?&';
+            let pwd = '';
+            // Au moins un de chaque catégorie
+            pwd += upper[Math.floor(Math.random() * upper.length)];
+            pwd += lower[Math.floor(Math.random() * lower.length)];
+            pwd += digits[Math.floor(Math.random() * digits.length)];
+            pwd += special[Math.floor(Math.random() * special.length)];
+            // Compléter à 12 caractères
+            const all = upper + lower + digits + special;
+            for (let i = 4; i < 12; i++) {
+                pwd += all[Math.floor(Math.random() * all.length)];
+            }
+            // Mélanger
+            pwd = pwd.split('').sort(() => Math.random() - 0.5).join('');
+
+            const pwdInput     = document.getElementById('password');
+            const confirmInput = document.getElementById('passwordConfirm');
+            pwdInput.value     = pwd;
+            confirmInput.value = pwd;
+            pwdInput.type      = 'text'; // Afficher le MDP généré
+            updatePasswordRequirements();
+            document.getElementById('passwordRequirements').style.display = '';
+            // Auto-copier dans le presse-papier
+            navigator.clipboard.writeText(pwd).catch(() => {});
+            // Feedback visuel
+            const btn = document.querySelector('.btn-generate-pwd');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Copié !';
+            btn.style.background = '#4CAF50'; btn.style.color = 'white';
+            setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                inp.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        document.getElementById('password').addEventListener('input', function () {
+            // Afficher les requirements si le champ n'est pas en erreur PHP
+            if (!this.classList.contains('is-invalid')) {
+                document.getElementById('passwordRequirements').style.display = '';
+            }
+            updatePasswordRequirements();
+            // Re-valider la confirmation si déjà saisie
+            const confirm = document.getElementById('passwordConfirm');
+            if (confirm.value && confirm.classList.contains('is-invalid')) {
+                if (this.value === confirm.value) clearFieldError('passwordConfirm', 'passwordConfirmError');
+            }
+        });
+
+        document.getElementById('passwordConfirm').addEventListener('input', function () {
+            if (this.classList.contains('is-invalid')) {
+                const p = document.getElementById('password').value;
+                if (this.value === p) clearFieldError('passwordConfirm', 'passwordConfirmError');
+            }
+        });
+
+        // ── VALIDATION FORMULAIRE ─────────────────────────────────────────────
+        function isValidEmail(email) {
+            return /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/.test(email);
+        }
+
+        function isValidPhone(phone) {
+            return /^[\d\s\+\-\(\)]{8,}$/.test(phone.trim());
+        }
+
+        function validateForm() {
+            clearAllErrors();
+            let isValid = true;
+            const role = document.getElementById('selectedRole').value;
+
             const nom      = document.getElementById('nom').value.trim();
             const prenom   = document.getElementById('prenom').value.trim();
             const email    = document.getElementById('email').value.trim();
             const tel      = document.getElementById('telephone').value.trim();
             const password = document.getElementById('password').value;
             const confirm  = document.getElementById('passwordConfirm').value;
-            const role     = document.getElementById('selectedRole').value;
             const terms    = document.getElementById('terms').checked;
 
-            if (!nom) { e.preventDefault(); showFieldError('nom', 'Le nom est requis.'); return; }
-            if (!prenom) { e.preventDefault(); showFieldError('prenom', 'Le prénom est requis.'); return; }
-            if (!email) { e.preventDefault(); showFieldError('email', 'L\'email est requis.'); return; }
-            if (!tel) { e.preventDefault(); showFieldError('telephone', 'Le téléphone est requis.'); return; }
-            if (!password) { e.preventDefault(); showFieldError('password', 'Le mot de passe est requis.'); return; }
-            if (!confirm) { e.preventDefault(); showFieldError('password_confirm', 'Veuillez confirmer le mot de passe.'); return; }
+            // Nom
+            if (!nom) {
+                showFieldError('nom', 'nomError', 'nomErrorText', 'Le nom est obligatoire.');
+                isValid = false;
+            } else if (nom.length < 2) {
+                showFieldError('nom', 'nomError', 'nomErrorText', 'Le nom doit contenir au moins 2 caractères.');
+                isValid = false;
+            }
 
-            const pv = validatePassword(password);
-            if (!pv.length || !pv.upper || !pv.number) {
-                e.preventDefault(); showFieldError('password', 'Au moins 8 caractères, une majuscule et un chiffre.'); return;
+            // Prénom
+            if (!prenom) {
+                showFieldError('prenom', 'prenomError', 'prenomErrorText', 'Le prénom est obligatoire.');
+                isValid = false;
+            } else if (prenom.length < 2) {
+                showFieldError('prenom', 'prenomError', 'prenomErrorText', 'Le prénom doit contenir au moins 2 caractères.');
+                isValid = false;
             }
-            if (password !== confirm) {
-                e.preventDefault(); showFieldError('password_confirm', 'Les mots de passe ne correspondent pas.'); return;
+
+            // Email
+            if (!email) {
+                showFieldError('email', 'emailError', 'emailErrorText', 'L\'adresse email est obligatoire.');
+                isValid = false;
+            } else if (!isValidEmail(email)) {
+                showFieldError('email', 'emailError', 'emailErrorText', 'Veuillez saisir un email valide (ex: nom@domaine.com).');
+                isValid = false;
             }
-            if (!terms) {
-                e.preventDefault(); showFieldError('terms', "Vous devez accepter les conditions d'utilisation."); return;
+
+            // Téléphone
+            if (!tel) {
+                showFieldError('telephone', 'telephoneError', 'telephoneErrorText', 'Le numéro de téléphone est obligatoire.');
+                isValid = false;
+            } else if (!isValidPhone(tel)) {
+                showFieldError('telephone', 'telephoneError', 'telephoneErrorText', 'Veuillez saisir un numéro de téléphone valide.');
+                isValid = false;
             }
+
+            // Mot de passe
+            if (!password) {
+                showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe est obligatoire.');
+                isValid = false;
+            } else {
+                const pv = getPasswordStrength(password);
+                if (!pv.length) {
+                    showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe doit contenir au moins 8 caractères.');
+                    isValid = false;
+                } else if (!pv.upper) {
+                    showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe doit contenir au moins une majuscule.');
+                    isValid = false;
+                } else if (!pv.number) {
+                    showFieldError('password', 'passwordError', 'passwordErrorText', 'Le mot de passe doit contenir au moins un chiffre.');
+                    isValid = false;
+                }
+            }
+
+            // Confirmation
+            if (!confirm) {
+                showFieldError('passwordConfirm', 'passwordConfirmError', 'passwordConfirmErrorText', 'Veuillez confirmer votre mot de passe.');
+                isValid = false;
+            } else if (password && password !== confirm) {
+                showFieldError('passwordConfirm', 'passwordConfirmError', 'passwordConfirmErrorText', 'Les mots de passe ne correspondent pas.');
+                isValid = false;
+            }
+
+            // Champs médecin
             if (role === 'medecin') {
-                const s = document.getElementById('specialite').value;
-                const n = document.getElementById('numeroOrdre').value.trim();
-                if (!s) { e.preventDefault(); showFieldError('specialite', 'Veuillez sélectionner votre spécialité.'); return; }
-                if (!n) { e.preventDefault(); showFieldError('numero_ordre', "Veuillez saisir votre numéro d'ordre."); return; }
+                const specialite  = document.getElementById('specialite').value;
+                const numeroOrdre = document.getElementById('numeroOrdre').value.trim();
+
+                if (!specialite) {
+                    showFieldError('specialite', 'specialiteError', 'specialiteErrorText', 'Veuillez sélectionner votre spécialité.');
+                    isValid = false;
+                }
+                if (!numeroOrdre) {
+                    showFieldError('numeroOrdre', 'numeroOrdreError', 'numeroOrdreErrorText', 'Le numéro d\'ordre est obligatoire.');
+                    isValid = false;
+                }
+            }
+
+            // CGU
+            if (!terms) {
+                const tErr = document.getElementById('termsError');
+                const tTxt = document.getElementById('termsErrorText');
+                if (tTxt) tTxt.innerText = 'Vous devez accepter les conditions d\'utilisation.';
+                if (tErr) tErr.classList.add('show');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        document.getElementById('terms').addEventListener('change', function () {
+            if (this.checked) {
+                const tErr = document.getElementById('termsError');
+                if (tErr) tErr.classList.remove('show');
             }
         });
-        function showSuccess(msg) {
-            const d = document.getElementById('successMessage');
-            document.getElementById('successText').innerText = msg;
-            d.style.display = 'block';
-        }
+
+        // ── SOUMISSION ────────────────────────────────────────────────────────
+        document.getElementById('registerForm').addEventListener('submit', function (e) {
+            if (!validateForm()) {
+                e.preventDefault();
+                // Scroll vers la première erreur
+                const firstError = document.querySelector('.is-invalid, .terms-error.show');
+                if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            // Désactiver pour éviter les doubles soumissions
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Inscription en cours...';
+            return true;
+        });
     </script>
 </body>
 </html>
+
+

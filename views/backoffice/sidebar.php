@@ -1,5 +1,5 @@
 <?php
-// views/backoffice/sidebar.php
+// views/backoffice/sidebar.php - Carte & Metiers Integrated v2
 $current_page = $_GET['page'] ?? 'dashboard';
 ?>
 <div class="sidebar">
@@ -7,6 +7,12 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <div class="brand-icon"><i class="fas fa-stethoscope"></i></div>
         <h4>MediConnect</h4>
         <small>Back Office</small>
+    </div>
+    <!-- Bouton de déconnexion visible en haut -->
+    <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <a href="index.php?page=logout" class="btn-logout">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </a>
     </div>
     <nav class="sidebar-nav">
         <a href="index.php?page=dashboard" class="<?= $current_page === 'dashboard' ? 'active' : '' ?>">
@@ -21,6 +27,9 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=patients" class="<?= $current_page === 'patients' ? 'active' : '' ?>">
             <i class="fas fa-user-injured"></i> Patients
         </a>
+        <a href="index.php?page=avis_admin" class="<?= $current_page === 'avis_admin' ? 'active' : '' ?>">
+            <i class="fas fa-star"></i> Avis
+        </a>
         <a href="index.php?page=rendez_vous_admin" class="<?= $current_page === 'rendez_vous_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-check"></i> Rendez-vous
         </a>
@@ -33,28 +42,40 @@ $current_page = $_GET['page'] ?? 'dashboard';
         <a href="index.php?page=categories_admin" class="<?= $current_page === 'categories_admin' ? 'active' : '' ?>">
             <i class="fas fa-tags"></i> Catégories
         </a>
-        <a href="index.php?page=commandes_admin" class="<?= $current_page === 'commandes_admin' ? 'active' : '' ?>">
-            <i class="fas fa-shopping-cart"></i> Commandes
-        </a>
         <a href="index.php?page=articles_admin" class="<?= $current_page === 'articles_admin' ? 'active' : '' ?>">
             <i class="fas fa-blog"></i> Blog
         </a>
         <a href="index.php?page=evenements_admin" class="<?= $current_page === 'evenements_admin' ? 'active' : '' ?>">
             <i class="fas fa-calendar-day"></i> Événements
         </a>
+        <a href="index.php?page=participations" class="<?= $current_page === 'participations' ? 'active' : '' ?>">
+            <i class="fas fa-handshake"></i> Participations
+        </a>
+        <a href="index.php?page=sponsors_admin" class="<?= $current_page === 'sponsors_admin' ? 'active' : '' ?>">
+            <i class="fas fa-hand-holding-usd"></i> Sponsors
+        </a>
+        <div class="nav-divider"></div>
+        <a href="index.php?page=carte" class="<?= $current_page === 'carte' ? 'active' : '' ?>">
+            <i class="fas fa-map-location-dot"></i> Carte Tunisie
+        </a>
+        <a href="index.php?page=carte&action=metiers" class="<?= ($current_page === 'carte' && ($_GET['action'] ?? '') === 'metiers') ? 'active' : '' ?>">
+            <i class="fas fa-brain"></i> IA Métiers Créatifs
+        </a>
         <div class="nav-divider"></div>
         <a href="index.php?page=stats" class="<?= $current_page === 'stats' ? 'active' : '' ?>">
             <i class="fas fa-chart-line"></i> Statistiques
         </a>
+        <a href="index.php?page=evenements_admin&action=advanced" class="<?= ($current_page === 'evenements_admin' && ($_GET['action'] ?? '') === 'advanced') ? 'active' : '' ?>">
+            <i class="fas fa-chart-bar"></i> Événements Avancé
+        </a>
         <a href="index.php?page=logs" class="<?= $current_page === 'logs' ? 'active' : '' ?>">
-            <i class="fas fa-history"></i> Historique
+            <i class="fas fa-history"></i> Historique Actions
+        </a>
+        <a href="index.php?page=login_history" class="<?= $current_page === 'login_history' ? 'active' : '' ?>">
+            <i class="fas fa-sign-in-alt"></i> Historique Connexions
         </a>
         <a href="index.php?page=settings" class="<?= $current_page === 'settings' ? 'active' : '' ?>">
             <i class="fas fa-cog"></i> Paramètres
-        </a>
-        <div class="nav-divider"></div>
-        <a href="index.php?page=logout">
-            <i class="fas fa-sign-out-alt"></i> Déconnexion
         </a>
     </nav>
 </div>
@@ -107,6 +128,8 @@ $current_page = $_GET['page'] ?? 'dashboard';
 .sidebar-nav {
     padding: 20px 0;
     flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .sidebar-nav a {
@@ -143,6 +166,33 @@ $current_page = $_GET['page'] ?? 'dashboard';
     height: 1px;
     background: rgba(255,255,255,0.07);
     margin: 10px 22px;
+}
+
+.btn-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white !important;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+    color: white !important;
+}
+
+.btn-logout i {
+    font-size: 16px;
 }
 
 .main-content {

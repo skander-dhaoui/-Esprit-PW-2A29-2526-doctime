@@ -111,7 +111,7 @@
             <button class="nav-link" data-page="blog">Blog</button>
             <button class="nav-link" data-page="evenements">Événements</button>
             <button class="nav-link" data-page="reclamations">Réclamations</button>
-            <button class="nav-link" data-page="parapharmacie">Parapharmacie</button>
+            <button class="nav-link" data-page="pharmacie">Pharmacie</button>
         </div>
         <div class="nav-actions">
             <div class="nav-icon" onclick="showProfile()">👤</div>
@@ -139,7 +139,7 @@
                 <div class="action-title">Événements à Venir</div>
                 <div class="action-desc">Voir les événements médicaux</div>
             </div>
-            <div class="action-item" onclick="goToParapharmacie()">
+            <div class="action-item" onclick="goToPharmacy()">
                 <div class="action-icon teal">💊</div>
                 <div class="action-title">Commander Médicaments</div>
                 <div class="action-desc">Achetez vos médicaments</div>
@@ -441,7 +441,7 @@ function cancelAppointment(id) { if (confirm('Voulez-vous vraiment annuler ce re
 function viewClaim(id) { const claim = claims.find(c => c.id === id); if (claim) alert(`📢 Réclamation\n\nSujet: ${claim.sujet}\nDescription: ${claim.description}\nPriorité: ${claim.priorite}\nStatut: ${claim.status === 'en_cours' ? 'En cours' : 'Résolu'}\nDate: ${claim.date}`); }
 function goToHome() { window.location.href = 'dashboard.html'; }
 function goToEvents() { document.getElementById('evenementsModal').classList.add('active'); }
-    function goToParapharmacie() { document.getElementById('produitsModal').classList.add('active'); }
+function goToPharmacy() { document.getElementById('produitsModal').classList.add('active'); }
 function showProfile() { window.location.href = 'profil.html'; }
 function viewAllAppointments() { document.querySelector('.card-expand').scrollIntoView({ behavior: 'smooth' }); }
 function refreshAppointments() { displayAppointments(); showToast('Liste actualisée', 'success'); }

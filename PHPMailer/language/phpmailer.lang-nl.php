@@ -36,4 +36,3 @@ $PHPMAILER_LANG['variable_set']         = 'Kan de volgende variabele niet instel
 $PHPMAILER_LANG['no_smtputf8']          = 'De server ondersteunt geen SMTPUTF8 dat nodig is om naar Unicode-adressen te sturen.';
 $PHPMAILER_LANG['imap_recommended']     = 'Het gebruik van de vereenvoudigde adresparser is niet aanbevolen. Installeer de IMAP-extensie voor PHP voor volledige RFC822-ondersteuning.';
 $PHPMAILER_LANG['deprecated_argument']  = 'Verouderd argument: ';
-

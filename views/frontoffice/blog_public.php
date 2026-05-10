@@ -134,7 +134,7 @@
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="index.php?page=accueil">
+        <a class="navbar-brand fw-bold" href="/valorys_Copie/index.php?page=accueil">
             <i class="fas fa-stethoscope me-2"></i>Valorys
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -142,16 +142,16 @@
         </button>
         <div class="collapse navbar-collapse" id="nav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="index.php?page=accueil">Accueil</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=medecins">Médecins</a></li>
-                <li class="nav-item"><a class="nav-link active" href="index.php?page=blog_public">Blog</a></li>
-                <li class="nav-item"><a class="nav-link" href="index.php?page=contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=accueil">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=medecins">Médecins</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/valorys_Copie/index.php?page=blog_public">Blog</a></li>
+                <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=contact">Contact</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=logout">Déconnexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=logout">Déconnexion</a></li>
                 <?php else: ?>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=login">Connexion</a></li>
-                    <li class="nav-item"><a class="nav-link" href="index.php?page=register">Inscription</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=login">Connexion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/valorys_Copie/index.php?page=register">Inscription</a></li>
                 <?php endif; ?>
             </ul>
         </div>
@@ -174,7 +174,7 @@
             <?php if (!isset($_SESSION['user_id'])): ?>
             <div class="login-prompt">
                 <i class="fas fa-info-circle fa-lg"></i>
-                <span><a href="index.php?page=login">Connectez-vous</a> pour commenter, créer, modifier ou supprimer des articles.</span>
+                <span><a href="/valorys_Copie/index.php?page=login">Connectez-vous</a> pour commenter, créer, modifier ou supprimer des articles.</span>
             </div>
             <?php else: ?>
             <div class="logged-prompt">
@@ -257,7 +257,7 @@
             <?php else: ?>
             <div class="login-prompt">
                 <i class="fas fa-lock"></i>
-                <span><a href="index.php?page=login">Connectez-vous</a> pour laisser un commentaire.</span>
+                <span><a href="/valorys_Copie/index.php?page=login">Connectez-vous</a> pour laisser un commentaire.</span>
             </div>
             <?php endif; ?>
         </div>
@@ -797,3 +797,4 @@ loadArticles();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
