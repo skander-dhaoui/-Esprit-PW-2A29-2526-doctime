@@ -1,772 +1,954 @@
+<?php
+declare(strict_types=1);
+$blogUserLabel = '';
+if (!empty($_SESSION['user_name'])) {
+    $blogUserLabel = trim((string)$_SESSION['user_name']);
+}
+$navActive = 'blog_public';
+$navVariant = 'doctime';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Valorys</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Blog — DocTime · Valorys</title>
+    <link href="assets/vendor/bootstrap/5.3.0/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <?php include __DIR__ . '/../partials/public_theme_styles.php'; ?>
     <style>
-        body { background: #f0f5fb; font-family: 'Segoe UI', sans-serif; }
-
-        /* ── HEADER ── */
-        .blog-header {
-            background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
-            color: #fff; padding: 55px 0; text-align: center; margin-bottom: 36px;
+        /* Blog public — aligné DocTime (teal, cartes slate, même esprit que événements / back-office) */
+        body.blog-feed-page.page-doctime-bg {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
         }
-        .blog-header h1 { font-size: 2.2rem; font-weight: 700; }
-        .blog-header p  { opacity: .9; }
 
-        /* ── ARTICLE CARD ── */
-        .art-card {
-            background: #fff; border-radius: 16px; padding: 26px 28px;
-            margin-bottom: 22px; box-shadow: 0 4px 18px rgba(0,0,0,.07);
-            border-left: 4px solid #2A7FAA; position: relative;
-            transition: transform .25s, box-shadow .25s;
+        .feed-outer { padding: 1.25rem 0.75rem 3.5rem; }
+        .feed-inner { max-width: 720px; margin: 0 auto; }
+
+        .blog-dt-hero {
+            background: linear-gradient(135deg, rgba(27, 154, 132, 0.12) 0%, rgba(15, 23, 42, 0.04) 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1.35rem 1.5rem;
+            margin-bottom: 1.25rem;
         }
-        .art-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,.11); }
+        .blog-dt-hero .dt-page-head-title { margin-bottom: 0.35rem; }
+        .blog-dt-hero .dt-page-head-sub { margin-bottom: 0; max-width: 42rem; }
 
-        /* Boutons CRUD flottants en haut à droite de la card */
-        .art-crud {
-            position: absolute; top: 16px; right: 16px;
-            display: flex; gap: 6px; opacity: 0; transition: opacity .2s;
+        .toolbar-card, .composer-card, .post-card, .filter-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e2e8f0;
+            padding: 1rem 1.15rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s ease;
         }
-        .art-card:hover .art-crud { opacity: 1; }
+        .toolbar-card:hover, .composer-card:hover { box-shadow: 0 8px 26px rgba(15, 23, 42, 0.1); }
 
-        .art-title   { font-size: 1.2rem; font-weight: 700; color: #1a2035; margin-bottom: 8px; padding-right: 90px; }
-        .art-title a { color: #1a2035; text-decoration: none; }
-        .art-title a:hover { color: #2A7FAA; }
-        .art-meta    { font-size: 12px; color: #6c757d; display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
-        .art-meta i  { color: #2A7FAA; }
-        .art-excerpt { color: #555; line-height: 1.7; font-size: 14px; margin-bottom: 16px; }
-        .art-footer  { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .search-row { display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center; }
+        .search-row .icon-wrap { color: #64748b; }
+        .search-row input[type="search"] {
+            flex: 1;
+            min-width: 200px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            border-radius: 12px;
+            padding: 0.65rem 1rem;
+            font-size: 0.9375rem;
+            outline: none;
+        }
+        .search-row input[type="search"]:focus {
+            border-color: var(--dt-teal);
+            box-shadow: 0 0 0 0.2rem rgba(27, 154, 132, 0.2);
+        }
+        .btn-search-blue {
+            background: var(--dt-teal);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 0.65rem 1.15rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: filter 0.15s, transform 0.15s;
+        }
+        .btn-search-blue:hover { filter: brightness(1.06); color: #fff; transform: translateY(-1px); }
+        .sort-select {
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            background: #fff;
+            color: #334155;
+            max-width: 240px;
+        }
+        .sort-select:focus {
+            border-color: var(--dt-teal);
+            outline: none;
+            box-shadow: 0 0 0 0.15rem rgba(27, 154, 132, 0.2);
+        }
 
-        .btn-read { background: #2A7FAA; color: #fff; border: none; border-radius: 25px; padding: 7px 18px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; transition: background .2s; }
-        .btn-read:hover { background: #1e5f80; color: #fff; }
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-weight: 600;
+            color: #0f172a;
+            user-select: none;
+            font-size: 0.9375rem;
+        }
+        .filter-toggle .fa-sliders-h { color: var(--dt-teal); }
+        .filter-panel { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+        .filter-panel.open { display: block; }
 
-        .btn-edit { background: #e3f2fd; color: #1565c0; border: none; border-radius: 20px; padding: 5px 11px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: .2s; }
-        .btn-edit:hover { background: #1565c0; color: #fff; }
-        .btn-del  { background: #fce4ec; color: #c62828; border: none; border-radius: 20px; padding: 5px 11px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: .2s; }
-        .btn-del:hover  { background: #c62828; color: #fff; }
+        .section-articles-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 1.5rem 0 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-articles-title i { color: var(--dt-teal); }
 
-        /* ── DETAIL ── */
-        .detail-header { background: linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%); color:#fff; padding:48px 0; margin-bottom:32px; }
-        .detail-header h1 { font-size:1.9rem; font-weight:700; margin-bottom:10px; }
-        .detail-meta { font-size:13px; opacity:.85; display:flex; gap:20px; flex-wrap:wrap; }
-        .back-btn { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:25px; padding:8px 18px; font-size:13px; cursor:pointer; margin-bottom:14px; transition:.2s; }
-        .back-btn:hover { background:rgba(255,255,255,.35); }
-        .article-body-box { background:#fff; border-radius:16px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,.07); margin-bottom:26px; line-height:1.85; color:#333; font-size:15px; }
+        .composer-card { padding: 1rem 1.1rem; }
+        .composer-head { display: flex; gap: 0.75rem; align-items: center; }
+        .avatar-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--dt-teal) 0%, #15806e 100%);
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(27, 154, 132, 0.35);
+        }
+        .composer-fake-input {
+            flex: 1;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.9375rem;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .composer-fake-input:hover {
+            border-color: rgba(27, 154, 132, 0.45);
+            background: #fff;
+        }
+        .composer-actions {
+            display: flex;
+            gap: 0.35rem;
+            margin-top: 0.75rem;
+            padding-top: 0.65rem;
+            border-top: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+        .composer-actions button {
+            flex: 1;
+            min-width: 90px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            padding: 0.5rem 0.65rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .composer-actions button:hover { background: #f1f5f9; }
+        .composer-actions .i-photo { color: var(--dt-teal); }
+        .composer-actions .i-emoji { color: #f59e0b; }
+        .composer-actions .i-article { color: #dc2626; }
 
-        /* Actions article dans le détail */
-        .art-detail-actions { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+        .post-card { padding: 0; overflow: hidden; }
+        .post-card:hover { box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12); }
+        .post-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 1rem 1.15rem 0;
+        }
+        .post-author-block { display: flex; gap: 10px; min-width: 0; }
+        .post-author-text { min-width: 0; }
+        .post-author-name { font-weight: 700; font-size: 0.95rem; color: #0f172a; line-height: 1.25; }
+        .post-meta-line { font-size: 0.8125rem; color: #64748b; margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .post-actions-top { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+        .btn-modifier {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-modifier:hover { filter: brightness(0.98); color: #92400e; }
+        .btn-supprimer {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-supprimer:hover { background: #fee2e2; color: #b91c1c; }
 
-        /* ── COMMENTAIRES ── */
-        .comments-box { background:#fff; border-radius:16px; padding:26px; box-shadow:0 4px 16px rgba(0,0,0,.07); margin-bottom:26px; }
-        .comments-box h4 { font-size:1.05rem; font-weight:700; color:#1a2035; margin-bottom:18px; }
-        .comment-item { border-bottom:1px solid #f0f4f8; padding:14px 0; display:flex; gap:12px; }
-        .comment-item:last-child { border-bottom:none; }
-        .c-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#2A7FAA,#4CAF50); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:15px; flex-shrink:0; }
-        .c-body  { flex:1; }
-        .c-author { font-weight:700; font-size:13px; color:#1a2035; margin-bottom:2px; }
-        .c-date  { font-size:11px; color:#94a3b8; margin-bottom:6px; }
-        .c-content { font-size:14px; color:#555; line-height:1.6; }
-        .c-actions { display:flex; gap:6px; margin-top:7px; }
+        .post-body { padding: 0.65rem 1.15rem 1rem; }
+        .post-title-link {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+        .post-title-link:hover { color: var(--dt-teal); }
+        .post-excerpt {
+            color: #475569;
+            font-size: 0.9375rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
 
-        /* ── FORM COMMENTAIRE ── */
-        .comment-form { background:#fff; border-radius:16px; padding:26px; box-shadow:0 4px 16px rgba(0,0,0,.07); margin-bottom:26px; }
-        .comment-form h5 { font-size:.95rem; font-weight:700; color:#1a2035; margin-bottom:14px; }
-        .fg { margin-bottom:12px; }
-        .fg label { font-size:11px; font-weight:700; color:#6c757d; text-transform:uppercase; margin-bottom:4px; display:block; }
-        .fg input, .fg textarea, .fg select { width:100%; padding:9px 12px; border:1.5px solid #e9ecef; border-radius:10px; font-size:13px; font-family:inherit; outline:none; background:#f8f9fc; color:#1a2035; transition:.15s; }
-        .fg input:focus, .fg textarea:focus, .fg select:focus { border-color:#2A7FAA; background:#fff; }
-        .fg textarea { min-height:85px; resize:vertical; }
-        .fg .err-msg { font-size:11px; color:#dc2626; margin-top:3px; }
-        .btn-comment { background:linear-gradient(135deg,#2A7FAA,#4CAF50); color:#fff; border:none; border-radius:25px; padding:9px 22px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity .2s; }
-        .btn-comment:hover { opacity:.88; }
+        .post-footer-bar {
+            border-top: 1px solid #e2e8f0;
+            padding: 0.65rem 1.15rem;
+            background: #fafbfc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .post-reactions { display: flex; align-items: center; gap: 10px; }
+        .vote-btn {
+            border: none;
+            background: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .vote-btn:hover { background: #f1f5f9; }
+        .vote-btn.active-like { color: #e11d48; }
+        .vote-btn.active-dis { color: #475569; }
+        .post-stats { display: flex; align-items: center; gap: 16px; color: #64748b; font-size: 0.875rem; }
 
-        /* ── SIDEBAR ── */
-        .sidebar-card { background:#fff; border-radius:16px; padding:20px; margin-bottom:18px; box-shadow:0 4px 12px rgba(0,0,0,.06); }
-        .sidebar-card h5 { font-size:14px; font-weight:700; color:#1a2035; margin-bottom:14px; border-left:3px solid #4CAF50; padding-left:10px; }
-        .stat-item { display:flex; justify-content:space-between; margin-bottom:7px; font-size:13px; }
-        .stat-item strong { color:#2A7FAA; }
+        .banner-success {
+            background: linear-gradient(90deg, #ecfdf5 0%, #d1fae5 100%);
+            color: #065f46;
+            border-bottom: 1px solid #a7f3d0;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9375rem;
+        }
+        .banner-success .close-banner { background: none; border: none; font-size: 1.25rem; cursor: pointer; opacity: 0.65; color: inherit; }
 
-        /* ── CONNEXION PROMPT ── */
-        .login-prompt { background:#e3f2fd; border-radius:12px; padding:14px 18px; margin-bottom:18px; font-size:13px; color:#1565c0; display:flex; align-items:center; gap:10px; }
-        .login-prompt a { color:#2A7FAA; font-weight:700; }
-        .logged-prompt { background:#e8f5e9; color:#2e7d32; border-radius:12px; padding:14px 18px; margin-bottom:18px; font-size:13px; display:flex; align-items:center; gap:10px; }
+        .login-banner-soft {
+            border-radius: 14px;
+            padding: 1rem 1.15rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1e40af;
+        }
+        .login-banner-soft a { font-weight: 600; color: var(--dt-teal-dark); }
 
-        /* ── MODALS ── */
-        .overlay { display:none; position:fixed; inset:0; background:rgba(15,43,61,.55); z-index:900; align-items:center; justify-content:center; padding:16px; }
-        .overlay.open { display:flex; }
-        .modal-box { background:#fff; border-radius:20px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; animation:pop .22s ease; box-shadow:0 20px 60px rgba(0,0,0,.22); }
-        .modal-box.sm { max-width:380px; }
-        @keyframes pop { from { opacity:0; transform:scale(.95) } to { opacity:1; transform:scale(1) } }
-        .mh { padding:16px 20px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
-        .mh h5 { font-size:15px; font-weight:700; color:#1a2035; margin:0; }
-        .mh button { background:none; border:none; font-size:18px; color:#999; cursor:pointer; line-height:1; }
-        .mb { padding:20px; }
-        .mf { padding:14px 20px; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:8px; }
-        .btn-cancel { padding:8px 18px; border-radius:25px; border:1.5px solid #e9ecef; background:#fff; font-size:13px; font-weight:600; color:#6c757d; cursor:pointer; }
-        .btn-save   { padding:8px 20px; border-radius:25px; border:none; background:linear-gradient(135deg,#2A7FAA,#4CAF50); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
-        .btn-danger { padding:8px 18px; border-radius:25px; border:none; background:#dc3545; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
-        .confirm-body { text-align:center; padding:28px 20px 10px; }
-        .confirm-body .ico { font-size:44px; margin-bottom:10px; }
-        .confirm-body h5 { font-size:16px; font-weight:700; color:#1a2035; margin-bottom:6px; }
-        .confirm-body p { font-size:13px; color:#6c757d; }
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 1040;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            backdrop-filter: blur(4px);
+        }
+        .overlay.open { display: flex; }
+        .modal-create {
+            background: #fff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 92vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+            border: 1px solid #e2e8f0;
+        }
+        .modal-create-head {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+        }
+        .modal-create-head h5 { margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+        .modal-create-head .x {
+            position: absolute;
+            right: 14px;
+            top: 12px;
+            background: #f1f5f9;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            font-size: 1.25rem;
+            color: #64748b;
+            cursor: pointer;
+            line-height: 1;
+            transition: background 0.15s;
+        }
+        .modal-create-head .x:hover { background: #e2e8f0; color: #0f172a; }
+        .modal-create-body { padding: 1rem 1.25rem 1.25rem; overflow-y: auto; flex: 1; }
+        .modal-create-user { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .modal-create-user .name { font-weight: 700; font-size: 0.95rem; color: #0f172a; }
+        .field-min input, .field-min textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.9375rem;
+            margin-bottom: 12px;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .field-min input:focus, .field-min textarea:focus {
+            border-color: var(--dt-teal);
+            box-shadow: 0 0 0 0.2rem rgba(27, 154, 132, 0.15);
+        }
+        .field-min textarea { min-height: 160px; resize: vertical; font-family: inherit; }
+        .add-pub-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            margin-top: 6px;
+            border-top: 1px solid #e2e8f0;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            color: #64748b;
+        }
+        .add-pub-icons { display: flex; gap: 14px; font-size: 1.35rem; }
+        .btn-publish-main {
+            width: 100%;
+            margin-top: 12px;
+            border: none;
+            border-radius: 12px;
+            padding: 0.85rem;
+            font-size: 1rem;
+            font-weight: 700;
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transition: opacity 0.15s, transform 0.15s;
+        }
+        .btn-publish-main.enabled {
+            background: linear-gradient(135deg, var(--dt-teal) 0%, #15806e 100%);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(27, 154, 132, 0.35);
+        }
+        .btn-publish-main.enabled:hover { opacity: 0.95; transform: translateY(-1px); }
 
-        /* ── DIVERS ── */
-        .spinner { display:inline-block; width:14px; height:14px; border:2.5px solid #e9ecef; border-top-color:#2A7FAA; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
-        @keyframes spin { to { transform:rotate(360deg) } }
-        .badge-count { background:#2A7FAA; color:#fff; border-radius:20px; padding:2px 8px; font-size:11px; font-weight:700; }
-        .toast { position:fixed; bottom:20px; right:20px; background:#0f2b3d; color:#fff; padding:10px 20px; border-radius:12px; font-size:13px; display:none; z-index:9999; min-width:200px; }
-        .toast.show { display:block; animation:su .25s ease; }
-        .toast.ok  { background:#166534; }
-        .toast.err { background:#991b1b; }
-        @keyframes su { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
-        footer { background:#1a2035; color:#fff; text-align:center; padding:28px; margin-top:48px; }
+        .toast-floating {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 9999;
+            background: #0f172a;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            display: none;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .toast-floating.show { display: block; animation: t-in 0.22s ease; }
+        @keyframes t-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+        .gami-toast {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            z-index: 20000;
+            background: linear-gradient(155deg, #0f172a 0%, #1e293b 100%);
+            color: #fff;
+            border-radius: 16px;
+            padding: 16px 40px 16px 16px;
+            box-shadow: 0 14px 48px rgba(0, 0, 0, 0.35);
+            max-width: 380px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gami-toast.show { display: block; animation: t-in 0.28s ease; }
+        .gami-toast-inner { display: flex; gap: 12px; align-items: flex-start; }
+        .gami-toast-ico { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+        .gami-toast-title { color: #fde68a; font-weight: 800; font-size: 15px; line-height: 1.35; }
+        .gami-toast-sub { color: #e2e8f0; font-size: 13px; margin-top: 8px; line-height: 1.45; }
+        .gami-toast-x {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.35rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px;
+        }
+        .gami-toast-x:hover { color: #fff; }
+
+        .blog-dt-loading .spinner-border {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-width: 0.2rem;
+            color: var(--dt-teal);
+        }
+
+        footer.site-ft {
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 2rem;
+            border-top: 3px solid var(--dt-teal);
+        }
+        footer.site-ft small { color: #94a3b8; }
     </style>
 </head>
-<body>
+<body class="blog-feed-page page-doctime-bg">
+<?php include __DIR__ . '/../partials/nav_public.php'; ?>
 
-<?php $navActive = $_GET['page'] ?? 'blog_public'; include __DIR__ . '/../partials/nav_public.php'; ?>
-
-<!-- HEADER -->
-<div class="blog-header">
-    <div class="container">
-        <h1><i class="fas fa-blog me-3"></i>Blog Valorys</h1>
-        <p class="lead">Actualités, conseils santé et informations médicales</p>
-    </div>
+<?php if (!empty($_SESSION['success'])): ?>
+<div class="banner-success" id="topSuccessBanner">
+    <span><i class="fas fa-check-circle me-2"></i><?= htmlspecialchars((string)$_SESSION['success'], ENT_QUOTES, 'UTF-8') ?></span>
+    <button type="button" class="close-banner" onclick="document.getElementById('topSuccessBanner').remove()" aria-label="Fermer">&times;</button>
 </div>
+<?php unset($_SESSION['success']); endif; ?>
 
-<div class="container mb-5">
-    <div class="row">
+<div class="feed-outer">
+    <div class="feed-inner">
+        <header class="blog-dt-hero">
+            <h1 class="dt-page-head-title">Blog &amp; actualités</h1>
+            <p class="dt-page-head-sub">Découvrez les publications de la communauté DocTime · Valorys : santé, conseils et échanges.</p>
+        </header>
 
-        <!-- ═══════ VUE LISTE ═══════ -->
-        <div class="col-lg-8" id="viewList">
-            <?php if (!isset($_SESSION['user_id'])): ?>
-            <div class="login-prompt">
-                <i class="fas fa-info-circle fa-lg"></i>
-                <span><a href="index.php?page=login">Connectez-vous</a> pour commenter, créer, modifier ou supprimer des articles.</span>
-            </div>
-            <?php else: ?>
-            <div class="logged-prompt">
-                <i class="fas fa-check-circle fa-lg"></i>
-                <span>Connecté en tant que <strong><?= htmlspecialchars($_SESSION['user_name'] ?? 'Utilisateur') ?></strong></span>
-            </div>
-            <?php endif; ?>
-
-            <div id="articlesList">
-                <div class="text-center py-5"><div class="spinner"></div><p class="mt-2 text-muted">Chargement...</p></div>
-            </div>
-        </div>
-
-        <!-- ═══════ VUE DETAIL ═══════ -->
-        <div class="col-lg-8" id="viewDetail" style="display:none">
-            <div class="detail-header" id="detailHeaderBg">
-                <div class="container">
-                    <button class="back-btn" onclick="showList()">
-                        <i class="fas fa-arrow-left me-2"></i>Retour au blog
-                    </button>
-                    <h1 id="detailTitle"></h1>
-                    <div class="detail-meta">
-                        <span><i class="fas fa-user me-1"></i><span id="detailAuteur"></span></span>
-                        <span><i class="fas fa-calendar me-1"></i><span id="detailDate"></span></span>
-                        <span><i class="fas fa-eye me-1"></i><span id="detailVues"></span> vue(s)</span>
-                        <span><i class="fas fa-comment me-1"></i><span id="detailNbRep"></span> commentaire(s)</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Actions article (connecté seulement) -->
-            <div id="artOwnerActions" class="art-detail-actions" style="display:none">
-                <button class="btn-edit" onclick="openEditArtModal()">
-                    <i class="fas fa-edit me-1"></i>Modifier l'article
-                </button>
-                <button class="btn-del" onclick="confirmDelArt()">
-                    <i class="fas fa-trash me-1"></i>Supprimer l'article
-                </button>
-            </div>
-
-            <div class="article-body-box" id="detailBody"></div>
-
-            <!-- Commentaires -->
-            <div class="comments-box">
-                <h4><i class="fas fa-comments me-2" style="color:#2A7FAA"></i>Commentaires <span class="badge-count" id="repCount">0</span></h4>
-                <div id="commentsContainer"><p class="text-muted text-center py-2">Aucun commentaire pour le moment.</p></div>
-            </div>
-
-            <!-- Formulaire commentaire -->
-            <?php if (isset($_SESSION['user_id'])): ?>
-            <div class="comment-form">
-                <h5><i class="fas fa-pen me-2"></i>Laisser un commentaire</h5>
-                <div class="fg">
-                    <label>Type</label>
-                    <select id="newRepType" onchange="toggleNewRepFields()">
-                        <option value="text">💬 Texte</option>
-                        <option value="emoji">😊 Emoji</option>
-                        <option value="photo">🖼️ Photo (URL)</option>
-                    </select>
-                </div>
-                <div class="fg" id="nfText">
-                    <label>Commentaire *</label>
-                    <textarea id="newRepText" placeholder="Votre commentaire..." rows="3"></textarea>
-                    <div class="err-msg" id="eNewRepText"></div>
-                </div>
-                <div class="fg" id="nfEmoji" style="display:none">
-                    <label>Emoji *</label>
-                    <input id="newRepEmoji" placeholder="😊">
-                    <div class="err-msg" id="eNewRepEmoji"></div>
-                </div>
-                <div class="fg" id="nfPhoto" style="display:none">
-                    <label>URL Photo *</label>
-                    <input id="newRepPhoto" placeholder="https://...">
-                    <div class="err-msg" id="eNewRepPhoto"></div>
-                </div>
-                <button class="btn-comment" onclick="postComment()">
-                    <i class="fas fa-paper-plane me-2"></i>Publier
-                </button>
-            </div>
-            <?php else: ?>
-            <div class="login-prompt">
-                <i class="fas fa-lock"></i>
-                <span><a href="index.php?page=login">Connectez-vous</a> pour laisser un commentaire.</span>
-            </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- ═══════ SIDEBAR ═══════ -->
-        <div class="col-lg-4">
-            <!-- Recherche -->
-            <div class="sidebar-card">
-                <h5><i class="fas fa-search me-2"></i>Rechercher</h5>
-                <div class="input-group">
-                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Rechercher...">
-                    <button class="btn btn-primary btn-sm" onclick="searchArticles()"><i class="fas fa-search"></i></button>
-                </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="sidebar-card">
-                <h5><i class="fas fa-chart-line me-2"></i>Statistiques</h5>
-                <div class="stat-item"><span>Total articles</span><strong id="statTotal">—</strong></div>
-                <div class="stat-item"><span>Ce mois</span><strong id="statMonth">—</strong></div>
-            </div>
-
-            <!-- Publier un article (connectés uniquement) -->
-            <?php if (isset($_SESSION['user_id'])): ?>
-            <div class="sidebar-card">
-                <h5><i class="fas fa-plus-circle me-2"></i>Publier un article</h5>
-                <div class="fg">
-                    <label>Titre *</label>
-                    <input id="newArtTitre" placeholder="Titre de l'article">
-                    <div class="err-msg" id="eNewArtTitre"></div>
-                </div>
-                <div class="fg">
-                    <label>Contenu *</label>
-                    <textarea id="newArtContenu" placeholder="Contenu..." rows="5"></textarea>
-                    <div class="err-msg" id="eNewArtContenu"></div>
-                </div>
-                <button class="btn-comment w-100 mt-1" onclick="postArticle()">
-                    <i class="fas fa-upload me-2"></i>Publier l'article
-                </button>
-            </div>
-            <?php endif; ?>
-        </div>
-
-    </div><!-- /row -->
-</div><!-- /container -->
-
-<!-- ══ MODAL CRÉER / MODIFIER ARTICLE ══ -->
-<div class="overlay" id="ovEditArt">
-    <div class="modal-box">
-        <div class="mh">
-            <h5 id="ovEditArtTitle">Modifier l'article</h5>
-            <button onclick="closeOv('ovEditArt')">✕</button>
-        </div>
-        <div class="mb">
-            <div class="fg">
-                <label>Titre *</label>
-                <input id="editArtTitre" placeholder="Titre de l'article">
-                <div class="err-msg" id="eEditArtTitre"></div>
-            </div>
-            <div class="fg">
-                <label>Contenu *</label>
-                <textarea id="editArtContenu" rows="8" placeholder="Contenu de l'article..."></textarea>
-                <div class="err-msg" id="eEditArtContenu"></div>
-            </div>
-        </div>
-        <div class="mf">
-            <button class="btn-cancel" onclick="closeOv('ovEditArt')">Annuler</button>
-            <button class="btn-save" onclick="saveEditArt()"><i class="fas fa-save me-1"></i>Enregistrer</button>
-        </div>
-    </div>
-</div>
-
-<!-- ══ MODAL MODIFIER COMMENTAIRE ══ -->
-<div class="overlay" id="ovEditRep">
-    <div class="modal-box">
-        <div class="mh"><h5>Modifier le commentaire</h5><button onclick="closeOv('ovEditRep')">✕</button></div>
-        <div class="mb">
-            <input type="hidden" id="editRepId">
-            <div class="fg">
-                <label>Type</label>
-                <select id="editRepType" onchange="toggleEditRepFields()">
-                    <option value="text">💬 Texte</option>
-                    <option value="emoji">😊 Emoji</option>
-                    <option value="photo">🖼️ Photo URL</option>
+        <div class="toolbar-card">
+            <div class="search-row mb-2">
+                <span class="icon-wrap"><i class="fas fa-search"></i></span>
+                <input type="search" id="searchInput" placeholder="Rechercher par titre, auteur ou contenu..." autocomplete="off">
+                <button type="button" class="btn-search-blue" id="btnSearch">Rechercher</button>
+                <select id="sortSelect" class="sort-select" title="Tri">
+                    <option value="desc">↕ Plus récent d'abord</option>
+                    <option value="asc">↕ Plus ancien d'abord</option>
                 </select>
             </div>
-            <div class="fg" id="efText">
-                <label>Commentaire *</label>
-                <textarea id="editRepText" rows="4"></textarea>
-                <div class="err-msg" id="eEditRepText"></div>
-            </div>
-            <div class="fg" id="efEmoji" style="display:none">
-                <label>Emoji *</label>
-                <input id="editRepEmoji">
-                <div class="err-msg" id="eEditRepEmoji"></div>
-            </div>
-            <div class="fg" id="efPhoto" style="display:none">
-                <label>URL Photo *</label>
-                <input id="editRepPhoto">
-                <div class="err-msg" id="eEditRepPhoto"></div>
+            <div class="filter-card border-0 shadow-none p-0 m-0" style="background:transparent;">
+                <div class="filter-toggle" id="filterToggle" role="button" tabindex="0">
+                    <span><i class="fas fa-sliders-h me-2 text-secondary"></i>Filtres avancés</span>
+                    <i class="fas fa-chevron-down" id="filterChevron"></i>
+                </div>
+                <div class="filter-panel" id="filterPanel">
+                    <p class="small text-muted mb-2">Affinez la liste (même critère que la recherche ci-dessus).</p>
+                    <input type="text" class="form-control form-control-sm" id="filterAuteur" placeholder="Filtrer par mot dans auteur…">
+                </div>
             </div>
         </div>
-        <div class="mf">
-            <button class="btn-cancel" onclick="closeOv('ovEditRep')">Annuler</button>
-            <button class="btn-save" onclick="saveEditRep()"><i class="fas fa-save me-1"></i>Enregistrer</button>
+
+        <?php if (empty($_SESSION['user_id'])): ?>
+        <div class="login-banner-soft">
+            <i class="fas fa-sign-in-alt me-2" style="color:var(--dt-teal);"></i><a href="index.php?page=login">Connectez-vous</a> pour publier, voter ou gérer vos articles.
+        </div>
+        <?php endif; ?>
+
+        <h2 class="section-articles-title"><i class="fas fa-newspaper"></i> Articles (<span id="feedCount">0</span>)</h2>
+
+        <?php if (isset($_SESSION['user_id'])): ?>
+        <div class="composer-card">
+            <div class="composer-head">
+                <div class="avatar-circle" id="composerAvatar"><?= strtoupper(substr($blogUserLabel ?: 'U', 0, 1)) ?></div>
+                <div class="composer-fake-input" id="openCreateModal"><?php
+                    $greet = $blogUserLabel !== '' ? $blogUserLabel : 'vous';
+                    echo 'Quoi de neuf, ' . htmlspecialchars($greet, ENT_QUOTES, 'UTF-8') . ' ?';
+                ?></div>
+            </div>
+            <div class="composer-actions">
+                <button type="button" id="btnSoonPhoto"><i class="fas fa-image i-photo"></i>Photo</button>
+                <button type="button" id="btnSoonEmoji"><i class="far fa-smile i-emoji"></i>Emoji</button>
+                <button type="button" id="btnOpenArticleModal"><i class="fas fa-pen i-article"></i>Article</button>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div id="articlesList">
+            <div class="text-center py-5 text-muted blog-dt-loading"><div class="spinner-border" role="status" aria-label="Chargement"></div><p class="mt-3 mb-0 small">Chargement des articles…</p></div>
         </div>
     </div>
 </div>
 
-<!-- ══ MODAL CONFIRMATION SUPPRESSION ══ -->
+<!-- Créer une publication -->
+<div class="overlay" id="ovCreate">
+    <div class="modal-create">
+        <div class="modal-create-head">
+            <button type="button" class="x" id="closeCreate" aria-label="Fermer">&times;</button>
+            <h5>Créer une publication</h5>
+        </div>
+        <div class="modal-create-body">
+            <div class="modal-create-user">
+                <div class="avatar-circle"><?= strtoupper(substr($blogUserLabel ?: 'U', 0, 1)) ?></div>
+                <span class="name"><?= htmlspecialchars($blogUserLabel ?: 'Utilisateur', ENT_QUOTES, 'UTF-8') ?></span>
+            </div>
+            <div class="field-min">
+                <input type="text" id="newArtTitreModal" placeholder="Titre de l'article..." maxlength="255">
+                <textarea id="newArtContenuModal" placeholder="Écrivez votre article..."></textarea>
+            </div>
+            <div class="add-pub-bar">
+                <span>Ajouter à votre publication</span>
+                <div class="add-pub-icons">
+                    <i class="fas fa-image text-success" title="Photo" style="cursor:pointer" id="btnSoonPhoto2"></i>
+                    <i class="far fa-smile text-warning" title="Emoji" style="cursor:pointer" id="btnSoonEmoji2"></i>
+                </div>
+            </div>
+            <button type="button" class="btn-publish-main" id="btnPublishModal" disabled>Publier</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modifier article -->
+<div class="overlay" id="ovEditArt">
+    <div class="modal-create">
+        <div class="modal-create-head">
+            <button type="button" class="x" onclick="closeOv('ovEditArt')">&times;</button>
+            <h5 id="ovEditArtTitle">Modifier l'article</h5>
+        </div>
+        <div class="modal-create-body">
+            <div class="field-min">
+                <input type="text" id="editArtTitre" placeholder="Titre">
+                <textarea id="editArtContenu" rows="8" placeholder="Contenu"></textarea>
+                <div class="text-danger small" id="eEditArtTitre"></div>
+                <div class="text-danger small" id="eEditArtContenu"></div>
+            </div>
+            <button type="button" class="btn-publish-main enabled mt-2" onclick="saveEditArt()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Suppression -->
 <div class="overlay" id="ovDel">
-    <div class="modal-box sm">
-        <div class="confirm-body">
-            <div class="ico">🗑️</div>
-            <h5 id="delTitle">Supprimer ?</h5>
-            <p id="delSub">Cette action est irréversible.</p>
-        </div>
-        <div class="mf">
-            <button class="btn-cancel" onclick="closeOv('ovDel')">Annuler</button>
-            <button class="btn-danger" id="delBtn">Supprimer</button>
+    <div class="modal-create" style="max-width:400px;">
+        <div class="modal-create-body text-center">
+            <div style="font-size:2.5rem;">🗑️</div>
+            <h5 class="mt-2" id="delTitle">Supprimer ?</h5>
+            <p class="text-muted small" id="delSub">Action irréversible.</p>
+            <div class="d-flex gap-2 justify-content-center mt-3">
+                <button type="button" class="btn btn-secondary rounded-pill" onclick="closeOv('ovDel')">Annuler</button>
+                <button type="button" class="btn btn-danger rounded-pill" id="delBtn">Supprimer</button>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast-floating" id="toast"></div>
 
-<footer>
+<footer class="site-ft">
     <div class="container">
-        <p>© 2024 Valorys — Tous droits réservés</p>
+        <p class="mb-0">© 2026 Valorys — Tous droits réservés</p>
         <small>Plateforme médicale en ligne</small>
     </div>
 </footer>
 
 <script>
-// ═══════════════════════════════════════════
-//  CONFIG SESSION (injectée par PHP)
-// ═══════════════════════════════════════════
-const IS_LOGGED    = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
-const SESSION_NAME = <?= isset($_SESSION['user_name']) ? json_encode($_SESSION['user_name']) : 'null' ?>;
-const SESSION_ID   = <?= isset($_SESSION['user_id'])   ? (int)$_SESSION['user_id']          : 'null' ?>;
+const IS_LOGGED = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+const SESSION_ID = <?= isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 'null' ?>;
+const API_ART_LIKE = 'index.php?page=api_article_like';
 
-// ═══════════════════════════════════════════
-//  UTILITAIRES
-// ═══════════════════════════════════════════
 const $ = id => document.getElementById(id);
-
 function esc(s) {
-    if (!s) return '';
+    if (s == null) return '';
     const d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
 }
-
-function fmtDate(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; }
-function fmtDT(d)   { return d ? new Date(d).toLocaleString('fr-FR')    : '—'; }
-function trunc(s, n = 200) { return s && s.length > n ? s.slice(0, n) + '…' : (s || ''); }
-
-function toast(msg, type = 'ok') {
+function trunc(s, n = 220) {
+    if (!s) return '';
+    const t = s.replace(/\s+/g, ' ').trim();
+    return t.length > n ? t.slice(0, n) + '…' : t;
+}
+function fmtDT(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }); } catch(e) { return '—'; }
+}
+function toast(msg) {
     const t = $('toast');
     t.textContent = msg;
-    t.className = 'toast show ' + type;
-    clearTimeout(t._t);
-    t._t = setTimeout(() => t.classList.remove('show'), 3200);
+    t.classList.add('show');
+    clearTimeout(t._x);
+    t._x = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
+/** Bandeau vert en tête (comme après publication côté serveur). */
+function showTopSuccessBanner(msg) {
+    const old = document.getElementById('topSuccessBanner');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.id = 'topSuccessBanner';
+    div.className = 'banner-success';
+    div.innerHTML = '<span><i class="fas fa-check-circle me-2"></i>' + esc(msg) + '</span>';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'close-banner';
+    btn.setAttribute('aria-label', 'Fermer');
+    btn.innerHTML = '&times;';
+    btn.onclick = () => div.remove();
+    div.appendChild(btn);
+    const feed = document.querySelector('.feed-outer');
+    if (feed && feed.parentNode) {
+        feed.parentNode.insertBefore(div, feed);
+    } else {
+        document.body.prepend(div);
+    }
+}
+
+function hideGamiToast() {
+    const t = document.getElementById('gamiToast');
+    if (!t) return;
+    t.classList.remove('show');
+    clearTimeout(window._gamiToastHide);
+    window._gamiToastHide = setTimeout(() => { if (t.parentNode) t.remove(); }, 280);
+}
+
+/** Toast points + récompense (bas-droite). */
+function showGamificationToast(g) {
+    if (!g) return;
+    const pts = Number(g.points_added || 0);
+    const tot = Number(g.total_points || 0);
+    const rewards = g.new_rewards || [];
+    if (pts <= 0 && tot <= 0 && !rewards.length) return;
+    hideGamiToast();
+    const wrap = document.createElement('div');
+    wrap.id = 'gamiToast';
+    wrap.className = 'gami-toast';
+    const titleText = (pts > 0 ? ('+' + pts + ' points gagnés 🎯') : 'Points mis à jour 🎯') +
+        ' (' + tot + ' pts au total)';
+    let inner = '<button type="button" class="gami-toast-x" aria-label="Fermer">&times;</button>';
+    inner += '<div class="gami-toast-inner"><span class="gami-toast-ico">🎯</span><div class="gami-toast-body-wrap">';
+    inner += '<div class="gami-toast-title"></div><div class="gami-toast-sub"></div></div></div>';
+    wrap.innerHTML = inner;
+    wrap.querySelector('.gami-toast-title').textContent = titleText;
+    const subEl = wrap.querySelector('.gami-toast-sub');
+    if (rewards.length) {
+        const r = rewards[0];
+        subEl.textContent = '🎈 Nouvelle récompense : ' + (r.title || '') +
+            ' ! Un certificat vous a été envoyé par email 🎓';
+    } else {
+        subEl.textContent = '';
+        subEl.style.display = 'none';
+    }
+    document.body.appendChild(wrap);
+    wrap.querySelector('.gami-toast-x').onclick = () => hideGamiToast();
+    requestAnimationFrame(() => wrap.classList.add('show'));
+    clearTimeout(window._gamiToastAuto);
+    window._gamiToastAuto = setTimeout(hideGamiToast, 10000);
+}
 function closeOv(id) { $(id).classList.remove('open'); }
-function openOv(id)  { $(id).classList.add('open'); }
+function openOv(id) { $(id).classList.add('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
 
-document.querySelectorAll('.overlay').forEach(o =>
-    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); })
-);
-
-function setErr(id, msg) { const e = $(id); if (e) e.textContent = msg; }
-function clrErr(ids) { ids.forEach(id => { const e = $(id); if (e) { e.textContent = ''; } }); }
-
-// ═══════════════════════════════════════════
-//  APPELS API
-// ═══════════════════════════════════════════
 async function apiGet(params) {
-    const r = await fetch('index.php?' + new URLSearchParams(params), { headers: { Accept: 'application/json' } });
-    return r.json();
-}
-async function apiPost(params, body) {
     const r = await fetch('index.php?' + new URLSearchParams(params), {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin',
+    });
+    const text = await r.text();
+    try {
+        return text ? JSON.parse(text) : {};
+    } catch (e) {
+        return { success: false, message: 'Réponse invalide du serveur.' };
+    }
+}
+async function apiPostJson(url, body) {
+    const r = await fetch(url, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(body),
     });
-    return r.json();
+    const text = await r.text();
+    try {
+        return text ? JSON.parse(text) : { success: false, message: r.ok ? 'Réponse vide' : ('Erreur ' + r.status) };
+    } catch (e) {
+        return {
+            success: false,
+            message: r.ok ? 'Réponse non JSON du serveur.' : ('Erreur serveur (' + r.status + ').'),
+        };
+    }
 }
 
-// ═══════════════════════════════════════════
-//  ÉTAT GLOBAL
-// ═══════════════════════════════════════════
-let articles   = [];
-let currentArt = null;
-let editArtId  = null;
-let editRepBuf = null;
+let articles = [];
+let editArtId = null;
 
-// ═══════════════════════════════════════════
-//  LISTE DES ARTICLES
-// ═══════════════════════════════════════════
-async function loadArticles() {
-    $('articlesList').innerHTML = '<div class="text-center py-5"><div class="spinner"></div></div>';
-    const r = await apiGet({ page: 'api_article', list: 1 });
-    if (!r.success) {
-        $('articlesList').innerHTML = '<div class="alert alert-danger">Erreur de chargement des articles.</div>';
-        return;
-    }
-    articles = r.articles || [];
-    $('statTotal').textContent = r.total  || 0;
-    $('statMonth').textContent = r.month  || 0;
+function sortArticles(arr) {
+    const o = $('sortSelect').value;
+    const cp = [...arr];
+    cp.sort((a, b) => {
+        const da = new Date(a.created_at || 0).getTime();
+        const db = new Date(b.created_at || 0).getTime();
+        return o === 'asc' ? da - db : db - da;
+    });
+    return cp;
+}
 
-    if (!articles.length) {
-        $('articlesList').innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-newspaper fa-3x mb-3"></i><p>Aucun article disponible.</p></div>';
-        return;
-    }
-    renderArticleList(articles);
+function applyFilters(list) {
+    const q = $('searchInput').value.toLowerCase().trim();
+    const fa = ($('filterAuteur').value || '').toLowerCase().trim();
+    return list.filter(a => {
+        const matchQ = !q ||
+            (a.titre || '').toLowerCase().includes(q) ||
+            (a.contenu || '').toLowerCase().includes(q) ||
+            (a.auteur_display || a.auteur || '').toLowerCase().includes(q);
+        const matchA = !fa || (a.auteur_display || a.auteur || '').toLowerCase().includes(fa);
+        return matchQ && matchA;
+    });
 }
 
 function renderArticleList(list) {
-    $('articlesList').innerHTML = list.map(a => `
-        <div class="art-card">
-            ${IS_LOGGED ? `<div class="art-crud">
-                <button class="btn-edit" title="Modifier" onclick="openEditArtFromList(${a.id}, event)">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-del" title="Supprimer" onclick="confirmDelArtFromList(${a.id}, ${JSON.stringify(esc(a.titre))}, event)">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>` : ''}
-            <h2 class="art-title">
-                <a href="#" onclick="openArticle(${a.id}); return false">${esc(a.titre)}</a>
-            </h2>
-            <div class="art-meta">
-                <span><i class="fas fa-user"></i> ${esc(a.auteur) || 'Valorys'}</span>
-                <span><i class="fas fa-calendar-alt"></i> ${fmtDate(a.created_at)}</span>
-                <span><i class="fas fa-eye"></i> ${a.vues || 0} vue(s)</span>
-                <span><i class="fas fa-comment"></i> ${a.nb_replies || 0} commentaire(s)</span>
-            </div>
-            <div class="art-excerpt">${trunc(esc(a.contenu))}</div>
-            <div class="art-footer">
-                <a href="#" class="btn-read" onclick="openArticle(${a.id}); return false">
-                    Lire la suite <i class="fas fa-arrow-right ms-1"></i>
-                </a>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Recherche locale
-function searchArticles() {
-    const q = $('searchInput').value.toLowerCase().trim();
-    if (!q) { loadArticles(); return; }
-    const filtered = articles.filter(a =>
-        (a.titre   || '').toLowerCase().includes(q) ||
-        (a.contenu || '').toLowerCase().includes(q)
-    );
-    if (!filtered.length) {
-        $('articlesList').innerHTML = '<div class="text-center text-muted py-4">Aucun résultat pour cette recherche.</div>';
+    $('feedCount').textContent = String(list.length);
+    if (!list.length) {
+        $('articlesList').innerHTML = '<div class="post-card p-4 text-center text-muted border-dashed" style="border-style:dashed;"><i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>Aucun article à afficher.</div>';
         return;
     }
-    renderArticleList(filtered);
-}
-$('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchArticles(); });
-
-// ═══════════════════════════════════════════
-//  DÉTAIL D'UN ARTICLE
-// ═══════════════════════════════════════════
-async function openArticle(id) {
-    const r = await apiGet({ page: 'api_article', id });
-    if (!r.success) { toast('Article introuvable', 'err'); return; }
-
-    currentArt = r.article;
-    const replies = r.replies || [];
-
-    $('viewList').style.display   = 'none';
-    $('viewDetail').style.display = '';
-
-    $('detailTitle').textContent  = currentArt.titre;
-    $('detailAuteur').textContent = currentArt.auteur || 'Valorys';
-    $('detailDate').textContent   = fmtDate(currentArt.created_at);
-    $('detailVues').textContent   = currentArt.vues || 0;
-    $('detailNbRep').textContent  = replies.length;
-    $('detailBody').innerHTML     = esc(currentArt.contenu).replace(/\n/g, '<br>');
-
-    // Boutons modifier / supprimer article
-    $('artOwnerActions').style.display = IS_LOGGED ? 'flex' : 'none';
-
-    renderComments(replies);
-    window.scrollTo(0, 0);
-}
-
-function showList() {
-    $('viewList').style.display   = '';
-    $('viewDetail').style.display = 'none';
-    currentArt = null;
-    loadArticles();
-}
-
-// ═══════════════════════════════════════════
-//  COMMENTAIRES
-// ═══════════════════════════════════════════
-function renderComments(replies) {
-    $('repCount').textContent = replies.length;
-    if (!replies.length) {
-        $('commentsContainer').innerHTML = '<p class="text-muted text-center py-3">Aucun commentaire. Soyez le premier !</p>';
-        return;
-    }
-    $('commentsContainer').innerHTML = replies.map(r => {
-        let content = '';
-        if      (r.type_reply === 'emoji') content = `<span style="font-size:26px">${esc(r.emoji)}</span>`;
-        else if (r.type_reply === 'photo') content = `<img src="${esc(r.photo)}" style="max-width:100%;border-radius:10px;margin-top:6px">`;
-        else                               content = esc(r.contenu_text || '').replace(/\n/g, '<br>');
-
-        const actions = IS_LOGGED ? `<div class="c-actions">
-            <button class="btn-edit" onclick="openEditRepModal(${r.id_reply})"><i class="fas fa-edit me-1"></i>Modifier</button>
-            <button class="btn-del"  onclick="confirmDelRep(${r.id_reply})"><i class="fas fa-trash me-1"></i>Supprimer</button>
-        </div>` : '';
-
-        return `<div class="comment-item">
-            <div class="c-avatar">${(r.auteur || 'A').charAt(0).toUpperCase()}</div>
-            <div class="c-body">
-                <div class="c-author">${esc(r.auteur || 'Anonyme')}</div>
-                <div class="c-date"><i class="fas fa-clock me-1"></i>${fmtDT(r.date_reply)}</div>
-                <div class="c-content">${content}</div>
-                ${actions}
+    $('articlesList').innerHTML = list.map(a => {
+        const aid = a.id;
+        const authorShow = esc(a.auteur_display || a.auteur || 'Valorys');
+        const initial = (authorShow || 'V').charAt(0).toUpperCase();
+        const isOwner = IS_LOGGED && SESSION_ID != null && Number(a.auteur_id) === SESSION_ID;
+        const modBtns = isOwner ? `
+            <div class="post-actions-top">
+                <button type="button" class="btn-modifier" onclick="event.stopPropagation();openEditArtFromList(${aid})"><i class="fas fa-pencil-alt"></i> Modifier</button>
+                <button type="button" class="btn-supprimer" onclick="event.stopPropagation();confirmDelArtFromList(${aid}, ${JSON.stringify(a.titre)})"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>` : '';
+        const lk = Number(a.nb_likes || 0);
+        const dk = Number(a.nb_dislikes || 0);
+        const myv = a.my_vote || null;
+        const likeCls = myv === 'like' ? ' vote-btn active-like' : ' vote-btn';
+        const disCls = myv === 'dislike' ? ' vote-btn active-dis' : ' vote-btn';
+        return `
+        <article class="post-card" data-id="${aid}">
+            <div class="post-head">
+                <div class="post-author-block">
+                    <div class="avatar-circle" style="width:40px;height:40px;font-size:1rem;">${initial}</div>
+                    <div class="post-author-text">
+                        <div class="post-author-name">${authorShow}</div>
+                        <div class="post-meta-line">
+                            <span>${fmtDT(a.created_at)}</span>
+                            <i class="fas fa-globe-americas" title="Public"></i>
+                        </div>
+                    </div>
+                </div>
+                ${modBtns}
             </div>
-        </div>`;
+            <div class="post-body">
+                <a class="post-title-link" href="index.php?page=detail_article_public&id=${aid}">${esc(a.titre)}</a>
+                <div class="post-excerpt">${esc(trunc(a.contenu || '', 380))}</div>
+            </div>
+            <div class="post-footer-bar">
+                <div class="post-reactions">
+                    <button type="button" class="${likeCls}" data-vote="like" data-aid="${aid}" ${IS_LOGGED ? '' : ' title="Connectez-vous pour voter"'}>
+                        <i class="fas fa-heart"></i><span class="n-lk">${lk}</span>
+                    </button>
+                    <button type="button" class="${disCls}" data-vote="dislike" data-aid="${aid}" ${IS_LOGGED ? '' : ' title="Connectez-vous pour voter"'}>
+                        <i class="fas fa-thumbs-down"></i><span class="n-dk">${dk}</span>
+                    </button>
+                </div>
+                <div class="post-stats">
+                    <span title="Vues"><i class="fas fa-eye me-1"></i>${Number(a.vues || 0)}</span>
+                    <span title="Commentaires"><i class="fas fa-comment me-1"></i>${Number(a.nb_replies || 0)}</span>
+                </div>
+            </div>
+        </article>`;
     }).join('');
+
+    $('articlesList').querySelectorAll('[data-vote]').forEach(btn => {
+        btn.addEventListener('click', () => voteArticle(Number(btn.getAttribute('data-aid')), btn.getAttribute('data-vote')));
+    });
 }
 
-// Poster un commentaire
-function toggleNewRepFields() {
-    const t = $('newRepType').value;
-    $('nfText').style.display  = t === 'text'  ? '' : 'none';
-    $('nfEmoji').style.display = t === 'emoji' ? '' : 'none';
-    $('nfPhoto').style.display = t === 'photo' ? '' : 'none';
+async function voteArticle(articleId, type) {
+    if (!IS_LOGGED) { toast('Connectez-vous pour voter.'); return; }
+    const r = await apiPostJson(API_ART_LIKE, { article_id: articleId, type });
+    if (!r.success) { toast(r.message || 'Erreur'); return; }
+    const card = document.querySelector('.post-card[data-id="' + articleId + '"]');
+    if (card) {
+        const lk = card.querySelector('.n-lk');
+        const dk = card.querySelector('.n-dk');
+        if (lk) lk.textContent = r.likes;
+        if (dk) dk.textContent = r.dislikes;
+        const bl = card.querySelector('[data-vote="like"]');
+        const bd = card.querySelector('[data-vote="dislike"]');
+        bl.classList.toggle('active-like', r.my_vote === 'like');
+        bd.classList.toggle('active-dis', r.my_vote === 'dislike');
+    }
+    const ref = articles.find(x => Number(x.id) === articleId);
+    if (ref) { ref.nb_likes = r.likes; ref.nb_dislikes = r.dislikes; ref.my_vote = r.my_vote; }
 }
 
-async function postComment() {
-    if (!IS_LOGGED || !currentArt) return;
-    clrErr(['eNewRepText', 'eNewRepEmoji', 'eNewRepPhoto']);
-
-    const type = $('newRepType').value;
-    let contenu_text = null, emoji = null, photo = null, ok = true;
-
-    if      (type === 'text')  { contenu_text = $('newRepText').value.trim();  if (!contenu_text) { setErr('eNewRepText', 'Le texte est obligatoire.');   ok = false; } }
-    else if (type === 'emoji') { emoji        = $('newRepEmoji').value.trim(); if (!emoji)        { setErr('eNewRepEmoji', "L'emoji est obligatoire.");    ok = false; } }
-    else                       { photo        = $('newRepPhoto').value.trim(); if (!photo)        { setErr('eNewRepPhoto', "L'URL est obligatoire.");       ok = false; } }
-    if (!ok) return;
-
-    const r = await apiPost({ page: 'api_reply' }, { id_article: currentArt.id, type_reply: type, contenu_text, emoji, photo, auteur: SESSION_NAME });
-    if (!r.success) { toast(r.message || 'Erreur', 'err'); return; }
-
-    toast('Commentaire publié !', 'ok');
-    $('newRepText').value = ''; $('newRepEmoji').value = ''; $('newRepPhoto').value = '';
-    const r2 = await apiGet({ page: 'api_article', id: currentArt.id });
-    if (r2.success) renderComments(r2.replies || []);
+async function loadArticles() {
+    const r = await apiGet({ page: 'api_article', list: 1 });
+    if (!r.success) {
+        $('articlesList').innerHTML = '<div class="alert alert-danger">Impossible de charger les articles.</div>';
+        return;
+    }
+    articles = r.articles || [];
+    const sorted = sortArticles(applyFilters(articles));
+    renderArticleList(sorted);
 }
 
-// Modifier un commentaire
-function toggleEditRepFields() {
-    const t = $('editRepType').value;
-    $('efText').style.display  = t === 'text'  ? '' : 'none';
-    $('efEmoji').style.display = t === 'emoji' ? '' : 'none';
-    $('efPhoto').style.display = t === 'photo' ? '' : 'none';
+function refreshDisplayed() {
+    const sorted = sortArticles(applyFilters(articles));
+    renderArticleList(sorted);
 }
 
-async function openEditRepModal(repId) {
+$('btnSearch').addEventListener('click', refreshDisplayed);
+$('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') refreshDisplayed(); });
+$('sortSelect').addEventListener('change', refreshDisplayed);
+$('filterAuteur').addEventListener('input', refreshDisplayed);
+
+const ft = $('filterToggle');
+const fp = $('filterPanel');
+const ch = $('filterChevron');
+ft.addEventListener('click', () => {
+    fp.classList.toggle('open');
+    ch.classList.toggle('fa-chevron-down');
+    ch.classList.toggle('fa-chevron-up');
+});
+ft.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ft.click(); }});
+
+/* Modal création */
+function openCreate() { if (!IS_LOGGED) return; openOv('ovCreate'); }
+$('openCreateModal')?.addEventListener('click', openCreate);
+$('btnOpenArticleModal')?.addEventListener('click', openCreate);
+$('closeCreate')?.addEventListener('click', () => closeOv('ovCreate'));
+
+function validatePublishBtn() {
+    const btn = $('btnPublishModal');
+    const t = ($('newArtTitreModal').value || '').trim();
+    const c = ($('newArtContenuModal').value || '').trim();
+    if (t.length && c.length >= 10) {
+        btn.disabled = false;
+        btn.classList.add('enabled');
+    } else {
+        btn.disabled = true;
+        btn.classList.remove('enabled');
+    }
+}
+$('newArtTitreModal')?.addEventListener('input', validatePublishBtn);
+$('newArtContenuModal')?.addEventListener('input', validatePublishBtn);
+
+$('btnPublishModal')?.addEventListener('click', async () => {
     if (!IS_LOGGED) return;
-    const r = await apiGet({ page: 'api_reply', id: repId });
-    if (!r.success || !r.reply) { toast('Commentaire introuvable', 'err'); return; }
-
-    editRepBuf = r.reply;
-    $('editRepId').value   = repId;
-    $('editRepType').value = r.reply.type_reply;
-    $('editRepText').value  = r.reply.contenu_text || '';
-    $('editRepEmoji').value = r.reply.emoji || '';
-    $('editRepPhoto').value = r.reply.photo || '';
-    clrErr(['eEditRepText', 'eEditRepEmoji', 'eEditRepPhoto']);
-    toggleEditRepFields();
-    openOv('ovEditRep');
-}
-
-async function saveEditRep() {
-    if (!IS_LOGGED || !editRepBuf) return;
-    const id   = $('editRepId').value;
-    const type = $('editRepType').value;
-    let contenu_text = null, emoji = null, photo = null, ok = true;
-    clrErr(['eEditRepText', 'eEditRepEmoji', 'eEditRepPhoto']);
-
-    if      (type === 'text')  { contenu_text = $('editRepText').value.trim();  if (!contenu_text) { setErr('eEditRepText', 'Le texte est obligatoire.');   ok = false; } }
-    else if (type === 'emoji') { emoji        = $('editRepEmoji').value.trim(); if (!emoji)        { setErr('eEditRepEmoji', "L'emoji est obligatoire.");    ok = false; } }
-    else                       { photo        = $('editRepPhoto').value.trim(); if (!photo)        { setErr('eEditRepPhoto', "L'URL est obligatoire.");       ok = false; } }
-    if (!ok) return;
-
-    const r = await apiPost({ page: 'api_reply', id }, { id_article: editRepBuf.id_article, type_reply: type, contenu_text, emoji, photo, auteur: editRepBuf.auteur, _method: 'PUT' });
-    if (!r.success) { toast(r.message || 'Erreur', 'err'); return; }
-
-    closeOv('ovEditRep');
-    toast('Commentaire modifié !', 'ok');
-    const r2 = await apiGet({ page: 'api_article', id: currentArt.id });
-    if (r2.success) renderComments(r2.replies || []);
-}
-
-// Supprimer un commentaire
-function confirmDelRep(repId) {
-    if (!IS_LOGGED) return;
-    $('delTitle').textContent = 'Supprimer ce commentaire ?';
-    $('delSub').textContent   = 'Cette action est irréversible.';
-    $('delBtn').onclick = async () => {
-        const r = await apiPost({ page: 'api_reply', id: repId }, { _method: 'DELETE' });
-        closeOv('ovDel');
-        toast(r.success ? 'Commentaire supprimé.' : (r.message || 'Erreur'), r.success ? 'ok' : 'err');
-        if (!r.success) return;
-        const r2 = await apiGet({ page: 'api_article', id: currentArt.id });
-        if (r2.success) renderComments(r2.replies || []);
-    };
-    openOv('ovDel');
-}
-
-// ═══════════════════════════════════════════
-//  PUBLIER UN ARTICLE (sidebar)
-// ═══════════════════════════════════════════
-async function postArticle() {
-    if (!IS_LOGGED) return;
-    clrErr(['eNewArtTitre', 'eNewArtContenu']);
-
-    const titre   = $('newArtTitre').value.trim();
-    const contenu = $('newArtContenu').value.trim();
-    let ok = true;
-    if (!titre)   { setErr('eNewArtTitre', 'Le titre est obligatoire.');   ok = false; }
-    if (!contenu) { setErr('eNewArtContenu', 'Le contenu est obligatoire.'); ok = false; }
-    if (!ok) return;
-
-    const r = await apiPost({ page: 'api_article' }, { titre, contenu });
-    if (!r.success) { toast(r.message || 'Erreur lors de la création', 'err'); return; }
-
-    toast('Article publié avec succès !', 'ok');
-    $('newArtTitre').value   = '';
-    $('newArtContenu').value = '';
+    const titre = ($('newArtTitreModal').value || '').trim();
+    const contenu = ($('newArtContenuModal').value || '').trim();
+    const r = await apiPostJson('index.php?page=api_article', { titre, contenu });
+    if (!r.success) {
+        toast((r.errors && (r.errors.titre || r.errors.contenu)) ? (r.errors.titre || r.errors.contenu) : (r.message || 'Erreur'));
+        return;
+    }
+    showTopSuccessBanner(r.message || 'Article publié avec succès !');
+    /* gamification présent dès que l’API a comptabilisé les points */
+    if (r.gamification && typeof r.gamification === 'object') {
+        showGamificationToast(r.gamification);
+    }
+    $('newArtTitreModal').value = '';
+    $('newArtContenuModal').value = '';
+    validatePublishBtn();
+    closeOv('ovCreate');
     loadArticles();
-}
+});
 
-// ═══════════════════════════════════════════
-//  MODIFIER UN ARTICLE
-// ═══════════════════════════════════════════
-function openEditArtModal() {
-    if (!IS_LOGGED || !currentArt) return;
-    editArtId = currentArt.id;
-    $('ovEditArtTitle').textContent = 'Modifier l\'article';
-    $('editArtTitre').value   = currentArt.titre;
-    $('editArtContenu').value = currentArt.contenu;
-    clrErr(['eEditArtTitre', 'eEditArtContenu']);
-    openOv('ovEditArt');
-}
+['btnSoonPhoto','btnSoonEmoji','btnSoonPhoto2','btnSoonEmoji2'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('click', () => toast('Fonction à venir — utilisez le texte pour décrire votre média.'));
+});
 
-async function openEditArtFromList(id, e) {
-    e.stopPropagation();
+/* Édition / suppression */
+async function openEditArtFromList(id) {
     if (!IS_LOGGED) return;
     const r = await apiGet({ page: 'api_article', id });
-    if (!r.success) { toast('Article introuvable', 'err'); return; }
-
+    if (!r.success || !r.article) { toast('Article introuvable'); return; }
     editArtId = id;
-    $('ovEditArtTitle').textContent = 'Modifier l\'article';
-    $('editArtTitre').value   = r.article.titre;
+    $('editArtTitre').value = r.article.titre;
     $('editArtContenu').value = r.article.contenu;
-    clrErr(['eEditArtTitre', 'eEditArtContenu']);
+    $('eEditArtTitre').textContent = '';
+    $('eEditArtContenu').textContent = '';
     openOv('ovEditArt');
 }
 
 async function saveEditArt() {
     if (!IS_LOGGED || !editArtId) return;
-    clrErr(['eEditArtTitre', 'eEditArtContenu']);
-
-    const titre   = $('editArtTitre').value.trim();
-    const contenu = $('editArtContenu').value.trim();
-    let ok = true;
-    if (!titre)   { setErr('eEditArtTitre', 'Le titre est obligatoire.');   ok = false; }
-    if (!contenu) { setErr('eEditArtContenu', 'Le contenu est obligatoire.'); ok = false; }
-    if (!ok) return;
-
-    const r = await apiPost({ page: 'api_article', id: editArtId }, { titre, contenu, _method: 'PUT' });
-    if (!r.success) { toast(r.message || 'Erreur lors de la modification', 'err'); return; }
-
+    const titre = ($('editArtTitre').value || '').trim();
+    const contenu = ($('editArtContenu').value || '').trim();
+    $('eEditArtTitre').textContent = !titre ? 'Titre requis' : '';
+    $('eEditArtContenu').textContent = !contenu ? 'Contenu requis' : '';
+    if (!titre || !contenu) return;
+    const r = await apiPostJson('index.php?page=api_article&id=' + encodeURIComponent(editArtId), { titre, contenu, _method: 'PUT' });
+    if (!r.success) { toast(r.message || 'Erreur'); return; }
     closeOv('ovEditArt');
-    toast('Article modifié avec succès !', 'ok');
-
-    // Si on est dans le détail, mettre à jour l'affichage
-    if (currentArt && currentArt.id === editArtId) {
-        const r2 = await apiGet({ page: 'api_article', id: editArtId });
-        if (r2.success) {
-            currentArt = r2.article;
-            $('detailTitle').textContent = currentArt.titre;
-            $('detailBody').innerHTML    = esc(currentArt.contenu).replace(/\n/g, '<br>');
-        }
-    }
+    toast('Article modifié !');
     loadArticles();
 }
 
-// ═══════════════════════════════════════════
-//  SUPPRIMER UN ARTICLE
-// ═══════════════════════════════════════════
-function confirmDelArt() {
-    if (!IS_LOGGED || !currentArt) return;
-    $('delTitle').textContent = `Supprimer "${currentArt.titre}" ?`;
-    $('delSub').textContent   = 'Tous les commentaires liés seront également supprimés.';
+function confirmDelArtFromList(id, titre) {
+    if (!IS_LOGGED) return;
+    $('delTitle').textContent = 'Supprimer « ' + String(titre).slice(0, 60) + ' » ?';
+    $('delSub').textContent = 'Les commentaires seront aussi supprimés.';
     $('delBtn').onclick = async () => {
-        const r = await apiPost({ page: 'api_article', id: currentArt.id }, { _method: 'DELETE' });
+        const r = await apiPostJson('index.php?page=api_article&id=' + encodeURIComponent(id), { _method: 'DELETE' });
         closeOv('ovDel');
-        toast(r.success ? 'Article supprimé.' : (r.message || 'Erreur'), r.success ? 'ok' : 'err');
-        if (r.success) showList();
-    };
-    openOv('ovDel');
-}
-
-function confirmDelArtFromList(id, titre, e) {
-    e.stopPropagation();
-    $('delTitle').textContent = `Supprimer "${titre}" ?`;
-    $('delSub').textContent   = 'Tous les commentaires liés seront également supprimés.';
-    $('delBtn').onclick = async () => {
-        const r = await apiPost({ page: 'api_article', id }, { _method: 'DELETE' });
-        closeOv('ovDel');
-        toast(r.success ? 'Article supprimé.' : (r.message || 'Erreur'), r.success ? 'ok' : 'err');
+        toast(r.success ? 'Article supprimé.' : (r.message || 'Erreur'));
         if (r.success) loadArticles();
     };
     openOv('ovDel');
 }
 
-// ═══════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════
 loadArticles();
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/vendor/bootstrap/5.3.0/bootstrap.bundle.min.js"></script>
 </body>
 </html>

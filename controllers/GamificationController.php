@@ -43,6 +43,23 @@ class GamificationController
         }
     }
 
+    /** Données pour le front (toast / JSON) à partir du retour de grantPoints. */
+    public static function formatGrantForClient(array $gRes): array
+    {
+        return [
+            'points_added' => (int) ($gRes['points_added'] ?? 0),
+            'total_points' => (int) ($gRes['total_points'] ?? 0),
+            'level'        => $gRes['level'] ?? null,
+            'new_rewards'  => array_values(array_map(static function (array $rw): array {
+                return [
+                    'title'       => (string) ($rw['title'] ?? ''),
+                    'icon'        => (string) ($rw['icon'] ?? '🏅'),
+                    'description' => (string) ($rw['description'] ?? ''),
+                ];
+            }, $gRes['new_rewards'] ?? [])),
+        ];
+    }
+
     // ── API JSON : GET index.php?page=api_gamification&action=stats&user_id=X
     public function stats(): void
     {

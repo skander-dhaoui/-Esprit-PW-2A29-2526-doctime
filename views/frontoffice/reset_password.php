@@ -27,6 +27,16 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
         .password-requirements { font-size: 12px; color: #999; margin-top: 5px; }
         .requirement-valid { color: #4CAF50; }
         .requirement-invalid { color: #dc3545; }
+        .pw-strength-track { height: 8px; background: #e9ecef; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+        .pw-strength-track span { display: block; height: 100%; width: 0; border-radius: 6px; transition: width .2s, background .2s; }
+        .pw-strength-empty { background: #dee2e6 !important; }
+        .pw-strength-weak { background: #dc3545 !important; }
+        .pw-strength-medium { background: #fd7e14 !important; }
+        .pw-strength-strong { background: #198754 !important; }
+        .pw-strength-text { font-size: 12px; font-weight: 600; margin-top: 6px; display: inline-block; min-height: 1.2em; }
+        .pw-strength-text.pw-strength-weak { color: #dc3545; }
+        .pw-strength-text.pw-strength-medium { color: #c35d00; }
+        .pw-strength-text.pw-strength-strong { color: #198754; }
     </style>
 </head>
 <body>
@@ -46,6 +56,11 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
                 <div class="mb-3">
                     <label class="form-label">Nouveau mot de passe</label>
                     <input type="password" name="password" id="password" class="form-control" required>
+                    <div class="pw-strength-track"><span id="resetPwdStrengthFill"></span></div>
+                    <span id="resetPwdStrengthLabel" class="pw-strength-text"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2 mb-1" id="resetGenPwdBtn">
+                        <i class="fas fa-dice me-1"></i> Générer un mot de passe fort
+                    </button>
                     <div class="password-requirements">
                         <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                         <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
@@ -63,6 +78,7 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
         </div>
     </div>
 
+    <script src="assets/js/password-strength.js"></script>
     <script>
         function updatePasswordRequirements() {
             const p = document.getElementById('password').value;
@@ -89,6 +105,17 @@ unset($_SESSION['error'], $_SESSION['valid_token']);
             } else {
                 this.style.borderColor = '#ddd';
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof DoctimePassword !== 'undefined') {
+                var refreshBar = DoctimePassword.bindMeter('password', 'resetPwdStrengthFill', 'resetPwdStrengthLabel');
+                DoctimePassword.wireGenerator('resetGenPwdBtn', 'password', 'confirm_password', function () {
+                    if (typeof refreshBar === 'function') refreshBar();
+                    updatePasswordRequirements();
+                });
+            }
+            updatePasswordRequirements();
         });
     </script>
 </body>

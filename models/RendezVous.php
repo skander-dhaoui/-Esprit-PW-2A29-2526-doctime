@@ -118,6 +118,11 @@ public function updateStatut(int $id, string $statut): bool {
         return false;
     }
 }
+
+/** Alias utilisé par RendezVousController */
+public function updateStatus(int $id, string $statut): bool {
+    return $this->updateStatut($id, $statut);
+}
 /**
  * Récupère les rendez-vous d'un patient
  */
@@ -337,6 +342,31 @@ public function getByPatient(int $patientId, string $statut = null, string $date
     }
     public function getById(int $id): ?array {
         try {
+            $cols = $this->getColumns();
+            $conn = $this->db->getConnection();
+
+            if (in_array('patient_id', $cols, true) && in_array('medecin_id', $cols, true)) {
+                $sql = "SELECT rv.*,
+                               u_patient.prenom AS patient_prenom,
+                               u_patient.nom AS patient_nom,
+                               u_patient.email AS patient_email,
+                               u_patient.telephone AS patient_telephone,
+                               u_medecin.prenom AS medecin_prenom,
+                               u_medecin.nom AS medecin_nom,
+                               m.specialite,
+                               m.cabinet_adresse
+                        FROM rendez_vous rv
+                        INNER JOIN users u_patient ON rv.patient_id = u_patient.id
+                        INNER JOIN users u_medecin ON rv.medecin_id = u_medecin.id
+                        LEFT JOIN medecins m ON rv.medecin_id = m.user_id
+                        WHERE rv.id = :id";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([':id' => $id]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                return $row ?: null;
+            }
+
             $sql = "SELECT rv.*, 
                            c.nom as client_nom, c.prenom as client_prenom, c.email as client_email, c.telephone as client_telephone,
                            u.nom as user_nom, u.prenom as user_prenom, u.email as user_email, u.avatar
@@ -1543,6 +1573,25 @@ public function getByPatient(int $patientId, string $statut = null, string $date
     // ─────────────────────────────────────────
     //  Liste d'attente intelligente
     // ─────────────────────────────────────────
+
+    /** Normalise une heure saisie (H:i ou H:i:s) pour comparaisons INSERT / TIME(). */
+    public static function normalizeHeureRendezvous(string $time): string {
+        $time = trim($time);
+        if ($time === '') {
+            return '00:00:00';
+        }
+        $dt = DateTime::createFromFormat('H:i:s', $time);
+        if ($dt instanceof DateTime) {
+            return $dt->format('H:i:s');
+        }
+        $dt = DateTime::createFromFormat('H:i', $time);
+        if ($dt instanceof DateTime) {
+            return $dt->format('H:i:s');
+        }
+        $ts = strtotime($time);
+        return $ts !== false ? date('H:i:s', $ts) : $time;
+    }
+
     private function ensureWaitlistTable(): void {
         try {
             $conn = $this->db->getConnection();

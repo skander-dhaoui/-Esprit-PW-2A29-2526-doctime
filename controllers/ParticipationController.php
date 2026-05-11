@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../models/Participation.php';
 require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../models/Patient.php';
+require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/AuthController.php';
 
@@ -11,6 +12,7 @@ class ParticipationController {
     private Participation $participationModel;
     private Event $eventModel;
     private Patient $patientModel;
+    private User $userModel;
     private AuthController $auth;
     private Database $db;
 
@@ -18,6 +20,7 @@ class ParticipationController {
         $this->participationModel = new Participation();
         $this->eventModel = new Event();
         $this->patientModel = new Patient();
+        $this->userModel = new User();
         $this->auth = new AuthController();
         $this->db = Database::getInstance();
     }
@@ -29,21 +32,151 @@ class ParticipationController {
         $this->auth->requireRole('admin');
 
         try {
-            $filter = $_GET['filter'] ?? 'all'; // all, confirmé, en attente, annulé, présent, absent
-            $eventId = $_GET['event'] ?? null;
+            $filter = $_GET['filter'] ?? 'all';
+            $eventId = isset($_GET['event']) && $_GET['event'] !== '' ? (int)$_GET['event'] : null;
             $search = $_GET['search'] ?? '';
 
-            $participations = $this->participationModel->getAll($filter, $eventId, $search);
+            $participations = $this->participationModel->listAdminBackoffice($filter, $eventId, $search, 500);
 
             $events = $this->eventModel->getAll();
             $flash = $_SESSION['flash'] ?? null;
             unset($_SESSION['flash']);
 
             require_once __DIR__ . '/../views/backoffice/participation/index.php';
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erreur ParticipationController::indexAdmin - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement des participations.');
-            header('Location: /admin/dashboard');
+            header('Location: index.php?page=dashboard');
+            exit;
+        }
+    }
+
+    // ─────────────────────────────────────────
+    //  Nouvelle participation (admin)
+    // ─────────────────────────────────────────
+    public function create(): void {
+        $this->auth->requireRole('admin');
+
+        try {
+            $csrfToken = $this->generateCsrfToken();
+            $old = $_SESSION['old'] ?? [];
+            $errors = $_SESSION['participation_errors'] ?? [];
+            unset($_SESSION['old'], $_SESSION['participation_errors']);
+
+            $evenements = $this->eventModel->getAll();
+            $statuts = ['inscrit', 'présent', 'absent'];
+
+            require_once __DIR__ . '/../views/backoffice/participation/create.php';
+        } catch (Throwable $e) {
+            error_log('Erreur ParticipationController::create - ' . $e->getMessage());
+            $this->setFlash('error', 'Erreur lors du chargement du formulaire.');
+            header('Location: index.php?page=participations');
+            exit;
+        }
+    }
+
+    public function store(): void {
+        $this->auth->requireRole('admin');
+
+        $redirectCreate = 'Location: index.php?page=participations&action=create';
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header($redirectCreate);
+            exit;
+        }
+
+        if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+            $this->setFlash('error', 'Erreur de sécurité. Veuillez réessayer.');
+            header($redirectCreate);
+            exit;
+        }
+
+        $payload = [
+            'nom' => trim($_POST['nom'] ?? ''),
+            'prenom' => trim($_POST['prenom'] ?? ''),
+            'email' => strtolower(trim($_POST['email'] ?? '')),
+            'telephone' => trim($_POST['telephone'] ?? ''),
+            'profession' => trim($_POST['profession'] ?? ''),
+            'evenement_id' => (int)($_POST['evenement_id'] ?? 0),
+            'statut' => trim($_POST['statut'] ?? ''),
+        ];
+
+        $errors = $this->validateParticipationCreate($payload);
+
+        if (!empty($errors)) {
+            $_SESSION['old'] = $payload;
+            $_SESSION['participation_errors'] = $errors;
+            header($redirectCreate);
+            exit;
+        }
+
+        $event = $this->eventModel->getById($payload['evenement_id']);
+        if (!$event) {
+            $this->setFlash('error', 'Événement introuvable.');
+            $_SESSION['old'] = $payload;
+            header($redirectCreate);
+            exit;
+        }
+
+        try {
+            $existingUser = $this->userModel->findByEmail($payload['email']);
+
+            if ($existingUser) {
+                $userId = (int)$existingUser['id'];
+                $this->userModel->update($userId, [
+                    'nom' => $payload['nom'],
+                    'prenom' => $payload['prenom'],
+                    'telephone' => $payload['telephone'] !== '' ? $payload['telephone'] : null,
+                ]);
+            } else {
+                $userId = $this->userModel->create([
+                    'nom' => $payload['nom'],
+                    'prenom' => $payload['prenom'],
+                    'email' => $payload['email'],
+                    'telephone' => $payload['telephone'],
+                    'password' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+                    'role' => 'patient',
+                    'statut' => 'actif',
+                ]);
+                if ($userId <= 0) {
+                    throw new RuntimeException('Création utilisateur refusée.');
+                }
+                try {
+                    $this->userModel->upsertPatient($userId, []);
+                } catch (Throwable $e) {
+                    error_log('ParticipationController::store upsertPatient - ' . $e->getMessage());
+                }
+            }
+
+            if ($this->participationModel->findByEventAndUserId($payload['evenement_id'], $userId)) {
+                $this->setFlash('error', 'Ce participant est déjà inscrit à cet événement.');
+                $_SESSION['old'] = $payload;
+                header($redirectCreate);
+                exit;
+            }
+
+            $pid = $this->participationModel->insertBackoffice(
+                $payload['evenement_id'],
+                $userId,
+                $payload['statut']
+            );
+
+            if (!$pid) {
+                throw new RuntimeException('Insertion participation refusée.');
+            }
+
+            if (!empty($_SESSION['user_id'])) {
+                $this->logAction((int)$_SESSION['user_id'], 'Création participation', 'Participation #' . $pid);
+            }
+
+            $this->setFlash('success', 'Participation enregistrée.');
+            header('Location: index.php?page=participations');
+            exit;
+        } catch (Throwable $e) {
+            error_log('Erreur ParticipationController::store - ' . $e->getMessage());
+            $this->setFlash('error', 'Impossible d\'enregistrer la participation.');
+            $_SESSION['old'] = $payload;
+            header($redirectCreate);
             exit;
         }
     }
@@ -200,7 +333,7 @@ class ParticipationController {
         $this->auth->requireRole(['admin', 'medecin']);
 
         try {
-            $participation = $this->participationModel->getById($id);
+            $participation = $this->participationModel->getByIdForBackoffice($id);
 
             if (!$participation) {
                 http_response_code(404);
@@ -208,17 +341,33 @@ class ParticipationController {
             }
 
             $csrfToken = $this->generateCsrfToken();
-            $event = $this->eventModel->getById($participation['event_id']);
-            $patient = $this->patientModel->findByUserId($participation['patient_id']);
-            $old = $_SESSION['old'] ?? null;
-            $flash = $_SESSION['flash'] ?? null;
-            unset($_SESSION['old'], $_SESSION['flash']);
+            $evenements = $this->eventModel->getAll();
+            $statuts = ['inscrit', 'présent', 'absent'];
 
-            require_once __DIR__ . '/../views/backoffice/participation_form_edit.php';
-        } catch (Exception $e) {
+            $sessionOld = $_SESSION['old'] ?? [];
+            $errors = $_SESSION['participation_errors'] ?? [];
+            unset($_SESSION['old'], $_SESSION['participation_errors']);
+
+            $defaults = [
+                'id' => (int)$participation['id'],
+                'nom' => $participation['nom'] ?? '',
+                'prenom' => $participation['prenom'] ?? '',
+                'email' => $participation['email'] ?? '',
+                'telephone' => $participation['telephone'] ?? '',
+                'profession' => '',
+                'evenement_id' => (int)$participation['event_id'],
+                'statut' => $participation['statut'] ?? 'inscrit',
+            ];
+            $old = array_merge($defaults, $sessionOld);
+            if (isset($sessionOld['id'])) {
+                $old['id'] = (int)$sessionOld['id'];
+            }
+
+            require_once __DIR__ . '/../views/backoffice/participation/edit.php';
+        } catch (Throwable $e) {
             error_log('Erreur ParticipationController::edit - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors du chargement.');
-            header('Location: /events');
+            header('Location: index.php?page=participations');
             exit;
         }
     }
@@ -229,51 +378,147 @@ class ParticipationController {
     public function update(int $id): void {
         $this->auth->requireRole(['admin', 'medecin']);
 
+        $redirectEdit = 'Location: index.php?page=participations&action=edit&id=' . $id;
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header("Location: /participations/$id/edit");
+            header($redirectEdit);
             exit;
         }
 
         if (!$this->verifyCsrfToken($_POST['csrf_token'] ?? '')) {
             $this->setFlash('error', 'Erreur de sécurité.');
-            header("Location: /participations/$id/edit");
+            header($redirectEdit);
             exit;
         }
 
         try {
-            $participation = $this->participationModel->getById($id);
+            $participation = $this->participationModel->getByIdForBackoffice($id);
 
             if (!$participation) {
                 http_response_code(404);
                 die('Participation introuvable.');
             }
 
-            $data = [
-                'statut' => $_POST['statut'] ?? 'confirmé',
-                'notes' => htmlspecialchars(trim($_POST['notes'] ?? ''), ENT_QUOTES, 'UTF-8'),
-                'presence' => $_POST['presence'] ?? null,
-            ];
+            $nom = trim($_POST['nom'] ?? '');
+            $prenom = trim($_POST['prenom'] ?? '');
+            $email = strtolower(trim($_POST['email'] ?? ''));
+            $telephone = trim($_POST['telephone'] ?? '');
+            $profession = trim($_POST['profession'] ?? '');
+            $eventId = (int)($_POST['evenement_id'] ?? 0);
+            $statut = trim($_POST['statut'] ?? '');
 
-            $errors = $this->validateParticipation($data);
+            $errors = $this->validateParticipationBackoffice([
+                'nom' => $nom,
+                'prenom' => $prenom,
+                'email' => $email,
+                'telephone' => $telephone,
+                'evenement_id' => $eventId,
+                'statut' => $statut,
+            ]);
+            if ($profession === '' || mb_strlen($profession) < 2) {
+                $errors['profession'] = 'Profession requise (2 caractères minimum).';
+            }
 
             if (!empty($errors)) {
-                $this->setFlash('error', implode('<br>', $errors));
-                $_SESSION['old'] = $data;
-                header("Location: /participations/$id/edit");
+                $_SESSION['old'] = [
+                    'id' => $id,
+                    'nom' => $nom,
+                    'prenom' => $prenom,
+                    'email' => $email,
+                    'telephone' => $telephone,
+                    'profession' => $profession,
+                    'evenement_id' => $eventId,
+                    'statut' => $statut,
+                ];
+                $_SESSION['participation_errors'] = $errors;
+                header($redirectEdit);
                 exit;
             }
 
-            $this->participationModel->update($id, $data);
+            $eventRow = $this->eventModel->getById($eventId);
+            if (!$eventRow) {
+                $this->setFlash('error', 'Événement introuvable.');
+                $_SESSION['old'] = [
+                    'id' => $id,
+                    'nom' => $nom,
+                    'prenom' => $prenom,
+                    'email' => $email,
+                    'telephone' => $telephone,
+                    'profession' => $profession,
+                    'evenement_id' => $eventId,
+                    'statut' => $statut,
+                ];
+                header($redirectEdit);
+                exit;
+            }
 
-            $this->logAction($_SESSION['user_id'], 'Modification participation', "Participation #$id modifiée");
+            $dup = $this->participationModel->findOtherByEventAndUser(
+                $eventId,
+                (int)$participation['user_id'],
+                $id
+            );
+            if ($dup) {
+                $this->setFlash('error', 'Ce participant est déjà inscrit à cet événement.');
+                $_SESSION['old'] = [
+                    'id' => $id,
+                    'nom' => $nom,
+                    'prenom' => $prenom,
+                    'email' => $email,
+                    'telephone' => $telephone,
+                    'profession' => $profession,
+                    'evenement_id' => $eventId,
+                    'statut' => $statut,
+                ];
+                header($redirectEdit);
+                exit;
+            }
+
+            $otherUser = $this->userModel->findByEmail($email);
+            if ($otherUser && (int)$otherUser['id'] !== (int)$participation['user_id']) {
+                $this->setFlash('error', 'Cet email est déjà utilisé par un autre compte.');
+                $_SESSION['old'] = [
+                    'id' => $id,
+                    'nom' => $nom,
+                    'prenom' => $prenom,
+                    'email' => $email,
+                    'telephone' => $telephone,
+                    'profession' => $profession,
+                    'evenement_id' => $eventId,
+                    'statut' => $statut,
+                ];
+                header($redirectEdit);
+                exit;
+            }
+
+            $uid = (int)$participation['user_id'];
+            $userOk = $this->userModel->update($uid, [
+                'nom' => $nom,
+                'prenom' => $prenom,
+                'email' => $email,
+                'telephone' => $telephone !== '' ? $telephone : null,
+            ]);
+
+            if (!$userOk) {
+                throw new RuntimeException('Mise à jour utilisateur refusée.');
+            }
+
+            $partOk = $this->participationModel->updateParticipationBackoffice($id, $eventId, $statut);
+
+            if (!$partOk) {
+                throw new RuntimeException('Mise à jour participation refusée.');
+            }
+
+            if (!empty($_SESSION['user_id'])) {
+                $this->logAction((int)$_SESSION['user_id'], 'Modification participation', 'Participation #' . $id . ' modifiée');
+            }
 
             $this->setFlash('success', 'Participation mise à jour.');
-            header("Location: /participations/$id");
+            header('Location: index.php?page=participations');
             exit;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log('Erreur ParticipationController::update - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la mise à jour.');
-            header("Location: /participations/$id/edit");
+            header($redirectEdit);
             exit;
         }
     }
@@ -410,12 +655,12 @@ class ParticipationController {
             $this->logAction($_SESSION['user_id'], 'Suppression participation', "Participation #$id supprimée");
 
             $this->setFlash('success', 'Participation supprimée.');
-            header('Location: /admin/participations');
+            header('Location: index.php?page=participations');
             exit;
         } catch (Exception $e) {
             error_log('Erreur ParticipationController::delete - ' . $e->getMessage());
             $this->setFlash('error', 'Erreur lors de la suppression.');
-            header('Location: /admin/participations');
+            header('Location: index.php?page=participations');
             exit;
         }
     }
@@ -649,6 +894,43 @@ class ParticipationController {
             $errors[] = 'Valeur de présence invalide.';
         }
 
+        return $errors;
+    }
+
+    /** @return array<string, string> */
+    private function validateParticipationBackoffice(array $data): array {
+        $errors = [];
+        $allowedStatuts = ['inscrit', 'présent', 'absent'];
+
+        if ($data['nom'] === '' || mb_strlen($data['nom']) < 2) {
+            $errors['nom'] = 'Nom requis (2 caractères minimum).';
+        }
+        if ($data['prenom'] === '' || mb_strlen($data['prenom']) < 2) {
+            $errors['prenom'] = 'Prénom requis (2 caractères minimum).';
+        }
+        if ($data['email'] === '' || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Email invalide.';
+        }
+        if ($data['telephone'] === '' || mb_strlen($data['telephone']) < 8) {
+            $errors['telephone'] = 'Téléphone requis (8 caractères minimum).';
+        }
+        if ((int)$data['evenement_id'] <= 0) {
+            $errors['evenement_id'] = 'Événement requis.';
+        }
+        if (!in_array($data['statut'], $allowedStatuts, true)) {
+            $errors['statut'] = 'Statut invalide.';
+        }
+
+        return $errors;
+    }
+
+    /** @return array<string, string> */
+    private function validateParticipationCreate(array $data): array {
+        $errors = $this->validateParticipationBackoffice($data);
+        $prof = trim($data['profession'] ?? '');
+        if ($prof === '' || mb_strlen($prof) < 2) {
+            $errors['profession'] = 'Profession requise (2 caractères minimum).';
+        }
         return $errors;
     }
 

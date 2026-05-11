@@ -1,8 +1,9 @@
 <?php
-// views/frontoffice/forgot_password.php
-$error = $_SESSION['error'] ?? null;
-$success = $_SESSION['success'] ?? null;
-unset($_SESSION['error'], $_SESSION['success']);
+// $error, $success déjà définis par AuthController::showForgotPassword() avant l'include
+$error = $error ?? null;
+$success = $success ?? null;
+$recaptchaSiteKey = trim((string) ($recaptchaSiteKey ?? ''));
+$useRecaptcha = $useRecaptcha ?? ($recaptchaSiteKey !== '');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -27,7 +28,8 @@ unset($_SESSION['error'], $_SESSION['success']);
         .btn-submit:hover { background: #2A7FAA; transform: translateY(-2px); }
         .alert-error-custom { background: #f8d7da; color: #721c24; border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; border-left: 4px solid #dc3545; }
         .alert-success-custom { background: #d4edda; color: #155724; border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; border-left: 4px solid #28a745; }
-        .back-link { color: #2A7FAA; text-decoration: none; }
+        .captcha-box { background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center; margin-bottom: 20px; }
+        .captcha-code { font-size: 22px; font-weight: bold; letter-spacing: 6px; background: #2A7FAA; color: white; display: inline-block; padding: 10px 18px; border-radius: 10px; font-family: monospace; }
         .back-link:hover { color: #4CAF50; text-decoration: underline; }
     </style>
 </head>
@@ -55,11 +57,24 @@ unset($_SESSION['error'], $_SESSION['success']);
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="index.php?page=forgot_password">
+            <form method="POST" action="index.php?page=forgot_password" id="forgotPasswordForm">
                 <div class="mb-4">
                     <label class="form-label">Votre adresse email</label>
                     <input type="email" name="email" class="form-control" placeholder="exemple@email.com" required>
                 </div>
+
+                <div class="captcha-box">
+                    <?php if ($useRecaptcha): ?>
+                        <label class="form-label d-block text-start">Je ne suis pas un robot</label>
+                        <div class="g-recaptcha d-inline-block" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+                        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                    <?php else: ?>
+                        <label class="form-label">Vérification anti-robot</label>
+                        <div><span class="captcha-code"><?= htmlspecialchars((string) ($_SESSION['forgot_captcha_code'] ?? '')) ?></span></div>
+                        <input type="text" name="forgot_captcha_response" class="form-control mt-2" placeholder="Recopiez le code" autocomplete="off" required>
+                    <?php endif; ?>
+                </div>
+
                 <button type="submit" class="btn-submit">
                     <i class="fas fa-paper-plane me-2"></i> Envoyer le lien
                 </button>
@@ -73,5 +88,17 @@ unset($_SESSION['error'], $_SESSION['success']);
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById('forgotPasswordForm')?.addEventListener('submit', function (e) {
+            <?php if (!empty($useRecaptcha)): ?>
+            if (typeof grecaptcha !== 'undefined') {
+                if (!grecaptcha.getResponse()) {
+                    e.preventDefault();
+                    alert('Veuillez cocher « Je ne suis pas un robot ».');
+                }
+            }
+            <?php endif; ?>
+        });
+    </script>
 </body>
 </html>

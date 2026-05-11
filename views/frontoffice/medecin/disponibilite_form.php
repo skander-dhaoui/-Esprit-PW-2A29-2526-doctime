@@ -278,5 +278,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'medecin') {
             });
         });
     </script>
+<?php include __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
 </body>
 </html>

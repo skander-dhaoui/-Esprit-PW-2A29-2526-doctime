@@ -1,6 +1,6 @@
 <?php
 $pageTitle = 'Detail Produit Parapharmacie - Valorys';
-$activePage = 'pharmacie';
+$activePage = 'parapharmacie';
 $extraStyles = "
     .detail-wrap { background: white; border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.08); overflow: hidden; }
     .detail-image { background: #f8f9fa; min-height: 320px; display: flex; align-items: center; justify-content: center; }

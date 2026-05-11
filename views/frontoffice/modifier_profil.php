@@ -309,6 +309,10 @@
                     <?php unset($_SESSION['error']); ?>
                 <?php endif; ?>
 
+                <?php if (!empty($_SESSION['user_id']) && is_file(__DIR__ . '/gamification_widget.php')): ?>
+                    <?php require __DIR__ . '/gamification_widget.php'; ?>
+                <?php endif; ?>
+
                 <!-- Formulaire modification infos -->
                 <form method="POST" action="index.php?page=modifier_profil" id="profileForm">
                     <input type="hidden" name="action" value="update_profile">

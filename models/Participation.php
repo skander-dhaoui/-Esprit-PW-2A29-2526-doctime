@@ -27,21 +27,88 @@ class Participation {
     }
 
     public function getById(int $id): ?array {
-        try {
-            $sql = "SELECT p.*, 
-                           e.titre as evenement_titre, e.date_debut as evenement_date, e.prix_unitaire,
-                           c.nom as client_nom, c.prenom as client_prenom, c.email as client_email, c.telephone as client_telephone,
-                           u.nom as user_nom, u.prenom as user_prenom, u.email as user_email
-                    FROM participations p
-                    LEFT JOIN evenements e ON p.evenement_id = e.id
-                    LEFT JOIN clients c ON p.client_id = c.id
-                    LEFT JOIN users u ON p.user_id = u.id
-                    WHERE p.id = :id";
+        return $this->getByIdForBackoffice($id);
+    }
 
-            $result = $this->db->query($sql, ['id' => $id]);
-            return $result ? $result[0] : null;
+    /**
+     * Détail participation — schéma Valorys / doctime (events, participations.event_id, user_id).
+     */
+    public function getByIdForBackoffice(int $id): ?array {
+        try {
+            $sql = "SELECT p.id, p.event_id, p.user_id, p.statut, p.date_inscription, p.code_qr,
+                           e.titre AS evenement_titre,
+                           u.nom, u.prenom, u.email, u.telephone
+                    FROM participations p
+                    INNER JOIN events e ON e.id = p.event_id
+                    INNER JOIN users u ON u.id = p.user_id
+                    WHERE p.id = :id
+                    LIMIT 1";
+
+            $row = $this->db->queryOne($sql, ['id' => $id]);
+            if (!$row) {
+                return null;
+            }
+            $row['patient_id'] = (int)$row['user_id'];
+            $row['evenement_id'] = (int)$row['event_id'];
+            return $row;
         } catch (Exception $e) {
-            error_log('Erreur Participation::getById - ' . $e->getMessage());
+            error_log('Erreur Participation::getByIdForBackoffice - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /** Contrainte unique (event_id, user_id) — autre ligne que $excludeParticipationId. */
+    public function findOtherByEventAndUser(int $eventId, int $userId, int $excludeParticipationId): ?array {
+        try {
+            return $this->db->queryOne(
+                'SELECT id FROM participations WHERE event_id = :e AND user_id = :u AND id <> :pid LIMIT 1',
+                ['e' => $eventId, 'u' => $userId, 'pid' => $excludeParticipationId]
+            );
+        } catch (Exception $e) {
+            error_log('Erreur Participation::findOtherByEventAndUser - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function updateParticipationBackoffice(int $id, int $eventId, string $statut): bool {
+        try {
+            $sql = 'UPDATE participations SET event_id = :eid, statut = :st WHERE id = :id';
+            return $this->db->execute($sql, [
+                'id' => $id,
+                'eid' => $eventId,
+                'st' => $statut,
+            ]);
+        } catch (Exception $e) {
+            error_log('Erreur Participation::updateParticipationBackoffice - ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function findByEventAndUserId(int $eventId, int $userId): ?array {
+        try {
+            return $this->db->queryOne(
+                'SELECT id FROM participations WHERE event_id = :e AND user_id = :u LIMIT 1',
+                ['e' => $eventId, 'u' => $userId]
+            );
+        } catch (Exception $e) {
+            error_log('Erreur Participation::findByEventAndUserId - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /** Insertion schéma doctime (event_id, user_id, statut). */
+    public function insertBackoffice(int $eventId, int $userId, string $statut): ?int {
+        try {
+            $sql = 'INSERT INTO participations (event_id, user_id, statut, date_inscription)
+                    VALUES (:e, :u, :s, NOW())';
+            $ok = $this->db->execute($sql, [
+                'e' => $eventId,
+                'u' => $userId,
+                's' => $statut,
+            ]);
+            return $ok ? (int)$this->db->lastInsertId() : null;
+        } catch (Exception $e) {
+            error_log('Erreur Participation::insertBackoffice - ' . $e->getMessage());
             return null;
         }
     }
@@ -994,6 +1061,50 @@ class Participation {
         } catch (Exception $e) {
             error_log('Erreur Participation::getNoShowRate - ' . $e->getMessage());
             return 0.0;
+        }
+    }
+
+    /**
+     * Liste admin — schéma events / participations (event_id, user_id).
+     */
+    public function listAdminBackoffice(string $filter = 'all', ?int $eventId = null, string $search = '', int $limit = 500): array {
+        try {
+            $where  = ['1=1'];
+            $params = [];
+
+            if ($eventId !== null && $eventId > 0) {
+                $where[]          = 'p.event_id = :eid';
+                $params['eid']    = $eventId;
+            }
+
+            if ($filter !== 'all' && $filter !== 'tous') {
+                $where[]           = 'p.statut = :fst';
+                $params['fst']     = $filter;
+            }
+
+            if ($search !== '') {
+                $where[]       = '(u.nom LIKE :s OR u.prenom LIKE :s OR u.email LIKE :s OR e.titre LIKE :s)';
+                $params['s']   = '%' . $search . '%';
+            }
+
+            $w   = implode(' AND ', $where);
+            $lim = max(1, min(2000, $limit));
+
+            $sql = "SELECT p.id, p.statut, p.date_inscription,
+                           u.prenom, u.nom, u.email, u.telephone,
+                           '' AS profession,
+                           e.titre AS evenement_titre
+                    FROM participations p
+                    INNER JOIN users u ON u.id = p.user_id
+                    INNER JOIN events e ON e.id = p.event_id
+                    WHERE {$w}
+                    ORDER BY p.date_inscription DESC
+                    LIMIT {$lim}";
+
+            return $this->db->query($sql, $params);
+        } catch (Exception $e) {
+            error_log('Erreur Participation::listAdminBackoffice - ' . $e->getMessage());
+            return [];
         }
     }
 }

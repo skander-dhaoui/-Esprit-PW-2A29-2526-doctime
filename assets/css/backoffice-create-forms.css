@@ -1,0 +1,142 @@
+/**
+ * Formulaires d’ajout back-office — alignement DocTime (carte blanche, teal, grille).
+ */
+:root {
+    --bo-create-teal: #1a7a85;
+    --bo-create-teal-light: #e8f4f5;
+    --bo-create-border: #e2e8f0;
+    --bo-create-muted: #64748b;
+}
+
+.bo-create-page {
+    max-width: 960px;
+}
+
+.bo-create-header .bo-create-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+}
+
+.bo-create-header .breadcrumb {
+    font-size: 0.875rem;
+}
+
+.bo-create-header .breadcrumb-item a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.bo-create-header .breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.card.bo-create-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.card.bo-create-card .bo-create-card-head {
+    background: #fff;
+    border-bottom: 1px solid var(--bo-create-border);
+    padding: 1rem 1.25rem;
+}
+
+.card.bo-create-card .bo-create-card-head h6 {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1e293b;
+}
+
+.card.bo-create-card .bo-create-card-head i {
+    color: var(--bo-create-teal);
+}
+
+.card.bo-create-card .card-body {
+    padding: 1.5rem 1.25rem 1.75rem;
+}
+
+@media (min-width: 992px) {
+    .card.bo-create-card .card-body {
+        padding: 1.75rem 2rem 2rem;
+    }
+}
+
+.bo-create-form .form-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #334155;
+    margin-bottom: 0.4rem;
+}
+
+.bo-create-form .form-control,
+.bo-create-form .form-select {
+    border-radius: 0.5rem;
+    border-color: #cbd5e1;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.9375rem;
+}
+
+.bo-create-form .form-control:focus,
+.bo-create-form .form-select:focus {
+    border-color: var(--bo-create-teal);
+    box-shadow: 0 0 0 0.2rem rgba(26, 122, 133, 0.15);
+}
+
+.bo-create-form textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.bo-create-form .form-text {
+    font-size: 0.78rem;
+    color: var(--bo-create-muted);
+    margin-top: 0.35rem;
+}
+
+.bo-create-actions {
+    padding-top: 1.25rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--bo-create-border);
+}
+
+.bo-create-actions .btn-primary {
+    min-width: 140px;
+    border-radius: 0.5rem;
+    padding: 0.55rem 1.25rem;
+    font-weight: 600;
+}
+
+.bo-create-actions .btn-outline-secondary {
+    border-radius: 0.5rem;
+    padding: 0.55rem 1.25rem;
+    font-weight: 500;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.bo-create-actions .btn-outline-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+.bo-alert-errors {
+    border-radius: 12px;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.bo-alert-errors ul {
+    padding-left: 1.1rem;
+    margin-bottom: 0;
+}
+
+/* Sélecteur sponsor plus lisible (liste longue) */
+.bo-create-form select[name="sponsor_id"] {
+    min-height: 2.75rem;
+}

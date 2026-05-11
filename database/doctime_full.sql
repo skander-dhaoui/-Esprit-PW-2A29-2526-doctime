@@ -26,7 +26,15 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('admin', 'medecin', 'patient') NOT NULL DEFAULT 'patient',
     statut ENUM('actif', 'inactif', 'en_attente') DEFAULT 'en_attente',
     avatar VARCHAR(255),
+    face_photo VARCHAR(255) NULL DEFAULT NULL,
+    face_encoding VARCHAR(512) NULL DEFAULT NULL,
+    face_descriptor TEXT NULL DEFAULT NULL,
     derniere_connexion DATETIME,
+    reset_token VARCHAR(64) NULL,
+    reset_expires DATETIME NULL,
+    social_provider VARCHAR(32) NULL,
+    social_provider_id VARCHAR(128) NULL,
+    social_avatar VARCHAR(512) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
@@ -163,6 +171,7 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE TABLE IF NOT EXISTS reply (
     id_reply INT AUTO_INCREMENT PRIMARY KEY,
     id_article INT NOT NULL,
+    parent_reply_id INT NULL,
     user_id INT NULL,
     type_reply VARCHAR(32) NOT NULL DEFAULT 'text',
     contenu_text TEXT NULL,
@@ -172,7 +181,9 @@ CREATE TABLE IF NOT EXISTS reply (
     date_reply TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_article) REFERENCES articles(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (parent_reply_id) REFERENCES reply(id_reply) ON DELETE CASCADE,
     INDEX idx_article (id_article),
+    INDEX idx_parent (parent_reply_id),
     INDEX idx_date (date_reply),
     INDEX idx_user (user_id)
 );
@@ -189,6 +200,8 @@ CREATE TABLE IF NOT EXISTS events (
     date_debut DATETIME NOT NULL,
     date_fin DATETIME NOT NULL,
     lieu VARCHAR(255),
+    categorie VARCHAR(100) NULL,
+    sponsor_id INT NULL,
     adresse TEXT,
     capacite_max INT,
     places_restantes INT,
@@ -199,7 +212,8 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_date (date_debut),
     INDEX idx_status (status),
-    INDEX idx_slug (slug)
+    INDEX idx_slug (slug),
+    INDEX idx_events_sponsor (sponsor_id)
 );
 
 -- =============================================
@@ -208,6 +222,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS sponsors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NULL,
+    telephone VARCHAR(50) NULL,
     logo VARCHAR(255),
     site_web VARCHAR(255),
     description TEXT,
@@ -390,6 +406,81 @@ CREATE TABLE IF NOT EXISTS avis (
 );
 
 -- =============================================
+-- LIKES / DISLIKES ARTICLES (blog public)
+-- =============================================
+CREATE TABLE IF NOT EXISTS article_likes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    article_id INT NOT NULL,
+    user_id INT NOT NULL,
+    type ENUM('like', 'dislike') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_article_user (article_id, user_id),
+    INDEX idx_article (article_id),
+    INDEX idx_user (user_id)
+);
+
+-- =============================================
+-- AVIS / REVIEWS (accueil, api/reviews.php)
+-- =============================================
+CREATE TABLE IF NOT EXISTS reviews (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    sentiment VARCHAR(50) DEFAULT NULL COMMENT 'positive, neutral, negative',
+    sentiment_score FLOAT DEFAULT NULL COMMENT 'Score entre -1 et 1',
+    is_approved BOOLEAN DEFAULT FALSE COMMENT 'Modération avant publication',
+    has_profanity BOOLEAN DEFAULT FALSE COMMENT 'Contient du contenu inapproprié',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_sentiment (sentiment),
+    INDEX idx_created (created_at),
+    INDEX idx_approved (is_approved)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS review_emojis (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    review_id INT NOT NULL,
+    emoji VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+    INDEX idx_review (review_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS review_replies (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    review_id INT NOT NULL,
+    moderator_id INT NOT NULL,
+    reply_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+    FOREIGN KEY (moderator_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_review (review_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
+-- JOURNAL ADMIN (?page=logs)
+-- =============================================
+CREATE TABLE IF NOT EXISTS logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL DEFAULT NULL,
+    action VARCHAR(255) NOT NULL,
+    description TEXT,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_logs_user (user_id),
+    INDEX idx_logs_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================
 -- DONNÉES INITIALES (ré-importables sans erreur duplicate key)
 -- =============================================
 
@@ -403,4 +494,4 @@ INSERT IGNORE INTO categories (nom, slug, description) VALUES
 
 -- Admin par défaut (mot de passe: admin123) — IGNORE si admin@doctime.com existe
 INSERT IGNORE INTO users (nom, prenom, email, password, role, statut) 
-VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');
+VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$l41tKGrgvz/B4.b8vK0fLe3mGJEUfA8Kp2B3LYtcD3zfYoTf00IOS', 'admin', 'actif');

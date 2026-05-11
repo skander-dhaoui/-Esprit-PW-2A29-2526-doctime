@@ -186,6 +186,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
     </div>
 </div>
 
+<?php include __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
+
 <footer>
     <div class="container">
         <p>&copy; 2024 Valorys - Tous droits réservés</p>

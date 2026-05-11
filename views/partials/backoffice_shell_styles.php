@@ -18,9 +18,11 @@ define('BO_BACKOFFICE_SHELL_STYLES', true);
     }
     .sidebar {
         width: 260px;
-        min-height: 100vh;
-        background: #1a2035;
-        color: #fff;
+        height: 100vh;
+        max-height: 100vh;
+        min-height: 0;
+        background: #1e2235;
+        color: #f1f5f9;
         display: flex;
         flex-direction: column;
         position: fixed;
@@ -28,58 +30,85 @@ define('BO_BACKOFFICE_SHELL_STYLES', true);
         left: 0;
         z-index: 100;
         overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+    }
+    .sidebar::-webkit-scrollbar {
+        width: 8px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.28);
+        border-radius: 4px;
+    }
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
     }
     .sidebar-brand {
         padding: 22px 18px;
         text-align: center;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: #1e2235;
     }
     .brand-icon {
         width: 52px;
         height: 52px;
-        background: rgba(255,255,255,0.1);
+        background: #131620;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 10px;
         font-size: 22px;
-        color: #4CAF50;
+        color: #22c55e;
+        box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.35), 0 4px 14px rgba(0, 0, 0, 0.25);
     }
     .sidebar-brand h4 {
         font-size: 17px;
         font-weight: 700;
         margin: 0;
-        color: #fff;
+        color: #ffffff;
     }
     .sidebar-brand small {
-        color: rgba(255,255,255,0.5);
+        color: #94a3b8;
         font-size: 11px;
     }
     .sidebar-nav {
-        padding: 14px 0 24px;
-        flex: 1;
+        padding: 14px 0 28px;
+        flex: 1 1 auto;
     }
     .sidebar-nav a {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 11px 20px;
-        color: rgba(255,255,255,0.72);
+        padding: 11px 17px 11px 20px;
+        color: rgba(248, 250, 252, 0.9);
         text-decoration: none;
         font-size: 14px;
         font-weight: 500;
         transition: background .2s, color .2s;
         border-left: 3px solid transparent;
+        border-radius: 0 10px 10px 0;
+        margin-right: 10px;
     }
     .sidebar-nav a:hover {
-        background: rgba(255,255,255,0.07);
-        color: #fff;
+        background: rgba(255, 255, 255, 0.06);
+        background-image: none;
+        color: #ffffff;
     }
     .sidebar-nav a.active {
-        background: rgba(255,255,255,0.1);
-        color: #fff;
-        border-left-color: #4CAF50;
+        background: rgba(34, 197, 94, 0.14);
+        background-image: none;
+        color: #ffffff;
+        border-left-color: #22c55e;
+        font-weight: 600;
     }
     .sidebar-nav a i {
         width: 22px;
@@ -88,7 +117,7 @@ define('BO_BACKOFFICE_SHELL_STYLES', true);
     }
     .nav-divider {
         height: 1px;
-        background: rgba(255,255,255,0.08);
+        background: rgba(255, 255, 255, 0.07);
         margin: 10px 18px;
     }
     .nav-section-label {
@@ -96,7 +125,7 @@ define('BO_BACKOFFICE_SHELL_STYLES', true);
         font-size: 10px;
         text-transform: uppercase;
         letter-spacing: .12em;
-        color: rgba(255,255,255,0.38);
+        color: #64748b;
         font-weight: 700;
     }
     .main-content {

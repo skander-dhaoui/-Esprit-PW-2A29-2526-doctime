@@ -13,27 +13,18 @@ $userRole   = $_SESSION['user_role'] ?? 'guest';
     <title><?= htmlspecialchars($pageTitle) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <?php include __DIR__ . '/../../partials/public_theme_styles.php'; ?>
+    <?php include __DIR__ . '/../../../partials/public_theme_styles.php'; ?>
     <style>
-        /* ── Styles originaux du module parapharmacie ─────────── */
-        body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
-
-        /* Header parapharmacie plein largeur (style original) */
+        /* Fond global (cohérent thème clair/sombre injecté par index.php) */
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-light, #f0f6ff); }
+        #chatbot-conseiller { scroll-margin-top: 88px; }
+        /* Bandeau optionnel (fiches produit / commandes module pharma) */
         .pharma-header {
             background: linear-gradient(135deg, #2A7FAA 0%, #4CAF50 100%);
             color: white;
-            padding: 50px 0;
+            padding: 28px 0;
             text-align: center;
-            margin-bottom: 36px;
-        }
-
-        /* Footer parapharmacie (style original) */
-        .pharma-footer {
-            background: #1a2035;
-            color: white;
-            text-align: center;
-            padding: 28px;
-            margin-top: 60px;
+            margin-bottom: 24px;
         }
 
         /* ── Système de notifications intégré (sans popup browser) */
@@ -81,6 +72,47 @@ $userRole   = $_SESSION['user_role'] ?? 'guest';
         @keyframes valo-bar { from{width:100%} to{width:0} }
         @keyframes valo-out { to{opacity:0;transform:translateX(20px);max-height:0;padding:0;margin:0} }
 
+        /* Assistant vocal : pile micro + clavier + panneau saisie */
+        .pharma-voice-stack {
+            position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 1030;
+            display: flex; flex-direction: column; gap: 8px; align-items: center;
+        }
+        .pharma-voice-fab {
+            width: 56px; height: 56px; border-radius: 50% !important;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem; border: none; cursor: pointer;
+            background: linear-gradient(135deg, #1a7fa8, #1db88e);
+            color: #fff; box-shadow: 0 4px 18px rgba(26, 127, 168, 0.45);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .pharma-voice-fab--kbd {
+            background: linear-gradient(135deg, #475569, #64748b);
+            box-shadow: 0 4px 12px rgba(71, 85, 105, 0.35);
+        }
+        .pharma-voice-fab--disabled { opacity: 0.45; cursor: not-allowed; }
+        .pharma-voice-fallback-panel {
+            position: fixed; bottom: 9.5rem; left: 1rem; z-index: 1029;
+            width: min(340px, calc(100vw - 2rem));
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+            padding: 12px 14px; box-shadow: 0 10px 30px rgba(0,0,0,.12);
+        }
+        .pharma-voice-fab:hover:not(:disabled) { transform: scale(1.05); color: #fff; }
+        .pharma-voice-fab.is-listening {
+            animation: pharma-voice-pulse 1.2s ease-in-out infinite;
+            box-shadow: 0 0 0 0 rgba(29, 184, 142, 0.6);
+        }
+        @keyframes pharma-voice-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(29, 184, 142, 0.5); }
+            50% { box-shadow: 0 0 0 12px rgba(29, 184, 142, 0); }
+        }
+        .pharma-voice-status {
+            position: fixed; bottom: 5.2rem; left: 1rem; right: auto; max-width: 280px;
+            z-index: 1029; display: none;
+            background: rgba(26, 32, 53, 0.92); color: #f1f5f9; font-size: 0.85rem;
+            padding: 10px 14px; border-radius: 12px; line-height: 1.4;
+            box-shadow: 0 6px 20px rgba(0,0,0,.2);
+        }
+
         <?php if (!empty($extraStyles)): ?><?= $extraStyles ?><?php endif; ?>
     </style>
 </head>
@@ -90,7 +122,7 @@ $userRole   = $_SESSION['user_role'] ?? 'guest';
 
 <?php
 $navActive = $activePage ?? ($_GET['page'] ?? '');
-include __DIR__ . '/../../partials/nav_public.php';
+include __DIR__ . '/../../../partials/nav_public.php';
 ?>
 
 <script>

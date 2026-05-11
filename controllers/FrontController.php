@@ -27,6 +27,111 @@ class FrontController {
         }
     }
 
+    private static bool $docTimeSchemaEnsured = false;
+
+    /** Colonnes optionnelles (UI DocTime) : categorie, sponsor_id sur events ; email, telephone sur sponsors */
+    private function ensureDocTimeSchema(\PDO $pdo): void {
+        if (self::$docTimeSchemaEnsured) {
+            return;
+        }
+        self::$docTimeSchemaEnsured = true;
+        $try = static function (string $sql) use ($pdo): void {
+            try {
+                $pdo->exec($sql);
+            } catch (Throwable $e) {
+                // colonne ou index déjà présent
+            }
+        };
+        $try('ALTER TABLE events ADD COLUMN categorie VARCHAR(100) NULL AFTER lieu');
+        $try('ALTER TABLE events ADD COLUMN sponsor_id INT NULL AFTER categorie');
+        $try('ALTER TABLE events ADD INDEX idx_events_sponsor (sponsor_id)');
+        $try('ALTER TABLE sponsors ADD COLUMN email VARCHAR(255) NULL AFTER nom');
+        $try('ALTER TABLE sponsors ADD COLUMN telephone VARCHAR(50) NULL AFTER email');
+        $this->repairEventsStatusEnumIfNeeded($pdo);
+    }
+
+    /**
+     * Bases importées avec mauvais encodage : ENUM peut contenir '? venir' au lieu de 'à venir',
+     * ou des valeurs vides. Normalisation en VARCHAR puis ré-ENUM UTF-8 via PDO (UTF-8 réel).
+     */
+    private function repairEventsStatusEnumIfNeeded(\PDO $pdo): void {
+        try {
+            $pdo->exec('ALTER TABLE events MODIFY COLUMN status VARCHAR(32) NOT NULL');
+        } catch (Throwable $e) {
+            // déjà VARCHAR ou indisponible
+        }
+        $avenir = 'à venir';
+        $term   = 'terminé';
+        $annul  = 'annulé';
+        try {
+            $run = static function (\PDO $pdo, string $sql, string $val): void {
+                $st = $pdo->prepare($sql);
+                $st->execute([$val]);
+            };
+            $run($pdo, 'UPDATE events SET status = ? WHERE status IN (\'termin?\', \'terminé\')', $term);
+            $run($pdo, 'UPDATE events SET status = ? WHERE status IN (\'annul?\', \'annulé\')', $annul);
+            $run($pdo, 'UPDATE events SET status = ? WHERE status IN (\'? venir\', \'?\', \'\') OR status IS NULL OR TRIM(COALESCE(status, \'\')) = \'\'', $avenir);
+            $run($pdo, 'UPDATE events SET status = ? WHERE status NOT IN (\'à venir\',\'en_cours\',\'terminé\',\'annulé\')', $avenir);
+        } catch (Throwable $e) {
+            error_log('repairEventsStatusEnumIfNeeded (updates): ' . $e->getMessage());
+        }
+        try {
+            $pdo->exec('ALTER TABLE events MODIFY COLUMN status ENUM(\'à venir\',\'en_cours\',\'terminé\',\'annulé\') NOT NULL DEFAULT \'à venir\'');
+        } catch (Throwable $e) {
+            error_log('repairEventsStatusEnumIfNeeded (enum): ' . $e->getMessage());
+        }
+    }
+
+    private function guessEventCategoryFromTitle(string $titre): string {
+        $t = mb_strtolower($titre, 'UTF-8');
+        $map = [
+            'dermat' => 'Dermatologie',
+            'cardio'  => 'Cardiologie',
+            'pédiat'  => 'Pédiatrie',
+            'pediat'  => 'Pédiatrie',
+            'nutrition' => 'Nutrition',
+            'diabète' => 'Endocrinologie',
+            'diabete' => 'Endocrinologie',
+            'sommeil' => 'Médecine du sommeil',
+            'coeur'   => 'Cardiologie',
+        ];
+        foreach ($map as $needle => $label) {
+            if ($needle !== '' && str_contains($t, $needle)) {
+                return $label;
+            }
+        }
+        return 'Général';
+    }
+
+    private function eventCategoryForRow(array $event): string {
+        $c = trim((string)($event['categorie'] ?? ''));
+        if ($c !== '') {
+            return $c;
+        }
+        return $this->guessEventCategoryFromTitle((string)($event['titre'] ?? ''));
+    }
+
+    /** Libellés + classes badge pour l’affichage public */
+    private function eventStatusPublicBadge(string $status): array {
+        return match ($status) {
+            'en_cours' => ['En cours', 'dt-badge-encours'],
+            'terminé' => ['Terminé', 'dt-badge-term'],
+            'annulé' => ['Annulé', 'dt-badge-annul'],
+            default => ['Planifié', 'dt-badge-planif'],
+        };
+    }
+
+    private function truncatePlain(?string $text, int $maxLen): string {
+        $t = trim(strip_tags((string)$text));
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($t, 'UTF-8') <= $maxLen) {
+                return $t;
+            }
+            return rtrim(mb_substr($t, 0, $maxLen - 1, 'UTF-8')) . '…';
+        }
+        return strlen($t) <= $maxLen ? $t : substr($t, 0, $maxLen - 1) . '…';
+    }
+
     // =============================================
     // PAGES PUBLIQUES
     // =============================================
@@ -250,155 +355,99 @@ public function listeMedecins(): void {
 
             if ($isAdmin) {
                 $totalArticles = count($articles);
-                $totalVues = array_sum(array_column($articles, 'vues'));
-                $totalComments = array_sum(array_column($articles, 'nb_replies'));
+                $totalVues = (int) array_sum(array_map('intval', array_column($articles, 'vues')));
+                $totalComments = (int) array_sum(array_map('intval', array_column($articles, 'nb_replies')));
                 $statsHtml = '
-                <div class="row mb-4">
+                <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <div class="card card-stats bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total articles</h6><h2 class="mb-0">' . $totalArticles . '</h2></div>
-                                    <i class="fas fa-newspaper fa-3x opacity-50"></i>
-                                </div>
-                            </div>
+                        <div class="stat-card" style="background:linear-gradient(135deg,#1a7fa8,#1db88e)">
+                            <p>Total articles</p>
+                            <h3>' . $totalArticles . '</h3>
+                            <i class="fas fa-newspaper stat-icon"></i>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card card-stats bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total vues</h6><h2 class="mb-0">' . $totalVues . '</h2></div>
-                                    <i class="fas fa-eye fa-3x opacity-50"></i>
-                                </div>
-                            </div>
+                        <div class="stat-card" style="background:linear-gradient(135deg,#22c55e,#15803d)">
+                            <p>Total vues</p>
+                            <h3>' . $totalVues . '</h3>
+                            <i class="fas fa-eye stat-icon"></i>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card card-stats bg-info text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div><h6 class="card-title">Total commentaires</h6><h2 class="mb-0">' . $totalComments . '</h2></div>
-                                    <i class="fas fa-comments fa-3x opacity-50"></i>
-                                </div>
-                            </div>
+                        <div class="stat-card" style="background:linear-gradient(135deg,#0ea5e9,#0891b2)">
+                            <p>Total commentaires</p>
+                            <h3>' . $totalComments . '</h3>
+                            <i class="fas fa-comments stat-icon"></i>
                         </div>
                     </div>
                 </div>';
-                $addButton = '
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0"><i class="fas fa-newspaper me-2"></i>Liste des articles</h4>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Nouvel article
-                    </a>
-                </div>';
+                $cardHead = '
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
+                        <h6 class="mb-0 fw-bold"><i class="fas fa-list me-2" style="color:#1a7fa8"></i>Liste des articles</h6>
+                        <a href="index.php?page=articles_admin&action=create" class="btn btn-primary btn-sm rounded-pill px-3">
+                            <i class="fas fa-plus me-1"></i>Nouvel article
+                        </a>
+                    </div>';
                 if (empty($articles)) {
-                    $content = '<div class="alert alert-info">Aucun article disponible pour le moment.</div>';
+                    $content = $cardHead . '
+                    <div class="card-body">
+                        <div class="alert alert-info border-0 mb-0" style="border-radius:12px;background:#e8f4f8;color:#0c4a6e;">
+                            <i class="fas fa-info-circle me-2"></i>Aucun article pour le moment. Créez le premier avec le bouton ci-dessus.
+                        </div>
+                    </div></div>';
                 } else {
-                    $content = '
+                    $content = $cardHead . '
+                    <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead class="table-primary">
-                                <tr><th>ID</th><th>Titre</th><th>Auteur</th><th>Date</th><th>Vues</th><th>Commentaires</th><th>Actions</th></tr>
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:72px">ID</th>
+                                    <th>Titre</th>
+                                    <th>Auteur</th>
+                                    <th>Date</th>
+                                    <th class="text-center">Vues</th>
+                                    <th class="text-center">Commentaires</th>
+                                    <th class="text-end" style="min-width:140px">Actions</th>
+                                </tr>
                             </thead>
                             <tbody>';
                     foreach ($articles as $article) {
                         $content .= '
                         <tr>
-                            <td>' . $article['id'] . '</td>
-                            <td><strong>' . htmlspecialchars(substr($article['titre'], 0, 50)) . (strlen($article['titre']) > 50 ? '...' : '') . '</strong></td>
+                            <td class="text-muted small">' . (int) $article['id'] . '</td>
+                            <td><strong>' . htmlspecialchars($this->truncateArticleTitleForAdminList((string) ($article['titre'] ?? ''))) . '</strong></td>
                             <td>' . htmlspecialchars($article['auteur_name'] ?? 'Valorys') . '</td>
-                            <td>' . date('d/m/Y H:i', strtotime($article['created_at'])) . '</td>
-                            <td><span class="badge bg-info">' . ($article['vues'] ?? 0) . '</span></td>
-                            <td><span class="badge bg-secondary">' . ($article['nb_replies'] ?? 0) . '</span></td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="index.php?page=detail_article_public&id=' . $article['id'] . '" class="btn btn-sm btn-info btn-action" title="Voir"><i class="fas fa-eye"></i></a>
-                                    <a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" class="btn btn-sm btn-warning btn-action" title="Modifier"><i class="fas fa-edit"></i></a>
-                                    <button type="button" class="btn btn-sm btn-danger btn-action" title="Supprimer" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i></button>
+                            <td class="text-nowrap small">' . date('d/m/Y H:i', strtotime($article['created_at'])) . '</td>
+                            <td class="text-center"><span class="badge rounded-pill" style="background:#e0f2fe;color:#0369a1;">' . (int) ($article['vues'] ?? 0) . '</span></td>
+                            <td class="text-center"><span class="badge rounded-pill bg-light text-dark border">' . (int) ($article['nb_replies'] ?? 0) . '</span></td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="index.php?page=detail_article_public&id=' . (int) $article['id'] . '" class="btn btn-outline-primary" title="Voir"><i class="fas fa-eye"></i></a>
+                                    <a href="index.php?page=articles_admin&action=edit&id=' . (int) $article['id'] . '" class="btn btn-outline-warning" title="Modifier"><i class="fas fa-edit"></i></a>
+                                    <button type="button" class="btn btn-outline-danger" title="Supprimer" onclick="confirmDeleteArticle(' . (int) $article['id'] . ', \'' . addslashes((string) ($article['titre'] ?? '')) . '\')"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>';
                     }
-                    $content .= '</tbody></table></div>';
+                    $content .= '</tbody></table></div></div></div>';
                 }
-                $fullContent = $statsHtml . $addButton . $content . $this->getDeleteScript();
+                $fullContent = $statsHtml . $content . $this->getDeleteScript();
                 $this->renderAdminLayout('Gestion des articles', $fullContent, 'articles');
-                return;
-            }
-
-            $addButton = '';
-            if ($isLoggedIn) {
-                $addButton = '
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h2><i class="fas fa-newspaper"></i> Nos articles</h2>
-                    <a href="index.php?page=articles_admin&action=create" class="btn btn-success" style="background:#28a745;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;">
-                        <i class="fas fa-plus"></i> Nouvel article
-                    </a>
-                </div>';
-            } else {
-                $addButton = '<h2 class="mb-4"><i class="fas fa-newspaper"></i> Nos articles</h2>';
-            }
-
-            if (empty($articles)) {
-                $content = '<div class="alert alert-info">Aucun article disponible pour le moment.</div>';
-            } else {
-                $content = '<div style="display:flex;flex-wrap:wrap;gap:20px;margin:0 -10px;">';
-                foreach ($articles as $article) {
-                    $canEdit = false;
-                    $canDelete = false;
-                    if ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']) {
-                        $canEdit = true;
-                        $canDelete = true;
-                    }
-                    $crudButtons = '';
-                    if ($canEdit || $canDelete) {
-                        $crudButtons = '
-                        <div style="position:absolute;top:15px;right:15px;display:flex;gap:8px;z-index:100;">
-                            ' . ($canEdit ? '<a href="index.php?page=articles_admin&action=edit&id=' . $article['id'] . '" style="background:#ffc107;color:#000;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:12px;"><i class="fas fa-edit"></i> Modifier</a>' : '') . '
-                            ' . ($canDelete ? '<button type="button" onclick="confirmDeleteArticle(' . $article['id'] . ', \'' . addslashes($article['titre']) . '\')" style="background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
-                        </div>';
-                    }
-                    $articleImage = !empty($article['image']) ? '<img src="' . htmlspecialchars($article['image']) . '" style="width:100%;height:180px;object-fit:cover;border-radius:8px;margin-bottom:15px;">' : '';
-                    $content .= '
-                    <div style="flex:0 0 calc(50% - 20px);min-width:280px;border:1px solid #ddd;border-radius:8px;padding:20px;margin-bottom:20px;background:white;position:relative;">
-                        ' . $crudButtons . '
-                        ' . $articleImage . '
-                        <h3 style="margin-top:0;padding-right:150px;">' . htmlspecialchars($article['titre']) . '</h3>
-                        <div style="color:#666;font-size:13px;margin-bottom:15px;">
-                            <span><i class="fas fa-user"></i> ' . htmlspecialchars($article['auteur_name'] ?? 'Valorys') . '</span>
-                            <span style="margin-left:15px;"><i class="fas fa-calendar"></i> ' . date('d/m/Y', strtotime($article['created_at'])) . '</span>
-                            <span style="margin-left:15px;"><i class="fas fa-eye"></i> ' . ($article['vues'] ?? 0) . ' vues</span>
-                            <span style="margin-left:15px;"><i class="fas fa-comment"></i> ' . ($article['nb_replies'] ?? 0) . ' commentaire(s)</span>
-                        </div>
-                        <p>' . htmlspecialchars(substr(strip_tags($article['contenu']), 0, 150)) . '...</p>
-                        <a href="index.php?page=detail_article_public&id=' . $article['id'] . '" style="display:inline-block;background:#2A7FAA;color:white;padding:8px 20px;border-radius:5px;text-decoration:none;">Lire la suite →</a>
-                    </div>';
-                }
-                $content .= '</div>';
-            }
-
-            if (!$isLoggedIn) {
-                $infoMessage = '
-                <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:12px 20px;margin-bottom:20px;border-radius:5px;">
-                    <i class="fas fa-info-circle"></i>
-                    <a href="index.php?page=login" style="color:#1976d2;">Connectez-vous</a> pour créer, modifier ou supprimer vos propres articles.
-                </div>';
-                $fullContent = $infoMessage . $addButton . $content . $this->getDeleteScript();
-            } else {
-                $fullContent = $addButton . $content . $this->getDeleteScript();
-            }
-            $this->renderPublicView('Blog Valorys', $fullContent);
-
-        } catch (Exception $e) {
-            error_log('Erreur blogList: ' . $e->getMessage());
-            $content = '<div class="alert alert-danger">Erreur: ' . htmlspecialchars($e->getMessage()) . '</div>';
-            $this->renderPublicView('Blog Valorys', $content);
+            return;
         }
+
+        require __DIR__ . '/../views/frontoffice/blog_public.php';
+    } catch (Exception $e) {
+        error_log('Erreur blogList: ' . $e->getMessage());
+        $content = '<div class="alert alert-danger">Erreur: ' . htmlspecialchars($e->getMessage()) . '</div>';
+        $this->renderPublicView('Blog Valorys', $content);
     }
+}
 
     // =============================================
-    // DISPONIBILITÉS
+    // DISPONIBILITÉS — suite du fichier original
     // =============================================
 
     public function patientDisponibilites(): void {
@@ -574,70 +623,32 @@ public function patientDeleteDisponibilite(int $id): void {
     // RENDU ADMIN AVEC SIDEBAR
     // =============================================
 
-    private function renderAdminLayout($title, $content, $activePage = 'articles'): void {
-        ?>
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?= htmlspecialchars($title) ?> - Valorys Admin</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-                .sidebar { background: #2c3e50; min-height: 100vh; color: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
-                .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; transition: all 0.3s; border-radius: 8px; margin: 4px 10px; }
-                .sidebar .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
-                .sidebar .nav-link.active { background: #2A7FAA; color: white; }
-                .sidebar .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
-                .sidebar .navbar-brand { padding: 20px 15px; font-size: 1.3rem; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; }
-                .main-content { padding: 20px; }
-                .top-bar { background: white; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            </style>
-        </head>
-        <body>
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-md-2 col-lg-2 px-0 sidebar">
-                        <div class="navbar-brand text-center">
-                            <i class="fas fa-hospital-user me-2"></i> Valorys Admin
-                        </div>
-                        <nav class="nav flex-column">
-                            <a class="nav-link <?= $activePage == 'dashboard'      ? 'active' : '' ?>" href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                            <a class="nav-link <?= $activePage == 'users'          ? 'active' : '' ?>" href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-                            <a class="nav-link <?= $activePage == 'patients'       ? 'active' : '' ?>" href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-                            <a class="nav-link <?= $activePage == 'medecins'       ? 'active' : '' ?>" href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
-                            <a class="nav-link <?= $activePage == 'disponibilites' ? 'active' : '' ?>" href="index.php?page=disponibilites_admin"><i class="fas fa-clock"></i> Disponibilités</a>
-                            <a class="nav-link <?= $activePage == 'rendezvous'     ? 'active' : '' ?>" href="index.php?page=rendez_vous_admin"><i class="fas fa-calendar-check"></i> Rendez-vous</a>
-                            <a class="nav-link <?= $activePage == 'ordonnances'    ? 'active' : '' ?>" href="index.php?page=ordonnances"><i class="fas fa-prescription-bottle"></i> Ordonnances</a>
-                            <a class="nav-link <?= $activePage == 'articles'       ? 'active' : '' ?>" href="index.php?page=articles_admin"><i class="fas fa-newspaper"></i> Articles</a>
-                            <a class="nav-link <?= $activePage == 'evenements'     ? 'active' : '' ?>" href="index.php?page=evenements_admin"><i class="fas fa-calendar-alt"></i> Événements</a>
-                            <a class="nav-link <?= $activePage == 'produits'       ? 'active' : '' ?>" href="index.php?page=produits_admin"><i class="fas fa-box"></i> Produits</a>
-                            <a class="nav-link <?= $activePage == 'stats'          ? 'active' : '' ?>" href="index.php?page=stats"><i class="fas fa-chart-line"></i> Statistiques</a>
-                            <a class="nav-link <?= $activePage == 'settings'       ? 'active' : '' ?>" href="index.php?page=settings"><i class="fas fa-cog"></i> Paramètres</a>
-                            <hr class="mx-3 my-2" style="border-color: rgba(255,255,255,0.1);">
-                            <a class="nav-link" href="index.php?page=accueil"><i class="fas fa-home"></i> Voir le site</a>
-                            <a class="nav-link text-danger" href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-                        </nav>
-                    </div>
-                    <div class="col-md-10 col-lg-10 main-content">
-                        <div class="top-bar d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0"><?= htmlspecialchars($title) ?></h4>
-                            <div class="d-flex align-items-center">
-                                <span class="me-3"><i class="fas fa-user-circle"></i> <?= htmlspecialchars($_SESSION['user_name'] ?? 'Admin') ?></span>
-                                <span class="badge bg-primary"><?= ucfirst($_SESSION['user_role'] ?? 'admin') ?></span>
-                            </div>
-                        </div>
-                        <?= $this->getFlashMessages() ?>
-                        <?= $content ?>
-                    </div>
-                </div>
-            </div>
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        </body>
-        </html>
-        <?php
+    /** Titre tronqué pour la liste admin (UTF-8 si mbstring disponible). */
+    private function truncateArticleTitleForAdminList(string $titre, int $max = 60): string {
+        if ($titre === '') {
+            return '';
+        }
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($titre, 'UTF-8') > $max) {
+                return mb_substr($titre, 0, $max, 'UTF-8') . '…';
+            }
+            return $titre;
+        }
+        if (strlen($titre) > $max) {
+            return substr($titre, 0, $max) . '…';
+        }
+        return $titre;
+    }
+
+    /**
+     * Shell back-office DocTime : même bandeau, sidebar et pied que le reste de l’admin.
+     */
+    private function renderAdminLayout(string $title, string $content, string $activePage = 'articles'): void {
+        $pageTitle = $title;
+        require __DIR__ . '/../views/backoffice/layout_header.php';
+        echo $this->getFlashMessages();
+        echo $content;
+        require __DIR__ . '/../views/backoffice/layout_footer.php';
     }
 
     private function renderAdminView($title, $content): void {
@@ -694,14 +705,15 @@ public function patientDeleteDisponibilite(int $id): void {
         }
         require_once __DIR__ . '/../models/Article.php';
         require_once __DIR__ . '/../models/Reply.php';
+        $isLoggedIn = isset($_SESSION['user_id']);
+        $userId     = $_SESSION['user_id'] ?? null;
         $articleModel = new Article();
         $replyModel   = new Reply();
         $articleModel->incrementViews($id);
-        $article = $articleModel->getById($id);
+        $viewerForArt = $isLoggedIn ? (int)$userId : null;
+        $article = $articleModel->getById($id, $viewerForArt);
         if (!$article) { $this->page404(); return; }
         $replies    = $replyModel->getByArticle($id);
-        $isLoggedIn = isset($_SESSION['user_id']);
-        $userId     = $_SESSION['user_id'] ?? null;
         $userRole   = $_SESSION['user_role'] ?? '';
         $isAdmin    = ($userRole === 'admin');
         if ($isAdmin) {
@@ -709,19 +721,68 @@ public function patientDeleteDisponibilite(int $id): void {
             $this->renderAdminLayout('Détail de l\'article - Administration', $content, 'articles');
             return;
         }
-        $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && $userId == $article['auteur_id']);
-        $articleButtons = $isAuthor ? '
-        <div class="mb-3 d-flex gap-2">
-            <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Modifier mon article</a>
-            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')"><i class="fas fa-trash"></i> Supprimer mon article</button>
-            <a href="index.php?page=blog_public" class="btn btn-secondary btn-sm ms-auto"><i class="fas fa-arrow-left"></i> Retour au blog</a>
-        </div>'
-        : '<div class="mb-3"><a href="index.php?page=blog_public" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Retour au blog</a></div>';
+        $isAuthor = ($isLoggedIn && isset($article['auteur_id']) && (int)$userId === (int)$article['auteur_id']);
+        $authorDisplay = trim(
+            ((string)($article['auteur_prenom'] ?? '')) . ' ' . ((string)($article['auteur_name'] ?? 'Valorys'))
+        ) ?: ($article['auteur_name'] ?? 'Valorys');
+        $initial = strtoupper(substr($authorDisplay, 0, 1));
+        $nbLk = (int)($article['nb_likes'] ?? 0);
+        $nbDk = (int)($article['nb_dislikes'] ?? 0);
+        $myVote = $article['my_vote'] ?? '';
+        $likeActive = $myVote === 'like' ? ' active-like' : '';
+        $disActive = $myVote === 'dislike' ? ' active-dis' : '';
+
+        $topActions = $isAuthor ? '
+            <div class="post-actions-top">
+                <a href="index.php?page=articles_admin&action=edit&id=' . $id . '" class="btn-modifier" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+                    <i class="fas fa-pencil-alt"></i> Modifier
+                </a>
+                <button type="button" class="btn-supprimer" onclick="confirmDeleteArticle(' . $id . ', \'' . addslashes($article['titre']) . '\')">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+            </div>' : '';
+
         $articleImage = !empty($article['image'])
-            ? '<img src="' . htmlspecialchars($article['image']) . '" style="width:100%;max-height:400px;object-fit:cover;border-radius:8px;margin-bottom:20px;">'
+            ? '<img src="' . htmlspecialchars($article['image']) . '" style="width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-bottom:16px;" alt="">'
             : '';
+
+        $articleI18nJson = json_encode([
+            'title' => (string)($article['titre'] ?? ''),
+            'body'  => (string)($article['contenu'] ?? ''),
+        ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $translateBar = '
+        <div class="translate-bar mb-3 pb-3 border-bottom">
+            <span class="small fw-bold text-muted me-2">Traduire :</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill me-1" data-translate-article="en">English</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill me-1" data-translate-article="ar">العربية</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="article-translate-original">Original</button>
+            <span id="article-translate-status" class="small text-muted ms-2 d-none"></span>
+        </div>';
+
         $content = '
         <style>
+            .detail-wrap-inner { max-width:680px;margin:0 auto;padding:0 10px 40px; }
+            .back-blog { display:inline-flex;align-items:center;gap:8px;color:#2A7FAA;font-weight:600;margin-bottom:16px;text-decoration:none;font-size:15px; }
+            .back-blog:hover { text-decoration:underline; }
+            .post-card-d { background:#fff;border-radius:14px;border:1px solid #e4e6eb;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px; }
+            .post-head-d { display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 16px 0; }
+            .post-author-block { display:flex;gap:10px;min-width:0; }
+            .avatar-circle-d { width:40px;height:40px;border-radius:50%;background:linear-gradient(145deg,#4CAF50,#2e9b4a);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+            .post-author-name { font-weight:700;font-size:15px;color:#1c1e21; }
+            .post-meta-line { font-size:13px;color:#65676b;margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+            .post-actions-top { display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end; }
+            .btn-modifier { background:#ffc107;color:#1c1e21;border:none;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px; }
+            .btn-supprimer { background:#dc3545;color:#fff;border:none;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px; }
+            .post-body-d { padding:12px 16px 16px; }
+            .post-title-d { font-size:1.35rem;font-weight:800;color:#1c1e21;margin-bottom:12px; }
+            .post-text-d { line-height:1.65;color:#1c1e21;font-size:15px;white-space:pre-wrap;word-break:break-word; }
+            .post-footer-d { border-top:1px solid #e4e6eb;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px; }
+            .vote-btn { border:none;background:transparent;display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#65676b;font-weight:600;padding:4px 8px;border-radius:8px;cursor:pointer; }
+            .vote-btn:hover { background:#f0f2f5; }
+            .vote-btn.active-like { color:#e41e3f; }
+            .vote-btn.active-dis { color:#65676b; }
+            .comments-card-d { background:#fff;border-radius:14px;border:1px solid #e4e6eb;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08); }
+            .comments-card-d h3 { font-size:1.1rem;font-weight:800;margin-bottom:16px;color:#1c1e21;border-bottom:2px solid #2A7FAA;padding-bottom:10px; }
             .reply-item { border-bottom:1px solid #eee;padding:15px 0;display:flex;gap:15px; }
             .reply-avatar { width:45px;height:45px;border-radius:50%;background:linear-gradient(135deg,#2A7FAA,#4CAF50);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;flex-shrink:0; }
             .reply-content { flex:1; }
@@ -733,66 +794,67 @@ public function patientDeleteDisponibilite(int $id): void {
             .reply-actions { margin-top:10px;display:flex;gap:10px; }
             .btn-edit-reply { background:#ffc107;color:#000;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px; }
             .btn-delete-reply { background:#dc3545;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px; }
-#editDispoModal, #addDispoModal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: transparent;
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-    }            .modal-content { background-color:#fff;margin:10% auto;padding:20px;border-radius:10px;width:90%;max-width:500px;position:relative; }
+            .reply-thread-node { margin-bottom: 10px; }
+            .reply-nested { margin-left: 8px; padding-left: 14px; border-left: 3px solid #e4e6eb; margin-top: 8px; }
+            .btn-reply-to { background: transparent; border: 1px solid #e4e6eb; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: #65676b; cursor: pointer; margin-top: 8px; }
+            .btn-reply-to:hover { background: #f0f2f5; color: #1c1e21; }
+            #editReplyModal, #deleteReplyModal { display:none;position:fixed;z-index:1050;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5); }
+            .modal-content { background-color:#fff;margin:10% auto;padding:20px;border-radius:12px;width:90%;max-width:500px;position:relative; }
             .close { position:absolute;right:15px;top:10px;font-size:25px;cursor:pointer; }
             .form-group { margin-bottom:15px; }
             .form-group label { display:block;margin-bottom:5px;font-weight:bold; }
-            .form-group input,.form-group textarea,.form-group select { width:100%;padding:10px;border:1px solid #ddd;border-radius:6px; }
+            .form-group input,.form-group textarea { width:100%;padding:10px;border:1px solid #ddd;border-radius:6px; }
             .btn-submit { background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;padding:10px 25px;border-radius:25px;cursor:pointer; }
         </style>
-        <div style="background:white;border-radius:12px;padding:30px;margin-bottom:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-            ' . $articleButtons . '
-            ' . $articleImage . '
-            <h1 style="font-size:2rem;margin-bottom:15px;">' . htmlspecialchars($article['titre']) . '</h1>
-            <div style="color:#666;font-size:14px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid #eee;">
-                <span><i class="fas fa-user"></i> ' . htmlspecialchars($article['auteur_name'] ?? 'Valorys') . '</span>
-                <span style="margin-left:20px;"><i class="fas fa-calendar"></i> ' . date('d/m/Y H:i', strtotime($article['created_at'])) . '</span>
-                <span style="margin-left:20px;"><i class="fas fa-eye"></i> ' . ($article['vues'] ?? 0) . ' vues</span>
-                <span style="margin-left:20px;"><i class="fas fa-comment"></i> ' . count($replies) . ' commentaire(s)</span>
-            </div>
-            <div style="line-height:1.8;color:#333;">' . nl2br(htmlspecialchars($article['contenu'])) . '</div>
-        </div>';
+        <div class="detail-wrap-inner">
+            <a href="index.php?page=blog_public" class="back-blog"><i class="fas fa-arrow-left"></i> Retour au blog</a>
+            <div class="post-card-d">
+                <div class="post-head-d">
+                    <div class="post-author-block">
+                        <div class="avatar-circle-d">' . $initial . '</div>
+                        <div>
+                            <div class="post-author-name">' . htmlspecialchars($authorDisplay) . '</div>
+                            <div class="post-meta-line">
+                                <span>' . date('d/m/Y H:i', strtotime($article['created_at'] ?? 'now')) . '</span>
+                                <i class="fas fa-globe-americas" title="Public"></i>
+                            </div>
+                        </div>
+                    </div>
+                    ' . $topActions . '
+                </div>
+                <div class="post-body-d">
+                    ' . $articleImage . '
+                    ' . $translateBar . '
+                    <h1 class="post-title-d" id="article-title-display">' . htmlspecialchars($article['titre']) . '</h1>
+                    <div class="post-text-d" id="article-body-display">' . nl2br(htmlspecialchars($article['contenu'])) . '</div>
+                </div>
+                <div class="post-footer-d">
+                    <div style="display:flex;gap:14px;align-items:center;">
+                        <button type="button" class="vote-btn' . $likeActive . '" id="detVoteLike" data-type="like"><i class="fas fa-heart"></i><span id="detLk">' . $nbLk . '</span></button>
+                        <button type="button" class="vote-btn' . $disActive . '" id="detVoteDis" data-type="dislike"><i class="fas fa-thumbs-down"></i><span id="detDk">' . $nbDk . '</span></button>
+                    </div>
+                    <div style="color:#65676b;font-size:14px;display:flex;gap:16px;">
+                        <span><i class="fas fa-eye me-1"></i>' . (int)($article['vues'] ?? 0) . '</span>
+                        <span><i class="fas fa-comment me-1"></i>' . count($replies) . '</span>
+                    </div>
+                </div>
+            </div>';
         $content .= '
-        <div style="background:white;border-radius:12px;padding:25px;margin-bottom:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-            <h3 style="margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid #2A7FAA;"><i class="fas fa-comments"></i> Commentaires (' . count($replies) . ')</h3>
+        <div class="comments-card-d">
+            <h3><i class="fas fa-comments me-2" style="color:#2A7FAA"></i>Commentaires (' . count($replies) . ')</h3>
             <div id="replies-container">';
         if (empty($replies)) {
             $content .= '<p style="text-align:center;color:#999;padding:20px;">Aucun commentaire pour le moment. Soyez le premier à réagir !</p>';
         } else {
+            $byParent = [];
             foreach ($replies as $reply) {
-                $canEditReply   = ($isLoggedIn && !empty($reply['user_id']) && $userId == $reply['user_id']);
-                $canDeleteReply = $canEditReply;
-                $replyContent = '';
-                if (!empty($reply['emoji']))        $replyContent .= '<div class="reply-emoji">' . htmlspecialchars($reply['emoji']) . '</div>';
-                if (!empty($reply['contenu_text'])) $replyContent .= '<div class="reply-text">' . nl2br(htmlspecialchars($reply['contenu_text'])) . '</div>';
-                if (!empty($reply['photo']))         $replyContent .= '<img src="' . htmlspecialchars($reply['photo']) . '" class="reply-photo" alt="Photo">';
-                $replyButtons = '';
-                if ($canEditReply || $canDeleteReply) {
-                    $replyButtons = '
-                    <div class="reply-actions">
-                        ' . ($canEditReply   ? '<button onclick="openEditReplyModal(' . $reply['id_reply'] . ')" class="btn-edit-reply"><i class="fas fa-edit"></i> Modifier</button>'   : '') . '
-                        ' . ($canDeleteReply ? '<button onclick="confirmDeleteReply(' . $reply['id_reply'] . ')" class="btn-delete-reply"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
-                    </div>';
+                $pid = !empty($reply['parent_reply_id']) ? (int)$reply['parent_reply_id'] : 0;
+                if (!isset($byParent[$pid])) {
+                    $byParent[$pid] = [];
                 }
-                $content .= '
-                <div class="reply-item" id="reply-' . $reply['id_reply'] . '">
-                    <div class="reply-avatar">' . strtoupper(substr($reply['auteur'] ?? 'A', 0, 1)) . '</div>
-                    <div class="reply-content">
-                        <div class="reply-author">' . htmlspecialchars($reply['auteur'] ?? 'Anonyme') . '</div>
-                        <div class="reply-date"><i class="fas fa-clock"></i> ' . date('d/m/Y H:i', strtotime($reply['date_reply'])) . '</div>
-                        ' . $replyContent . $replyButtons . '
-                    </div>
-                </div>';
+                $byParent[$pid][] = $reply;
             }
+            $content .= $this->renderReplyBranchHtml($byParent, 0, $isLoggedIn, $userId);
         }
         $content .= '</div></div>';
         if ($isLoggedIn) {
@@ -800,10 +862,29 @@ public function patientDeleteDisponibilite(int $id): void {
             $replyData   = $_SESSION['reply_data']   ?? [];
             $textValue   = htmlspecialchars($replyData['text']  ?? '');
             $emojiValue  = htmlspecialchars($replyData['emoji'] ?? '');
+            $parentReplyField = (int)($replyData['parent_reply_id'] ?? 0);
+            $parentReplyLabel = '';
+            if ($parentReplyField > 0) {
+                foreach ($replies as $rr) {
+                    if ((int)($rr['id_reply'] ?? 0) === $parentReplyField) {
+                        $parentReplyLabel = (string)($rr['auteur'] ?? '');
+                        break;
+                    }
+                }
+            }
+            $parentHintDisplay = ($parentReplyField > 0) ? 'block' : 'none';
+            $parentHintText = $parentReplyField > 0
+                ? ('Réponse à ' . htmlspecialchars($parentReplyLabel !== '' ? $parentReplyLabel : ('commentaire #' . $parentReplyField)))
+                : '';
             $content .= '
-            <div id="comment-form" style="background:white;border-radius:12px;padding:25px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-                <h4 style="margin-bottom:20px;"><i class="fas fa-pen"></i> Laisser un commentaire</h4>
+            <div id="comment-form" class="comments-card-d">
+                <h4 style="margin-bottom:20px;font-weight:800;"><i class="fas fa-pen me-2" style="color:#2A7FAA"></i>Laisser un commentaire</h4>
                 <form method="POST" action="index.php?page=detail_article_public&id=' . $id . '" enctype="multipart/form-data">
+                    <input type="hidden" name="parent_reply_id" id="parent_reply_id" value="' . ($parentReplyField > 0 ? (string)(int)$parentReplyField : '') . '">
+                    <div id="reply-to-hint" class="mb-3 p-2 rounded border" style="display:' . $parentHintDisplay . ';background:#f0f7ff;border-color:#b8daff!important;">
+                        <i class="fas fa-reply me-2 text-primary"></i><span id="reply-to-text">' . $parentHintText . '</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="cancelReplyTo()">Annuler</button>
+                    </div>
                     <div class="form-group">
                         <label>Votre commentaire (texte)</label>
                         <textarea name="reply_text" rows="4" placeholder="Écrivez votre commentaire..."
@@ -830,11 +911,13 @@ public function patientDeleteDisponibilite(int $id): void {
             unset($_SESSION['reply_errors'], $_SESSION['reply_data']);
         } else {
             $content .= '
-            <div style="background:#e3f2fd;border-left:4px solid #2196f3;padding:15px;border-radius:8px;">
-                <i class="fas fa-info-circle"></i>
-                <a href="index.php?page=login" style="color:#1976d2;">Connectez-vous</a> pour laisser un commentaire.
+            <div class="comments-card-d" style="background:#e7f3ff;border-color:#b8daff;">
+                <i class="fas fa-info-circle me-2"></i>
+                <a href="index.php?page=login" style="color:#1976d2;font-weight:600;">Connectez-vous</a> pour laisser un commentaire.
             </div>';
         }
+        $content .= '</div>';
+
         $content .= '
         <div id="editReplyModal" class="modal">
             <div class="modal-content">
@@ -849,19 +932,116 @@ public function patientDeleteDisponibilite(int $id): void {
         </div>
         <div id="deleteReplyModal" class="modal">
             <div class="modal-content" style="text-align:center;">
-                <span class="close" onclick="closeDeleteModal()">&times;</span>
+                <span class="close" onclick="closeDeleteReplyModal()">&times;</span>
                 <h3>Confirmer la suppression</h3>
                 <p>Êtes-vous sûr de vouloir supprimer ce commentaire ?</p>
                 <p style="color:red;font-size:12px;">Cette action est irréversible.</p>
                 <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
-                    <button onclick="closeDeleteModal()" style="padding:8px 20px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;">Annuler</button>
-                    <button id="confirmDeleteBtn" style="padding:8px 20px;background:#dc3545;color:white;border:none;border-radius:5px;cursor:pointer;">Supprimer</button>
+                    <button type="button" onclick="closeDeleteReplyModal()" style="padding:8px 20px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;">Annuler</button>
+                    <button type="button" id="confirmDeleteReplyBtn" style="padding:8px 20px;background:#dc3545;color:white;border:none;border-radius:5px;cursor:pointer;">Supprimer</button>
                 </div>
             </div>
         </div>';
+        $content .= '
+        <script>window.__ARTICLE_I18N__ = ' . $articleI18nJson . ';</script>
+        <script>
+        (function(){
+            var aid = ' . (int)$id . ';
+            var logged = ' . ($isLoggedIn ? 'true' : 'false') . ';
+            function nl2brEsc(s) {
+                var d = document.createElement("div");
+                d.textContent = s;
+                return d.innerHTML.replace(/\\n/g, "<br>");
+            }
+            function applyOriginal() {
+                var o = window.__ARTICLE_I18N__ || {};
+                var t = document.getElementById("article-title-display");
+                var b = document.getElementById("article-body-display");
+                if (t) t.textContent = o.title || "";
+                if (b) b.innerHTML = nl2brEsc(o.body || "");
+            }
+            function setTranslateStatus(msg, loading) {
+                var st = document.getElementById("article-translate-status");
+                if (!st) return;
+                if (!msg && !loading) { st.classList.add("d-none"); st.textContent = ""; return; }
+                st.classList.remove("d-none");
+                st.textContent = loading ? "Traduction…" : msg;
+            }
+            document.addEventListener("click", function (e) {
+                var btn = e.target.closest("[data-translate-article]");
+                if (!btn) return;
+                var lang = btn.getAttribute("data-translate-article");
+                var o = window.__ARTICLE_I18N__ || {};
+                setTranslateStatus("", true);
+                fetch("index.php?page=api_translate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({ title: o.title || "", body: o.body || "", lang: lang })
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    setTranslateStatus("", false);
+                    if (!data.success) { alert(data.message || "Traduction indisponible."); return; }
+                    var t = document.getElementById("article-title-display");
+                    var b = document.getElementById("article-body-display");
+                    if (t) t.textContent = data.title || "";
+                    if (b) b.innerHTML = nl2brEsc(data.body || "");
+                }).catch(function () { setTranslateStatus("", false); alert("Erreur réseau."); });
+            });
+            var origBtn = document.getElementById("article-translate-original");
+            if (origBtn) origBtn.addEventListener("click", function () { setTranslateStatus("", false); applyOriginal(); });
+            function upd(r) {
+                if (!r.success) return;
+                var lk = document.getElementById("detLk");
+                var dk = document.getElementById("detDk");
+                if (lk) lk.textContent = r.likes;
+                if (dk) dk.textContent = r.dislikes;
+                var bl = document.getElementById("detVoteLike");
+                var bd = document.getElementById("detVoteDis");
+                if (bl) bl.classList.toggle("active-like", r.my_vote === "like");
+                if (bd) bd.classList.toggle("active-dis", r.my_vote === "dislike");
+            }
+            function sendVote(type) {
+                if (!logged) { alert("Connectez-vous pour voter."); return; }
+                fetch("index.php?page=api_article_like", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                    body: JSON.stringify({ article_id: aid, type: type })
+                }).then(function(x){ return x.json(); }).then(upd).catch(function(){});
+            }
+            var bl = document.getElementById("detVoteLike");
+            var bd = document.getElementById("detVoteDis");
+            if (bl) bl.addEventListener("click", function(){ sendVote("like"); });
+            if (bd) bd.addEventListener("click", function(){ sendVote("dislike"); });
+        })();
+        </script>';
         $content .= <<<'JS'
         <script>
-        var currentDeleteId = null;
+        var currentDeleteReplyId = null;
+        function setReplyTo(id, authorName) {
+            var hid = document.getElementById("parent_reply_id");
+            var hint = document.getElementById("reply-to-hint");
+            var tx = document.getElementById("reply-to-text");
+            if (!hid || !hint || !tx) return;
+            hid.value = String(id);
+            hint.style.display = "block";
+            tx.textContent = "Réponse à " + (authorName || "");
+            var cf = document.getElementById("comment-form");
+            if (cf) cf.scrollIntoView({ behavior: "smooth" });
+        }
+        document.addEventListener("click", function (ev) {
+            var rbtn = ev.target.closest(".btn-reply-to");
+            if (!rbtn) return;
+            var pid = rbtn.getAttribute("data-parent-id");
+            var auth = rbtn.getAttribute("data-parent-author") || "";
+            if (pid) setReplyTo(pid, auth);
+        });
+        function cancelReplyTo() {
+            var hid = document.getElementById("parent_reply_id");
+            var hint = document.getElementById("reply-to-hint");
+            var tx = document.getElementById("reply-to-text");
+            if (hid) hid.value = "";
+            if (hint) hint.style.display = "none";
+            if (tx) tx.textContent = "";
+        }
         function openEditReplyModal(replyId) {
             fetch("index.php?page=api_reply&id=" + replyId).then(r => r.json()).then(data => {
                 if (data.success) {
@@ -878,19 +1058,22 @@ public function patientDeleteDisponibilite(int $id): void {
             var data = { contenu_text: document.getElementById("edit_reply_text").value, emoji: document.getElementById("edit_reply_emoji").value, photo: document.getElementById("edit_reply_photo").value, type_reply: "mixte", _method: "PUT" };
             fetch("index.php?page=api_reply&id=" + id, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json()).then(data => { if (data.success) location.reload(); else alert("Erreur : " + (data.message || "Impossible de modifier")); });
         }
-        function confirmDeleteReply(replyId) { currentDeleteId = replyId; document.getElementById("deleteReplyModal").style.display = "block"; }
+        function confirmDeleteReply(replyId) { currentDeleteReplyId = replyId; document.getElementById("deleteReplyModal").style.display = "block"; }
         function closeEditModal()   { document.getElementById("editReplyModal").style.display   = "none"; }
-        function closeDeleteModal() { document.getElementById("deleteReplyModal").style.display = "none"; currentDeleteId = null; }
-        document.getElementById("confirmDeleteBtn").onclick = function () {
-            if (currentDeleteId) {
-                fetch("index.php?page=api_reply&id=" + currentDeleteId, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ _method: "DELETE" }) }).then(r => r.json()).then(data => { if (data.success) location.reload(); else alert("Erreur lors de la suppression"); });
-            }
-            closeDeleteModal();
-        };
-        window.onclick = function (event) { if (event.target.classList.contains("modal")) event.target.style.display = "none"; };
+        function closeDeleteReplyModal() { document.getElementById("deleteReplyModal").style.display = "none"; currentDeleteReplyId = null; }
+        (function () {
+            var cbtn = document.getElementById("confirmDeleteReplyBtn");
+            if (cbtn) cbtn.onclick = function () {
+                if (currentDeleteReplyId) {
+                    fetch("index.php?page=api_reply&id=" + currentDeleteReplyId, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ _method: "DELETE" }) }).then(r => r.json()).then(data => { if (data.success) location.reload(); else alert("Erreur lors de la suppression"); });
+                }
+                closeDeleteReplyModal();
+            };
+        })();
+        window.addEventListener("click", function (event) { if (event.target.classList.contains("modal")) event.target.style.display = "none"; });
         </script>
 JS;
-        $this->renderPublicView(htmlspecialchars($article['titre']), $content . $this->getDeleteScript());
+        $this->renderPublicViewFeed(htmlspecialchars($article['titre']), $content . $this->getDeleteScript());
     }
 
     private function getAdminArticleDetailHTML($article, $replies, $id): string {
@@ -1053,6 +1236,61 @@ JS;
         return move_uploaded_file($file['tmp_name'], $uploadDir . $filename) ? $relativePath : null;
     }
 
+    /**
+     * Rend les commentaires en arbre (réponse à un commentaire).
+     *
+     * @param array<int, list<array<string,mixed>>> $byParent
+     */
+    private function renderReplyBranchHtml(array $byParent, int $parentKey, bool $isLoggedIn, $userId): string {
+        if (empty($byParent[$parentKey])) {
+            return '';
+        }
+        $html = '';
+        foreach ($byParent[$parentKey] as $reply) {
+            $rid = (int)$reply['id_reply'];
+            $canEditReply   = ($isLoggedIn && !empty($reply['user_id']) && (int)$userId === (int)$reply['user_id']);
+            $canDeleteReply = $canEditReply;
+            $replyContent = '';
+            if (!empty($reply['emoji'])) {
+                $replyContent .= '<div class="reply-emoji">' . htmlspecialchars((string)$reply['emoji']) . '</div>';
+            }
+            if (!empty($reply['contenu_text'])) {
+                $replyContent .= '<div class="reply-text">' . nl2br(htmlspecialchars((string)$reply['contenu_text'])) . '</div>';
+            }
+            if (!empty($reply['photo'])) {
+                $replyContent .= '<img src="' . htmlspecialchars((string)$reply['photo']) . '" class="reply-photo" alt="Photo">';
+            }
+            $replyButtons = '';
+            if ($canEditReply || $canDeleteReply) {
+                $replyButtons = '
+                    <div class="reply-actions">
+                        ' . ($canEditReply ? '<button onclick="openEditReplyModal(' . $rid . ')" class="btn-edit-reply"><i class="fas fa-edit"></i> Modifier</button>' : '') . '
+                        ' . ($canDeleteReply ? '<button onclick="confirmDeleteReply(' . $rid . ')" class="btn-delete-reply"><i class="fas fa-trash"></i> Supprimer</button>' : '') . '
+                    </div>';
+            }
+            $authorAttr = htmlspecialchars((string)($reply['auteur'] ?? 'Anonyme'), ENT_QUOTES, 'UTF-8');
+            $replyBtn = $isLoggedIn
+                ? '<button type="button" class="btn-reply-to" data-parent-id="' . $rid . '" data-parent-author="' . $authorAttr . '"><i class="fas fa-reply me-1"></i>Répondre</button>'
+                : '';
+            $html .= '
+                <div class="reply-thread-node">
+                    <div class="reply-item" id="reply-' . $rid . '">
+                        <div class="reply-avatar">' . strtoupper(substr((string)($reply['auteur'] ?? 'A'), 0, 1)) . '</div>
+                        <div class="reply-content">
+                            <div class="reply-author">' . htmlspecialchars((string)($reply['auteur'] ?? 'Anonyme')) . '</div>
+                            <div class="reply-date"><i class="fas fa-clock"></i> ' . date('d/m/Y H:i', strtotime((string)($reply['date_reply'] ?? 'now'))) . '</div>
+                            ' . $replyContent . $replyButtons . $replyBtn . '
+                        </div>
+                    </div>';
+            $nested = $this->renderReplyBranchHtml($byParent, $rid, $isLoggedIn, $userId);
+            if ($nested !== '') {
+                $html .= '<div class="reply-nested">' . $nested . '</div>';
+            }
+            $html .= '</div>';
+        }
+        return $html;
+    }
+
     private function addReply($articleId): void {
         require_once __DIR__ . '/../models/Reply.php';
         $replyModel  = new Reply();
@@ -1071,13 +1309,36 @@ JS;
         }
         if (!empty($errors)) {
             $_SESSION['reply_errors'] = $errors;
-            $_SESSION['reply_data']   = ['text' => $contenuText, 'emoji' => $emoji];
+            $_SESSION['reply_data']   = ['text' => $contenuText, 'emoji' => $emoji, 'parent_reply_id' => $_POST['parent_reply_id'] ?? ''];
             header("Location: index.php?page=detail_article_public&id=$articleId#comment-form");
             exit;
         }
-        $result = $replyModel->createMixte($articleId, $contenuText, $emoji, $imagePath, $auteur, $userId);
-        if ($result) {
+        $parentReplyId = isset($_POST['parent_reply_id']) ? (int)$_POST['parent_reply_id'] : 0;
+        if ($parentReplyId > 0) {
+            $parentRow = $replyModel->getById($parentReplyId);
+            if (!$parentRow || (int)$parentRow['id_article'] !== (int)$articleId) {
+                $parentReplyId = 0;
+            }
+        }
+        $newReplyId = $replyModel->createMixte($articleId, $contenuText, $emoji, $imagePath, $auteur, $userId, $parentReplyId > 0 ? $parentReplyId : null);
+        if ($newReplyId > 0) {
+            $gamification = null;
+            if (!empty($userId) && class_exists('GamificationController')) {
+                $gRes = GamificationController::grantPoints((int) $userId, 'comment_created', $newReplyId);
+                $gamification = GamificationController::formatGrantForClient($gRes);
+            }
+            if (($_SESSION['user_role'] ?? '') === 'patient' && is_file(__DIR__ . '/../models/AdminNotification.php')) {
+                require_once __DIR__ . '/../models/Article.php';
+                require_once __DIR__ . '/../models/AdminNotification.php';
+                $artRow = (new Article())->getById((int) $articleId);
+                $artTitle = is_array($artRow) ? (string) ($artRow['titre'] ?? 'Article') : 'Article';
+                $nm = trim($_SESSION['user_name'] ?? '') ?: 'Patient';
+                AdminNotification::notifyPatientComment((int) $articleId, $artTitle, $nm);
+            }
             $_SESSION['success'] = 'Commentaire ajouté avec succès !';
+            if ($gamification !== null && ($gamification['points_added'] > 0 || $gamification['total_points'] > 0 || !empty($gamification['new_rewards']))) {
+                $_SESSION['gamification_toast'] = $gamification;
+            }
             unset($_SESSION['reply_errors'], $_SESSION['reply_data']);
         } else {
             $_SESSION['error'] = 'Erreur lors de l\'ajout du commentaire.';
@@ -1172,7 +1433,19 @@ JS;
             }
             if (empty($errors)) {
                 $result = $articleModel->create(['titre' => $titre, 'contenu' => $contenu, 'auteur_id' => $auteur_id, 'image' => $imagePath, 'categorie' => $categorie, 'tags' => $tags, 'status' => $status]);
-                if ($result > 0) { $_SESSION['success'] = 'Article créé avec succès !'; header('Location: index.php?page=blog_public'); exit; }
+                if ($result > 0) {
+                    if (!empty($auteur_id) && class_exists('GamificationController')) {
+                        GamificationController::grantPoints((int) $auteur_id, 'article_created', (int) $result);
+                    }
+                    if (($userRole ?? '') === 'patient' && is_file(__DIR__ . '/../models/AdminNotification.php')) {
+                        require_once __DIR__ . '/../models/AdminNotification.php';
+                        $nm = trim($_SESSION['user_name'] ?? '') ?: 'Patient';
+                        AdminNotification::notifyPatientPublishedArticle((int) $result, $titre, $nm);
+                    }
+                    $_SESSION['success'] = 'Article créé avec succès !';
+                    header('Location: index.php?page=blog_public');
+                    exit;
+                }
                 else $errors['general'] = 'Erreur lors de la création de l\'article.';
             }
         }
@@ -1406,58 +1679,154 @@ JS;
     // =============================================
 
     public function listeEvenements(): void {
-        require_once __DIR__ . '/../models/Event.php';
-        $eventModel     = new Event();
-        $upcomingEvents = $eventModel->getUpcoming();
+        $pdo = Database::getInstance()->getConnection();
+        $this->ensureDocTimeSchema($pdo);
+        $sql = "
+            SELECT e.*,
+                   (SELECT COUNT(*) FROM participations WHERE event_id = e.id) AS nb_participants,
+                   s.nom AS sponsor_nom
+            FROM events e
+            LEFT JOIN sponsors s ON s.id = e.sponsor_id
+            WHERE e.date_debut >= NOW()
+            AND (
+                e.status IN ('à venir', 'en_cours', '? venir')
+                OR e.status IS NULL
+                OR TRIM(COALESCE(CAST(e.status AS CHAR), '')) = ''
+            )
+            ORDER BY e.date_debut ASC
+            LIMIT 50
+        ";
+        try {
+            $upcomingEvents = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            error_log('listeEvenements: ' . $e->getMessage());
+            require_once __DIR__ . '/../models/Event.php';
+            $upcomingEvents = (new Event())->getUpcoming();
+            foreach ($upcomingEvents as &$ev) {
+                $ev['sponsor_nom'] = null;
+            }
+            unset($ev);
+        }
+
+        $catSet = [];
+        foreach ($upcomingEvents as $ev) {
+            $catSet[$this->eventCategoryForRow($ev)] = true;
+        }
+        $sortedCats = array_keys($catSet);
+        sort($sortedCats, SORT_STRING);
+        $categories = array_merge(['Toutes'], $sortedCats);
+
+        $isLoggedIn = !empty($_SESSION['user_id']);
+        $inscrUrl    = $isLoggedIn ? 'index.php?page=mes_inscriptions' : 'index.php?page=login';
+        $countEvents = count($upcomingEvents);
 
         ob_start();
         ?>
-        <style>
-            .event-card { background:white;border-radius:16px;margin-bottom:25px;box-shadow:0 5px 15px rgba(0,0,0,0.08);transition:transform 0.3s;overflow:hidden;position:relative; }
-            .event-card:hover { transform:translateY(-5px); }
-            .event-image { height:200px;background-size:cover;background-position:center;background-color:#e9ecef; }
-            .event-body { padding:20px; }
-            .event-title { font-size:1.25rem;font-weight:700;margin-bottom:8px; }
-            .event-title a { color:#1a2035;text-decoration:none; }
-            .event-title a:hover { color:#2A7FAA; }
-            .event-meta { font-size:13px;color:#6c757d;margin-bottom:8px;display:flex;align-items:center;gap:10px; }
-            .event-footer { display:flex;justify-content:space-between;align-items:center;padding-top:15px;border-top:1px solid #eee; }
-            .event-price { font-size:18px;font-weight:bold;color:#2A7FAA; }
-            .btn-register { background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border:none;border-radius:25px;padding:8px 20px;font-size:13px;text-decoration:none;display:inline-block; }
-        </style>
-        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:60px 0;text-align:center;margin-bottom:40px;border-radius:12px;">
-            <h1 style="font-size:2.5rem;"><i class="fas fa-calendar-alt me-3"></i>Événements médicaux</h1>
-            <p style="font-size:1.2rem;opacity:0.9;">Conférences, ateliers et rencontres médicales</p>
+        <div class="mb-3">
+                <h1 class="dt-page-head-title mb-1">Événements médicaux</h1>
+                <p class="dt-page-head-sub mb-0"><?= (int)$countEvents ?> événement<?= $countEvents > 1 ? 's' : '' ?> disponible<?= $countEvents > 1 ? 's' : '' ?></p>
+            </div>
+        <div class="dt-toolbar-row">
+            <div class="dt-toolbar-filters" id="dtCatFilters">
+            <?php foreach ($categories as $idx => $cat): ?>
+            <button type="button" class="dt-filter-pill<?= $idx === 0 ? ' active' : '' ?>" data-cat="<?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?></button>
+            <?php endforeach; ?>
+            </div>
+            <form class="d-flex dt-evt-search-form flex-shrink-0" role="search" onsubmit="return false;">
+                <input type="search" id="dtEvtSearch" class="form-control rounded-end-0 border-end-0" placeholder="Rechercher un événement..." aria-label="Rechercher un événement">
+                <button type="button" class="btn dt-btn-teal rounded-start-0 px-3" id="dtEvtSearchBtn" aria-label="Rechercher"><i class="fas fa-search"></i></button>
+            </form>
         </div>
-        <div class="row" id="eventsList">
+        <div class="dt-inscription-banner mb-4">
+            <div class="d-flex align-items-center gap-2 text-primary flex-shrink-0"><i class="fas fa-user-check fa-lg"></i></div>
+            <p class="mb-0 flex-grow-1 small" style="color:#1e3a5f;">Déjà inscrit(e) à un événement ? Consultez, modifiez ou annulez vos inscriptions depuis votre espace personnel.</p>
+            <a href="<?= htmlspecialchars($inscrUrl, ENT_QUOTES, 'UTF-8') ?>" class="dt-btn-teal text-decoration-none d-inline-flex align-items-center gap-2 ms-auto">Mes inscriptions <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="row g-4" id="dtEventsGrid">
         <?php if (empty($upcomingEvents)): ?>
-        <div class="col-12"><div style="text-align:center;padding:40px;color:#6c757d;"><i class="fas fa-calendar-check fa-3x mb-3"></i><p>Aucun événement disponible.</p></div></div>
+        <div class="col-12 text-center py-5 text-muted">
+                <div style="font-size:3.5rem;opacity:.35;line-height:1;"><i class="fas fa-calendar-check"></i></div>
+                <p class="mb-0 mt-3">Aucun événement disponible.</p>
+        </div>
         <?php else: ?>
         <?php foreach ($upcomingEvents as $event):
-            $prix = $event['prix'] ?? 0;
-            $prixText = $prix > 0 ? $prix . ' DT' : 'GRATUIT';
-            $image = htmlspecialchars($event['image'] ?? 'https://via.placeholder.com/400x200?text=Event');
-        ?>
-        <div class="col-md-6 col-lg-4">
-            <div class="event-card">
-                <div class="event-image" style="background-image:url('<?= $image ?>')"></div>
-                <div class="event-body">
-                    <h3 class="event-title"><a href="index.php?page=detail_evenement&slug=<?= htmlspecialchars($event['slug']) ?>"><?= htmlspecialchars($event['titre']) ?></a></h3>
-                    <div class="event-meta"><i class="fas fa-calendar"></i><?= date('d/m/Y', strtotime($event['date_debut'])) ?></div>
-                    <div class="event-meta"><i class="fas fa-map-marker-alt"></i><?= htmlspecialchars($event['lieu'] ?? 'À déterminer') ?></div>
-                    <div class="event-footer">
-                        <div class="event-price"><?= $prixText ?></div>
-                        <a href="index.php?page=detail_evenement&slug=<?= htmlspecialchars($event['slug']) ?>" class="btn-register"><i class="fas fa-info-circle"></i> Détails</a>
-                    </div>
+            $cat        = $this->eventCategoryForRow($event);
+            [$stLabel, $stClass] = $this->eventStatusPublicBadge((string)($event['status'] ?? 'à venir'));
+            $slug       = htmlspecialchars($event['slug'] ?? '', ENT_QUOTES, 'UTF-8');
+            $detailUrl  = 'index.php?page=detail_evenement&slug=' . $slug;
+            $imageRaw   = trim((string)($event['image'] ?? ''));
+            $imageStyle = $imageRaw !== ''
+                ? "background-image:url('" . htmlspecialchars($imageRaw, ENT_QUOTES, 'UTF-8') . "')"
+                : '';
+            $capMax     = (int)($event['capacite_max'] ?? 0);
+            $placesTxt  = $capMax > 0 ? $capMax . ' place' . ($capMax > 1 ? 's' : '') : '—';
+            $prix       = (float)($event['prix'] ?? 0);
+            $prixTxt    = $prix > 0 ? number_format($prix, 2, ',', ' ') . ' TND' : 'Gratuit';
+            $d1         = date('d/m/Y', strtotime($event['date_debut']));
+            $d2         = date('d/m/Y', strtotime($event['date_fin']));
+            $dateRange  = $d1 === $d2 ? $d1 : $d1 . ' → ' . $d2;
+            $sponsorNom = trim((string)($event['sponsor_nom'] ?? ''));
+            $searchBlob = mb_strtolower(
+                ($event['titre'] ?? '') . ' ' . ($event['description'] ?? '') . ' ' . $cat . ' ' . ($event['lieu'] ?? ''),
+                'UTF-8'
+            );
+            ?>
+        <div class="col-md-6 col-lg-4 dt-evt-col" data-category="<?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?>" data-search="<?= htmlspecialchars($searchBlob, ENT_QUOTES, 'UTF-8') ?>">
+            <div class="dt-card-event">
+                <div class="dt-img-wrap" style="<?= $imageStyle ?>">
+                    <span class="dt-badge-status <?= htmlspecialchars($stClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($stLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+                <span class="dt-cat-pill"><?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?></span>
+                <div class="dt-event-body">
+                    <h2 class="dt-event-title"><?= htmlspecialchars($event['titre'] ?? '', ENT_QUOTES, 'UTF-8') ?></h2>
+                    <p class="dt-event-desc"><?= htmlspecialchars($this->truncatePlain($event['description'] ?? '', 220), ENT_QUOTES, 'UTF-8') ?></p>
+                    <div class="dt-meta-row"><i class="fas fa-map-marker-alt"></i><span><?= htmlspecialchars($event['lieu'] ?? 'À déterminer', ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <div class="dt-meta-row"><i class="fas fa-calendar-alt"></i><span><?= htmlspecialchars($dateRange, ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <div class="dt-meta-row"><i class="fas fa-users"></i><span><?= htmlspecialchars($placesTxt, ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <div class="dt-meta-row"><i class="fas fa-money-bill-wave"></i><span><?= htmlspecialchars($prixTxt, ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <?php if ($sponsorNom !== ''): ?>
+                    <div class="dt-meta-row"><i class="fas fa-building"></i><span><strong>Sponsors :</strong> <?= htmlspecialchars($sponsorNom, ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <?php endif; ?>
+                    <a href="<?= htmlspecialchars($detailUrl, ENT_QUOTES, 'UTF-8') ?>" class="dt-btn-teal dt-btn-detail text-decoration-none mt-3">Voir les détails <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
         </div>
         <?php endforeach; ?>
         <?php endif; ?>
         </div>
+        <script>
+        (function(){
+            var grid = document.getElementById('dtEventsGrid');
+            if (!grid) return;
+            var inp = document.getElementById('dtEvtSearch');
+            var pills = document.querySelectorAll('#dtCatFilters .dt-filter-pill');
+            var activeCat = 'Toutes';
+            function norm(s){ return (s||'').toLowerCase().trim(); }
+            function apply(){
+                var q = norm(inp ? inp.value : '');
+                grid.querySelectorAll('.dt-evt-col').forEach(function(col){
+                    var okCat = activeCat === 'Toutes' || col.getAttribute('data-category') === activeCat;
+                    var blob = norm(col.getAttribute('data-search'));
+                    var okSearch = !q || blob.indexOf(q) !== -1;
+                    col.style.display = (okCat && okSearch) ? '' : 'none';
+                });
+            }
+            if (inp) { inp.addEventListener('input', apply); }
+            var sb = document.getElementById('dtEvtSearchBtn');
+            if (sb) sb.addEventListener('click', apply);
+            pills.forEach(function(p){
+                p.addEventListener('click', function(){
+                    pills.forEach(function(x){ x.classList.remove('active'); });
+                    p.classList.add('active');
+                    activeCat = p.getAttribute('data-cat') || 'Toutes';
+                    apply();
+                });
+            });
+        })();
+        </script>
         <?php
         $content = ob_get_clean();
-        $this->renderPublicView('Événements', $content);
+        $this->renderPublicView('Événements', $content, true, 'doctime');
     }
 
     public function detailEvenement($id = null): void {
@@ -1470,139 +1839,425 @@ JS;
             return;
         }
         $isLoggedIn = isset($_SESSION['user_id']);
+        $userId     = $isLoggedIn ? (int)$_SESSION['user_id'] : 0;
+        $eventId    = (int)$event['id'];
+        $alreadyIn  = $isLoggedIn && $eventModel->isParticipant($eventId, $userId);
+        $regHint    = '';
+        $canRegister = false;
+        if ($isLoggedIn && !$alreadyIn) {
+            $chk = $eventModel->canUserRegister($eventId, $userId);
+            $canRegister = $chk['ok'];
+            $regHint     = $chk['ok'] ? '' : $chk['message'];
+        }
         $prix       = $event['prix'] ?? 0;
-        $prixText   = $prix > 0 ? number_format((float)$prix, 2, ',', ' ') . ' DT' : 'GRATUIT';
+        $prixText   = $prix > 0 ? number_format((float)$prix, 2, ',', ' ') . ' TND' : 'Gratuit';
+        $cap        = (int)($event['capacite_max'] ?? 0);
+        $nbPart     = (int)($event['nb_participants'] ?? 0);
+        $restCol    = $event['places_restantes'] ?? null;
+        if ($cap > 0) {
+            $placesLeft = $restCol !== null && $restCol !== '' ? (int)$restCol : max(0, $cap - $nbPart);
+            $placesLabel = $placesLeft . ' place' . ($placesLeft > 1 ? 's' : '') . ' restante' . ($placesLeft > 1 ? 's' : '') . ' sur ' . $cap;
+        } else {
+            $placesLabel = 'Capacité ouverte';
+        }
+        $ddeb = strtotime((string)$event['date_debut']);
+        $dfin = strtotime((string)$event['date_fin']);
+        $dateLong = $ddeb && $dfin
+            ? (date('d/m/Y H:i', $ddeb) . ($dfin !== $ddeb ? ' → ' . date('d/m/Y H:i', $dfin) : ''))
+            : '';
 
         ob_start();
         ?>
-        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:40px;margin-bottom:30px;border-radius:12px;">
-            <a href="index.php?page=evenements" style="color:white;text-decoration:none;"><i class="fas fa-arrow-left me-2"></i>Retour</a>
+        <div class="dt-detail-hero">
+            <a href="index.php?page=evenements" class="back-link"><i class="fas fa-arrow-left me-2"></i>Retour aux événements</a>
             <h1 style="font-size:2.5rem;margin-top:15px;"><?= htmlspecialchars($event['titre']) ?></h1>
-            <p><?= date('d F Y', strtotime($event['date_debut'])) ?></p>
+            <p class="mb-0 opacity-90"><i class="fas fa-calendar-alt me-2"></i><?= htmlspecialchars($dateLong) ?></p>
         </div>
-        <div class="row">
+        <div class="row g-4">
             <div class="col-lg-8">
                 <?php if (!empty($event['image'])): ?>
-                <img src="<?= htmlspecialchars($event['image']) ?>" alt="" style="width:100%;max-height:400px;object-fit:cover;border-radius:12px;margin-bottom:30px;">
+                <img src="<?= htmlspecialchars($event['image']) ?>" alt="" class="w-100 rounded-3 shadow-sm mb-4" style="max-height:400px;object-fit:cover;">
                 <?php endif; ?>
-                <div style="background:white;border-radius:12px;padding:30px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-                    <h3 style="color:#2A7FAA;margin-bottom:15px;">Description</h3>
+                <div class="bg-white rounded-3 p-4 mb-4 shadow-sm border" style="border-color:#e2e8f0!important;">
+                    <h3 class="dt-detail-accent mb-3" style="font-weight:700;">Description</h3>
                     <?= nl2br(htmlspecialchars($event['description'] ?? 'Aucune description.')) ?>
                 </div>
             </div>
             <div class="col-lg-4">
-                <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;border-radius:12px;padding:25px;text-align:center;">
-                    <div>Tarif</div>
-                    <div style="font-size:36px;font-weight:bold;margin-bottom:10px;"><?= $prixText ?></div>
-                    <button type="button" onclick="<?= $isLoggedIn ? 'registerForEvent(' . (int)$event['id'] . ')' : "window.location.href='index.php?page=login'" ?>" style="background:white;color:#2A7FAA;border:none;border-radius:25px;padding:12px 35px;font-size:16px;font-weight:600;cursor:pointer;margin-top:15px;">
-                        <?= $isLoggedIn ? "S'inscrire" : 'Se connecter' ?>
-                    </button>
+                <div class="dt-detail-cta mb-3">
+                    <div class="small text-uppercase opacity-75 mb-1">Tarif</div>
+                    <div style="font-size:2rem;font-weight:800;line-height:1.2;"><?= htmlspecialchars($prixText) ?></div>
+                </div>
+                <div class="dt-reg-meta card border-0 shadow-sm mb-3 rounded-3" style="border:1px solid #e2e8f0;">
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0 small dt-reg-meta-list">
+                            <?php if (!empty($event['lieu'])): ?>
+                            <li class="mb-2"><i class="fas fa-map-marker-alt text-secondary me-2 w-1"></i><?= htmlspecialchars((string)$event['lieu']) ?></li>
+                            <?php endif; ?>
+                            <li class="mb-2"><i class="fas fa-users text-secondary me-2"></i><?= htmlspecialchars($placesLabel) ?></li>
+                            <li><i class="fas fa-clipboard-check text-secondary me-2"></i>Inscriptions en ligne</li>
+                        </ul>
+                    </div>
+                </div>
+                <div id="evtRegAlert" class="alert alert-dismissible fade d-none mb-3" role="alert">
+                    <span id="evtRegAlertMsg"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                </div>
+                <?php if ($alreadyIn): ?>
+                <div class="alert alert-success mb-3 border-0 rounded-3 shadow-sm">
+                    <i class="fas fa-check-circle me-2"></i><strong>Vous êtes inscrit.</strong>
+                    <p class="small mb-2 mt-2">Retrouvez le détail et l’annulation éventuelle dans votre espace.</p>
+                    <a href="index.php?page=mes_inscriptions" class="dt-btn-teal text-decoration-none d-inline-flex align-items-center gap-2">Mes inscriptions <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <?php elseif (!$isLoggedIn): ?>
+                <p class="small text-muted mb-3">Connectez-vous pour réserver votre place à cet événement.</p>
+                <a href="index.php?page=login" class="dt-btn-teal text-decoration-none d-block text-center py-2 rounded-3 fw-semibold">Se connecter pour s’inscrire</a>
+                <?php elseif ($canRegister): ?>
+                <button type="button" id="evtRegisterBtn" class="dt-register-btn w-100" data-event-id="<?= $eventId ?>">
+                    <i class="fas fa-user-plus me-2"></i>S’inscrire à cet événement
+                </button>
+                <p id="evtRegisterHint" class="small text-muted mt-2 mb-0">En vous inscrivant, vous acceptez de recevoir des informations relatives à cet événement.</p>
+                <?php else: ?>
+                <div class="alert alert-warning mb-0 rounded-3 border-0">
+                    <i class="fas fa-info-circle me-2"></i><?= htmlspecialchars($regHint ?: 'Inscription impossible pour le moment.') ?>
+                </div>
+                <?php endif; ?>
+                <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 10800;">
+                    <div id="evtRegToast" class="toast align-items-center border-0 text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body" id="evtRegToastBody"></div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+        <?php if ($isLoggedIn && $canRegister): ?>
         <script>
-        function registerForEvent(eventId) {
-            fetch("index.php?page=event_register", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, credentials:"include", body:"event_id="+eventId })
-            .then(r=>r.json()).then(d=>{ if(d.success) alert("Inscription confirmée!"); else alert("Erreur: "+(d.message||"Impossible")); });
-        }
+        (function(){
+            var btn = document.getElementById('evtRegisterBtn');
+            if (!btn) return;
+            var toastEl = document.getElementById('evtRegToast');
+            var toastBody = document.getElementById('evtRegToastBody');
+            var alertEl = document.getElementById('evtRegAlert');
+            var alertMsg = document.getElementById('evtRegAlertMsg');
+            function showToast(isSuccess, msg) {
+                if (!toastEl || !toastBody || typeof bootstrap === 'undefined') {
+                    alert(msg);
+                    return;
+                }
+                toastEl.classList.toggle('text-bg-success', isSuccess);
+                toastEl.classList.toggle('text-bg-danger', !isSuccess);
+                toastBody.textContent = msg;
+                var t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4500 });
+                t.show();
+            }
+            function showInline(isSuccess, msg) {
+                if (!alertEl || !alertMsg) { showToast(isSuccess, msg); return; }
+                alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
+                alertEl.classList.add('show', isSuccess ? 'alert-success' : 'alert-danger');
+                alertMsg.textContent = msg;
+            }
+            btn.addEventListener('click', function() {
+                var id = btn.getAttribute('data-event-id');
+                btn.disabled = true;
+                var spin = document.createElement('span');
+                spin.className = 'spinner-border spinner-border-sm me-2';
+                spin.setAttribute('role', 'status');
+                btn.insertBefore(spin, btn.firstChild);
+                fetch('index.php?page=event_register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    body: 'event_id=' + encodeURIComponent(id)
+                })
+                .then(function(r) { return r.json().catch(function() { throw new Error('Réponse invalide'); }); })
+                .then(function(d) {
+                    if (d.success) {
+                        showToast(true, d.message || 'Inscription enregistrée.');
+                        btn.replaceWith(function() {
+                            var a = document.createElement('a');
+                            a.href = d.mes_inscriptions || 'index.php?page=mes_inscriptions';
+                            a.className = 'dt-btn-teal text-decoration-none d-block text-center py-2 rounded-3 fw-semibold';
+                            a.innerHTML = '<i class="fas fa-clipboard-check me-2"></i>Voir mes inscriptions';
+                            return a;
+                        }());
+                        var hint = document.getElementById('evtRegisterHint');
+                        if (hint) hint.remove();
+                    } else {
+                        showInline(false, d.message || 'Erreur.');
+                        showToast(false, d.message || 'Impossible de s’inscrire.');
+                        btn.disabled = false;
+                        var sp = btn.querySelector('.spinner-border');
+                        if (sp) sp.remove();
+                    }
+                })
+                .catch(function() {
+                    showInline(false, 'Erreur réseau. Vérifiez votre connexion.');
+                    btn.disabled = false;
+                    var sp = btn.querySelector('.spinner-border');
+                    if (sp) sp.remove();
+                });
+            });
+        })();
         </script>
+        <?php endif; ?>
         <?php
         $content = ob_get_clean();
-        $this->renderPublicView(htmlspecialchars($event['titre']), $content);
+        $this->renderPublicView(htmlspecialchars($event['titre']), $content, true, 'doctime');
     }
 
-    /** Inscription AJAX aux événements (table participations : event_id, user_id) */
+    /** Inscription AJAX aux événements (places + transaction via Event::addParticipant) */
     public function registerEventAction(): void {
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         if (empty($_SESSION['user_id'])) {
-            echo json_encode(['success' => false, 'message' => 'Veuillez vous connecter.']);
+            echo json_encode(['success' => false, 'code' => 'auth', 'message' => 'Veuillez vous connecter pour vous inscrire.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         $eventId = (int)($_POST['event_id'] ?? 0);
         $userId  = (int)$_SESSION['user_id'];
         if (!$eventId) {
-            echo json_encode(['success' => false, 'message' => 'ID invalide.']);
+            echo json_encode(['success' => false, 'code' => 'invalid', 'message' => 'Requête invalide.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         require_once __DIR__ . '/../models/Event.php';
         $eventModel = new Event();
-        $event      = $eventModel->getById($eventId);
-        if (!$event) {
-            echo json_encode(['success' => false, 'message' => 'Événement non trouvé.']);
+        $check = $eventModel->canUserRegister($eventId, $userId);
+        if (!$check['ok']) {
+            echo json_encode(['success' => false, 'code' => $check['code'], 'message' => $check['message']], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
-        $pdo = Database::getInstance()->getConnection();
-        try {
-            $chk = $pdo->prepare('SELECT COUNT(*) FROM participations WHERE event_id = :e AND user_id = :u');
-            $chk->execute([':e' => $eventId, ':u' => $userId]);
-            if ((int)$chk->fetchColumn() > 0) {
-                echo json_encode(['success' => false, 'message' => 'Déjà inscrit.']);
-                exit;
-            }
-            $ins = $pdo->prepare('INSERT INTO participations (event_id, user_id, statut) VALUES (:e, :u, :s)');
-            $ok  = $ins->execute([':e' => $eventId, ':u' => $userId, ':s' => 'inscrit']);
-            echo json_encode($ok ? ['success' => true, 'message' => 'Inscription confirmée!'] : ['success' => false, 'message' => 'Erreur lors de l\'enregistrement.']);
-        } catch (Throwable $e) {
-            error_log('registerEventAction: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Erreur serveur.']);
+        if (!$eventModel->addParticipant($eventId, $userId)) {
+            echo json_encode(['success' => false, 'code' => 'save', 'message' => 'Impossible d’enregistrer votre inscription. Réessayez ou contactez le support.'], JSON_UNESCAPED_UNICODE);
+            exit;
         }
+        echo json_encode([
+            'success' => true,
+            'code'    => 'ok',
+            'message' => 'Inscription confirmée ! Retrouvez cet événement dans « Mes inscriptions ».',
+            'mes_inscriptions' => 'index.php?page=mes_inscriptions',
+        ], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    /** Désinscription événement (formulaire POST) */
+    public function unregisterEventAction(): void {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            header('Location: index.php?page=mes_inscriptions');
+            exit;
+        }
+        $this->requireLogin();
+        $eventId = (int)($_POST['event_id'] ?? 0);
+        if (!$eventId) {
+            $_SESSION['error'] = 'Événement invalide.';
+            header('Location: index.php?page=mes_inscriptions');
+            exit;
+        }
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        if ($eventModel->removeParticipant($eventId, (int)$_SESSION['user_id'])) {
+            $_SESSION['success'] = 'Inscription annulée.';
+        } else {
+            $_SESSION['error'] = 'Impossible d\'annuler cette inscription.';
+        }
+        header('Location: index.php?page=mes_inscriptions');
+        exit;
+    }
+
+    /** Liste des inscriptions événements de l’utilisateur connecté (style DocTime) */
+    public function mesInscriptionsEvenements(): void {
+        $this->requireLogin();
+        $userId = (int)$_SESSION['user_id'];
+        $pdo    = Database::getInstance()->getConnection();
+        $this->ensureDocTimeSchema($pdo);
+        $rows = [];
+        try {
+            $sql = "
+                SELECT p.id AS participation_id, p.statut AS participation_statut, p.date_inscription,
+                       e.id AS event_id, e.titre, e.slug, e.description, e.date_debut, e.date_fin,
+                       e.lieu, e.image, e.prix, e.status, e.capacite_max,
+                       s.nom AS sponsor_nom
+                FROM participations p
+                INNER JOIN events e ON e.id = p.event_id
+                LEFT JOIN sponsors s ON s.id = e.sponsor_id
+                WHERE p.user_id = :u
+                ORDER BY e.date_debut DESC
+            ";
+            $st = $pdo->prepare($sql);
+            $st->execute([':u' => $userId]);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            error_log('mesInscriptionsEvenements: ' . $e->getMessage());
+            try {
+                $sql2 = "
+                    SELECT p.id AS participation_id, p.statut AS participation_statut, p.date_inscription,
+                           e.id AS event_id, e.titre, e.slug, e.description, e.date_debut, e.date_fin,
+                           e.lieu, e.image, e.prix, e.status, e.capacite_max, NULL AS sponsor_nom
+                    FROM participations p
+                    INNER JOIN events e ON e.id = p.event_id
+                    WHERE p.user_id = :u
+                    ORDER BY e.date_debut DESC
+                ";
+                $st2 = $pdo->prepare($sql2);
+                $st2->execute([':u' => $userId]);
+                $rows = $st2->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Throwable $e2) {
+                $rows = [];
+            }
+        }
+
+        ob_start();
+        ?>
+        <h1 class="dt-page-head-title mb-1">Mes inscriptions</h1>
+        <p class="dt-page-head-sub mb-4">Consultez et gérez vos inscriptions aux événements médicaux.</p>
+        <div class="mb-4">
+            <a href="index.php?page=evenements" class="dt-btn-teal text-decoration-none d-inline-flex align-items-center gap-2"><i class="fas fa-arrow-left"></i> Voir les événements</a>
+        </div>
+        <?php if (empty($rows)): ?>
+        <div class="dt-inscription-banner mb-0">
+            <div class="d-flex align-items-center gap-2 text-primary"><i class="fas fa-info-circle fa-lg"></i></div>
+            <p class="mb-0 small" style="color:#1e3a5f;">Vous n’êtes inscrit à aucun événement pour le moment.</p>
+            <a href="index.php?page=evenements" class="dt-btn-teal text-decoration-none ms-auto">Parcourir les événements <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <?php else: ?>
+        <div class="row g-4">
+            <?php foreach ($rows as $row):
+                $cat        = $this->eventCategoryForRow($row);
+                [$stLabel, $stClass] = $this->eventStatusPublicBadge((string)($row['status'] ?? 'à venir'));
+                $slug       = htmlspecialchars((string)($row['slug'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $detailUrl  = 'index.php?page=detail_evenement&slug=' . $slug;
+                $imageRaw   = trim((string)($row['image'] ?? ''));
+                $imageStyle = $imageRaw !== '' ? "background-image:url('" . htmlspecialchars($imageRaw, ENT_QUOTES, 'UTF-8') . "')" : '';
+                $prix       = (float)($row['prix'] ?? 0);
+                $prixTxt    = $prix > 0 ? number_format($prix, 2, ',', ' ') . ' TND' : 'Gratuit';
+                $d1         = date('d/m/Y', strtotime((string)$row['date_debut']));
+                $d2         = date('d/m/Y', strtotime((string)$row['date_fin']));
+                $dateRange  = $d1 === $d2 ? $d1 : $d1 . ' → ' . $d2;
+                $sponsorNom = trim((string)($row['sponsor_nom'] ?? ''));
+                $pStatRaw   = (string)($row['participation_statut'] ?? '');
+                $pStatLabel = match ($pStatRaw) {
+                    'présent', 'present' => ['Présence confirmée', 'success'],
+                    'absent' => ['Absent', 'secondary'],
+                    'inscrit' => ['Inscrit', 'info'],
+                    default => ['Inscrit', 'info'],
+                };
+                ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="dt-card-event">
+                    <div class="dt-img-wrap" style="<?= $imageStyle ?>"><span class="dt-badge-status <?= htmlspecialchars($stClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($stLabel, ENT_QUOTES, 'UTF-8') ?></span></div>
+                    <span class="dt-cat-pill"><?= htmlspecialchars($cat, ENT_QUOTES, 'UTF-8') ?></span>
+                    <div class="dt-event-body">
+                        <h2 class="dt-event-title"><?= htmlspecialchars((string)($row['titre'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h2>
+                        <p class="small mb-2">
+                            <span class="badge bg-<?= htmlspecialchars($pStatLabel[1], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($pStatLabel[0], ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php if (!empty($row['date_inscription'])): ?>
+                            <span class="text-muted"> · <?= htmlspecialchars(date('d/m/Y à H:i', strtotime((string)$row['date_inscription'])), ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php endif; ?>
+                        </p>
+                        <p class="dt-event-desc"><?= htmlspecialchars($this->truncatePlain($row['description'] ?? '', 180), ENT_QUOTES, 'UTF-8') ?></p>
+                        <div class="dt-meta-row"><i class="fas fa-map-marker-alt"></i><span><?= htmlspecialchars((string)($row['lieu'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></span></div>
+                        <div class="dt-meta-row"><i class="fas fa-calendar-alt"></i><span><?= htmlspecialchars($dateRange, ENT_QUOTES, 'UTF-8') ?></span></div>
+                        <div class="dt-meta-row"><i class="fas fa-money-bill-wave"></i><span><?= htmlspecialchars($prixTxt, ENT_QUOTES, 'UTF-8') ?></span></div>
+                        <?php if ($sponsorNom !== ''): ?>
+                        <div class="dt-meta-row"><i class="fas fa-building"></i><span><strong>Sponsors :</strong> <?= htmlspecialchars($sponsorNom, ENT_QUOTES, 'UTF-8') ?></span></div>
+                        <?php endif; ?>
+                        <a href="<?= htmlspecialchars($detailUrl, ENT_QUOTES, 'UTF-8') ?>" class="dt-btn-teal dt-btn-detail text-decoration-none">Voir les détails <i class="fas fa-arrow-right"></i></a>
+                        <?php if (($row['status'] ?? '') === 'à venir'): ?>
+                        <form method="post" action="index.php?page=event_unregister" class="mt-2" onsubmit="return confirm('Annuler votre inscription à cet événement ?');">
+                            <input type="hidden" name="event_id" value="<?= (int)($row['event_id'] ?? 0) ?>">
+                            <button type="submit" class="btn btn-outline-danger w-100 rounded-3 fw-semibold">Annuler l’inscription</button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php
+        $content = ob_get_clean();
+        $this->renderPublicView('Mes inscriptions', $content, true, 'doctime');
     }
 
     /** Page publique sponsors (schéma database.sql : niveau, actif) */
     public function listSponsors(): void {
         $pdo = Database::getInstance()->getConnection();
+        $this->ensureDocTimeSchema($pdo);
         try {
-            $stmt = $pdo->query("SELECT id, nom, logo, site_web, description, niveau, actif FROM sponsors WHERE actif = 1 ORDER BY FIELD(niveau,'platinium','gold','silver','bronze'), nom");
+            $stmt = $pdo->query("
+                SELECT id, nom, email, telephone, logo, site_web, description, niveau, actif
+                FROM sponsors
+                WHERE actif = 1
+                ORDER BY FIELD(niveau,'platinium','gold','silver','bronze'), nom
+            ");
             $sponsors = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
         } catch (Throwable $e) {
             error_log('listSponsors: ' . $e->getMessage());
-            $sponsors = [];
+            try {
+                $stmt = $pdo->query("SELECT id, nom, logo, site_web, description, niveau, actif FROM sponsors WHERE actif = 1 ORDER BY FIELD(niveau,'platinium','gold','silver','bronze'), nom");
+                $sponsors = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (Throwable $e2) {
+                $sponsors = [];
+            }
         }
 
-        $levelMap = ['platinium' => 'Platine', 'gold' => 'Or', 'silver' => 'Argent', 'bronze' => 'Bronze'];
-        $sponsorsByLevel = [];
-        foreach ($sponsors as $sponsor) {
-            $nk = $sponsor['niveau'] ?? 'bronze';
-            $levelKey = $levelMap[$nk] ?? 'Autre';
-            $sponsorsByLevel[$levelKey][] = $sponsor;
-        }
+        $levelBadge = static function (string $nk): array {
+            return match ($nk) {
+                'platinium' => ['Platine', 'dt-level-plat'],
+                'gold' => ['Or', 'dt-level-or'],
+                'silver' => ['Argent', 'dt-level-argent'],
+                'bronze' => ['Bronze', 'dt-level-bronze'],
+                default => ['Partenaire', 'dt-level-argent'],
+            };
+        };
 
         ob_start();
         ?>
-        <div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);color:white;padding:60px 0;text-align:center;margin-bottom:40px;border-radius:12px;">
-            <h1><i class="fas fa-handshake me-3"></i>Nos Sponsors</h1>
-            <p style="font-size:1.1rem;opacity:0.9;">Partenaires qui soutiennent nos événements</p>
-        </div>
+        <h1 class="dt-page-head-title mb-1">Nos Sponsors</h1>
+        <p class="dt-page-head-sub mb-4">Partenaires qui soutiennent les événements médicaux.</p>
         <?php if (empty($sponsors)): ?>
-        <div class="alert alert-info text-center" style="padding:40px;"><p>Aucun sponsor disponible.</p></div>
+        <div class="alert alert-info text-center rounded-3 py-5">Aucun sponsor disponible.</div>
         <?php else: ?>
-        <?php foreach (['Platine','Or','Argent','Bronze','Autre'] as $level):
-            if (empty($sponsorsByLevel[$level])) {
-                continue;
-            } ?>
-        <h3 style="font-size:1.8rem;font-weight:700;margin-top:40px;margin-bottom:30px;padding-bottom:15px;border-bottom:3px solid #2A7FAA;"><?= htmlspecialchars($level) ?></h3>
-        <div class="row">
-            <?php foreach ($sponsorsByLevel[$level] as $sponsor): ?>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div style="background:white;border-radius:12px;padding:30px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.08);text-align:center;">
-                    <?php if (!empty($sponsor['logo'])): ?>
-                    <div style="margin-bottom:15px;"><img src="<?= htmlspecialchars($sponsor['logo']) ?>" alt="" style="max-height:80px;max-width:100%;object-fit:contain;"></div>
-                    <?php endif; ?>
-                    <div style="font-size:18px;font-weight:700;margin-bottom:10px;"><?= htmlspecialchars($sponsor['nom']) ?></div>
-                    <?php if (!empty($sponsor['site_web'])): ?>
-                    <div style="font-size:13px;"><a href="<?= htmlspecialchars($sponsor['site_web']) ?>" target="_blank" rel="noopener">Site web</a></div>
-                    <?php endif; ?>
+        <div class="row g-4">
+            <?php foreach ($sponsors as $sponsor):
+                $nk = (string)($sponsor['niveau'] ?? 'bronze');
+                [$lvlLabel, $lvlClass] = $levelBadge($nk);
+                $email = trim((string)($sponsor['email'] ?? ''));
+                $tel   = trim((string)($sponsor['telephone'] ?? ''));
+                $site  = trim((string)($sponsor['site_web'] ?? ''));
+            ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="dt-sponsor-card">
+                    <div class="dt-sponsor-head">
+                        <div class="dt-sponsor-ico"><i class="fas fa-building"></i></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <h2 class="dt-sponsor-name mb-0"><?= htmlspecialchars($sponsor['nom'] ?? '', ENT_QUOTES, 'UTF-8') ?></h2>
+                                <span class="dt-level-badge <?= htmlspecialchars($lvlClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($lvlLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dt-meta-row"><i class="fas fa-envelope"></i>
+                        <?php if ($email !== ''): ?>
+                        <a href="mailto:<?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?></a>
+                        <?php else: ?><span>—</span><?php endif; ?>
+                    </div>
+                    <div class="dt-meta-row"><i class="fas fa-phone"></i>
+                        <span><?= $tel !== '' ? htmlspecialchars($tel, ENT_QUOTES, 'UTF-8') : '—' ?></span>
+                    </div>
+                    <div class="dt-meta-row"><i class="fas fa-globe"></i>
+                        <?php if ($site !== ''): ?>
+                        <a href="<?= htmlspecialchars($site, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($site, ENT_QUOTES, 'UTF-8') ?></a>
+                        <?php else: ?><span>—</span><?php endif; ?>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
-        <?php endforeach; ?>
         <?php endif; ?>
         <?php
         $content = ob_get_clean();
-        $this->renderPublicView('Nos Sponsors', $content);
+        $this->renderPublicView('Nos Sponsors', $content, true, 'doctime');
     }
     public function contact(): void {
         $this->renderTemporaryView('Contact', '
@@ -1698,6 +2353,9 @@ JS;
                 </div>
             </form>
         </div>';
+        ob_start();
+        include __DIR__ . '/../views/partials/rendezvous_chatbot.php';
+        $content .= ob_get_clean();
         $this->renderPublicView('Prendre rendez-vous', $content);
     }
 
@@ -1721,6 +2379,7 @@ JS;
     }
 
     private function getRendezVousHTML($rendezVous, $userRole, $title): string {
+        require_once __DIR__ . '/../config/rendez_vous_labels.php';
         $isMedecin = ($userRole === 'medecin');
         $html = '
         <style>
@@ -1756,7 +2415,26 @@ JS;
             .form-group label { display:block;font-weight:bold;margin-bottom:5px; }
             .form-control { width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px; }
             .field-error { color:#dc3545;font-size:12px;margin-top:5px; }
-        </style>
+            .rdv-page-toolbar { width:100%; }
+            a.btn-prendre-rdv {
+                display:inline-flex;align-items:center;justify-content:center;
+                background:linear-gradient(135deg,#2A7FAA 0%,#4CAF50 100%);
+                color:#fff !important;font-weight:600;padding:10px 22px;border-radius:999px;
+                text-decoration:none;border:none;box-shadow:0 2px 10px rgba(42,127,170,0.25);
+                font-size:0.95rem;transition:filter .15s ease,transform .15s ease;
+            }
+            a.btn-prendre-rdv:hover { filter:brightness(1.06); color:#fff !important; transform:translateY(-1px); }
+            a.btn-prendre-rdv:focus-visible { outline:2px solid #4CAF50; outline-offset:2px; }
+        </style>';
+
+        if (!$isMedecin) {
+            $html .= '
+        <div class="rdv-page-toolbar mb-3 d-flex flex-wrap justify-content-end align-items-center gap-2">
+            <a href="index.php?page=prendre_rendez_vous" class="btn-prendre-rdv"><i class="fas fa-calendar-plus me-2"></i>Prendre un nouveau rendez-vous</a>
+        </div>';
+        }
+
+        $html .= '
         <div class="filter-section">
             <h5><i class="fas fa-filter me-2"></i>Filtrer</h5>
             <form method="GET" class="row g-3">
@@ -1781,25 +2459,27 @@ JS;
         if (empty($rendezVous)) {
             $html .= '<div class="empty-state"><i class="fas fa-calendar-times fa-3x text-muted mb-3"></i><h4>Aucun rendez-vous</h4>';
             if (!$isMedecin) {
-                $html .= '<a href="index.php?page=prendre_rendez_vous" class="btn btn-primary mt-3"><i class="fas fa-calendar-plus me-2"></i>Prendre un rendez-vous</a>';
+                $html .= '<a href="index.php?page=prendre_rendez_vous" class="btn-prendre-rdv mt-3"><i class="fas fa-calendar-plus me-2"></i>Prendre un nouveau rendez-vous</a>';
             }
             $html .= '</div>';
         } else {
             foreach ($rendezVous as $rdv) {
-                $badgeClass = match($rdv['statut']) {
+                $st = rendez_vous_statut_canonical($rdv['statut'] ?? '');
+                $badgeClass = match ($st) {
                     'confirmé'   => 'badge-confirme',
                     'en_attente' => 'badge-attente',
                     'terminé'    => 'badge-termine',
                     'annulé'     => 'badge-annule',
-                    default      => 'badge-attente'
+                    default      => 'badge-attente',
                 };
-                $showEditDelete = ($rdv['statut'] !== 'terminé' && $rdv['statut'] !== 'annulé');
+                $showEditDelete = ($st !== 'terminé' && $st !== 'annulé');
+                $statutLibelle  = htmlspecialchars(rendez_vous_statut_libelle($rdv['statut'] ?? ''), ENT_QUOTES, 'UTF-8');
                 $html .= '
                 <div class="rdv-card">
                     <div class="rdv-header">
                         <span class="rdv-title"><i class="fas ' . ($isMedecin ? 'fa-user' : 'fa-user-md') . ' me-2"></i>'
                             . ($isMedecin ? htmlspecialchars($rdv['patient_nom']) : 'Dr. ' . htmlspecialchars($rdv['medecin_nom'])) . '</span>
-                        <span class="badge-statut ' . $badgeClass . '">' . ucfirst($rdv['statut']) . '</span>
+                        <span class="badge-statut ' . $badgeClass . '">' . $statutLibelle . '</span>
                     </div>
                     <div class="rdv-info">
                         <div class="rdv-info-item"><i class="fas fa-calendar"></i><span>' . date('d/m/Y', strtotime($rdv['date_rendezvous'])) . '</span></div>
@@ -1816,10 +2496,10 @@ JS;
                         <button onclick="openEditRdvModal(' . $rdv['id'] . ', \'' . $rdv['date_rendezvous'] . '\', \'' . $rdv['heure_rendezvous'] . '\', \'' . addslashes($rdv['motif'] ?? '') . '\')" class="btn-action btn-modifier"><i class="fas fa-edit me-1"></i>Modifier</button>
                         <button onclick="confirmDeleteRdv(' . $rdv['id'] . ')" class="btn-action btn-supprimer"><i class="fas fa-trash me-1"></i>Supprimer</button>';
                 }
-                if ($isMedecin && $rdv['statut'] === 'en_attente') {
+                if ($isMedecin && $st === 'en_attente') {
                     $html .= '<a href="index.php?page=confirmer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-confirmer" onclick="return confirm(\'Confirmer ce rendez-vous ?\')"><i class="fas fa-check me-1"></i>Confirmer</a>';
                 }
-                if ($isMedecin && $rdv['statut'] === 'confirmé') {
+                if ($isMedecin && $st === 'confirmé') {
                     $html .= '<a href="index.php?page=terminer_rendez_vous&id=' . $rdv['id'] . '" class="btn-action btn-terminer" onclick="return confirm(\'Terminer ce rendez-vous ?\')"><i class="fas fa-check-double me-1"></i>Terminer</a>';
                 }
                 $html .= '</div></div>';
@@ -1895,12 +2575,30 @@ JS;
         };
         </script>
 JS;
+        ob_start();
+        include __DIR__ . '/../views/partials/rendezvous_chatbot.php';
+        $html .= ob_get_clean();
+
         return $html;
     }
 
     public function annulerRendezVous($id): void { $this->requireLogin(); $this->renderTemporaryView('Annuler rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' annulé</p>'); }
     public function confirmerRendezVous($id): void { $this->requireLogin(); $this->renderTemporaryView('Confirmer rendez-vous', '<p>Rendez-vous #' . htmlspecialchars($id) . ' confirmé</p>'); }
-    public function mesOrdonnances(): void { $this->requireLogin(); $this->renderTemporaryView('Mes ordonnances', '<p>Liste de vos ordonnances</p>'); }
+    public function mesOrdonnances(): void {
+        $this->requireLogin();
+        require_once __DIR__ . '/../models/Ordonnance.php';
+        $ordModel    = new Ordonnance();
+        $ordonnances = $ordModel->getAllByPatient((int)($_SESSION['user_id'] ?? 0));
+        foreach ($ordonnances as &$o) {
+            $full = trim((string)($o['medecin_nom'] ?? ''));
+            $full = preg_replace('/^Dr\.\s*/iu', '', $full);
+            $parts             = preg_split('/\s+/', $full, 2, PREG_SPLIT_NO_EMPTY);
+            $o['medecin_prenom'] = $parts[0] ?? '';
+            $o['medecin_nom']    = $parts[1] ?? ($parts[0] ?? '');
+        }
+        unset($o);
+        require __DIR__ . '/../views/frontoffice/patient/mes_ordonnances.php';
+    }
     public function mesNotifications(): void { $this->requireLogin(); $this->renderTemporaryView('Mes notifications', '<p>Aucune notification</p>'); }
 
     // =============================================
@@ -2001,6 +2699,8 @@ JS;
             .field-error { color:#dc3545;font-size:12px;margin-top:5px; }
         </style>';
 
+        $content .= '<script src="assets/js/camera-stream.js"></script>';
+
         // Tout le JavaScript en NOWDOC pour éviter tout problème d'échappement
         $content .= <<<JS
         <script>
@@ -2063,19 +2763,20 @@ JS;
         });
 
         function registerFaceId() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                document.getElementById("faceIdStatus").innerHTML = '<div class="alert alert-danger">Votre navigateur ne supporte pas la caméra.</div>';
+            if (!window.DoctimeCamera || typeof window.DoctimeCamera.acquireVideoStream !== "function") {
+                document.getElementById("faceIdStatus").innerHTML = '<div class="alert alert-danger">Script caméra indisponible. Rechargez la page.</div>';
                 return;
             }
             document.getElementById("faceIdStatus").innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Accès à la caméra...</div>';
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    stream.getTracks().forEach(function(track) { track.stop(); });
-                    window.location.href = "index.php?page=register_face";
-                })
-                .catch(function(err) {
-                    document.getElementById("faceIdStatus").innerHTML = '<div class="alert alert-danger">Erreur d\'accès à la caméra: ' + err.message + '</div>';
-                });
+            window.DoctimeCamera.acquireVideoStream().then(function(stream) {
+                stream.getTracks().forEach(function(track) { track.stop(); });
+                window.location.href = "index.php?page=register_face";
+            }).catch(function(err) {
+                var hint = window.DoctimeCamera.formatHint(err);
+                var msg = (err && err.message) ? err.message : "Accès refusé";
+                document.getElementById("faceIdStatus").innerHTML = '<div class="alert alert-danger">Erreur d\'accès à la caméra : ' + msg +
+                    (hint ? '<br><small class="d-block mt-2">' + hint + '</small>' : '') + '</div>';
+            });
         }
 
         function updateFaceId() {
@@ -2138,8 +2839,17 @@ public function monProfil(): void {
     $errorPassword = '';
     
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $jsonInput = null;
+        $ct = strtolower($_SERVER['CONTENT_TYPE'] ?? '');
+        if (str_contains($ct, 'application/json')) {
+            $decoded = json_decode((string) file_get_contents('php://input'), true);
+            $jsonInput = is_array($decoded) ? $decoded : null;
+        }
         $action = $_POST['action'] ?? '';
-        
+        if ($action === '' && $jsonInput && !empty($jsonInput['action'])) {
+            $action = (string) $jsonInput['action'];
+        }
+
         // Mise à jour du profil
         if ($action === 'update_profile') {
             $nom = trim($_POST['nom'] ?? '');
@@ -2199,7 +2909,7 @@ public function monProfil(): void {
         
         // Mise à jour de l'avatar (traitement séparé)
         elseif ($action === 'update_avatar' && isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/valorys_Copie/uploads/avatars/';
+            $uploadDir = __DIR__ . '/../uploads/avatars/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
             
             $file = $_FILES['avatar'];
@@ -2229,7 +2939,7 @@ public function monProfil(): void {
         
         // Enregistrement facial
         elseif ($action === 'register_face') {
-            $input = json_decode(file_get_contents('php://input'), true);
+            $input = $jsonInput ?? [];
             $imageData = $input['image'] ?? '';
             
             if (empty($imageData)) {
@@ -2244,7 +2954,7 @@ public function monProfil(): void {
                 $imageData = base64_decode($imageData);
                 $extension = $matches[1];
                 
-                $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/valorys_Copie/uploads/faces/';
+                $uploadDir = __DIR__ . '/../uploads/faces/';
                 if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
                 
                 $filename = 'face_' . $userId . '_' . time() . '.' . $extension;
@@ -2303,7 +3013,11 @@ public function monProfil(): void {
     // VUES
     // =============================================
 
-    private function renderPublicView($title, $content): void {
+    private function renderPublicView(string $title, string $content, bool $fullBleedLayout = false, string $navVariant = 'valorys'): void {
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=UTF-8');
+        }
+        $bodyClass = $fullBleedLayout ? 'page-doctime-bg' : '';
         ?>
         <!DOCTYPE html>
         <html lang="fr">
@@ -2315,8 +3029,14 @@ public function monProfil(): void {
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <?= $this->getCustomStyles() ?>
         </head>
-        <body>
-            <?= $this->getPublicNavbar() ?>
+        <body<?= $bodyClass !== '' ? ' class="' . htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
+            <?= $this->getPublicNavbar(null, $navVariant) ?>
+            <?php if ($fullBleedLayout): ?>
+            <div class="container py-4">
+                <?= $this->getFlashMessages() ?>
+                <?= $content ?>
+            </div>
+            <?php else: ?>
             <div class="container mt-4">
                 <?= $this->getFlashMessages() ?>
                 <div class="row">
@@ -2327,6 +3047,35 @@ public function monProfil(): void {
                         </div>
                     </div>
                 </div>
+            </div>
+            <?php endif; ?>
+            <?= $this->getFooter() ?>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>
+        <?php
+    }
+
+    /** Page publique type « fil » : fond gris, sans carte Bootstrap englobante (blog article) */
+    private function renderPublicViewFeed(string $htmlTitle, string $content): void {
+        ?>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title><?= htmlspecialchars($htmlTitle) ?> - Valorys</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <?= $this->getCustomStyles() ?>
+        </head>
+        <body style="background:#f0f2f5;">
+            <?= $this->getPublicNavbar() ?>
+            <div class="px-2 py-3">
+                <div class="container" style="max-width:700px;">
+                    <?= $this->getFlashMessages() ?>
+                </div>
+                <?= $content ?>
             </div>
             <?= $this->getFooter() ?>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -2425,6 +3174,29 @@ private function getFlashMessages(): string {
             . '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
         unset($_SESSION['flash']);
     }
+
+    if (!empty($_SESSION['gamification_toast'])) {
+        $gt = $_SESSION['gamification_toast'];
+        unset($_SESSION['gamification_toast']);
+        if (is_array($gt)) {
+            $json = json_encode($gt, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+            if ($json !== false) {
+                $html .= '<style>
+                    .gami-toast{position:fixed;bottom:22px;right:22px;z-index:20000;background:linear-gradient(155deg,#0f1b28 0%,#1a2c40 100%);color:#fff;border-radius:16px;padding:16px 40px 16px 16px;max-width:380px;box-shadow:0 14px 48px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);display:none}
+                    .gami-toast.show{display:block;animation:valoGamiIn .28s ease}
+                    @keyframes valoGamiIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+                    .gami-toast-inner{display:flex;gap:12px;align-items:flex-start}
+                    .gami-toast-ico{font-size:1.6rem;line-height:1;flex-shrink:0}
+                    .gami-toast-title{color:#ffe082;font-weight:800;font-size:15px;line-height:1.35}
+                    .gami-toast-sub{color:#e8eaed;font-size:13px;margin-top:8px;line-height:1.45}
+                    .gami-toast-wrap{position:relative}
+                    .gami-toast-x{position:absolute;top:10px;right:12px;background:none;border:none;color:#9aa0a6;font-size:1.35rem;cursor:pointer;line-height:1;padding:4px}
+                    .gami-toast-x:hover{color:#fff}
+                </style>';
+                $html .= '<script>(function(){var g=' . $json . ';if(!g)return;var pts=+g.points_added||0,tot=+g.total_points||0,rew=g.new_rewards||[];if(pts<=0&&tot<=0&&(!rew||!rew.length))return;var w=document.createElement("div");w.id="gamiToast";w.className="gami-toast gami-toast-wrap show";var title=(pts>0?"+"+pts+" points gagnés 🎯":"Points mis à jour 🎯")+" ("+tot+" pts au total)";var sub="";if(rew&&rew.length){sub="🎈 Nouvelle récompense : "+(rew[0].title||"")+" ! Un certificat vous a été envoyé par email 🎓"}w.innerHTML="<button type=\\"button\\" class=\\"gami-toast-x\\" aria-label=\\"Fermer\\">&times;</button><div class=\\"gami-toast-inner\\"><span class=\\"gami-toast-ico\\">🎯</span><div><div class=\\"gami-toast-title\\"></div><div class=\\"gami-toast-sub\\"></div></div></div>";w.querySelector(".gami-toast-title").textContent=title;var se=w.querySelector(".gami-toast-sub");if(sub){se.textContent=sub}else{se.style.display="none"}document.body.appendChild(w);w.querySelector(".gami-toast-x").onclick=function(){w.remove()};setTimeout(function(){if(w.parentNode)w.remove()},10000);})();</script>';
+            }
+        }
+    }
  
     return $html;
 }
@@ -2440,7 +3212,7 @@ private function getFlashMessages(): string {
     }
 
     /** Barre nav publique unique : views/partials/nav_public.php */
-    private function getPublicNavbar(?string $navActiveOverride = null): string {
+    private function getPublicNavbar(?string $navActiveOverride = null, string $navVariant = 'valorys'): string {
         $navActive = $navActiveOverride ?? ($_GET['page'] ?? '');
         ob_start();
         include __DIR__ . '/../views/partials/nav_public.php';
@@ -2460,6 +3232,25 @@ private function getFlashMessages(): string {
     // =============================================
     // PAGE D'ACCUEIL
     // =============================================
+
+    /** Bloc « Avis patients » (formulaire + liste) pour l’accueil. */
+    private function getHomeReviewsSectionHTML(): string {
+        if (!is_file(__DIR__ . '/../views/frontoffice/reviews_section.php')) {
+            return '';
+        }
+        require_once __DIR__ . '/../models/Review.php';
+        $reviewModel = new Review();
+        $reviews = $reviewModel->getApproved(8, 0);
+        foreach ($reviews as &$r) {
+            $r['emojis'] = $reviewModel->getEmojis((int)$r['id']);
+        }
+        unset($r);
+        $stats          = $reviewModel->getStats();
+        $reviewsApiBase = 'api/reviews.php';
+        ob_start();
+        include __DIR__ . '/../views/frontoffice/reviews_section.php';
+        return (string) ob_get_clean();
+    }
 
     private function getPublicDashboardHTML(): string {
         $isLoggedIn = !empty($_SESSION['user_id']);
@@ -2490,7 +3281,7 @@ private function getFlashMessages(): string {
             <div class="row g-4">
                 <div class="col-md-6"><div class="card"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Prochain Rendez-vous</h5></div><div class="card-body text-center py-4"><p class="text-muted">Aucun rendez-vous planifié</p><a href="index.php?page=medecins" class="btn btn-primary btn-sm">Prendre un rendez-vous</a></div></div></div>
                 <div class="col-md-6"><div class="card"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-ticket-alt text-success me-2"></i>Événements à Venir</h5></div><div class="card-body"><div class="d-flex justify-content-between mb-2"><span>🏥 Conférence sur la cardiologie</span><small class="text-muted">15 Avril 2026</small></div><div class="d-flex justify-content-between"><span>🍎 Atelier bien-être</span><small class="text-muted">22 Avril 2026</small></div><div class="text-center mt-3"><a href="index.php?page=evenements" class="btn btn-sm btn-outline-primary">Voir tous</a></div></div></div></div>
-            </div>';
+            </div>' . $this->getHomeReviewsSectionHTML();
         }
         return '
         <div class="text-center mb-5"><h1 class="display-4 mb-3">Bienvenue sur Valorys!</h1><p class="lead text-muted">Connectez-vous pour accéder à tous nos services</p></div>
@@ -2503,7 +3294,7 @@ private function getFlashMessages(): string {
         <div class="row g-4">
             <div class="col-md-6"><div class="card"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-calendar-alt text-primary me-2"></i>Prochain Rendez-vous</h5></div><div class="card-body text-center py-4"><p class="text-muted">Connectez-vous pour voir vos rendez-vous</p><a href="index.php?page=login" class="btn btn-primary">Se connecter</a></div></div></div>
             <div class="col-md-6"><div class="card"><div class="card-header bg-white"><h5 class="mb-0"><i class="fas fa-ticket-alt text-success me-2"></i>Événements à Venir</h5></div><div class="card-body"><div class="d-flex justify-content-between mb-2"><span>🏥 Conférence sur la cardiologie</span><small class="text-muted">15 Avril 2026</small></div><div class="d-flex justify-content-between"><span>🍎 Atelier bien-être</span><small class="text-muted">22 Avril 2026</small></div><div class="text-center mt-3"><a href="index.php?page=evenements" class="btn btn-sm btn-outline-primary">Voir tous</a></div></div></div></div>
-        </div>';
+        </div>' . $this->getHomeReviewsSectionHTML();
     }
 
 

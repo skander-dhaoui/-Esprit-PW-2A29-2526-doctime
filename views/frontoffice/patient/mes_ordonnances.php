@@ -62,7 +62,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
                         </div>
                         <p class="card-text">
                             <small class="text-muted">
-                                <i class="fas fa-user-md me-1"></i>Dr. <?= htmlspecialchars($ord['medecin_prenom'] . ' ' . $ord['medecin_nom']) ?><br>
+                                <i class="fas fa-user-md me-1"></i>Dr. <?= htmlspecialchars(trim(($ord['medecin_prenom'] ?? '') . ' ' . ($ord['medecin_nom'] ?? ''))) ?><br>
                                 <i class="fas fa-calendar me-1"></i><?= date('d/m/Y', strtotime($ord['date_ordonnance'])) ?>
                             </small>
                         </p>
@@ -104,6 +104,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'patient') {
         </div>
     </div>
 </div>
+
+<?php include __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
 
 <script>
 function showDetails(id) {

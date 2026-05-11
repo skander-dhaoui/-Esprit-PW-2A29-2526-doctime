@@ -13,6 +13,9 @@ class PharmacieController {
 
     private AuthController $auth;
     private Database $db;
+    /** @var list<string>|null */
+    private ?array $produitColumnsCache = null;
+    private ?bool $categoriesHasStatutCache = null;
 
     public function __construct() {
         $this->auth = new AuthController();
@@ -1049,6 +1052,80 @@ class PharmacieController {
     }
 
     // ================================
+    // Schéma produits / catégories (compat. backoffice vs doctime)
+    // ================================
+
+    /** @return list<string> */
+    private function getProduitColumns(): array {
+        if ($this->produitColumnsCache !== null) {
+            return $this->produitColumnsCache;
+        }
+        $rows = $this->db->query(
+            "SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'produits'"
+        );
+        $this->produitColumnsCache = array_map(static fn(array $r): string => (string)$r['c'], $rows);
+        return $this->produitColumnsCache;
+    }
+
+    private function produitHasColumn(string $name): bool {
+        return in_array($name, $this->getProduitColumns(), true);
+    }
+
+    private function categoriesHasStatutColumn(): bool {
+        if ($this->categoriesHasStatutCache !== null) {
+            return $this->categoriesHasStatutCache;
+        }
+        $n = (int)$this->db->queryScalar(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'categories' AND COLUMN_NAME = 'statut'"
+        );
+        $this->categoriesHasStatutCache = $n > 0;
+        return $this->categoriesHasStatutCache;
+    }
+
+    /** @param array<string,mixed>|null $p */
+    private function normalizeProduitRow(?array $p): ?array {
+        if ($p === null) {
+            return null;
+        }
+        if ($this->produitHasColumn('prix_vente')) {
+            $pv = $p['prix_vente'] ?? 0;
+        } elseif (!empty($p['prix_promo'])) {
+            $pv = $p['prix_promo'];
+        } else {
+            $pv = $p['prix'] ?? 0;
+        }
+        $p['prix_vente'] = (float)$pv;
+
+        if ($this->produitHasColumn('actif')) {
+            $p['actif'] = (int)(bool)($p['actif'] ?? 0);
+        } elseif ($this->produitHasColumn('status')) {
+            $p['actif'] = (($p['status'] ?? '') === 'actif') ? 1 : 0;
+        } else {
+            $p['actif'] = 1;
+        }
+
+        if (empty($p['reference']) && !empty($p['slug'])) {
+            $p['reference'] = $p['slug'];
+        }
+        if (!array_key_exists('reference', $p) || $p['reference'] === null) {
+            $p['reference'] = '';
+        } else {
+            $p['reference'] = (string)$p['reference'];
+        }
+
+        if (!$this->produitHasColumn('stock_alerte')) {
+            $p['stock_alerte'] = 5;
+        }
+
+        $p['stock'] = (int)($p['stock'] ?? 0);
+        $p['prescription'] = (int)(bool)($p['prescription'] ?? 0);
+
+        return $p;
+    }
+
+    // ================================
     // SQL - PRODUITS
     // ================================
 
@@ -1069,44 +1146,61 @@ class PharmacieController {
                 LEFT JOIN categories c ON p.categorie_id = c.id
                 WHERE p.id = :id";
         $result = $this->db->query($sql, ['id' => $id]);
-        return $result[0] ?? null;
+        return $this->normalizeProduitRow($result[0] ?? null);
     }
 
     private function produitGetAll(string $search = '', int $categorieId = 0, string $statut = ''): array {
-        $where = "WHERE 1=1";
+        $where = 'WHERE 1=1';
         $params = [];
 
         if ($search !== '') {
-            $where .= " AND (p.nom LIKE :search OR p.reference LIKE :search OR p.description LIKE :search)";
+            $parts = ['p.nom LIKE :search', 'p.description LIKE :search'];
+            if ($this->produitHasColumn('reference')) {
+                $parts[] = 'p.reference LIKE :search';
+            }
+            if ($this->produitHasColumn('slug')) {
+                $parts[] = 'p.slug LIKE :search';
+            }
+            $where .= ' AND (' . implode(' OR ', $parts) . ')';
             $params['search'] = '%' . $search . '%';
         }
         if ($categorieId > 0) {
-            $where .= " AND p.categorie_id = :cat";
+            $where .= ' AND p.categorie_id = :cat';
             $params['cat'] = $categorieId;
         }
         if ($statut === 'actif') {
-            $where .= " AND p.actif = 1";
+            if ($this->produitHasColumn('actif')) {
+                $where .= ' AND p.actif = 1';
+            } elseif ($this->produitHasColumn('status')) {
+                $where .= " AND p.status = 'actif'";
+            }
         } elseif ($statut === 'inactif') {
-            $where .= " AND p.actif = 0";
-        } elseif ($statut === 'alerte') {
-            $where .= " AND p.stock <= p.stock_alerte";
+            if ($this->produitHasColumn('actif')) {
+                $where .= ' AND p.actif = 0';
+            } elseif ($this->produitHasColumn('status')) {
+                $where .= " AND p.status <> 'actif'";
+            }
+        } elseif ($statut === 'alerte' && $this->produitHasColumn('stock_alerte')) {
+            $where .= ' AND p.stock <= p.stock_alerte';
         }
 
+        $orderCol = $this->produitHasColumn('created_at') ? 'p.created_at' : 'p.id';
         $sql = "SELECT p.*, c.nom AS categorie_nom
                 FROM produits p
                 LEFT JOIN categories c ON p.categorie_id = c.id
                 $where
-                ORDER BY p.created_at DESC";
-        return $this->db->query($sql, $params);
+                ORDER BY $orderCol DESC";
+        $rows = $this->db->query($sql, $params);
+
+        return array_map(fn(array $r): array => $this->normalizeProduitRow($r) ?? [], $rows);
     }
 
     private function produitGetActifs(): array {
-        $sql = "SELECT p.*, c.nom AS categorie_nom
-                FROM produits p
-                LEFT JOIN categories c ON p.categorie_id = c.id
-                WHERE p.actif = 1
-                ORDER BY p.nom ASC";
-        return $this->db->query($sql);
+        $list = $this->produitGetAll('', 0, 'actif');
+        usort($list, static function (array $a, array $b): int {
+            return strcmp((string)($a['nom'] ?? ''), (string)($b['nom'] ?? ''));
+        });
+        return $list;
     }
 
     private function produitUpdate(int $id, array $data): bool {
@@ -1149,12 +1243,40 @@ class PharmacieController {
     }
 
     private function produitGetStats(): array {
+        $total = (int)$this->db->queryScalar('SELECT COUNT(*) FROM produits');
+
+        if ($this->produitHasColumn('actif')) {
+            $actifs = (int)$this->db->queryScalar('SELECT COUNT(*) FROM produits WHERE actif=1');
+            $actifWhere = 'actif=1';
+        } elseif ($this->produitHasColumn('status')) {
+            $actifs = (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE status='actif'");
+            $actifWhere = "status='actif'";
+        } else {
+            $actifs = $total;
+            $actifWhere = '1=1';
+        }
+
+        $rupture = (int)$this->db->queryScalar('SELECT COUNT(*) FROM produits WHERE stock=0');
+
+        if ($this->produitHasColumn('stock_alerte')) {
+            $alerte = (int)$this->db->queryScalar(
+                'SELECT COUNT(*) FROM produits WHERE stock <= stock_alerte AND stock > 0'
+            );
+        } else {
+            $alerte = 0;
+        }
+
+        $priceCol = $this->produitHasColumn('prix_vente') ? 'prix_vente' : 'prix';
+        $valeur = (float)$this->db->queryScalar(
+            "SELECT COALESCE(SUM(stock * $priceCol),0) FROM produits WHERE $actifWhere"
+        );
+
         return [
-            'total' => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits"),
-            'actifs' => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE actif=1"),
-            'rupture' => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE stock=0"),
-            'alerte' => (int)$this->db->queryScalar("SELECT COUNT(*) FROM produits WHERE stock <= stock_alerte AND stock > 0"),
-            'valeur_stock' => (float)$this->db->queryScalar("SELECT COALESCE(SUM(stock * prix_vente),0) FROM produits WHERE actif=1"),
+            'total' => $total,
+            'actifs' => $actifs,
+            'rupture' => $rupture,
+            'alerte' => $alerte,
+            'valeur_stock' => $valeur,
         ];
     }
 
@@ -1367,46 +1489,192 @@ class PharmacieController {
         // 7. Nettoyer le bloc <ids> du message affiché
         $messageAffiche = trim(preg_replace('/<ids>.*?<\/ids>/s', '', $texteIA));
 
+        if ($suggestions === []) {
+            $suggestions = $this->chatbotRankedSuggestions($query, $produits, 3);
+        }
+
         return [$messageAffiche ?: 'Voici les produits qui correspondent à votre besoin.', $suggestions];
     }
 
     /**
-     * Fallback si l'API IA est indisponible : recherche basique par mots-clés.
+     * Mots-clés affichés quand aucune requête ne matche (basés sur le catalogue réel).
+     *
+     * @param list<array<string,mixed>> $produits
+     */
+    private function chatbotCatalogueSearchHints(array $produits, int $limit = 5): string {
+        $stop = [
+            'avec', 'sans', 'pour', 'dans', 'aux', 'les', 'des', 'une', 'est', 'plus',
+            'format', 'famille', 'boite', 'flacon', 'rapide', 'mesure',
+        ];
+        $freq = [];
+        foreach ($produits as $p) {
+            $chunk = $this->normalizeText(($p['nom'] ?? '') . ' ' . ($p['description'] ?? ''));
+            foreach (preg_split('/\s+/', $chunk) ?: [] as $w) {
+                if (strlen($w) < 4 || is_numeric($w) || in_array($w, $stop, true)) {
+                    continue;
+                }
+                $freq[$w] = ($freq[$w] ?? 0) + 1;
+            }
+        }
+        if ($freq === []) {
+            return 'toux, nasal, vitamine, gel';
+        }
+        arsort($freq);
+
+        return implode(', ', array_slice(array_keys($freq), 0, $limit));
+    }
+
+    /**
+     * Alias métiers → segments souvent présents dans les noms du catalogue (petit magasin démo).
+     *
+     * @return list<string>
+     */
+    private function chatbotTokenAliases(string $token): array {
+        $map = [
+            'cheveux' => ['cheveux', 'capillaire', 'shampoing'],
+            'capillaire' => ['capillaire', 'cheveux', 'shampoing'],
+            'capillaires' => ['capillaire', 'cheveux', 'shampoing'],
+            'shampoing' => ['shampoing', 'cheveux', 'capillaire'],
+            'soins' => ['soin', 'capillaire', 'cheveux', 'shampoing'],
+            'nez' => ['nasal', 'spray'],
+            'nasal' => ['nasal', 'spray'],
+            'rhume' => ['nasal', 'spray'],
+            'toux' => ['toux', 'sirop'],
+            'gorge' => ['toux', 'sirop'],
+            'sirop' => ['sirop', 'toux'],
+            'plaie' => ['pansement', 'hydrocollo'],
+            'pansement' => ['pansement', 'hydrocollo'],
+            'blessure' => ['pansement', 'hydrocollo'],
+            'temperature' => ['thermo'],
+            'fievre' => ['thermo'],
+            'thermometre' => ['thermo'],
+            'vitamine' => ['vitamine'],
+            'gel' => ['gel', 'hydroalcoolique'],
+            'mains' => ['gel', 'hydroalcoolique'],
+            'desinfectant' => ['gel', 'hydroalcoolique'],
+            'hydroalcoolique' => ['hydroalcoolique', 'gel'],
+            'hygiene' => ['gel', 'hydroalcoolique'],
+        ];
+
+        return $map[$token] ?? [];
+    }
+
+    /**
+     * Score un produit pour une requête (sous-chaînes, Levenshtein léger, alias).
+     *
+     * @param array<string,mixed> $produit
+     */
+    private function chatbotScoreProduit(string $query, array $produit): int {
+        $q      = $this->normalizeText($query);
+        $tokens = array_values(array_filter(preg_split('/\s+/', $q) ?: []));
+        $text   = $this->normalizeText(
+            ($produit['nom'] ?? '') . ' ' .
+            ($produit['description'] ?? '') . ' ' .
+            ($produit['categorie_nom'] ?? '')
+        );
+        $wordsInText = array_values(array_filter(preg_split('/\s+/', $text) ?: []));
+        $score       = 0;
+
+        foreach ($tokens as $token) {
+            if (strlen($token) < 3) {
+                continue;
+            }
+            $variants = array_unique(array_merge([$token], $this->chatbotTokenAliases($token)));
+            $hit      = false;
+            foreach ($variants as $vt) {
+                if (strlen($vt) >= 3 && str_contains($text, $vt)) {
+                    $score += 4;
+                    $hit = true;
+                    break;
+                }
+            }
+            if ($hit) {
+                continue;
+            }
+            foreach ($wordsInText as $w) {
+                if (strlen($w) < 4) {
+                    continue;
+                }
+                foreach ($variants as $vt) {
+                    if (strlen($vt) < 4) {
+                        continue;
+                    }
+                    $d = levenshtein($vt, $w);
+                    $max = max(strlen($vt), strlen($w));
+                    if ($max > 0 && $d <= max(1, (int)floor($max * 0.22))) {
+                        $score += 2;
+                        $hit = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return $score;
+    }
+
+    /**
+     * Jusqu'à $limit produits : d'abord par score, puis complète avec le catalogue si trop peu de hits.
+     *
+     * @param list<array<string,mixed>> $produits
+     * @return list<array<string,mixed>>
+     */
+    private function chatbotRankedSuggestions(string $query, array $produits, int $limit = 3): array {
+        $best = [];
+        foreach ($produits as $produit) {
+            $s = $this->chatbotScoreProduit($query, $produit);
+            if ($s > 0) {
+                $best[] = ['score' => $s, 'produit' => $produit];
+            }
+        }
+        usort($best, fn($a, $b) => $b['score'] <=> $a['score']);
+        $out = array_map(static fn(array $item): array => $item['produit'], array_slice($best, 0, $limit));
+        if (count($out) >= $limit) {
+            return $out;
+        }
+        $ids = array_column($out, 'id');
+        foreach ($produits as $p) {
+            if (count($out) >= $limit) {
+                break;
+            }
+            if (in_array($p['id'], $ids, true)) {
+                continue;
+            }
+            $out[] = $p;
+            $ids[] = $p['id'];
+        }
+
+        return array_slice($out, 0, $limit);
+    }
+
+    /**
+     * Fallback si l'API IA est indisponible : recherche par mots-clés + classement local.
      */
     private function chatbotFallback(string $query, array $produits): array
     {
-        $q      = $this->normalizeText($query);
-        $tokens = array_values(array_filter(preg_split('/\\s+/', $q) ?: []));
-        $best   = [];
-
+        $best = [];
         foreach ($produits as $produit) {
-            $text  = $this->normalizeText(
-                ($produit['nom'] ?? '') . ' ' .
-                ($produit['description'] ?? '') . ' ' .
-                ($produit['categorie_nom'] ?? '')
-            );
-            $score = 0;
-            foreach ($tokens as $token) {
-                if (strlen($token) >= 3 && str_contains($text, $token)) {
-                    $score += 2;
-                }
-            }
-            if ($score > 0) {
-                $best[] = ['score' => $score, 'produit' => $produit];
+            $s = $this->chatbotScoreProduit($query, $produit);
+            if ($s > 0) {
+                $best[] = ['score' => $s, 'produit' => $produit];
             }
         }
-
         usort($best, fn($a, $b) => $b['score'] <=> $a['score']);
-        $suggestions = array_map(fn($item) => $item['produit'], array_slice($best, 0, 3));
+        $suggestions = array_map(static fn(array $item): array => $item['produit'], array_slice($best, 0, 3));
 
-        if (empty($suggestions)) {
-            return [
-                "Je n'ai pas trouvé de correspondance précise. Essayez des termes comme \"peau sèche\", \"cheveux\", \"bébé\" ou \"solaire\".",
-                array_slice($produits, 0, 3)
-            ];
+        if ($suggestions !== []) {
+            return ['Voici les produits les plus proches de votre besoin dans notre catalogue.', $suggestions];
         }
 
-        return ['Voici les produits les plus proches de votre besoin dans notre catalogue.', $suggestions];
+        $hints = $this->chatbotCatalogueSearchHints($produits);
+        $pick  = array_slice($produits, 0, 3);
+
+        return [
+            'Aucun produit du catalogue ne correspond à cette recherche (il n’y a par exemple pas encore d’article « soins capillaires »). '
+            . 'Essayez des mots que vous voyez sur nos fiches : ' . $hints . '. '
+            . 'Voici quelques articles disponibles :',
+            $pick,
+        ];
     }
 
 
@@ -1461,9 +1729,13 @@ class PharmacieController {
     }
 
     private function categorieGetActives(): array {
-        return $this->db->query(
-            "SELECT id, nom FROM categories WHERE statut = 'actif' ORDER BY nom ASC"
-        );
+        if ($this->categoriesHasStatutColumn()) {
+            return $this->db->query(
+                "SELECT id, nom FROM categories WHERE statut = 'actif' ORDER BY nom ASC"
+            );
+        }
+
+        return $this->db->query('SELECT id, nom FROM categories ORDER BY nom ASC');
     }
 
     private function categorieUpdate(int $id, array $data): bool {

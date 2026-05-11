@@ -14,6 +14,8 @@ class RendezVousController {
     private Disponibilite $dispoModel;
     private AuthController $auth;
     private PDO $db;
+    /** @var Ordonnance|null */
+    private $ordModel = null;
 
     public function __construct() {
         $this->rdvModel     = new RendezVous();
@@ -22,6 +24,10 @@ class RendezVousController {
         $this->dispoModel   = new Disponibilite();
         $this->auth         = new AuthController();
         $this->db           = Database::getInstance()->getConnection();
+        if (is_file(__DIR__ . '/../models/Ordonnance.php')) {
+            require_once __DIR__ . '/../models/Ordonnance.php';
+            $this->ordModel = new Ordonnance();
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -194,95 +200,91 @@ class RendezVousController {
 
         $this->rdvModel->updateStatus($id, 'confirmé');
 
-        // ✉️ Envoi d'un e-mail de notification à la confirmation du RDV
-        $this->sendConfirmationEmail($rdv);
+        $mailSent = $this->sendConfirmationEmail($rdv);
 
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous confirmé. Un e-mail de confirmation a été envoyé.'];
-        header('Location: index.php?page=medecin_rendezvous');
+        $_SESSION['flash'] = [
+            'type' => 'success',
+            'message' => $mailSent
+                ? 'Rendez-vous confirmé. Un e-mail de confirmation a été envoyé au patient.'
+                : 'Rendez-vous confirmé. L\'e-mail n\'a pas pu être envoyé (vérifiez MAIL_HOST / MAIL_USERNAME / MAIL_PASSWORD dans .env).',
+        ];
+        header('Location: index.php?page=mes_rendez_vous');
         exit;
     }
 
     /**
-     * Envoie un e-mail de confirmation de rendez-vous via PHPMailer + Gmail SMTP.
-     * L'e-mail est envoyé à : skanderdhaoui77@gmail.com
+     * E-mail au patient après confirmation du RDV (SMTP via config/mail.php / .env).
      */
-    private function sendConfirmationEmail(array $rdv): void {
-        require_once __DIR__ . '/../doctime_full/PHPMailer/src/Exception.php';
-        require_once __DIR__ . '/../doctime_full/PHPMailer/src/PHPMailer.php';
-        require_once __DIR__ . '/../doctime_full/PHPMailer/src/SMTP.php';
+    private function sendConfirmationEmail(array $rdv): bool {
+        if (!class_exists('MailConfig')) {
+            require_once __DIR__ . '/../config/mail.php';
+        }
 
-        $patientNom   = htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']);
-        $medecinNom   = 'Dr. ' . htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']);
-        $specialite   = htmlspecialchars($rdv['specialite'] ?? 'Médecin généraliste');
-        $date         = date('d/m/Y', strtotime($rdv['date_rendezvous']));
-        $heure        = htmlspecialchars($rdv['heure_rendezvous']);
-        $motif        = htmlspecialchars($rdv['motif'] ?? 'Non précisé');
-        $adresse      = htmlspecialchars($rdv['cabinet_adresse'] ?? 'Non précisée');
-        $patientEmail = htmlspecialchars($rdv['patient_email'] ?? '');
+        $patientEmail = trim((string)($rdv['patient_email'] ?? ''));
+        if ($patientEmail === '' || !filter_var($patientEmail, FILTER_VALIDATE_EMAIL)) {
+            error_log('sendConfirmationEmail: adresse patient invalide ou absente.');
+            return false;
+        }
 
-        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        if (!MailConfig::isConfigured()) {
+            error_log('sendConfirmationEmail: Mail non configuré (.env MAIL_*).');
+            return false;
+        }
+
+        $patientNom = trim((string)(($rdv['patient_prenom'] ?? '') . ' ' . ($rdv['patient_nom'] ?? '')));
+        if ($patientNom === '') {
+            $patientNom = 'Patient';
+        }
+
+        $medecinNom = trim((string)(($rdv['medecin_prenom'] ?? '') . ' ' . ($rdv['medecin_nom'] ?? '')));
+        if ($medecinNom !== '') {
+            $medecinNom = 'Dr. ' . $medecinNom;
+        } else {
+            $medecinNom = 'Votre médecin';
+        }
+
+        $specialite = htmlspecialchars((string)($rdv['specialite'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $dateStr    = htmlspecialchars(date('d/m/Y', strtotime((string)($rdv['date_rendezvous'] ?? 'now'))), ENT_QUOTES, 'UTF-8');
+        $heure      = htmlspecialchars((string)($rdv['heure_rendezvous'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $motif      = htmlspecialchars(trim((string)($rdv['motif'] ?? '')), ENT_QUOTES, 'UTF-8');
+        if ($motif === '') {
+            $motif = 'Non précisé';
+        }
+        $adresse = htmlspecialchars(trim((string)($rdv['cabinet_adresse'] ?? '')), ENT_QUOTES, 'UTF-8');
+        if ($adresse === '') {
+            $adresse = 'Voir les informations sur votre espace Valorys.';
+        }
+
+        $subject = 'Confirmation de votre rendez-vous — Valorys';
+        $displayName = htmlspecialchars($patientNom, ENT_QUOTES, 'UTF-8');
+
+        $body = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head><body style="margin:0;background:#f5f7fb;font-family:Segoe UI,Arial,sans-serif;">'
+            . '<div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">'
+            . '<div style="background:linear-gradient(135deg,#2A7FAA,#4CAF50);padding:22px;text-align:center;">'
+            . '<h1 style="color:#fff;margin:0;font-size:20px;">Rendez-vous confirmé</h1></div>'
+            . '<div style="padding:28px;color:#333;font-size:15px;line-height:1.55;">'
+            . '<p>Bonjour ' . $displayName . ',</p>'
+            . '<p>Votre médecin a <strong>confirmé</strong> le rendez-vous suivant :</p>'
+            . '<table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;margin:16px 0;">'
+            . '<tr><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;"><strong>Médecin</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;">'
+            . htmlspecialchars($medecinNom, ENT_QUOTES, 'UTF-8') . ($specialite !== '' ? ' — ' . $specialite : '') . '</td></tr>'
+            . '<tr><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;"><strong>Date</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;">' . $dateStr . '</td></tr>'
+            . '<tr><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;"><strong>Heure</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;">' . $heure . '</td></tr>'
+            . '<tr><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;"><strong>Motif</strong></td><td style="padding:12px 16px;border-bottom:1px solid #e9ecef;">' . $motif . '</td></tr>'
+            . '<tr><td style="padding:12px 16px;"><strong>Cabinet</strong></td><td style="padding:12px 16px;">' . $adresse . '</td></tr>'
+            . '</table>'
+            . '<p style="font-size:14px;color:#6c757d;">Connectez-vous à Valorys pour plus de détails ou pour modifier votre rendez-vous selon les règles du cabinet.</p>'
+            . '<p>Cordialement,<br><strong>L’équipe Valorys</strong></p>'
+            . '</div><div style="background:#1a2035;color:#adb5bd;padding:14px;text-align:center;font-size:12px;">Message automatique — ne pas répondre.</div>'
+            . '</div></body></html>';
+
+        $alt = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
 
         try {
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'skanderdhaoui77@gmail.com';
-            $mail->Password   = 'fuld tydv xzka ztxb';
-            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->CharSet    = 'UTF-8';
-            // Désactiver vérification SSL (nécessaire en local XAMPP)
-            $mail->SMTPOptions = [
-                'ssl' => [
-                    'verify_peer'       => false,
-                    'verify_peer_name'  => false,
-                    'allow_self_signed' => true,
-                ],
-            ];
-
-            $mail->setFrom('skanderdhaoui77@gmail.com', 'DocTime');
-            $mail->addAddress('skanderdhaoui77@gmail.com', 'DocTime Admin');
-            $mail->addAddress($patientEmail, $patientNom);
-
-            $mail->isHTML(true);
-            $mail->Subject = '✅ Confirmation de rendez-vous - DocTime';
-            $mail->Body    = "
-            <html>
-            <head><meta charset='UTF-8'></head>
-            <body style='font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0;'>
-              <div style='max-width:600px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);'>
-                <div style='background:#2563eb;padding:24px;text-align:center;'>
-                  <h1 style='color:#fff;margin:0;font-size:22px;'>DocTime — Confirmation de Rendez-vous</h1>
-                </div>
-                <div style='padding:30px;'>
-                  <p style='color:#374151;font-size:15px;'>Bonjour,</p>
-                  <p style='color:#374151;font-size:15px;'>Le rendez-vous suivant a ete <strong>confirme</strong> par le medecin :</p>
-                  <div style='background:#eff6ff;border-left:4px solid #2563eb;border-radius:4px;padding:16px 20px;margin:20px 0;'>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Patient :</strong> $patientNom</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Email patient :</strong> $patientEmail</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Medecin :</strong> $medecinNom</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Specialite :</strong> $specialite</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Date :</strong> $date</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Heure :</strong> $heure</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Motif :</strong> $motif</p>
-                    <p style='margin:6px 0;color:#1e3a8a;font-size:14px;'><strong>Adresse cabinet :</strong> $adresse</p>
-                  </div>
-                  <p style='color:#374151;font-size:15px;'>Cordialement,<br><strong>L equipe DocTime</strong></p>
-                </div>
-                <div style='background:#f9fafb;padding:16px;text-align:center;font-size:12px;color:#9ca3af;'>
-                  Cet e-mail est envoye automatiquement par DocTime.
-                </div>
-              </div>
-            </body>
-            </html>";
-
-            $mail->send();
-
-        } catch (\Exception $e) {
-            // Log l'erreur dans un fichier pour déboguer
-            $logMsg = date('[Y-m-d H:i:s]') . ' Erreur email RDV : ' . $mail->ErrorInfo . PHP_EOL;
-            file_put_contents(__DIR__ . '/../mail_error.log', $logMsg, FILE_APPEND);
-            error_log('DocTime - Erreur envoi email : ' . $mail->ErrorInfo);
+            return MailConfig::send($patientEmail, $patientNom, $subject, $body, $alt);
+        } catch (Throwable $e) {
+            error_log('sendConfirmationEmail: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -323,7 +325,17 @@ class RendezVousController {
             exit;
         }
 
+        $wasBlocking = !in_array((string)($rdv['statut'] ?? ''), ['annulé', 'terminé'], true);
+        $slotMid     = (int)$rdv['medecin_id'];
+        $slotDate    = (string)$rdv['date_rendezvous'];
+        $slotHeure   = RendezVous::normalizeHeureRendezvous((string)($rdv['heure_rendezvous'] ?? ''));
+
         $this->rdvModel->updateStatus($id, 'annulé');
+
+        if ($wasBlocking) {
+            $this->rdvModel->fillWaitlistForFreedSlot($slotMid, $slotDate, $slotHeure);
+        }
+
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous annulé.'];
         header('Location: index.php?page=medecin_rendezvous');
         exit;
@@ -447,7 +459,17 @@ class RendezVousController {
             exit;
         }
 
+        $wasBlocking = !in_array((string)($rdv['statut'] ?? ''), ['annulé', 'terminé'], true);
+        $slotMid     = (int)$rdv['medecin_id'];
+        $slotDate    = (string)$rdv['date_rendezvous'];
+        $slotHeure   = RendezVous::normalizeHeureRendezvous((string)($rdv['heure_rendezvous'] ?? ''));
+
         $this->rdvModel->updateStatus($id, 'annulé');
+
+        if ($wasBlocking) {
+            $this->rdvModel->fillWaitlistForFreedSlot($slotMid, $slotDate, $slotHeure);
+        }
+
         $_SESSION['flash'] = ['type' => 'success', 'message' => 'Rendez-vous annulé.'];
         header('Location: index.php?page=mes_rendezvous');
         exit;
@@ -621,7 +643,7 @@ class RendezVousController {
         $message = trim((string)($payload['message'] ?? ''));
 
         if ($message === '') {
-            echo json_encode(['success' => false, 'reply' => 'Posez-moi une question sur les rendez-vous.']);
+            echo json_encode(['success' => false, 'reply' => 'Posez-moi une question sur les rendez-vous, les ordonnances ou les disponibilités.']);
             exit;
         }
 
@@ -669,9 +691,9 @@ class RendezVousController {
             'today' => date('Y-m-d'),
             'summary' => [],
             'actions' => [
-                'patient' => 'prendre, modifier ou annuler un rendez-vous depuis Mes RDV',
-                'medecin' => 'creer, confirmer, annuler, terminer et noter un rendez-vous',
-                'admin' => 'filtrer, creer, modifier, voir ou supprimer les rendez-vous',
+                'patient' => 'RDV (Mes RDV, prendre RDV), ordonnances (Mes ordonnances), liste d attente selon le flux du formulaire',
+                'medecin' => 'RDV, ordonnances délivrées, créneaux / disponibilités cabinet',
+                'admin' => 'filtrer, créer, modifier ou supprimer les rendez-vous et suivre les statuts',
             ],
         ];
 
@@ -688,6 +710,19 @@ class RendezVousController {
                     $rdv['statut'] ?? '-'
                 );
             }
+            if ($this->ordModel) {
+                $ords = $this->ordModel->getAllByPatient($userId);
+                $context['summary'][] = 'Ordonnances patient (total): ' . count($ords);
+                foreach (array_slice($ords, 0, 3) as $o) {
+                    $context['summary'][] = sprintf(
+                        'Ordonnance %s du %s — Dr. %s — statut %s',
+                        $o['numero_ordonnance'] ?? ('#' . ($o['id'] ?? '')),
+                        $o['date_ordonnance'] ?? '-',
+                        $o['medecin_nom'] ?? '-',
+                        $o['status'] ?? '-'
+                    );
+                }
+            }
         } elseif ($role === 'medecin') {
             $today = $this->rdvModel->getTodayByMedecin($userId);
             $upcoming = $this->rdvModel->getUpcomingByMedecin($userId);
@@ -700,6 +735,28 @@ class RendezVousController {
                     $rdv['patient_prenom'] ?? '',
                     $rdv['patient_nom'] ?? '',
                     $rdv['statut'] ?? '-'
+                );
+            }
+            if ($this->ordModel) {
+                $ords = $this->ordModel->getAllByMedecin($userId);
+                $context['summary'][] = 'Ordonnances rédigées (total): ' . count($ords);
+                foreach (array_slice($ords, 0, 3) as $o) {
+                    $context['summary'][] = sprintf(
+                        'Ordonnance %s patient %s date %s',
+                        $o['numero_ordonnance'] ?? ('#' . ($o['id'] ?? '')),
+                        $o['patient_nom'] ?? '-',
+                        $o['date_ordonnance'] ?? '-'
+                    );
+                }
+            }
+            $dispos = $this->dispoModel->getByMedecin($userId);
+            $context['summary'][] = 'Disponibilités actives (créneaux): ' . count($dispos);
+            foreach (array_slice($dispos, 0, 8) as $d) {
+                $context['summary'][] = sprintf(
+                    'Créneau %s %s-%s',
+                    $d['jour_semaine'] ?? '-',
+                    $d['heure_debut'] ?? '',
+                    $d['heure_fin'] ?? ''
                 );
             }
         } elseif ($role === 'admin') {
@@ -730,8 +787,8 @@ class RendezVousController {
         }
 
         $model = getenv('OLLAMA_MODEL') ?: 'llama3.2';
-        $prompt = "Tu es l assistant gratuit de gestion des rendez-vous Valorys. "
-            . "Reponds en francais, en 2 a 5 phrases, sans diagnostic medical. "
+        $prompt = "Tu es l assistant gratuit Valorys pour rendez-vous, ordonnances (liste, PDF, validité) et disponibilités médecin (créneaux). "
+            . "Reponds en francais, en 2 a 5 phrases, sans diagnostic medical ni posologie. "
             . "Pour urgence medicale, conseille de contacter les urgences. "
             . "Contexte: " . implode(' | ', $context['summary'])
             . " | Role: " . ($context['role'] ?? 'utilisateur')
@@ -773,6 +830,35 @@ class RendezVousController {
         preg_match('/\b(\d+)\b/', $text, $matches);
         $rdvId = isset($matches[1]) ? (int)$matches[1] : 0;
 
+        $wantOrdonnance = str_contains($text, 'ordonnan') || str_contains($text, 'prescript')
+            || str_contains($text, 'médicament') || str_contains($text, 'medicament')
+            || str_contains($text, 'pdf ordonnance');
+        if ($wantOrdonnance) {
+            if ($role === 'patient') {
+                return [
+                    'type' => 'redirect',
+                    'url' => 'index.php?page=mes_ordonnances',
+                    'label' => 'Ouvrir Mes ordonnances',
+                ];
+            }
+            if ($role === 'medecin') {
+                return [
+                    'type' => 'redirect',
+                    'url' => 'index.php?page=ordonnances',
+                    'label' => 'Ouvrir la liste des ordonnances',
+                ];
+            }
+        }
+
+        if ($role === 'medecin' && (str_contains($text, 'disponibi') || str_contains($text, 'créneau')
+                || str_contains($text, 'creneau') || str_contains($text, 'horaire cabinet'))) {
+            return [
+                'type' => 'redirect',
+                'url' => 'index.php?page=disponibilites',
+                'label' => 'Gérer mes disponibilités',
+            ];
+        }
+
         if ($role === 'patient' && (str_contains($text, 'prendre') || str_contains($text, 'nouveau') || str_contains($text, 'reserver'))) {
             return [
                 'type' => 'redirect',
@@ -781,11 +867,12 @@ class RendezVousController {
             ];
         }
 
-        if (str_contains($text, 'mes rdv') || str_contains($text, 'mes rendez') || str_contains($text, 'liste')) {
+        if (str_contains($text, 'mes rdv') || str_contains($text, 'mes rendez')
+            || (str_contains($text, 'liste') && str_contains($text, 'rendez'))) {
             return [
                 'type' => 'redirect',
                 'url' => 'index.php?page=mes_rendez_vous',
-                'label' => 'J ouvre vos rendez-vous.',
+                'label' => 'Ouvrir Mes rendez-vous',
             ];
         }
 
@@ -838,7 +925,19 @@ class RendezVousController {
         }
 
         if (str_contains($text, 'dispo') || str_contains($text, 'creneau') || str_contains($text, 'heure')) {
-            return "Les creneaux se chargent automatiquement apres le choix du medecin et de la date. Si aucun horaire n apparait, essayez une autre date ou verifiez les disponibilites du medecin." . $summary;
+            $extra = ($role === 'medecin')
+                ? ' En tant que médecin, vos créneaux récurrents se gèrent dans Disponibilités (menu Médecin). Les patients voient les horaires libres après choix du médecin et de la date.'
+                : '';
+            return "Les créneaux côté patient se proposent après le choix du médecin et de la date. Si un créneau est pris, vous pouvez être mis en liste d’attente selon le message affiché." . $extra . $summary;
+        }
+
+        if (str_contains($text, 'ordonnan') || str_contains($text, 'prescript') || str_contains($text, 'médicament') || str_contains($text, 'medicament')) {
+            if ($role === 'patient') {
+                return "Vos ordonnances sont dans « Mes ordonnances » : vous pouvez consulter le détail et télécharger le PDF. Pour toute question médicale, contactez votre médecin." . $summary;
+            }
+            if ($role === 'medecin') {
+                return "Les ordonnances se créent depuis le détail d’un rendez-vous terminé ou via la liste ordonnances. Vérifiez diagnostic, médicaments et date de validité avant enregistrement." . $summary;
+            }
         }
 
         if (str_contains($text, 'statut') || str_contains($text, 'confirm')) {
@@ -850,10 +949,10 @@ class RendezVousController {
         }
 
         if ($role === 'medecin') {
-            return "Je peux vous aider a organiser la journee, confirmer les rendez-vous en attente, terminer une consultation ou retrouver les prochaines visites." . $summary;
+            return "Je peux vous aider sur la journée (RDV), les ordonnances délivrées et vos créneaux de disponibilité. Utilisez les liens proposés ou précisez votre situation." . $summary;
         }
 
-        return "Je peux vous guider pour prendre, modifier ou annuler un rendez-vous. Pour une urgence medicale, contactez directement les services d urgence." . $summary;
+        return "Je peux vous guider sur les rendez-vous, vos ordonnances et la prise de créneaux. Pour une urgence médicale, contactez les services d’urgence." . $summary;
     }
 
     private function notFound(): void {

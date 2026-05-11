@@ -1,7 +1,12 @@
 <?php
-// Vue des avis pour l'accueil
+declare(strict_types=1);
+/** @var array<int,array<string,mixed>> $reviews */
+/** @var array<string,mixed> $stats */
+/** @var string $reviewsApiBase */
+$reviews = $reviews ?? [];
+$stats = $stats ?? ['total' => 0, 'average_rating' => 0, 'by_sentiment' => []];
+$reviewsApiBase = $reviewsApiBase ?? 'api/reviews.php';
 ?>
-
 <!-- SECTION AVIS -->
 <div class="reviews-section mt-5 pt-5" style="border-top: 2px solid #e0e0e0;">
     <div class="mb-4">
@@ -45,17 +50,16 @@
     <!-- Formulaire d'avis -->
     <?php if (!empty($_SESSION['user_id'])): ?>
     <div class="mt-4 mb-4">
-        <div class="review-form-card" style="background: #f8f9fa; padding: 25px; border-radius: 12px; border-left: 4px solid #4CAF50;">
+        <div class="review-form-card" style="background: #fff; padding: 28px; border-radius: 16px; border: 1px solid #e8e8e8; box-shadow: 0 2px 12px rgba(0,0,0,.06);">
             <h5 class="mb-3 fw-bold">
                 <i class="fas fa-pen-fancy me-2" style="color: #4CAF50;"></i>
                 Partager votre avis
             </h5>
 
             <form id="reviewForm" method="POST">
-                <!-- Rating -->
+                <!-- Évaluation (étoiles, sans libellé « Note * ») -->
                 <div class="mb-3">
-                    <label class="form-label fw-600 small">Note *</label>
-                    <div class="rating-picker" id="ratingPicker">
+                    <div class="rating-picker" id="ratingPicker" role="group" aria-label="Note sur 5">
                         <input type="hidden" id="ratingInput" name="rating" value="5">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                             <i class="fas fa-star rating-star" data-rating="<?= $i ?>" style="font-size: 24px; cursor: pointer; color: #ddd; margin-right: 8px; transition: all 0.2s;"></i>
@@ -67,7 +71,7 @@
                 <div class="mb-3">
                     <label for="reviewContent" class="form-label fw-600 small d-flex justify-content-between align-items-center w-100">
                         <span>Votre avis *</span>
-                        <button type="button" id="micBtn" class="btn btn-sm btn-outline-primary" style="padding: 2px 8px; border-radius: 20px;" title="Dicter vocalement">
+                        <button type="button" id="micBtn" class="btn btn-sm btn-outline-primary" style="padding: 2px 8px; border-radius: 20px;" title="Dicter (nécessite Internet — service du navigateur)">
                             <i class="fas fa-microphone"></i> Dicter
                         </button>
                     </label>
@@ -78,10 +82,13 @@
                         rows="4"
                         placeholder="Partagez vos impressions (ou dictez vocalement)..."
                     ></textarea>
-                    <div class="d-flex justify-content-between mt-2 align-items-center">
+                    <div id="micSpeechHint" class="alert small mt-2 mb-0 py-2 px-3" role="status" style="display:none;"></div>
+                    <div class="d-flex justify-content-between mt-2 align-items-center flex-wrap gap-2">
                         <small class="text-muted">Min 10, Max 2000 caractères</small>
-                        <span id="sentimentDisplay" class="badge bg-secondary">Sentiment: En attente...</span>
                         <small id="charCount" class="text-muted">0/2000</small>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span id="sentimentDisplay" class="badge speech-sentiment-badge bg-secondary">SENTIMENT : EN ATTENTE…</span>
                     </div>
                 </div>
 
@@ -128,7 +135,7 @@
         <?php else: ?>
             <div class="reviews-list">
                 <?php foreach ($reviews as $review): ?>
-                <div class="review-card mb-3" style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                <div class="review-card mb-3" style="background: #fff; padding: 22px; border-radius: 14px; border: 1px solid #ececec; box-shadow: 0 1px 8px rgba(0,0,0,.05); border-left: 4px solid #4CAF50;">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <p class="mb-0 text-muted small">
@@ -167,7 +174,17 @@
                         </div>
                     </div>
                     <p class="mb-2" style="color: #333; line-height: 1.5; font-size: 14px;">
-                        <?= nl2br(htmlspecialchars(substr($review['content'], 0, 150))) ?>...
+                        <?php
+                        $rc = (string)($review['content'] ?? '');
+                        $maxR = 400;
+                        if (function_exists('mb_strlen') && mb_strlen($rc, 'UTF-8') > $maxR) {
+                            echo nl2br(htmlspecialchars(mb_substr($rc, 0, $maxR, 'UTF-8'))) . '…';
+                        } elseif (strlen($rc) > $maxR) {
+                            echo nl2br(htmlspecialchars(substr($rc, 0, $maxR))) . '…';
+                        } else {
+                            echo nl2br(htmlspecialchars($rc));
+                        }
+                        ?>
                     </p>
                     <?php if (!empty($review['emojis'])): ?>
                     <div class="small mb-2">
@@ -410,9 +427,10 @@
 
 #sentimentDisplay {
     font-size: 12px;
-    padding: 4px 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    padding: 8px 16px;
+    font-weight: 600;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
 }
 
 .alert-danger {
@@ -488,6 +506,24 @@
 
 <script>
 "use strict";
+
+const REVIEWS_API_BASE = <?= json_encode($reviewsApiBase, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+function reviewsParseJsonResponse(text) {
+    try {
+        return text ? JSON.parse(text) : { success: false, message: 'Réponse vide du serveur.' };
+    } catch (e) {
+        return { success: false, message: 'Réponse serveur invalide (pas de JSON).' };
+    }
+}
+function reviewsSentimentBadgeText(label) {
+    const map = {
+        'Positif 😊': 'POSITIF 😊',
+        'Négatif 😞': 'NÉGATIF 😞',
+        'Neutre 😐': 'NEUTRE 😐',
+        'En attente...': 'EN ATTENTE…'
+    };
+    return map[label] || String(label || '').toUpperCase();
+}
 
 // =============== DONNÉES ===========
 const emojis = ['😀', '😂', '❤️', '👍', '🙌', '😍', '😎', '🤔', '👌', '💯', '✨', '🎉'];
@@ -660,27 +696,46 @@ if (contentField) {
         const sentiment = analyzeSentiment(this.value);
         const display = document.getElementById('sentimentDisplay');
         if (display) {
-            display.textContent = 'Sentiment: ' + sentiment.label;
-            display.className = 'badge ' + sentiment.class;
+            display.textContent = 'SENTIMENT : ' + reviewsSentimentBadgeText(sentiment.label);
+            display.className = 'badge speech-sentiment-badge ' + sentiment.class;
         }
     });
 }
 
 // =============== SPEECH TO TEXT ===========
+function showMicSpeechHint(message, variant) {
+    const el = document.getElementById('micSpeechHint');
+    if (!el || !message) return;
+    el.textContent = message;
+    const v = variant === 'danger' ? 'alert-danger' : variant === 'info' ? 'alert-info' : 'alert-warning';
+    el.className = 'alert small mt-2 mb-0 py-2 px-3 ' + v;
+    el.style.display = 'block';
+    clearTimeout(el._hideT);
+    el._hideT = setTimeout(function() { el.style.display = 'none'; }, 12000);
+}
+
 const micBtn = document.getElementById('micBtn');
 if (micBtn && (window.SpeechRecognition || window.webkitSpeechRecognition)) {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new Recognition();
     recognition.lang = 'fr-FR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
     
     let isRecording = false;
     
     micBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        const hint = document.getElementById('micSpeechHint');
+        if (hint) { hint.style.display = 'none'; }
         if (isRecording) {
             recognition.stop();
         } else {
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (err) {
+                showMicSpeechHint('Impossible de démarrer la dictée. Réessayez ou saisissez le texte au clavier.', 'danger');
+            }
         }
     });
     
@@ -702,11 +757,25 @@ if (micBtn && (window.SpeechRecognition || window.webkitSpeechRecognition)) {
     };
     
     recognition.onerror = (event) => {
-        console.error('Speech error:', event.error);
+        const code = event.error || '';
         isRecording = false;
         micBtn.classList.remove('btn-danger');
         micBtn.classList.add('btn-outline-primary');
         micBtn.innerHTML = '<i class="fas fa-microphone"></i> Dicter';
+        if (code === 'aborted') return;
+        const map = {
+            network: 'Dictée indisponible (erreur réseau). Chrome et Edge utilisent un service en ligne : vérifiez Internet, pare-feu, VPN, ou saisissez le texte au clavier.',
+            'not-allowed': 'Microphone refusé. Autorisez le micro pour ce site (icône à gauche de la barre d’adresse).',
+            'service-not-allowed': 'Reconnaissance vocale désactivée par le navigateur ou ce contexte. Essayez un autre navigateur ou le clavier.',
+            'no-speech': 'Aucune voix détectée. Parlez après le bip ou rapprochez-vous du micro.',
+            'audio-capture': 'Micro inaccessible (peut-être utilisé ailleurs). Fermez les autres apps qui utilisent le micro.',
+            'not-supported': 'Dictée non supportée ici. Utilisez le clavier.'
+        };
+        const msg = map[code] || ('Dictée : erreur « ' + code + ' ». Vous pouvez taper votre avis au clavier.');
+        showMicSpeechHint(msg, (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') ? 'danger' : 'warning');
+        if (code !== 'no-speech') {
+            console.warn('Speech recognition:', code);
+        }
     };
     
     recognition.onend = () => {
@@ -715,6 +784,11 @@ if (micBtn && (window.SpeechRecognition || window.webkitSpeechRecognition)) {
         micBtn.classList.add('btn-outline-primary');
         micBtn.innerHTML = '<i class="fas fa-microphone"></i> Dicter';
     };
+} else if (micBtn) {
+    micBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        showMicSpeechHint('Votre navigateur ne prend pas en charge la dictée vocale. Saisissez le texte au clavier.', 'info');
+    });
 }
 
 // =============== FORM SUBMISSION ===========
@@ -758,11 +832,12 @@ if (form) {
             
             const response = await fetch(actionUrl, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
-            const data = await response.json();
+            const raw = await response.text();
+            const data = reviewsParseJsonResponse(raw);
             const errorDiv = document.getElementById('formErrors');
             
             if (data.success) {
@@ -878,13 +953,14 @@ document.getElementById('deleteConfirmOk')?.addEventListener('click', async func
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Suppression...';
         
-        const response = await fetch('/valorys_Copie/api/reviews.php?action=delete', {
+        const response = await fetch(REVIEWS_API_BASE + '?action=delete', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: reviewId })
         });
         
-        const data = await response.json();
+        const data = reviewsParseJsonResponse(await response.text());
         
         if (data.success) {
             modal.style.display = 'none';
@@ -921,8 +997,8 @@ document.querySelectorAll('.edit-review-btn').forEach(btn => {
         const reviewId = this.getAttribute('data-review-id');
         
         try {
-            const response = await fetch('/valorys_Copie/api/reviews.php?action=get&id=' + reviewId);
-            const data = await response.json();
+            const response = await fetch(REVIEWS_API_BASE + '?action=get&id=' + reviewId, { credentials: 'same-origin' });
+            const data = reviewsParseJsonResponse(await response.text());
             
             if (data.success) {
                 // Scroll to form

@@ -1,200 +1,159 @@
 <?php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: index.php?page=login');
-    exit;
-}
+/**
+ * Liste des rendez-vous (admin) — shell DocTime comme le reste du back-office
+ */
+$pageTitle = 'Gestion des rendez-vous';
+require_once __DIR__ . '/../layout_header.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des rendez-vous - Valorys</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <?php require_once __DIR__ . '/../../partials/backoffice_shell_styles.php'; ?>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .admin-info { display: flex; align-items: center; gap: 15px; }
-        .admin-avatar { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
-        .stat-card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.3s; border-left: 4px solid; }
-        .stat-card:hover { transform: translateY(-5px); }
-        .stat-card h3 { font-size: 32px; margin: 10px 0 5px; font-weight: bold; }
-        .stat-card p { color: #666; margin: 0; }
-        .stat-icon { font-size: 45px; opacity: 0.3; float: right; }
-        .recent-table { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .recent-table h5 { margin-bottom: 20px; color: #1e2a3e; }
-        .badge-confirme { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-attente { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-termine { background: #cfe2ff; color: #084298; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-annule { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 12px; }
-        .btn-action { padding: 5px 10px; margin: 2px; border-radius: 5px; }
-        .chart-container { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-    </style>
-</head>
-<body class="bo-shell-body">
-<?php require_once __DIR__ . '/../sidebar.php'; ?>
 
-<div class="main-content">
-    <!-- Navbar top -->
-    <div class="navbar-top">
-        <div style="display:flex;align-items:center;gap:10px;">
-            <strong style="color:#1e2a3e;font-size:1.05rem;"><i class="fas fa-calendar-check me-2" style="color:#4CAF50"></i> Rendez-vous</strong>
-        </div>
-        <div class="admin-info">
-            <a href="index.php?page=mes_notifications" style="color:#1e2a3e;">
-                <i class="fas fa-bell"></i>
-            </a>
-            <a href="index.php?page=profil" style="text-decoration:none;">
-                <div class="admin-avatar" title="Mon profil">
-                    <?= strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1)) ?>
-                </div>
-            </a>
-            <span><?= htmlspecialchars($_SESSION['user_name'] ?? 'Admin') ?></span>
+<?php if (!empty($_SESSION['flash'])): ?>
+    <?php $f = $_SESSION['flash']; unset($_SESSION['flash']); ?>
+    <?php $bt = (($f['type'] ?? '') === 'error' || ($f['type'] ?? '') === 'danger') ? 'danger' : (($f['type'] ?? '') === 'warning' ? 'warning' : 'success'); ?>
+    <div class="alert alert-<?= htmlspecialchars($bt, ENT_QUOTES, 'UTF-8') ?> alert-dismissible fade show mb-4">
+        <i class="fas fa-info-circle me-2"></i><?= htmlspecialchars((string) ($f['message'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+<?php endif; ?>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h4 mb-1 fw-bold" style="color:#1e293b;">Planning des rendez-vous</h1>
+        <p class="text-muted small mb-0">Filtrez par date, statut ou recherche patient / médecin.</p>
+    </div>
+    <a href="index.php?page=rendez_vous_admin&amp;action=create" class="btn btn-primary btn-sm rounded-pill px-3">
+        <i class="fas fa-plus me-1"></i>Nouveau rendez-vous
+    </a>
+</div>
+
+<!-- Statistiques (jeu filtré affiché) -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#1a7fa8,#1db88e)">
+            <p>Total (liste)</p>
+            <h3><?= (int) ($stats['total'] ?? 0) ?></h3>
+            <i class="fas fa-calendar-check stat-icon"></i>
         </div>
     </div>
-
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-check me-2"></i>Gestion des rendez-vous</h2>
-        <a href="index.php?page=admin_rendezvous&action=create" class="btn btn-success">
-            <i class="fas fa-plus me-2"></i>Nouveau rendez-vous
-        </a>
-    </div>
-
-    <!-- Statistiques -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card" style="border-left-color: #4CAF50;">
-                <i class="fas fa-calendar-check stat-icon"></i>
-                <p>Total RDV</p>
-                <h3><?= $stats['total'] ?? 0 ?></h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-left-color: #ffc107;">
-                <i class="fas fa-clock stat-icon"></i>
-                <p>En attente</p>
-                <h3><?= $stats['en_attente'] ?? 0 ?></h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-left-color: #2A7FAA;">
-                <i class="fas fa-check-circle stat-icon"></i>
-                <p>Confirmés</p>
-                <h3><?= $stats['confirmes'] ?? 0 ?></h3>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card" style="border-left-color: #6c757d;">
-                <i class="fas fa-check-double stat-icon"></i>
-                <p>Terminés</p>
-                <h3><?= $stats['termines'] ?? 0 ?></h3>
-            </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#ea580c)">
+            <p>En attente</p>
+            <h3><?= (int) ($stats['en_attente'] ?? 0) ?></h3>
+            <i class="fas fa-clock stat-icon"></i>
         </div>
     </div>
-
-    <!-- Filtres -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <input type="hidden" name="page" value="admin_rendezvous">
-                <div class="col-md-3">
-                    <input type="date" name="date" class="form-control" value="<?= $_GET['date'] ?? '' ?>" placeholder="Date">
-                </div>
-                <div class="col-md-3">
-                    <select name="statut" class="form-select">
-                        <option value="">Tous les statuts</option>
-                        <option value="en_attente" <?= ($_GET['statut'] ?? '') === 'en_attente' ? 'selected' : '' ?>>En attente</option>
-                        <option value="confirmé" <?= ($_GET['statut'] ?? '') === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
-                        <option value="terminé" <?= ($_GET['statut'] ?? '') === 'terminé' ? 'selected' : '' ?>>Terminé</option>
-                        <option value="annulé" <?= ($_GET['statut'] ?? '') === 'annulé' ? 'selected' : '' ?>>Annulé</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Rechercher..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filtrer</button>
-                </div>
-            </form>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#22c55e,#15803d)">
+            <p>Confirmés</p>
+            <h3><?= (int) ($stats['confirmes'] ?? 0) ?></h3>
+            <i class="fas fa-check-circle stat-icon"></i>
         </div>
     </div>
-
-    <!-- Tableau -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table id="rdvTable" class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Médecin</th>
-                            <th>Spécialité</th>
-                            <th>Date</th>
-                            <th>Heure</th>
-                            <th>Motif</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($rdvs)): ?>
-                            <?php foreach ($rdvs as $rdv): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']) ?></td>
-                                <td>Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></td>
-                                <td><?= htmlspecialchars($rdv['specialite'] ?? '-') ?></td>
-                                <td><?= date('d/m/Y', strtotime($rdv['date_rendezvous'])) ?></td>
-                                <td><?= $rdv['heure_rendezvous'] ?></td>
-                                <td><?= htmlspecialchars(substr($rdv['motif'] ?? '', 0, 30)) ?><?= strlen($rdv['motif'] ?? '') > 30 ? '…' : '' ?></td>
-                                <td>
-                                    <?php
-                                    $badgeClass = match($rdv['statut']) {
-                                        'confirmé' => 'badge-confirme',
-                                        'en_attente' => 'badge-attente',
-                                        'terminé' => 'badge-termine',
-                                        'annulé' => 'badge-annule',
-                                        default => 'badge-secondary'
-                                    };
-                                    ?>
-                                    <span class="badge <?= $badgeClass ?> px-3 py-2"><?= htmlspecialchars($rdv['statut']) ?></span>
-                                </td>
-                                <td>
-                                    <a href="index.php?page=admin_rendezvous&action=show&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-info" title="Voir"><i class="fas fa-eye"></i></a>
-                                    <a href="index.php?page=admin_rendezvous&action=edit&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-warning" title="Modifier"><i class="fas fa-edit"></i></a>
-                                    <a href="index.php?page=admin_rendezvous&action=delete&id=<?= $rdv['id'] ?>" class="btn btn-sm btn-danger" title="Supprimer" onclick="return confirm('Supprimer ce rendez-vous ?')"><i class="fas fa-trash"></i></a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="8" class="text-center text-muted py-4">Aucun rendez-vous trouvé</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#64748b,#475569)">
+            <p>Terminés</p>
+            <h3><?= (int) ($stats['termines'] ?? 0) ?></h3>
+            <i class="fas fa-flag-checkered stat-icon"></i>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-    <?php if (!empty($rdvs)): ?>
-    $('#rdvTable').DataTable({
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' },
-        pageLength: 10,
-        order: [[3, 'desc']],
-        searching: false,
-        paging: true
-    });
-    <?php endif; ?>
-});
-</script>
-</body>
-</html>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="mb-0 fw-bold"><i class="fas fa-filter me-2 text-primary"></i>Filtres</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <input type="hidden" name="page" value="rendez_vous_admin">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Date</label>
+                <input type="date" name="date" class="form-control" value="<?= htmlspecialchars($_GET['date'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Statut</label>
+                <select name="statut" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="en_attente" <?= ($_GET['statut'] ?? '') === 'en_attente' ? 'selected' : '' ?>>En attente</option>
+                    <option value="confirmé" <?= ($_GET['statut'] ?? '') === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
+                    <option value="terminé" <?= ($_GET['statut'] ?? '') === 'terminé' ? 'selected' : '' ?>>Terminé</option>
+                    <option value="annulé" <?= ($_GET['statut'] ?? '') === 'annulé' ? 'selected' : '' ?>>Annulé</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Recherche</label>
+                <input type="text" name="search" class="form-control" placeholder="Nom ou prénom patient / médecin…" value="<?= htmlspecialchars($_GET['search'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filtrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Médecin</th>
+                        <th>Spécialité</th>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Motif</th>
+                        <th>Statut</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($rdvs)): ?>
+                        <?php foreach ($rdvs as $rdv): ?>
+                            <?php
+                            $st = (string) ($rdv['statut'] ?? '');
+                            $badgeClass = match ($st) {
+                                'confirmé' => 'success',
+                                'en_attente' => 'warning text-dark',
+                                'terminé' => 'info text-dark',
+                                'annulé' => 'danger',
+                                default => 'secondary',
+                            };
+                            ?>
+                            <tr>
+                                <td><?= htmlspecialchars($rdv['patient_prenom'] . ' ' . $rdv['patient_nom']) ?></td>
+                                <td>Dr. <?= htmlspecialchars($rdv['medecin_prenom'] . ' ' . $rdv['medecin_nom']) ?></td>
+                                <td><?= htmlspecialchars($rdv['specialite'] ?? '—') ?></td>
+                                <td class="text-nowrap"><?= !empty($rdv['date_rendezvous']) ? date('d/m/Y', strtotime($rdv['date_rendezvous'])) : '—' ?></td>
+                                <td class="text-nowrap"><?= htmlspecialchars((string) ($rdv['heure_rendezvous'] ?? '')) ?></td>
+                                <td><span class="small text-muted"><?php
+                                    $mot = (string) ($rdv['motif'] ?? '');
+                                    if (function_exists('mb_strimwidth')) {
+                                        echo htmlspecialchars(mb_strimwidth($mot, 0, 42, '…', 'UTF-8'));
+                                    } else {
+                                        echo htmlspecialchars(strlen($mot) > 40 ? (substr($mot, 0, 40) . '…') : $mot);
+                                    }
+                                ?></span></td>
+                                <td><span class="badge rounded-pill bg-<?= $badgeClass ?>"><?= htmlspecialchars($st ?: '—') ?></span></td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="index.php?page=rendez_vous_admin&amp;action=show&amp;id=<?= (int) $rdv['id'] ?>" class="btn btn-outline-primary" title="Voir"><i class="fas fa-eye"></i></a>
+                                        <a href="index.php?page=rendez_vous_admin&amp;action=edit&amp;id=<?= (int) $rdv['id'] ?>" class="btn btn-outline-warning" title="Modifier"><i class="fas fa-edit"></i></a>
+                                        <a href="index.php?page=rendez_vous_admin&amp;action=delete&amp;id=<?= (int) $rdv['id'] ?>" class="btn btn-outline-danger" title="Supprimer" onclick="return confirm('Supprimer ce rendez-vous ?');"><i class="fas fa-trash"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="fas fa-calendar-times fa-2x d-block mb-2 opacity-50"></i>
+                                Aucun rendez-vous ne correspond aux critères.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<?php require_once __DIR__ . '/../layout_footer.php'; ?>

@@ -31,12 +31,15 @@ class Article {
             }
         }
 
+        $slug = $this->uniqueSlugFromTitle($titre, null);
+
         $stmt = $this->db->prepare(
-            "INSERT INTO articles (titre, contenu, auteur_id, created_at) 
-             VALUES (:titre, :contenu, :auteur_id, NOW())"
+            "INSERT INTO articles (titre, slug, contenu, auteur_id, created_at)
+             VALUES (:titre, :slug, :contenu, :auteur_id, NOW())"
         );
         $stmt->execute([
             ':titre'     => $titre,
+            ':slug'      => $slug,
             ':contenu'   => $contenu,
             ':auteur_id' => $auteur_id,
         ]);
@@ -46,31 +49,40 @@ class Article {
     /**
      * Récupère un article par son ID avec le nombre de commentaires
      */
-    public function getById(int $id): array|false {
+    public function getById(int $id, ?int $viewerId = null): array|false {
+        $vid = ($viewerId !== null && $viewerId > 0) ? $viewerId : -1;
         $stmt = $this->db->prepare(
-            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+            "SELECT a.*, u.nom AS auteur_name, u.prenom AS auteur_prenom, COUNT(r.id_reply) AS nb_replies,
+                (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
+                (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes,
+                (SELECT type FROM article_likes alv WHERE alv.article_id = a.id AND alv.user_id = :viewer LIMIT 1) AS my_vote
              FROM articles a
              LEFT JOIN users u ON u.id = a.auteur_id
              LEFT JOIN reply r ON r.id_article = a.id
              WHERE a.id = :id
              GROUP BY a.id"
         );
-        $stmt->execute([':id' => $id]);
+        $stmt->execute([':id' => $id, ':viewer' => $vid]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
      * Récupère tous les articles avec le nombre de commentaires
      */
-    public function getAll(): array {
-        $stmt = $this->db->query(
-            "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
+    public function getAll(?int $viewerId = null): array {
+        $vid = ($viewerId !== null && $viewerId > 0) ? $viewerId : -1;
+        $stmt = $this->db->prepare(
+            "SELECT a.*, u.nom AS auteur_name, u.prenom AS auteur_prenom, COUNT(DISTINCT r.id_reply) AS nb_replies,
+                (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'like') AS nb_likes,
+                (SELECT COUNT(*) FROM article_likes al WHERE al.article_id = a.id AND al.type = 'dislike') AS nb_dislikes,
+                (SELECT type FROM article_likes alv WHERE alv.article_id = a.id AND alv.user_id = :viewer LIMIT 1) AS my_vote
              FROM articles a
              LEFT JOIN users u ON u.id = a.auteur_id
              LEFT JOIN reply r ON r.id_article = a.id
              GROUP BY a.id
              ORDER BY a.created_at DESC"
         );
+        $stmt->execute([':viewer' => $vid]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -100,9 +112,11 @@ public function updateFull(int $id, string $titre, string $contenu, $auteur = nu
         $auteur_id = $this->resolveAuthorId($auteur);
     }
     
+    $slug = $this->uniqueSlugFromTitle($titre, $id);
     $stmt = $this->db->prepare(
         "UPDATE articles SET 
-            titre = :titre, 
+            titre = :titre,
+            slug = :slug,
             contenu = :contenu, 
             auteur_id = :auteur_id, 
             image = :image,
@@ -114,6 +128,7 @@ public function updateFull(int $id, string $titre, string $contenu, $auteur = nu
     );
     return $stmt->execute([
         ':titre' => $titre,
+        ':slug' => $slug,
         ':contenu' => $contenu,
         ':auteur_id' => $auteur_id,
         ':image' => $image,
@@ -133,31 +148,34 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
     } elseif (!empty($auteur)) {
         $auteur_id = $this->resolveAuthorId($auteur);
     }
+
+    $slug = $this->uniqueSlugFromTitle($titre, $id);
     
     if ($image !== null) {
         $stmt = $this->db->prepare(
-            "UPDATE articles SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id, image = :image 
+            "UPDATE articles SET titre = :titre, slug = :slug, contenu = :contenu, auteur_id = :auteur_id, image = :image 
              WHERE id = :id"
         );
         return $stmt->execute([
             ':titre' => $titre,
+            ':slug' => $slug,
             ':contenu' => $contenu,
             ':auteur_id' => $auteur_id,
             ':image' => $image,
             ':id' => $id,
         ]);
-    } else {
-        $stmt = $this->db->prepare(
-            "UPDATE articles SET titre = :titre, contenu = :contenu, auteur_id = :auteur_id 
-             WHERE id = :id"
-        );
-        return $stmt->execute([
-            ':titre' => $titre,
-            ':contenu' => $contenu,
-            ':auteur_id' => $auteur_id,
-            ':id' => $id,
-        ]);
     }
+    $stmt = $this->db->prepare(
+        "UPDATE articles SET titre = :titre, slug = :slug, contenu = :contenu, auteur_id = :auteur_id 
+             WHERE id = :id"
+    );
+    return $stmt->execute([
+        ':titre' => $titre,
+        ':slug' => $slug,
+        ':contenu' => $contenu,
+        ':auteur_id' => $auteur_id,
+        ':id' => $id,
+    ]);
 }
 
     /**
@@ -242,6 +260,53 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
         return $stmt->execute([':id' => $id]);
     }
 
+    /** Vote utilisateur courant : like / dislike (table article_likes) */
+    public function getUserArticleLike(int $articleId, int $userId): ?string {
+        $stmt = $this->db->prepare('SELECT type FROM article_likes WHERE article_id = ? AND user_id = ?');
+        $stmt->execute([$articleId, $userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? (string)$row['type'] : null;
+    }
+
+    /**
+     * @return array{action:string, likes:int, dislikes:int}
+     */
+    public function toggleArticleLike(int $articleId, int $userId, string $type): array {
+        if (!in_array($type, ['like', 'dislike'], true)) {
+            $type = 'like';
+        }
+        $existing = $this->getUserArticleLike($articleId, $userId);
+
+        if ($existing === $type) {
+            $this->db->prepare('DELETE FROM article_likes WHERE article_id = ? AND user_id = ?')
+                ->execute([$articleId, $userId]);
+            $action = 'removed';
+        } elseif ($existing !== null) {
+            $this->db->prepare('UPDATE article_likes SET type = ? WHERE article_id = ? AND user_id = ?')
+                ->execute([$type, $articleId, $userId]);
+            $action = 'changed';
+        } else {
+            $this->db->prepare('INSERT INTO article_likes (article_id, user_id, type) VALUES (?, ?, ?)')
+                ->execute([$articleId, $userId, $type]);
+            $action = 'added';
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT
+                SUM(type = 'like') AS likes,
+                SUM(type = 'dislike') AS dislikes
+             FROM article_likes WHERE article_id = ?"
+        );
+        $stmt->execute([$articleId]);
+        $counts = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'action'   => $action,
+            'likes'    => (int)($counts['likes'] ?? 0),
+            'dislikes' => (int)($counts['dislikes'] ?? 0),
+        ];
+    }
+
     public function getPopular(int $limit = 5): array {
         $stmt = $this->db->prepare(
             "SELECT a.*, u.nom as auteur_name, COUNT(r.id_reply) AS nb_replies
@@ -296,6 +361,61 @@ public function update(int $id, string $titre, string $contenu, $auteur = null, 
         $stmt->execute([':name' => $name]);
         $id = (int)$stmt->fetchColumn();
         return $id > 0 ? $id : null;
+    }
+
+    /** Slug URL à partir du titre (ASCII, accents français simplifiés). */
+    private function slugify(string $text): string {
+        $text = trim($text);
+        if ($text === '') {
+            return 'article';
+        }
+        $lower = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+        $map   = [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a', 'ā' => 'a',
+            'ç' => 'c',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', 'ē' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ī' => 'i',
+            'ñ' => 'n',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'õ' => 'o', 'ō' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ū' => 'u',
+            'ý' => 'y', 'ÿ' => 'y',
+            'œ' => 'oe', 'æ' => 'ae',
+        ];
+        $lower = strtr($lower, $map);
+        $lower = preg_replace('/[^a-z0-9]+/', '-', $lower) ?? '';
+        $lower = preg_replace('/-+/', '-', $lower);
+        $lower = trim($lower, '-');
+        if ($lower === '') {
+            return 'article';
+        }
+        if (strlen($lower) > 200) {
+            $lower = rtrim(substr($lower, 0, 200), '-');
+        }
+        return $lower !== '' ? $lower : 'article';
+    }
+
+    private function slugExists(string $slug, ?int $excludeArticleId): bool {
+        if ($excludeArticleId !== null) {
+            $st = $this->db->prepare('SELECT id FROM articles WHERE slug = ? AND id != ? LIMIT 1');
+            $st->execute([$slug, $excludeArticleId]);
+        } else {
+            $st = $this->db->prepare('SELECT id FROM articles WHERE slug = ? LIMIT 1');
+            $st->execute([$slug]);
+        }
+        return (bool) $st->fetchColumn();
+    }
+
+    /** Slug unique pour INSERT (exclude null) ou UPDATE (exclude id courant). */
+    private function uniqueSlugFromTitle(string $titre, ?int $excludeArticleId): string {
+        $base = $this->slugify($titre);
+        $slug = $base;
+        $n    = 2;
+        while ($this->slugExists($slug, $excludeArticleId)) {
+            $suffix = '-' . $n;
+            $slug   = substr($base, 0, 255 - strlen($suffix)) . $suffix;
+            $n++;
+        }
+        return $slug;
     }
 }
 ?>

@@ -29,29 +29,16 @@ $existingTitre   = htmlspecialchars($old['titre'] ?? $article['titre'] ?? '');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title) ?> — Valorys</title>
+    <title><?= htmlspecialchars($title) ?> — MediConnect</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#f0f4f8;font-family:'Segoe UI',sans-serif}
-        .sidebar{position:fixed;top:0;left:0;width:260px;height:100%;background:#0f2b3d;color:#fff;z-index:100;overflow-y:auto}
-        .sidebar-header{padding:22px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,.1)}
-        .sidebar-header .logo{font-size:20px;font-weight:700;color:#fff}
-        .sidebar-header small{color:rgba(255,255,255,.5);font-size:11px}
-        .sidebar-menu a{display:flex;align-items:center;gap:10px;padding:12px 22px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;font-weight:500;transition:.2s;border-left:3px solid transparent}
-        .sidebar-menu a:hover,.sidebar-menu a.active{background:rgba(76,175,80,.15);color:#fff;border-left-color:#4CAF50}
-        .sidebar-menu a i{width:20px;font-size:1rem}
-        .sidebar-nav-divider{height:1px;background:rgba(255,255,255,.08);margin:8px 22px}
-        .main{margin-left:260px;padding:24px 28px}
-        .topbar{background:#fff;border-radius:16px;padding:14px 22px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-        .topbar-title{font-size:17px;font-weight:700;color:#0f2b3d;display:flex;align-items:center;gap:10px}
-        .topbar-title i{color:#4CAF50}
-        .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#2A7FAA,#4CAF50);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+        body{background:#f0f2f5;font-family:'Segoe UI',sans-serif}
         .card-box{background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:24px}
         .section-label{font-size:11px;font-weight:700;color:#6c757d;text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #f0f4f8}
-        .form-label{font-weight:600;font-size:13px;color:#0f2b3d;margin-bottom:6px}
+        .form-label{font-weight:600;font-size:13px;color:#1a2035;margin-bottom:6px}
         .form-control,.form-select{border-radius:8px;border:1.5px solid #e0e6ed;padding:10px 13px;font-size:13px;transition:all .2s}
         .form-control:focus,.form-select:focus{border-color:#2A7FAA;box-shadow:0 0 0 3px rgba(42,127,170,.1);outline:none}
         .required{color:#ef4444}
@@ -69,37 +56,21 @@ $existingTitre   = htmlspecialchars($old['titre'] ?? $article['titre'] ?? '');
 </head>
 <body>
 
-<div class="sidebar">
-    <div class="sidebar-header">
-        <div class="logo">Valorys</div>
-        <small>Plateforme Médicale</small>
-    </div>
-    <div class="sidebar-menu">
-        <a href="index.php?page=dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="index.php?page=articles_admin" class="active"><i class="fas fa-newspaper"></i> Articles</a>
-        <a href="index.php?page=replies_admin"><i class="fas fa-comments"></i> Commentaires</a>
-        <a href="index.php?page=evenements_admin"><i class="fas fa-calendar"></i> Événements</a>
-        <div class="sidebar-nav-divider"></div>
-        <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i> Médecins</a>
-        <a href="index.php?page=patients"><i class="fas fa-user-injured"></i> Patients</a>
-        <a href="index.php?page=users"><i class="fas fa-users"></i> Utilisateurs</a>
-        <div class="sidebar-nav-divider"></div>
-        <a href="index.php?page=blog_public"><i class="fas fa-eye"></i> Voir le site</a>
-        <a href="index.php?page=logout"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
-    </div>
-</div>
+<?php include __DIR__ . '/sidebar.php'; ?>
 
-<div class="main">
-    <div class="topbar">
-        <div class="topbar-title">
+<div class="main-content">
+    <div class="page-header">
+        <h4>
             <i class="fas fa-<?= $isEdit ? 'pen-to-square' : 'plus-circle' ?>"></i>
             <?= htmlspecialchars($title) ?>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        </h4>
+        <div class="d-flex align-items-center gap-2">
             <a href="index.php?page=articles_admin" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Retour
             </a>
-            <div class="avatar"><?= strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1)) ?></div>
+            <a href="index.php?page=mon_profil" class="admin-avatar" title="Mon profil">
+                <?= strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1)) ?>
+            </a>
         </div>
     </div>
 

@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Medecin.php';
 require_once __DIR__ . '/../models/Patient.php';
+require_once __DIR__ . '/../models/RendezVous.php';
 require_once __DIR__ . '/../models/Admin.php';
 require_once __DIR__ . '/AuthController.php';
 
@@ -32,6 +33,7 @@ class AdminController {
             'total_users'     => $this->userModel->count(),
             'total_medecins'  => $this->userModel->countByRole('medecin'),
             'total_patients'  => $this->userModel->countByRole('patient'),
+            'total_admins'    => $this->userModel->countByRole('admin'),
             'en_validation'   => $this->userModel->countByStatus('en_attente'),
         ];
 
@@ -811,10 +813,14 @@ public function editMedecin(int $id): void {
         $this->userModel->update($id, $userData);
         
         // Mettre à jour les infos médecin
+        $prixPost = $_POST['consultation_prix'] ?? '';
+        $expPost = $_POST['annee_experience'] ?? '';
         $this->medecinModel->update($id, [
-            'specialite' => $_POST['specialite'] ?? '',
-            'numero_ordre' => $_POST['numero_ordre'] ?? '',
-            'cabinet_adresse' => $_POST['cabinet_adresse'] ?? '',
+            'specialite'        => $_POST['specialite'] ?? '',
+            'numero_ordre'      => $_POST['numero_ordre'] ?? '',
+            'cabinet_adresse'   => $_POST['cabinet_adresse'] ?? '',
+            'consultation_prix' => ($prixPost === '' || $prixPost === null) ? null : $prixPost,
+            'annee_experience'  => ($expPost === '' || $expPost === null) ? null : (int) $expPost,
         ]);
         
         $this->logAction('Modification médecin', "Médecin #$id modifié");
@@ -990,7 +996,7 @@ public function showCreateRendezVous(): void {
     } catch (Exception $e) {
         error_log('Erreur showCreateRendezVous - ' . $e->getMessage());
         $this->setFlash('error', 'Erreur lors du chargement.');
-        header('Location: index.php?page=admin_rendezvous');
+        header('Location: index.php?page=rendez_vous_admin');
         exit;
     }
 }
@@ -1002,7 +1008,7 @@ public function createRendezVous(): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header('Location: index.php?page=admin_rendezvous&action=create');
+        header('Location: index.php?page=rendez_vous_admin&action=create');
         exit;
     }
     
@@ -1030,7 +1036,7 @@ public function createRendezVous(): void {
     if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
         $_SESSION['old'] = $old;
-        header('Location: index.php?page=admin_rendezvous&action=create');
+        header('Location: index.php?page=rendez_vous_admin&action=create');
         exit;
     }
     
@@ -1068,7 +1074,7 @@ public function createRendezVous(): void {
         error_log('Erreur createRendezVous - ' . $e->getMessage());
         $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
         $_SESSION['old'] = $old;
-        header('Location: index.php?page=admin_rendezvous&action=create');
+        header('Location: index.php?page=rendez_vous_admin&action=create');
         exit;
     }
 }
@@ -1134,7 +1140,7 @@ public function updateRendezVous(int $id): void {
     $this->auth->requireRole('admin');
     
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
+        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
         exit;
     }
     
@@ -1160,7 +1166,7 @@ public function updateRendezVous(int $id): void {
     if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
         $_SESSION['old'] = $old;
-        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
+        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
         exit;
     }
     
@@ -1207,7 +1213,7 @@ public function updateRendezVous(int $id): void {
         error_log('Erreur updateRendezVous - ' . $e->getMessage());
         $_SESSION['flash'] = ['type' => 'error', 'message' => $e->getMessage()];
         $_SESSION['old'] = $old;
-        header("Location: index.php?page=admin_rendezvous&action=edit&id=$id");
+        header("Location: index.php?page=rendez_vous_admin&action=edit&id=$id");
         exit;
     }
 }
@@ -1630,11 +1636,29 @@ public function deleteRendezVous(int $id): void {
     
     try {
         $db = Database::getInstance()->getConnection();
+
+        $sel = $db->prepare("SELECT medecin_id, date_rendezvous, heure_rendezvous, statut FROM rendez_vous WHERE id = :id LIMIT 1");
+        $sel->execute([':id' => $id]);
+        $rdv = $sel->fetch(PDO::FETCH_ASSOC);
+        if (!$rdv) {
+            $this->setFlash('error', 'Rendez-vous introuvable.');
+            header('Location: index.php?page=rendez_vous_admin');
+            exit;
+        }
+
+        $wasBlocking = !in_array((string)($rdv['statut'] ?? ''), ['annulé', 'terminé'], true);
+        $slotMid     = (int)$rdv['medecin_id'];
+        $slotDate    = (string)$rdv['date_rendezvous'];
+        $slotHeure   = RendezVous::normalizeHeureRendezvous((string)($rdv['heure_rendezvous'] ?? ''));
         
         $stmt = $db->prepare("DELETE FROM rendez_vous WHERE id = :id");
         $result = $stmt->execute([':id' => $id]);
         
         if ($result) {
+            if ($wasBlocking) {
+                $rvModel = new RendezVous();
+                $rvModel->fillWaitlistForFreedSlot($slotMid, $slotDate, $slotHeure);
+            }
             $this->setFlash('success', 'Rendez-vous supprimé avec succès.');
         } else {
             throw new Exception('Erreur lors de la suppression.');
@@ -1693,6 +1717,12 @@ private function setFlash(string $type, string $message): void {
                     'contenu' => $contenu,
                     'auteur_id' => $_SESSION['user_id'] ?? 1
                 ]);
+                if ($newId > 0 && class_exists('GamificationController')) {
+                    $uid = (int) ($_SESSION['user_id'] ?? 0);
+                    if ($uid > 0) {
+                        GamificationController::grantPoints($uid, 'article_created', (int) $newId);
+                    }
+                }
                 $_SESSION['flash'] = ['type' => 'success', 'message' => 'Article créé avec succès.'];
             } catch(Exception $e) {
                 $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur: ' . $e->getMessage()];
@@ -1758,41 +1788,310 @@ private function setFlash(string $type, string $message): void {
     // ─────────────────────────────────────────
     public function listEvents(): void {
         $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/events_list.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        require_once __DIR__ . '/../models/Event.php';
+        require_once __DIR__ . '/../config/database.php';
+
+        $eventModel = new Event();
+        $rows       = $eventModel->getAll();
+
+        $statusMap = [
+            'à venir' => 'planifie',
+            'en_cours' => 'en_cours',
+            'terminé' => 'termine',
+            'annulé' => 'annule',
+        ];
+
+        $evenements = [];
+        foreach ($rows as $e) {
+            $rawStatus = $e['status'] ?? '';
+            $sid       = (int)($e['sponsor_id'] ?? 0);
+            $sponsor_nom = null;
+            if ($sid > 0) {
+                $spRow = Database::getInstance()->queryOne(
+                    'SELECT nom FROM sponsors WHERE id = :id LIMIT 1',
+                    ['id' => $sid]
+                );
+                $sponsor_nom = $spRow['nom'] ?? null;
+            }
+            $evenements[] = [
+                'id' => (int)$e['id'],
+                'titre' => $e['titre'],
+                'specialite' => $e['categorie'] ?? '',
+                'lieu' => $e['lieu'] ?? '',
+                'date_debut' => $e['date_debut'],
+                'date_fin' => $e['date_fin'],
+                'capacite' => (int)($e['capacite_max'] ?? 0),
+                'statut' => $statusMap[$rawStatus] ?? 'planifie',
+                'sponsor_nom' => $sponsor_nom,
+            ];
+        }
+
+        require_once __DIR__ . '/../views/backoffice/evenement/index.php';
     }
 
     public function showCreateEvent(): void {
         $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/event_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        $old = [
+            'titre' => '', 'description' => '', 'specialite' => '', 'lieu' => '',
+            'date_debut' => '', 'date_fin' => '', 'capacite' => '', 'prix' => '0',
+            'statut' => 'planifie', 'sponsor_id' => '',
+        ];
+        $specialites = $this->eventSpecialitesList();
+        $statuts     = $this->eventStatutsForm();
+        $sponsors    = $this->loadSponsorsForForm();
+        $errors      = [];
+        require_once __DIR__ . '/../views/backoffice/evenement/create.php';
     }
 
     public function createEvent(): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement créé.'];
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+
+        $old    = $_POST;
+        $errors = $this->validateEventFormInput($old);
+        if (!empty($errors)) {
+            $specialites = $this->eventSpecialitesList();
+            $statuts     = $this->eventStatutsForm();
+            $sponsors    = $this->loadSponsorsForForm();
+            $old         = $this->normalizeOldFromPost($old);
+            require_once __DIR__ . '/../views/backoffice/evenement/create.php';
+            return;
+        }
+
+        $payload = $this->buildEventPayloadFromPost($old);
+        try {
+            $eventModel->create($payload);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement créé.'];
+        } catch (Throwable $e) {
+            error_log('AdminController::createEvent ' . $e->getMessage());
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Impossible de créer l’événement.'];
+        }
         header('Location: index.php?page=evenements_admin');
         exit;
     }
 
     public function editEvent(int $id): void {
         $this->auth->requireRole('admin');
-        $viewPath = __DIR__ . '/../views/backoffice/event_form.php';
-        file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $row        = $eventModel->getById($id);
+        if (!$row) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Événement introuvable.'];
+            header('Location: index.php?page=evenements_admin');
+            exit;
+        }
+        $old         = $this->mapEventRowToForm($row);
+        $specialites = $this->eventSpecialitesList();
+        $statuts     = $this->eventStatutsForm();
+        $sponsors    = $this->loadSponsorsForForm();
+        $errors      = [];
+        require_once __DIR__ . '/../views/backoffice/evenement/edit.php';
     }
 
     public function updateEvent(int $id): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement mis à jour.'];
+        $postId = (int)($_POST['id'] ?? 0);
+        if ($postId > 0) {
+            $id = $postId;
+        }
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        $row        = $eventModel->getById($id);
+        if (!$row) {
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Événement introuvable.'];
+            header('Location: index.php?page=evenements_admin');
+            exit;
+        }
+
+        $old    = $_POST;
+        $errors = $this->validateEventFormInput($old);
+        if (!empty($errors)) {
+            $specialites = $this->eventSpecialitesList();
+            $statuts     = $this->eventStatutsForm();
+            $sponsors    = $this->loadSponsorsForForm();
+            $old         = $this->normalizeOldFromPost($old);
+            require_once __DIR__ . '/../views/backoffice/evenement/edit.php';
+            return;
+        }
+
+        $payload = $this->buildEventPayloadFromPost($old);
+        try {
+            $eventModel->update($id, $payload);
+            $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement mis à jour.'];
+        } catch (Throwable $e) {
+            error_log('AdminController::updateEvent ' . $e->getMessage());
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Impossible de mettre à jour l’événement.'];
+        }
         header('Location: index.php?page=evenements_admin');
         exit;
     }
 
     public function deleteEvent(int $id): void {
         $this->auth->requireRole('admin');
-        $_SESSION['flash'] = ['type' => 'success', 'message' => 'Événement supprimé.'];
+        require_once __DIR__ . '/../models/Event.php';
+        $eventModel = new Event();
+        try {
+            $ok = $eventModel->delete($id);
+            $_SESSION['flash'] = [
+                'type' => $ok ? 'success' : 'danger',
+                'message' => $ok ? 'Événement supprimé.' : 'Suppression impossible (événement introuvable ou erreur).',
+            ];
+        } catch (Throwable $e) {
+            error_log('AdminController::deleteEvent ' . $e->getMessage());
+            $_SESSION['flash'] = ['type' => 'danger', 'message' => 'Erreur lors de la suppression.'];
+        }
         header('Location: index.php?page=evenements_admin');
         exit;
+    }
+
+    /** @return string[] */
+    private function eventSpecialitesList(): array {
+        return [
+            'Médecine générale', 'Cardiologie', 'Dermatologie', 'Pédiatrie', 'Neurologie',
+            'Chirurgie', 'Gynécologie', 'Ophtalmologie', 'ORL', 'Psychiatrie', 'Autre',
+        ];
+    }
+
+    /** @return string[] */
+    private function eventStatutsForm(): array {
+        return ['planifie', 'en_cours', 'termine', 'annule'];
+    }
+
+    private function mapDbStatutToForm(string $status): string {
+        $m = [
+            'à venir' => 'planifie',
+            'en_cours' => 'en_cours',
+            'terminé' => 'termine',
+            'annulé' => 'annule',
+        ];
+        return $m[$status] ?? 'planifie';
+    }
+
+    private function mapFormStatutToDb(string $st): string {
+        $m = [
+            'planifie' => 'à venir',
+            'en_cours' => 'en_cours',
+            'termine' => 'terminé',
+            'annule' => 'annulé',
+        ];
+        return $m[$st] ?? 'à venir';
+    }
+
+    /** @param array<string,mixed> $row */
+    private function mapEventRowToForm(array $row): array {
+        $dd = (string)($row['date_debut'] ?? '');
+        $df = (string)($row['date_fin'] ?? '');
+        if ($dd !== '' && preg_match('/^\d{4}-\d{2}-\d{2}/', $dd)) {
+            $dd = substr($dd, 0, 10);
+        }
+        if ($df !== '' && preg_match('/^\d{4}-\d{2}-\d{2}/', $df)) {
+            $df = substr($df, 0, 10);
+        }
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'titre' => (string)($row['titre'] ?? ''),
+            'description' => (string)($row['description'] ?? ''),
+            'specialite' => (string)($row['categorie'] ?? ''),
+            'lieu' => (string)($row['lieu'] ?? ''),
+            'date_debut' => $dd,
+            'date_fin' => $df,
+            'capacite' => (string)(int)($row['capacite_max'] ?? 0),
+            'prix' => (string)($row['prix'] ?? '0'),
+            'statut' => $this->mapDbStatutToForm((string)($row['status'] ?? '')),
+            'sponsor_id' => $row['sponsor_id'] ?? '',
+        ];
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    private function loadSponsorsForForm(): array {
+        require_once __DIR__ . '/../models/Sponsor.php';
+        $s = new Sponsor();
+        return $s->getAllForBackoffice('all', '', 500);
+    }
+
+    /**
+     * Valide le formulaire ; retourne soit une liste de messages (ré-indexée), soit tableau champ=>erreur.
+     *
+     * @param array<string,mixed> $p
+     * @return array<int|string,string>
+     */
+    private function validateEventFormInput(array $p): array {
+        $errors = [];
+        $titre  = trim((string)($p['titre'] ?? ''));
+        if ($titre === '' || mb_strlen($titre) < 2) {
+            $errors['titre'] = 'Titre requis (2 caractères min).';
+        }
+        if (trim((string)($p['description'] ?? '')) === '') {
+            $errors['description'] = 'Description requise.';
+        }
+        if (trim((string)($p['specialite'] ?? '')) === '') {
+            $errors['specialite'] = 'Spécialité requise.';
+        }
+        if (trim((string)($p['lieu'] ?? '')) === '') {
+            $errors['lieu'] = 'Lieu requis.';
+        }
+        $dd = trim((string)($p['date_debut'] ?? ''));
+        $df = trim((string)($p['date_fin'] ?? ''));
+        if ($dd === '' || !preg_match('/^\d{4}-\d{2}-\d{2}/', $dd)) {
+            $errors['date_debut'] = 'Date de début invalide (AAAA-MM-JJ).';
+        }
+        if ($df === '' || !preg_match('/^\d{4}-\d{2}-\d{2}/', $df)) {
+            $errors['date_fin'] = 'Date de fin invalide (AAAA-MM-JJ).';
+        }
+        $cap = (int)($p['capacite'] ?? 0);
+        if ($cap < 1) {
+            $errors['capacite'] = 'Capacité minimale : 1.';
+        }
+        $st = (string)($p['statut'] ?? '');
+        if (!in_array($st, $this->eventStatutsForm(), true)) {
+            $errors['statut'] = 'Statut invalide.';
+        }
+        return $errors;
+    }
+
+    /** @param array<string,mixed> $p */
+    private function normalizeOldFromPost(array $p): array {
+        return [
+            'id' => (int)($p['id'] ?? 0),
+            'titre' => (string)($p['titre'] ?? ''),
+            'description' => (string)($p['description'] ?? ''),
+            'specialite' => (string)($p['specialite'] ?? ''),
+            'lieu' => (string)($p['lieu'] ?? ''),
+            'date_debut' => (string)($p['date_debut'] ?? ''),
+            'date_fin' => (string)($p['date_fin'] ?? ''),
+            'capacite' => (string)($p['capacite'] ?? ''),
+            'prix' => (string)($p['prix'] ?? '0'),
+            'statut' => (string)($p['statut'] ?? 'planifie'),
+            'sponsor_id' => $p['sponsor_id'] ?? '',
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $p
+     * @return array<string,mixed>
+     */
+    private function buildEventPayloadFromPost(array $p): array {
+        $dd = trim((string)($p['date_debut'] ?? ''));
+        $df = trim((string)($p['date_fin'] ?? ''));
+        $ddt = strlen($dd) === 10 ? $dd . ' 09:00:00' : $dd;
+        $dft = strlen($df) === 10 ? $df . ' 18:00:00' : $df;
+        $sid = $p['sponsor_id'] ?? '';
+        return [
+            'titre' => trim((string)($p['titre'] ?? '')),
+            'description' => trim((string)($p['description'] ?? '')),
+            'contenu' => null,
+            'date_debut' => $ddt,
+            'date_fin' => $dft,
+            'lieu' => trim((string)($p['lieu'] ?? '')),
+            'categorie' => trim((string)($p['specialite'] ?? '')),
+            'sponsor_id' => ($sid === '' || $sid === null) ? null : (int)$sid,
+            'adresse' => null,
+            'capacite_max' => (int)($p['capacite'] ?? 0),
+            'image' => null,
+            'prix' => (float)str_replace(',', '.', (string)($p['prix'] ?? '0')),
+            'status' => $this->mapFormStatutToDb((string)($p['statut'] ?? 'planifie')),
+        ];
     }
 
     // ─────────────────────────────────────────
@@ -1842,30 +2141,38 @@ private function setFlash(string $type, string $message): void {
     // ─────────────────────────────────────────
     public function logs(): void {
         $this->auth->requireRole('admin');
-        $logs     = $this->getLogs();
-        $viewPath = __DIR__ . '/../views/backoffice/logs.php';
+        $this->adminModel->ensureLogsTable();
+        $perPage    = 40;
+        $pageNum    = max(1, (int) ($_GET['p'] ?? 1));
+        $offset     = ($pageNum - 1) * $perPage;
+        $totalRows  = $this->adminModel->countLogs();
+        $logs       = $this->adminModel->getLogsPaged($offset, $perPage);
+        $totalPages = $totalRows > 0 ? max(1, (int) ceil($totalRows / $perPage)) : 1;
+        $logPageNum = $pageNum;
+        $logsTableMissing = !$this->adminModel->logsTableExists();
+        $viewPath   = __DIR__ . '/../views/backoffice/logs.php';
         file_exists($viewPath) ? require_once $viewPath : http_response_code(200);
     }
 
     public function exportLogs(): void {
         $this->auth->requireRole('admin');
-        $logs = $this->getLogs();
+        $this->adminModel->ensureLogsTable();
+        $logs = $this->adminModel->getLogs(10000);
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="logs_' . date('Y-m-d') . '.csv"');
 
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['ID', 'Utilisateur', 'Rôle', 'Action', 'Description', 'IP', 'Date']);
+        fputcsv($out, ['ID', 'Utilisateur', 'Rôle', 'Action', 'Description', 'Date']);
 
         foreach ($logs as $log) {
             fputcsv($out, [
-                $log['id'],
-                ($log['prenom'] ?? '') . ' ' . ($log['nom'] ?? 'Système'),
-                $log['role']        ?? '-',
-                $log['action'],
-                $log['description'],
-                $log['ip_address'],
-                $log['created_at'],
+                $log['id'] ?? '',
+                trim(($log['prenom'] ?? '') . ' ' . ($log['nom'] ?? '')) ?: 'Système',
+                $log['role'] ?? '-',
+                $log['action'] ?? '',
+                $log['description'] ?? '',
+                $log['created_at'] ?? '',
             ]);
         }
 
@@ -1920,14 +2227,6 @@ private function setFlash(string $type, string $message): void {
     // ─────────────────────────────────────────
     //  Helpers privés
     // ─────────────────────────────────────────
-    private function getLogs(): array {
-        try {
-            return $this->adminModel->getLogs(200);
-        } catch (Exception $e) {
-            return [];
-        }
-    }
-
     private function logAction(string $action, string $description): void {
         try {
             $this->adminModel->addLog(

@@ -1,230 +1,204 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($user) ? 'Modifier' : 'Créer' ?> un utilisateur - MediConnect</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
-    <style>
-        body.bo-shell-body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .navbar-top { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .content-card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .section-title { font-size: 15px; font-weight: bold; margin: 20px 0 15px; color: #2A7FAA; border-left: 4px solid #4CAF50; padding-left: 10px; }
-        .form-control, .form-select { border-radius: 10px; padding: 10px 15px; border: 1px solid #ddd; }
-        .form-control:focus, .form-select:focus { border-color: #4CAF50; box-shadow: 0 0 0 3px rgba(76,175,80,0.1); }
-        .btn-save { background: #4CAF50; color: white; border-radius: 10px; padding: 10px 25px; border: none; }
-        .btn-save:hover { background: #388E3C; }
-        .alert-box { border-radius: 10px; padding: 12px 15px; margin-bottom: 20px; }
-        .alert-error { background: #f8d7da; color: #721c24; }
-        .medecin-fields { display: none; }
-        .field-error { font-size: 12px; margin-top: 6px; color: #c62828; font-weight: 500; }
-        .field-error i { margin-right: 5px; }
-        .form-control.error, .form-select.error { border-color: #dc3545 !important; }
-    </style>
-</head>
-<body class="bo-shell-body">
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+<?php
+/**
+ * Modification utilisateur (admin) — gabarit DocTime
+ */
+$pageTitle = 'Modifier un utilisateur';
+$errors = $errors ?? [];
+$extras = $extras ?? [];
+$pv = array_merge($user ?? [], $_POST ?? []);
 
-<div class="main-content">
-    <div class="navbar-top">
-        <h4>
-            <i class="fas fa-user-<?= isset($user) ? 'edit' : 'plus' ?> me-2"></i>
-            <?= isset($user) ? 'Modifier l\'utilisateur' : 'Créer un utilisateur' ?>
-        </h4>
-        <a href="index.php?page=users" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Retour
-        </a>
+/** Valeur affichée : POST si présent, sinon extra métier, sinon colonne users. */
+function ue_val(array $pv, array $extras, string $postKey, ?string $extraKey = null): string {
+    if (array_key_exists($postKey, $_POST)) {
+        return (string) $_POST[$postKey];
+    }
+    $ek = $extraKey ?? $postKey;
+    if (isset($extras[$ek])) {
+        return (string) $extras[$ek];
+    }
+    return (string) ($pv[$postKey] ?? '');
+}
+
+$currentRole = $pv['role'] ?? 'patient';
+$currentStatut = $pv['statut'] ?? 'actif';
+
+require __DIR__ . '/layout_header.php';
+?>
+
+<div class="bo-create-page">
+    <div class="bo-create-header mb-4">
+        <h1 class="bo-create-title">Modifier l’utilisateur</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="index.php?page=users">Utilisateurs</a></li>
+                <li class="breadcrumb-item active" aria-current="page">#<?= (int) ($user['id'] ?? 0) ?></li>
+            </ol>
+        </nav>
     </div>
 
-    <div class="content-card">
+    <div class="card bo-create-card shadow-sm">
+        <div class="card-header bo-create-card-head py-3">
+            <h6 class="mb-0"><i class="bi bi-person-gear me-2"></i>Informations du compte</h6>
+        </div>
+        <div class="card-body">
+            <form class="bo-create-form" method="POST"
+                  action="index.php?page=users&action=edit&id=<?= (int) $user['id'] ?>" novalidate>
 
-        <?php if (!empty($error)): ?>
-            <div class="alert-box alert-error">
-                <i class="fas fa-exclamation-circle me-2"></i><?= $error ?>
-            </div>
-        <?php endif; ?>
-
-        <?php
-            // Valeurs à afficher : priorité aux données soumises ($old), sinon données existantes ($user/$extra)
-            $errors = isset($errors) ? $errors : [];
-            $v = $old ?? [];
-            $currentRole = $v['role'] ?? ($user['role'] ?? 'patient');
-        ?>
-
-        <form method="POST"
-              action="index.php?page=users&action=<?= isset($user) ? 'edit&id='.$user['id'] : 'create' ?>">
-
-            <?php if (isset($user)): ?>
-                <input type="hidden" name="id" value="<?= $user['id'] ?>">
-            <?php endif; ?>
-
-            <div class="section-title"><i class="fas fa-user-circle me-2"></i>Informations personnelles</div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Nom <span class="text-danger">*</span></label>
-                    <input type="text" name="nom" class="form-control<?php echo isset($errors['nom']) ? ' error' : ''; ?>"
-                           value="<?= htmlspecialchars($v['nom'] ?? $user['nom'] ?? '') ?>">
-                    <?php if(isset($errors['nom'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['nom']); ?></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                    <input type="text" name="prenom" class="form-control<?php echo isset($errors['prenom']) ? ' error' : ''; ?>"
-                           value="<?= htmlspecialchars($v['prenom'] ?? $user['prenom'] ?? '') ?>">
-                    <?php if(isset($errors['prenom'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['prenom']); ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="text" name="email" class="form-control<?php echo isset($errors['email']) ? ' error' : ''; ?>"
-                           value="<?= htmlspecialchars($v['email'] ?? $user['email'] ?? '') ?>">
-                    <?php if(isset($errors['email'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['email']); ?></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Téléphone <span class="text-danger">*</span></label>
-                    <input type="text" name="telephone" class="form-control<?php echo isset($errors['telephone']) ? ' error' : ''; ?>"
-                           value="<?= htmlspecialchars($v['telephone'] ?? $user['telephone'] ?? '') ?>">
-                    <?php if(isset($errors['telephone'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['telephone']); ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-                           value="<?= htmlspecialchars($v['telephone'] ?? $user['telephone'] ?? '') ?>">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Date de naissance</label>
-                    <input type="date" name="date_naissance" class="form-control"
-                           value="<?= htmlspecialchars($v['date_naissance'] ?? $user['date_naissance'] ?? '') ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Rôle</label>
-                    <select name="role" id="roleSelect" class="form-select">
-                        <?php foreach (['patient','medecin','admin'] as $r): ?>
-                            <option value="<?= $r ?>" <?= $currentRole===$r ? 'selected':'' ?>>
-                                <?= ucfirst($r) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Statut</label>
-                    <select name="statut" class="form-select">
-                        <?php
-                            $currentStatut = $v['statut'] ?? $user['statut'] ?? 'actif';
-                            foreach (['actif','inactif','en_validation'] as $s):
-                        ?>
-                            <option value="<?= $s ?>" <?= $currentStatut===$s ? 'selected':'' ?>>
-                                <?= ucfirst(str_replace('_',' ',$s)) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php if (!isset($user)): // Mot de passe seulement à la création ?>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Mot de passe <span class="text-danger">*</span></label>
-                    <input type="password" name="password" class="form-control" placeholder="Min. 8 car., 1 maj., 1 chiffre">
-                </div>
-                <?php endif; ?>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Adresse</label>
-                <textarea name="adresse" class="form-control" rows="2"><?= htmlspecialchars($v['adresse'] ?? $user['adresse'] ?? '') ?></textarea>
-            </div>
-
-            <!-- Champs Patient -->
-            <div id="patientFields" <?= $currentRole !== 'patient' ? 'style="display:none"' : '' ?>>
-                <div class="section-title"><i class="fas fa-heartbeat me-2"></i>Informations patient</div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Groupe sanguin</label>
-                    <select name="groupe_sanguin" class="form-select">
-                        <option value="">--</option>
-                        <?php
-                            $groupes = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
-                            $gs = $v['groupe_sanguin'] ?? $extra['groupe_sanguin'] ?? '';
-                            foreach ($groupes as $g):
-                        ?>
-                            <option value="<?= $g ?>" <?= $gs===$g ? 'selected':'' ?>><?= $g ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Champs Médecin -->
-            <div id="medecinFields" <?= $currentRole !== 'medecin' ? 'style="display:none"' : '' ?>>
-                <div class="section-title"><i class="fas fa-stethoscope me-2"></i>Informations médecin</div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Spécialité</label>
-                        <select name="specialite" class="form-select">
-                            <option value="">Sélectionner...</option>
-                            <?php
-                                $specialites = ['Cardiologue','Dermatologue','Gynécologue','Pédiatre',
-                                                'Généraliste','Ophtalmologue','Orthopédiste','Neurologue',
-                                                'Psychiatre','Dentiste'];
-                                $sp = $v['specialite'] ?? $extra['specialite'] ?? '';
-                                foreach ($specialites as $s):
-                            ?>
-                                <option value="<?= $s ?>" <?= $sp===$s ? 'selected':'' ?>><?= $s ?></option>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_nom">Nom <span class="text-danger">*</span></label>
+                        <input type="text" id="ue_nom" name="nom" class="form-control <?= isset($errors['nom']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($pv['nom'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['nom'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['nom'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_prenom">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" id="ue_prenom" name="prenom" class="form-control <?= isset($errors['prenom']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($pv['prenom'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['prenom'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['prenom'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_email">Email <span class="text-danger">*</span></label>
+                        <input type="email" id="ue_email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($pv['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['email'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_tel">Téléphone</label>
+                        <input type="tel" id="ue_tel" name="telephone" class="form-control <?= isset($errors['telephone']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($pv['telephone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                        <?php if (!empty($errors['telephone'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['telephone'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_pass">Nouveau mot de passe</label>
+                        <input type="password" id="ue_pass" name="password" autocomplete="new-password"
+                               class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
+                               placeholder="Laisser vide pour ne pas changer" minlength="6">
+                        <div class="form-text">Min. 6 caractères si renseigné.</div>
+                        <?php if (!empty($errors['password'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_dn">Date de naissance</label>
+                        <input type="date" id="ue_dn" name="date_naissance" class="form-control"
+                               value="<?= htmlspecialchars((string) ($pv['date_naissance'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_role">Rôle</label>
+                        <select id="ue_role" name="role" class="form-select">
+                            <?php foreach (['patient', 'medecin', 'admin'] as $r): ?>
+                                <option value="<?= $r ?>" <?= $currentRole === $r ? 'selected' : '' ?>><?= ucfirst($r) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">N° ordre</label>
-                        <input type="text" name="numero_ordre" class="form-control"
-                               value="<?= htmlspecialchars($v['numero_ordre'] ?? $extra['numero_ordre'] ?? '') ?>">
+                    <div class="col-md-6">
+                        <label class="form-label" for="ue_statut">Statut</label>
+                        <select id="ue_statut" name="statut" class="form-select">
+                            <?php foreach (['actif', 'inactif', 'en_attente'] as $s): ?>
+                                <option value="<?= $s ?>" <?= $currentStatut === $s ? 'selected' : '' ?>><?= $s === 'en_attente' ? 'En attente' : ucfirst($s) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="ue_adr">Adresse</label>
+                        <textarea id="ue_adr" name="adresse" class="form-control" rows="2"><?= htmlspecialchars((string) ($pv['adresse'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Tarif (DT)</label>
-                        <input type="text" name="tarif" class="form-control"
-                               value="<?= htmlspecialchars($v['tarif'] ?? $extra['tarif'] ?? '') ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Expérience (ans)</label>
-                        <input type="text" name="experience" class="form-control"
-                               value="<?= htmlspecialchars($v['experience'] ?? $extra['experience'] ?? '') ?>">
-                    </div>
-                </div>
-            </div>
 
-            <div class="d-flex gap-3 mt-4">
-                <button type="submit" class="btn-save">
-                    <i class="fas fa-save me-2"></i>
-                    <?= isset($user) ? 'Enregistrer les modifications' : 'Créer l\'utilisateur' ?>
-                </button>
-                <?php if (isset($user) && $user['id'] != $_SESSION['user_id']): ?>
-                <a href="index.php?page=users&action=delete&id=<?= $user['id'] ?>"
-                   class="btn btn-danger ms-auto"
-                   onclick="return confirm('Supprimer définitivement ?')">
-                    <i class="fas fa-trash me-2"></i> Supprimer
-                </a>
-                <?php endif; ?>
-            </div>
-        </form>
+                <div id="ue_patient_fields" class="mt-4 pt-3 border-top" style="display:<?= $currentRole === 'patient' ? 'block' : 'none' ?>;">
+                    <h6 class="text-secondary mb-3"><i class="bi bi-heart-pulse me-2"></i>Patient</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="ue_gs">Groupe sanguin</label>
+                            <?php
+                            $gsPost = $_POST['groupe_sanguin'] ?? null;
+                            $gs = $gsPost !== null ? (string) $gsPost : (string) ($extras['groupe_sanguin'] ?? '');
+                            ?>
+                            <select id="ue_gs" name="groupe_sanguin" class="form-select">
+                                <option value="">—</option>
+                                <?php foreach (['A+','A-','B+','B-','AB+','AB-','O+','O-'] as $g): ?>
+                                    <option value="<?= $g ?>" <?= $gs === $g ? 'selected' : '' ?>><?= $g ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ue_medecin_fields" class="mt-4 pt-3 border-top" style="display:<?= $currentRole === 'medecin' ? 'block' : 'none' ?>;">
+                    <h6 class="text-secondary mb-3"><i class="bi bi-hospital me-2"></i>Médecin</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="ue_spec">Spécialité</label>
+                            <?php
+                            $specialites = ['Généraliste','Cardiologue','Dermatologue','Gynécologue','Pédiatre','Ophtalmologue','Orthopédiste','Neurologue','Psychiatre','Dentiste','Autre'];
+                            $spVal = ue_val($pv, $extras, 'specialite');
+                            ?>
+                            <select id="ue_spec" name="specialite" class="form-select">
+                                <option value="">— Choisir —</option>
+                                <?php foreach ($specialites as $s): ?>
+                                    <option value="<?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?>" <?= $spVal === $s ? 'selected' : '' ?>><?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?></option>
+                                <?php endforeach; ?>
+                                <?php if ($spVal !== '' && !in_array($spVal, $specialites, true)): ?>
+                                    <option value="<?= htmlspecialchars($spVal, ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($spVal, ENT_QUOTES, 'UTF-8') ?> (actuel)</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ue_ordre">N° d’ordre</label>
+                            <input type="text" id="ue_ordre" name="numero_ordre" class="form-control"
+                                   value="<?= htmlspecialchars(ue_val($pv, $extras, 'numero_ordre'), ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ue_tarif">Tarif consultation (TND)</label>
+                            <input type="number" id="ue_tarif" name="tarif" class="form-control" step="0.01" min="0"
+                                   value="<?= htmlspecialchars(ue_val($pv, $extras, 'tarif', 'consultation_prix'), ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ue_exp">Années d’expérience</label>
+                            <input type="number" id="ue_exp" name="experience" class="form-control" min="0" step="1"
+                                   value="<?= htmlspecialchars(ue_val($pv, $extras, 'experience', 'annee_experience'), ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="ue_cab">Adresse du cabinet</label>
+                            <textarea id="ue_cab" name="adresse_cabinet" class="form-control" rows="2"><?= htmlspecialchars(ue_val($pv, $extras, 'adresse_cabinet', 'cabinet_adresse'), ENT_QUOTES, 'UTF-8') ?></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bo-create-actions d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+                    <a href="index.php?page=users" class="btn btn-outline-secondary">Retour à la liste</a>
+                    <?php if (isset($user['id']) && (int) $user['id'] !== (int) ($_SESSION['user_id'] ?? 0)): ?>
+                        <a href="index.php?page=users&action=delete&id=<?= (int) $user['id'] ?>"
+                           class="btn btn-outline-danger ms-auto js-confirm-delete" data-msg="Supprimer définitivement cet utilisateur ?">Supprimer</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    document.getElementById('roleSelect').addEventListener('change', function() {
-        const role = this.value;
-        document.getElementById('patientFields').style.display = role === 'patient' ? 'block' : 'none';
-        document.getElementById('medecinFields').style.display = role === 'medecin' ? 'block' : 'none';
-    });
+(function () {
+    var sel = document.getElementById('ue_role');
+    var pf = document.getElementById('ue_patient_fields');
+    var mf = document.getElementById('ue_medecin_fields');
+    function sync() {
+        var role = sel.value;
+        pf.style.display = role === 'patient' ? 'block' : 'none';
+        mf.style.display = role === 'medecin' ? 'block' : 'none';
+    }
+    sel.addEventListener('change', sync);
+})();
 </script>
-</body>
-</html>
+
+<?php require __DIR__ . '/layout_footer.php'; ?>

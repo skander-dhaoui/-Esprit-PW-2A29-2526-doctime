@@ -9,12 +9,15 @@
     --bo-muted-light: #b0b9cc;
     --bo-line: #e5e9f2;
     --bo-line-dark: #2a3647;
-    --bo-sidebar: #101827;
-    --bo-sidebar-soft: #162033;
-    --bo-sidebar-bg: #0f1823;
+    --bo-sidebar: #1e2235;
+    --bo-sidebar-soft: rgba(255, 255, 255, 0.06);
+    --bo-sidebar-bg: #1e2235;
+    --bo-sidebar-ink: #f8fafc;
+    --bo-sidebar-muted: #94a3b8;
+    --bo-sidebar-accent: #22c55e;
     --bo-primary: #2563eb;
     --bo-primary-dark: #1d4ed8;
-    --bo-success: #188b55;
+    --bo-success: #22c55e;
     --bo-success-soft: #e7f6ee;
     --bo-warning: #b7790f;
     --bo-warning-soft: #fff4d7;
@@ -33,9 +36,9 @@ body {
 }
 
 .sidebar {
-    background: linear-gradient(180deg, var(--bo-sidebar) 0%, #0d1320 100%) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 14px 0 38px rgba(10, 17, 30, 0.16);
+    background: var(--bo-sidebar) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2) !important;
 }
 
 .sidebar-brand {
@@ -45,17 +48,21 @@ body {
 
 .brand-icon,
 .sidebar-brand > div:first-child {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(24, 139, 85, 0.18)) !important;
-    color: #7dd3fc !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: #131620 !important;
+    background-image: none !important;
+    color: var(--bo-sidebar-accent) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(34, 197, 94, 0.35),
+        0 4px 14px rgba(0, 0, 0, 0.25) !important;
 }
 
 .sidebar-brand h4 {
     letter-spacing: 0;
+    color: var(--bo-sidebar-ink) !important;
 }
 
 .sidebar-brand small {
-    color: rgba(255, 255, 255, 0.58) !important;
+    color: var(--bo-sidebar-muted) !important;
 }
 
 .sidebar-nav {
@@ -64,31 +71,39 @@ body {
 
 .sidebar-nav a {
     min-height: 44px;
-    border-radius: 10px !important;
-    border-left: 0 !important;
-    color: rgba(255, 255, 255, 0.68) !important;
-    font-weight: 650 !important;
-    margin: 3px 0;
+    border-radius: 0 10px 10px 0 !important;
+    border-left: 3px solid transparent !important;
+    color: rgba(248, 250, 252, 0.9) !important;
+    font-weight: 550 !important;
+    margin: 3px 10px 3px 0;
 }
 
 .sidebar-nav a:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: var(--bo-sidebar-soft) !important;
+    background-image: none !important;
     color: #ffffff !important;
 }
 
 .sidebar-nav a.active {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(24, 139, 85, 0.92)) !important;
+    background: rgba(34, 197, 94, 0.14) !important;
+    background-image: none !important;
     color: #ffffff !important;
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+    border-left-color: var(--bo-sidebar-accent) !important;
+    box-shadow: none !important;
+    font-weight: 650 !important;
 }
 
 .sidebar-nav a i {
-    opacity: 0.9;
+    opacity: 0.92;
 }
 
 .nav-divider {
-    background: rgba(255, 255, 255, 0.08) !important;
-    margin: 14px 10px !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    margin: 14px 18px !important;
+}
+
+.sidebar .nav-section-label {
+    color: #64748b !important;
 }
 
 .main-content {
@@ -325,25 +340,7 @@ body {
 }
 
 /* ===== DARK MODE TEXT IMPROVEMENTS ===== */
-/* Améliorer la lisibilité du texte en mode sombre */
-
-/* Texte sur fond sombre */
-.sidebar {
-    background-color: var(--bo-sidebar-bg) !important;
-}
-
-.sidebar h1, .sidebar h2, .sidebar h3, .sidebar h4, .sidebar h5, .sidebar p,
-.sidebar span, .sidebar a, .sidebar label {
-    color: var(--bo-text-dark) !important;
-}
-
-.sidebar-brand h4 {
-    color: var(--bo-text-dark) !important;
-}
-
-.sidebar-brand small {
-    color: var(--bo-text-dark-secondary) !important;
-}
+/* Sidebar en charte claire : pas de texte forcé en blanc (styles plus haut). */
 
 /* Panels et cartes en mode sombre */
 [style*="background: #0f1823"], [style*="background: #101827"], 
@@ -739,22 +736,15 @@ a:not(.btn) {
 }
 
 /* Sidebar navigation par rôle */
-.sidebar-nav a[href*="medecins"]:hover,
-.sidebar-nav a[href*="medecins"].active {
-    background: rgba(16, 185, 129, 0.2) !important;
-    color: #10b981 !important;
-}
-
-.sidebar-nav a[href*="patients"]:hover,
-.sidebar-nav a[href*="patients"].active {
-    background: rgba(59, 130, 246, 0.2) !important;
-    color: #3b82f6 !important;
-}
-
-.sidebar-nav a[href*="users"]:hover,
-.sidebar-nav a[href*="users"].active {
-    background: rgba(245, 158, 11, 0.2) !important;
-    color: #f59e0b !important;
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="medecins"]:hover,
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="medecins"].active,
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="patients"]:hover,
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="patients"].active,
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="users"]:hover,
+.sidebar.sidebar-bo-light .sidebar-nav a[href*="users"].active {
+    background: rgba(34, 197, 94, 0.14) !important;
+    color: #ffffff !important;
+    border-left-color: var(--bo-sidebar-accent) !important;
 }
 
 /* ===== EVENT FORM STYLES ===== */

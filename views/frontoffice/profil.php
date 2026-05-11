@@ -49,6 +49,29 @@
             height: 130px;
             margin: 0 auto 20px;
         }
+        .profile-avatar-wrapper.avatar-drag-over .profile-avatar {
+            outline: 3px dashed rgba(255,255,255,0.95);
+            outline-offset: 4px;
+        }
+        .avatar-drop-hint {
+            font-size: 11px;
+            color: rgba(255,255,255,0.85);
+            margin-top: 8px;
+            max-width: 220px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.3;
+        }
+        .pw-strength-track { height: 8px; background: #e9ecef; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+        .pw-strength-track span { display: block; height: 100%; width: 0; border-radius: 6px; transition: width .2s, background .2s; }
+        .pw-strength-empty { background: #dee2e6 !important; }
+        .pw-strength-weak { background: #dc3545 !important; }
+        .pw-strength-medium { background: #fd7e14 !important; }
+        .pw-strength-strong { background: #198754 !important; }
+        .pw-strength-text { font-size: 12px; font-weight: 600; margin-top: 6px; display: inline-block; min-height: 1.2em; }
+        .pw-strength-text.pw-strength-weak { color: #dc3545; }
+        .pw-strength-text.pw-strength-medium { color: #c35d00; }
+        .pw-strength-text.pw-strength-strong { color: #198754; }
         .profile-avatar {
             width: 130px;
             height: 130px;
@@ -352,17 +375,34 @@
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="container text-center">
-            <div class="profile-avatar-wrapper">
+            <div class="profile-avatar-wrapper" id="avatarDropZone">
                 <?php
                     $prenom = $user['prenom'] ?? $_SESSION['user_name'] ?? '';
                     $nom    = $user['nom']    ?? '';
                     $initiales = strtoupper(substr($prenom, 0, 1) . substr($nom, 0, 1));
-                    $avatar = $user['avatar'] ?? null;
-                    $avatarFullPath = $avatar ? '/valorys_Copie/' . $avatar : null;
+                    $rawAvatar = trim((string)($user['avatar'] ?? ''));
+                    $showAvatarImg = false;
+                    $avatarImgSrc = '';
+                    if ($rawAvatar !== '') {
+                        if (preg_match('#^https?://#i', $rawAvatar)) {
+                            $showAvatarImg = true;
+                            $avatarImgSrc = $rawAvatar;
+                        } else {
+                            $rel = ltrim(str_replace('\\', '/', $rawAvatar), '/');
+                            $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '/');
+                            $webBase = rtrim(str_replace('\\', '/', $scriptDir), '/');
+                            $urlPrefix = ($webBase === '' || $webBase === '.') ? '' : $webBase;
+                            $avatarImgSrc = '/' . ltrim($urlPrefix . '/' . $rel, '/');
+                            $docRoot = rtrim(str_replace('\\', '/', (string)($_SERVER['DOCUMENT_ROOT'] ?? '')), '/');
+                            $fsRel = ltrim($urlPrefix . '/' . $rel, '/');
+                            $absFs = $docRoot . '/' . $fsRel;
+                            $showAvatarImg = is_file($absFs);
+                        }
+                    }
                 ?>
                 <div class="profile-avatar" id="avatarPreview">
-                    <?php if ($avatar && file_exists($_SERVER['DOCUMENT_ROOT'] . $avatarFullPath)): ?>
-                        <img src="<?= htmlspecialchars($avatarFullPath) ?>" alt="Avatar" id="avatarImg">
+                    <?php if ($showAvatarImg && $avatarImgSrc !== ''): ?>
+                        <img src="<?= htmlspecialchars($avatarImgSrc) ?>" alt="Avatar" id="avatarImg">
                     <?php else: ?>
                         <span style="font-size: 52px;"><?= $initiales ?: '👤' ?></span>
                     <?php endif; ?>
@@ -370,7 +410,7 @@
                 <div class="avatar-overlay" onclick="document.getElementById('avatarInput').click()">
                     <i class="fas fa-camera"></i>
                 </div>
-                <form id="avatarForm" method="POST" action="index.php?page=profil" enctype="multipart/form-data">
+                <form id="avatarForm" method="POST" action="index.php?page=mon_profil" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_avatar">
                     <input type="file" name="avatar" id="avatarInput" 
                            accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" 
@@ -378,6 +418,7 @@
                            onchange="uploadAvatarOnly()">
                 </form>
             </div>
+            <p class="avatar-drop-hint"><i class="fas fa-arrows-alt me-1"></i> Photo : clic sur <i class="fas fa-camera"></i> ou <strong>glisser-déposer</strong> (max 2 Mo).</p>
             <div class="profile-name">
                 <?= htmlspecialchars(($user['prenom'] ?? '') . ' ' . ($user['nom'] ?? $_SESSION['user_name'] ?? '')) ?>
             </div>
@@ -421,7 +462,7 @@
                 <i class="fas fa-user-circle"></i> Informations personnelles
             </div>
             <div class="card-body">
-                <form method="POST" action="index.php?page=profil" id="profileForm" novalidate>
+                <form method="POST" action="index.php?page=mon_profil" id="profileForm" novalidate>
                     <input type="hidden" name="action" value="update_profile">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -481,7 +522,7 @@
                         <button type="submit" class="btn-save">
                             <i class="fas fa-save me-2"></i> Enregistrer
                         </button>
-                        <a href="index.php?page=profil" class="btn-cancel">
+                        <a href="index.php?page=mon_profil" class="btn-cancel">
                             <i class="fas fa-undo me-2"></i> Annuler
                         </a>
                     </div>
@@ -495,7 +536,7 @@
                 <i class="fas fa-lock"></i> Sécurité
             </div>
             <div class="card-body">
-                <form method="POST" action="index.php?page=profil" id="passwordForm" novalidate>
+                <form method="POST" action="index.php?page=mon_profil" id="passwordForm" novalidate>
                     <input type="hidden" name="action" value="change_password">
                     <div class="mb-3">
                         <label class="form-label">Mot de passe actuel <span class="text-danger">*</span></label>
@@ -505,6 +546,11 @@
                     <div class="mb-3">
                         <label class="form-label">Nouveau mot de passe <span class="text-danger">*</span></label>
                         <input type="password" id="newPassword" name="new_password" class="form-control" placeholder="Entrez votre nouveau mot de passe">
+                        <div class="pw-strength-track"><span id="profilPwdStrengthFill"></span></div>
+                        <span id="profilPwdStrengthLabel" class="pw-strength-text"></span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 mb-1" id="profilGenPwdBtn" style="color:#2A7FAA;border-color:#2A7FAA;">
+                            <i class="fas fa-dice me-1"></i> Générer un mot de passe fort
+                        </button>
                         <div class="password-requirements">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle"></i> 8 caractères</span>
                             <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle"></i> 1 majuscule</span>
@@ -544,7 +590,7 @@
                 <div id="faceCaptureSection" style="<?= !empty($user['face_encoding']) ? 'display:none;' : '' ?>">
                     <div class="text-center">
                         <div id="faceVideoContainer">
-                            <video id="faceVideo" width="450" height="340" autoplay playsinline style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
+                            <video id="faceVideo" width="450" height="340" autoplay playsinline muted style="border-radius: 16px; border: 2px solid #2A7FAA; background: #000; max-width: 100%;"></video>
                             <canvas id="faceCanvas" style="display: none;"></canvas>
                         </div>
                         <div class="mt-4">
@@ -593,9 +639,13 @@
         </div>
     </div>
 
+    <script src="assets/js/camera-stream.js"></script>
+    <script src="assets/js/password-strength.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // ═══ FUNCTIONS ═══
+        var profilePwdStrengthRefresh = function () {};
+
         function showFieldError(fieldId, message) {
             const container = document.getElementById(fieldId + '-error');
             if (container) {
@@ -769,6 +819,7 @@
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
             updatePasswordRequirements();
+            profilePwdStrengthRefresh();
             clearFieldError('currentPassword');
             clearFieldError('newPassword');
             clearFieldError('confirmPassword');
@@ -778,20 +829,29 @@
         let faceStream = null;
         let faceVideo = null;
 
-        function startFaceCamera() {
+        async function startFaceCamera() {
             faceVideo = document.getElementById('faceVideo');
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        faceStream = stream;
-                        faceVideo.srcObject = stream;
-                        faceVideo.play();
-                        document.getElementById('captureFaceBtn').style.display = 'inline-block';
-                        document.getElementById('stopCameraBtn').style.display = 'inline-block';
-                    })
-                    .catch(function(err) {
-                        document.getElementById('faceStatus').innerHTML = '<div class="alert alert-danger">Erreur caméra: ' + err.message + '</div>';
-                    });
+            var statusEl = document.getElementById('faceStatus');
+            if (!window.DoctimeCamera || typeof window.DoctimeCamera.acquireVideoStream !== 'function') {
+                if (statusEl) {
+                    statusEl.innerHTML = '<div class="alert alert-danger">Chargement de la caméra impossible (script manquant).</div>';
+                }
+                return;
+            }
+            try {
+                var stream = await window.DoctimeCamera.acquireVideoStream();
+                faceStream = stream;
+                faceVideo.srcObject = stream;
+                await faceVideo.play();
+                document.getElementById('captureFaceBtn').style.display = 'inline-block';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
+            } catch (err) {
+                var hint = window.DoctimeCamera.formatHint(err);
+                if (statusEl) {
+                    statusEl.innerHTML = '<div class="alert alert-danger">Erreur caméra : ' +
+                        (err && err.message ? err.message : 'accès refusé ou appareil indisponible') +
+                        (hint ? '<br><small class="d-block mt-2">' + hint + '</small>' : '') + '</div>';
+                }
             }
         }
 
@@ -821,7 +881,7 @@
             
             document.getElementById('faceStatus').innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Envoi...</div>';
             
-            fetch('index.php?page=profil', {
+            fetch('index.php?page=mon_profil', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: imageData, action: 'register_face' })
@@ -903,6 +963,60 @@
 
         // Start face camera if needed
         document.addEventListener('DOMContentLoaded', function() {
+            if (typeof DoctimePassword !== 'undefined' && document.getElementById('newPassword')) {
+                var r = DoctimePassword.bindMeter('newPassword', 'profilPwdStrengthFill', 'profilPwdStrengthLabel');
+                if (typeof r === 'function') {
+                    profilePwdStrengthRefresh = r;
+                }
+                DoctimePassword.wireGenerator('profilGenPwdBtn', 'newPassword', 'confirmPassword', function () {
+                    profilePwdStrengthRefresh();
+                    updatePasswordRequirements();
+                });
+            }
+
+            var zone = document.getElementById('avatarDropZone');
+            var input = document.getElementById('avatarInput');
+            if (zone && input) {
+                ['dragenter', 'dragover'].forEach(function (ev) {
+                    zone.addEventListener(ev, function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        zone.classList.add('avatar-drag-over');
+                    });
+                });
+                zone.addEventListener('dragleave', function (e) {
+                    e.preventDefault();
+                    var rel = e.relatedTarget;
+                    if (!rel || !zone.contains(rel)) {
+                        zone.classList.remove('avatar-drag-over');
+                    }
+                });
+                zone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.remove('avatar-drag-over');
+                    var files = e.dataTransfer && e.dataTransfer.files;
+                    if (!files || !files.length) return;
+                    var f = files[0];
+                    if (!f.type || f.type.indexOf('image/') !== 0) {
+                        showToast('Utilisez une image (JPG, PNG, WEBP…).', 'error');
+                        return;
+                    }
+                    if (f.size > 2 * 1024 * 1024) {
+                        showToast('Image trop volumineuse (max 2 Mo).', 'error');
+                        return;
+                    }
+                    try {
+                        var dt = new DataTransfer();
+                        dt.items.add(f);
+                        input.files = dt.files;
+                        uploadAvatarOnly();
+                    } catch (err) {
+                        showToast('Impossible d’utiliser ce fichier.', 'error');
+                    }
+                });
+            }
+
             <?php if (empty($user['face_encoding'])): ?>
             startFaceCamera();
             <?php endif; ?>

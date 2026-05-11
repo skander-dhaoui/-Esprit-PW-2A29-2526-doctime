@@ -191,6 +191,8 @@ CREATE TABLE IF NOT EXISTS events (
     date_debut DATETIME NOT NULL,
     date_fin DATETIME NOT NULL,
     lieu VARCHAR(255),
+    categorie VARCHAR(100) NULL,
+    sponsor_id INT NULL,
     adresse TEXT,
     capacite_max INT,
     places_restantes INT,
@@ -201,7 +203,8 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_date (date_debut),
     INDEX idx_status (status),
-    INDEX idx_slug (slug)
+    INDEX idx_slug (slug),
+    INDEX idx_events_sponsor (sponsor_id)
 );
 
 -- =============================================
@@ -210,6 +213,8 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS sponsors (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NULL,
+    telephone VARCHAR(50) NULL,
     logo VARCHAR(255),
     site_web VARCHAR(255),
     description TEXT,
@@ -403,4 +408,4 @@ INSERT IGNORE INTO categories (nom, slug, description) VALUES
 ('Nutrition', 'nutrition', 'Compléments alimentaires et nutrition');
 
 INSERT IGNORE INTO users (nom, prenom, email, password, role, statut) 
-VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');
+VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$l41tKGrgvz/B4.b8vK0fLe3mGJEUfA8Kp2B3LYtcD3zfYoTf00IOS', 'admin', 'actif');

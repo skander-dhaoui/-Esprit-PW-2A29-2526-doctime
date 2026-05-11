@@ -1,6 +1,14 @@
 <?php $pageTitle = 'Gestion des Participations'; ?>
 <?php require __DIR__ . '/../layout_header.php'; ?>
 
+<?php if (!empty($flash)): ?>
+    <?php $f = $flash; ?>
+    <div class="alert alert-<?= (($f['type'] ?? '') === 'error' || ($f['type'] ?? '') === 'danger') ? 'danger' : 'success' ?> alert-dismissible fade show mb-4">
+        <?= htmlspecialchars($f['message'] ?? '') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+<?php endif; ?>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h5 class="mb-0 fw-semibold">Liste des Participations</h5>
@@ -37,8 +45,14 @@
                 <tbody>
                 <?php foreach ($participations as $p): ?>
                     <?php
-                    $badgeMap = ['en_attente'=>'warning','confirme'=>'success','annule'=>'danger'];
-                    $labelMap = ['en_attente'=>'En attente','confirme'=>'Confirmé','annule'=>'Annulé'];
+                    $badgeMap = [
+                        'en_attente' => 'warning', 'confirme' => 'success', 'annule' => 'danger',
+                        'inscrit' => 'primary', 'présent' => 'success', 'absent' => 'secondary',
+                    ];
+                    $labelMap = [
+                        'en_attente' => 'En attente', 'confirme' => 'Confirmé', 'annule' => 'Annulé',
+                        'inscrit' => 'Inscrit', 'présent' => 'Présent', 'absent' => 'Absent',
+                    ];
                     ?>
                     <tr>
                         <td class="text-muted small"><?= $p['id'] ?></td>

@@ -1,148 +1,124 @@
 <?php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: index.php?page=login');
-    exit;
-}
 $errors = $errors ?? [];
 $isEdit = isset($rendezvous) && is_array($rendezvous);
+$pageTitle = $isEdit ? 'Modifier un rendez-vous' : 'Nouveau rendez-vous';
+require_once __DIR__ . '/../layout_header.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $isEdit ? 'Modifier' : 'Ajouter' ?> un rendez-vous - Valorys Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .field-error {
-            font-size: 12px;
-            margin-top: 5px;
-            color: #dc3545;
-            font-weight: normal;
-        }
-        .field-error i {
-            margin-right: 5px;
-        }
-        .form-control.error, .form-select.error {
-            border-color: #dc3545 !important;
-        }
-        .error-container {
-            min-height: 32px;
-        }
-    </style>
-</head>
-<body>
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-calendar-plus"></i> <?= $isEdit ? 'Modifier' : 'Ajouter' ?> un rendez-vous</h2>
-        <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Retour
-        </a>
+
+<?php if (!empty($flash) && isset($flash['type'])): ?>
+    <?php $bt = (($flash['type'] ?? '') === 'error' || ($flash['type'] ?? '') === 'danger') ? 'danger' : (($flash['type'] ?? '') === 'warning' ? 'warning' : 'success'); ?>
+    <div class="alert alert-<?= htmlspecialchars($bt, ENT_QUOTES, 'UTF-8') ?> alert-dismissible fade show mb-4">
+        <i class="fas fa-info-circle me-2"></i><?= htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+<?php endif; ?>
+
+<div class="bo-create-page">
+    <div class="bo-create-header mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <h1 class="bo-create-title"><?= $isEdit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous' ?></h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="index.php?page=rendez_vous_admin">Rendez-vous</a></li>
+                        <li class="breadcrumb-item active" aria-current="page"><?= $isEdit ? 'Modifier' : 'Créer' ?></li>
+                    </ol>
+                </nav>
+            </div>
+            <a href="index.php?page=rendez_vous_admin" class="btn btn-outline-secondary btn-sm rounded-pill"><i class="fas fa-arrow-left me-1"></i>Liste</a>
+        </div>
     </div>
 
-    <?php if (isset($flash) && isset($flash['type'])): ?>
-        <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show">
-            <?= htmlspecialchars($flash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="card bo-create-card shadow-sm border-0">
+        <div class="card-header bo-create-card-head py-3">
+            <h6 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Patient, médecin et créneau</h6>
         </div>
-    <?php endif; ?>
-
-    <div class="card">
         <div class="card-body">
-            <form method="POST" novalidate action="index.php?page=admin_rendezvous&action=<?= $isEdit ? 'edit&id=' . (int)$rendezvous['id'] : 'create' ?>">
-                <div class="row">
-                    <!-- Patient -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Patient <span class="text-danger">*</span></label>
-                        <select name="patient_id" id="patient_id" class="form-select <?= isset($errors['patient_id']) ? 'error' : '' ?>">
-                            <option value="">-- Sélectionner un patient --</option>
+            <form class="bo-create-form" method="post" novalidate
+                  action="<?= $isEdit
+                      ? 'index.php?page=rendez_vous_admin&amp;action=edit&amp;id=' . (int) ($rendezvous['id'] ?? 0)
+                      : 'index.php?page=rendez_vous_admin&amp;action=create' ?>">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="patient_id">Patient <span class="text-danger">*</span></label>
+                        <select name="patient_id" id="patient_id" class="form-select <?= isset($errors['patient_id']) ? 'is-invalid' : '' ?>">
+                            <option value="">— Sélectionner un patient —</option>
                             <?php foreach ($patients as $patient): ?>
-                                <option value="<?= $patient['id'] ?>" <?= (isset($old['patient_id']) && (string)$old['patient_id'] === (string)$patient['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($patient['prenom'] . ' ' . $patient['nom']) ?>
+                                <option value="<?= (int) $patient['id'] ?>" <?= (isset($old['patient_id']) && (string) $old['patient_id'] === (string) $patient['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($patient['prenom'] . ' ' . $patient['nom'], ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="error-container" id="patient_id-error">
+                        <div class="error-container invalid-feedback d-block" id="patient_id-error">
                             <?php if (isset($errors['patient_id'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['patient_id']) ?></div>
+                                <span class="small text-danger d-block"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['patient_id'], ENT_QUOTES, 'UTF-8') ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Médecin -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Médecin <span class="text-danger">*</span></label>
-                        <select name="medecin_id" id="medecin_id" class="form-select <?= isset($errors['medecin_id']) ? 'error' : '' ?>">
-                            <option value="">-- Sélectionner un médecin --</option>
+                    <div class="col-md-6">
+                        <label class="form-label" for="medecin_id">Médecin <span class="text-danger">*</span></label>
+                        <select name="medecin_id" id="medecin_id" class="form-select <?= isset($errors['medecin_id']) ? 'is-invalid' : '' ?>">
+                            <option value="">— Sélectionner un médecin —</option>
                             <?php foreach ($medecins as $medecin): ?>
-                                <option value="<?= $medecin['id'] ?>" <?= (isset($old['medecin_id']) && (string)$old['medecin_id'] === (string)$medecin['id']) ? 'selected' : '' ?>>
-                                    Dr. <?= htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom']) ?> - <?= htmlspecialchars($medecin['specialite'] ?? 'Généraliste') ?>
+                                <option value="<?= (int) $medecin['id'] ?>" <?= (isset($old['medecin_id']) && (string) $old['medecin_id'] === (string) $medecin['id']) ? 'selected' : '' ?>>
+                                    Dr. <?= htmlspecialchars($medecin['prenom'] . ' ' . $medecin['nom'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($medecin['specialite'] ?? 'Généraliste', ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="error-container" id="medecin_id-error">
+                        <div class="error-container invalid-feedback d-block" id="medecin_id-error">
                             <?php if (isset($errors['medecin_id'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['medecin_id']) ?></div>
+                                <span class="small text-danger d-block"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['medecin_id'], ENT_QUOTES, 'UTF-8') ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
 
-                <div class="row">
-                    <!-- Date -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Date <span class="text-danger">*</span></label>
-                        <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'error' : '' ?>"
-                               value="<?= htmlspecialchars($old['date_rendezvous'] ?? '') ?>">
-                        <div class="error-container" id="date_rendezvous-error">
+                    <div class="col-md-6">
+                        <label class="form-label" for="date_rendezvous">Date <span class="text-danger">*</span></label>
+                        <input type="date" name="date_rendezvous" id="date_rendezvous" class="form-control <?= isset($errors['date_rendezvous']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars($old['date_rendezvous'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="error-container invalid-feedback d-block" id="date_rendezvous-error">
                             <?php if (isset($errors['date_rendezvous'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['date_rendezvous']) ?></div>
+                                <span class="small text-danger d-block"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['date_rendezvous'], ENT_QUOTES, 'UTF-8') ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Heure -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Heure <span class="text-danger">*</span></label>
-                        <input type="time" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'error' : '' ?>"
-                               value="<?= htmlspecialchars($old['heure_rendezvous'] ?? '') ?>">
-                        <div class="error-container" id="heure_rendezvous-error">
+                    <div class="col-md-6">
+                        <label class="form-label" for="heure_rendezvous">Heure <span class="text-danger">*</span></label>
+                        <input type="time" name="heure_rendezvous" id="heure_rendezvous" class="form-control <?= isset($errors['heure_rendezvous']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars($old['heure_rendezvous'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="error-container invalid-feedback d-block" id="heure_rendezvous-error">
                             <?php if (isset($errors['heure_rendezvous'])): ?>
-                                <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['heure_rendezvous']) ?></div>
+                                <span class="small text-danger d-block"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['heure_rendezvous'], ENT_QUOTES, 'UTF-8') ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
+
+                    <div class="col-12">
+                        <label class="form-label" for="motif">Motif</label>
+                        <textarea name="motif" id="motif" class="form-control" rows="3" placeholder="Motif de la consultation…"><?= htmlspecialchars($old['motif'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                        <div class="error-container" id="motif-error"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="statut">Statut</label>
+                        <?php $st = $old['statut'] ?? 'en_attente'; ?>
+                        <select name="statut" id="statut" class="form-select">
+                            <option value="en_attente" <?= $st === 'en_attente' ? 'selected' : '' ?>>En attente</option>
+                            <option value="confirmé" <?= $st === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
+                            <option value="terminé" <?= $st === 'terminé' ? 'selected' : '' ?>>Terminé</option>
+                            <option value="annulé" <?= $st === 'annulé' ? 'selected' : '' ?>>Annulé</option>
+                        </select>
+                        <div class="error-container" id="statut-error"></div>
+                    </div>
                 </div>
 
-                <!-- Motif -->
-                <div class="mb-3">
-                    <label class="form-label">Motif</label>
-                    <textarea name="motif" id="motif" class="form-control" rows="3"
-                              placeholder="Motif de la consultation..."><?= htmlspecialchars($old['motif'] ?? '') ?></textarea>
-                    <div class="error-container" id="motif-error"></div>
-                </div>
-
-                <!-- Statut -->
-                <div class="mb-3">
-                    <label class="form-label">Statut</label>
-                    <select name="statut" id="statut" class="form-select">
-                        <?php
-                        $st = $old['statut'] ?? 'en_attente';
-                        ?>
-                        <option value="en_attente" <?= $st === 'en_attente' ? 'selected' : '' ?>>En attente</option>
-                        <option value="confirmé" <?= $st === 'confirmé' ? 'selected' : '' ?>>Confirmé</option>
-                        <option value="terminé" <?= $st === 'terminé' ? 'selected' : '' ?>>Terminé</option>
-                        <option value="annulé" <?= $st === 'annulé' ? 'selected' : '' ?>>Annulé</option>
-                    </select>
-                    <div class="error-container" id="statut-error"></div>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="index.php?page=rendez_vous_admin" class="btn btn-secondary">Annuler</a>
+                <div class="bo-create-actions d-flex flex-wrap gap-2 mt-4">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <?= $isEdit ? 'Mettre à jour' : 'Créer' ?>
+                        <i class="bi bi-check-lg me-1"></i><?= $isEdit ? 'Mettre à jour' : 'Créer' ?>
                     </button>
+                    <a href="index.php?page=rendez_vous_admin" class="btn btn-outline-secondary">Annuler</a>
                 </div>
             </form>
         </div>
@@ -150,11 +126,14 @@ $isEdit = isset($rendezvous) && is_array($rendezvous);
 </div>
 
 <script>
-document.querySelector('form').addEventListener('submit', function(e) {
+document.querySelector('.bo-create-form').addEventListener('submit', function(e) {
     let isValid = true;
 
-    document.querySelectorAll('.field-error').forEach(el => el.remove());
-    document.querySelectorAll('.form-control, .form-select').forEach(el => el.classList.remove('error'));
+    ['patient_id-error', 'medecin_id-error', 'date_rendezvous-error', 'heure_rendezvous-error'].forEach(id => {
+        const box = document.getElementById(id);
+        if (box) box.innerHTML = '';
+    });
+    document.querySelectorAll('#patient_id, #medecin_id, #date_rendezvous, #heure_rendezvous').forEach(el => el.classList.remove('is-invalid'));
 
     const patient = document.getElementById('patient_id');
     if (!patient.value) {
@@ -168,8 +147,8 @@ document.querySelector('form').addEventListener('submit', function(e) {
         isValid = false;
     }
 
-    const date = document.getElementById('date_rendezvous');
-    if (!date.value) {
+    const dateEl = document.getElementById('date_rendezvous');
+    if (!dateEl.value) {
         showError('date_rendezvous', 'Veuillez sélectionner une date.');
         isValid = false;
     }
@@ -182,19 +161,19 @@ document.querySelector('form').addEventListener('submit', function(e) {
 
     if (!isValid) {
         e.preventDefault();
-        const firstError = document.querySelector('.field-error');
-        if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const firstInv = document.querySelector('.is-invalid');
+        if (firstInv) firstInv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
 
 function showError(fieldId, message) {
     const field = document.getElementById(fieldId);
-    if (field) field.classList.add('error');
+    if (field) field.classList.add('is-invalid');
 
     const errorContainer = document.getElementById(fieldId + '-error');
     if (errorContainer) {
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'field-error';
+        errorDiv.className = 'invalid-feedback d-block';
         errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + message;
         errorContainer.appendChild(errorDiv);
     }
@@ -203,14 +182,12 @@ function showError(fieldId, message) {
 document.querySelectorAll('#patient_id, #medecin_id, #date_rendezvous, #heure_rendezvous').forEach(field => {
     if (field) {
         field.addEventListener('change', function() {
-            this.classList.remove('error');
+            this.classList.remove('is-invalid');
             const errorContainer = document.getElementById(this.id + '-error');
             if (errorContainer) errorContainer.innerHTML = '';
         });
     }
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
 
+<?php require_once __DIR__ . '/../layout_footer.php'; ?>

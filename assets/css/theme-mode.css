@@ -190,8 +190,72 @@ html[data-theme="dark"] .table tbody tr:hover {
     background: rgba(56, 189, 248, 0.08) !important;
 }
 
-html[data-theme="dark"] .sidebar {
+/* Pas le menu admin (sidebar-bo-light), sinon fond bleu même avec corrections métier. */
+html[data-theme="dark"] .sidebar:not(.sidebar-bo-light) {
     background: linear-gradient(180deg, #020617 0%, #0f172a 100%) !important;
+}
+
+/* Admin : fond sombre + accent vert (aligné charte Valorys sidebar). */
+html[data-theme="dark"] .sidebar.sidebar-bo-light {
+    background: #1e2235 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2) !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-brand {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-brand h4 {
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-brand small {
+    color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .brand-icon {
+    background: #131620 !important;
+    background-image: none !important;
+    color: #22c55e !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(34, 197, 94, 0.35),
+        0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .nav-section-label {
+    color: #64748b !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .nav-divider {
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-nav a {
+    color: rgba(248, 250, 252, 0.9) !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-nav a:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    background-image: none !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-nav a.active {
+    background: rgba(34, 197, 94, 0.14) !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border-left-color: #22c55e !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-nav a i {
+    color: rgba(248, 250, 252, 0.88) !important;
+}
+
+html[data-theme="dark"] .sidebar.sidebar-bo-light .sidebar-nav a.active i {
+    color: #22c55e !important;
 }
 
 html[data-theme="dark"] .navbar,
@@ -243,4 +307,52 @@ html[data-theme="dark"] .bg-white,
 html[data-theme="dark"] .bg-light {
     background: var(--theme-surface) !important;
     color: var(--theme-text) !important;
+}
+
+/* Pages DocTime (événements / sponsors / inscriptions) */
+html[data-theme="dark"] body.page-doctime-bg {
+    background: var(--theme-bg) !important;
+}
+html[data-theme="dark"] .navbar-doctime {
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+html[data-theme="dark"] .dt-page-head-title,
+html[data-theme="dark"] .dt-sponsor-name,
+html[data-theme="dark"] .dt-event-title {
+    color: var(--theme-text) !important;
+}
+html[data-theme="dark"] .dt-page-head-sub,
+html[data-theme="dark"] .dt-event-desc,
+html[data-theme="dark"] .dt-meta-row {
+    color: var(--theme-muted) !important;
+}
+html[data-theme="dark"] .dt-card-event,
+html[data-theme="dark"] .dt-sponsor-card {
+    background: var(--theme-surface) !important;
+    border-color: var(--theme-border) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28) !important;
+}
+html[data-theme="dark"] .dt-filter-pill {
+    background: var(--theme-surface-2) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-text) !important;
+}
+html[data-theme="dark"] .dt-filter-pill.active {
+    background: #0d9488 !important;
+    border-color: #0d9488 !important;
+    color: #fff !important;
+}
+html[data-theme="dark"] .dt-inscription-banner {
+    background: rgba(56, 189, 248, 0.12) !important;
+    border-color: rgba(56, 189, 248, 0.28) !important;
+}
+html[data-theme="dark"] .dt-inscription-banner p,
+html[data-theme="dark"] .dt-inscription-banner .small {
+    color: #bae6fd !important;
+}
+html[data-theme="dark"] .dt-evt-search-form .form-control {
+    background: var(--theme-surface-2) !important;
+    color: var(--theme-text) !important;
+    border-color: var(--theme-border) !important;
 }

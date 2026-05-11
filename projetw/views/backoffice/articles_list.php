@@ -240,7 +240,7 @@ if (isset($_GET['mark_all_read'])) {
                     <div style="display:flex;gap:8px;align-items:center;">
                         <span class="<?= $badgeClass ?>"><?= ucfirst($status) ?></span>
                         <a href="index.php?page=articles_admin&action=view&id=<?= $a['id'] ?>" class="btn-action btn-view" title="Voir"><i class="fas fa-eye"></i></a>
-                        <a href="index.php?page=admin_article_edit&id=<?= $a['id'] ?>" class="btn-action btn-edit" title="Modifier"><i class="fas fa-edit"></i></a>
+                        <a href="index.php?page=articles_admin&action=edit&id=<?= $a['id'] ?>" class="btn-action btn-edit" title="Modifier"><i class="fas fa-edit"></i></a>
                         <a href="index.php?page=articles_admin&action=delete&id=<?= $a['id'] ?>" class="btn-action btn-delete" title="Supprimer" onclick="return confirm('Supprimer cet article ?')"><i class="fas fa-trash"></i></a>
                     </div>
                 </div>

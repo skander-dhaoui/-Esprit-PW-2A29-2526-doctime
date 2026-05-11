@@ -5,10 +5,12 @@ declare(strict_types=1);
  * Variables optionnelles avant include :
  *   $navActive — valeur de $_GET['page'] pour surligner l’entrée active
  */
-$navActive = $navActive ?? ($_GET['page'] ?? '');
+$navActive  = $navActive ?? ($_GET['page'] ?? '');
+$navVariant = $navVariant ?? 'valorys';
 $isLoggedIn = !empty($_SESSION['user_id']);
 $userName   = htmlspecialchars($_SESSION['user_name'] ?? 'Compte', ENT_QUOTES, 'UTF-8');
 $userRole   = $_SESSION['user_role'] ?? 'guest';
+$navBarClass = $navVariant === 'doctime' ? 'navbar-doctime' : 'navbar-custom';
 
 /** @param array<int,string>|string $pages */
 function nav_pub_active(string $navActive, array|string $pages): string {
@@ -16,9 +18,13 @@ function nav_pub_active(string $navActive, array|string $pages): string {
     return in_array($navActive, $list, true) ? ' active' : '';
 }
 ?>
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+<nav class="navbar navbar-expand-lg navbar-dark <?= htmlspecialchars($navBarClass, ENT_QUOTES, 'UTF-8') ?> sticky-top">
     <div class="container">
+        <?php if ($navVariant === 'doctime'): ?>
+        <a class="navbar-brand fw-bold" href="index.php?page=accueil"><i class="fas fa-heartbeat me-2"></i>DocTime</a>
+        <?php else: ?>
         <a class="navbar-brand fw-bold" href="index.php?page=accueil"><i class="fas fa-hospital-user"></i> Valorys</a>
+        <?php endif; ?>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavMain" aria-controls="navbarNavMain" aria-expanded="false" aria-label="Menu">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -40,6 +46,9 @@ function nav_pub_active(string $navActive, array|string $pages): string {
                     <a class="nav-link<?= nav_pub_active($navActive, 'sponsors') ?>" href="index.php?page=sponsors"><i class="fas fa-handshake me-1"></i>Sponsors</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link<?= nav_pub_active($navActive, 'mes_inscriptions') ?>" href="<?= $isLoggedIn ? 'index.php?page=mes_inscriptions' : 'index.php?page=login' ?>"><i class="fas fa-clipboard-check me-1"></i>Mes inscriptions</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link<?= nav_pub_active($navActive, ['parapharmacie', 'pharmacie', 'panier', 'mes_commandes']) ?>" href="index.php?page=parapharmacie"><i class="fas fa-pills me-1"></i>Parapharmacie</a>
                 </li>
                 <li class="nav-item">
@@ -47,6 +56,11 @@ function nav_pub_active(string $navActive, array|string $pages): string {
                 </li>
             </ul>
             <ul class="navbar-nav ms-auto">
+                <?php if ($navVariant === 'doctime' && $isLoggedIn && $userRole === 'admin'): ?>
+                <li class="nav-item">
+                    <a class="nav-link<?= nav_pub_active($navActive, 'dashboard') ?>" href="index.php?page=dashboard"><i class="fas fa-cog me-1"></i>Admin</a>
+                </li>
+                <?php endif; ?>
                 <?php if ($isLoggedIn): ?>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">

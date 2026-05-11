@@ -16,6 +16,7 @@
         .sidebar-menu a{display:flex;align-items:center;gap:10px;padding:12px 22px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;font-weight:500;transition:.2s}
         .sidebar-menu a:hover,.sidebar-menu a.active{background:rgba(76,175,80,.15);color:#fff;border-left:3px solid #4CAF50}
         .sidebar-menu a i{width:20px;font-size:1rem}
+        .sidebar-section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:12px 22px 6px;margin:0}
         .main{margin-left:260px;padding:24px 28px}
         .topbar{background:#fff;border-radius:16px;padding:14px 22px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.05)}
         .topbar-title{font-size:17px;font-weight:700;color:#0f2b3d}
@@ -89,6 +90,9 @@
     <div class="sidebar-header"><div class="logo">Valorys</div><small>Back Office</small></div>
     <div class="sidebar-menu">
         <a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+        <div class="sidebar-section-label">Carte &amp; IA</div>
+        <a href="index.php?page=carte"><i class="fas fa-map-marked-alt"></i><span>Carte Tunisie</span></a>
+        <a href="index.php?page=carte&action=metiers"><i class="fas fa-robot"></i><span>IA Métiers créatifs</span></a>
         <a href="index.php?page=users"><i class="fas fa-users"></i><span>Utilisateurs</span></a>
         <a href="index.php?page=medecins_admin"><i class="fas fa-user-md"></i><span>Médecins</span></a>
         <a href="index.php?page=patients"><i class="fas fa-user-injured"></i><span>Patients</span></a>

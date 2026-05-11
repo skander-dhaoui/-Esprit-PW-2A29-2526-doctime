@@ -85,4 +85,40 @@ class AdminNotification
         $stmt->execute([':type' => $type]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /** Patient : nouvel article publié sur le blog */
+    public static function notifyPatientPublishedArticle(int $articleId, string $articleTitle, string $patientName): void
+    {
+        try {
+            $n = new self();
+            $preview = mb_strlen($articleTitle) > 90 ? mb_substr($articleTitle, 0, 87) . '…' : $articleTitle;
+            $n->add(
+                'patient_article',
+                'Nouvel article (patient)',
+                $patientName . ' a publié : « ' . $preview . ' ».',
+                $articleId,
+                'article'
+            );
+        } catch (\Throwable $e) {
+            error_log('AdminNotification::notifyPatientPublishedArticle: ' . $e->getMessage());
+        }
+    }
+
+    /** Patient : nouveau commentaire sous un article */
+    public static function notifyPatientComment(int $articleId, string $articleTitle, string $patientName): void
+    {
+        try {
+            $n = new self();
+            $preview = mb_strlen($articleTitle) > 70 ? mb_substr($articleTitle, 0, 67) . '…' : $articleTitle;
+            $n->add(
+                'patient_comment',
+                'Nouveau commentaire (patient)',
+                $patientName . ' a commenté sous « ' . $preview . ' ».',
+                $articleId,
+                'article'
+            );
+        } catch (\Throwable $e) {
+            error_log('AdminNotification::notifyPatientComment: ' . $e->getMessage());
+        }
+    }
 }

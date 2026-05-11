@@ -416,4 +416,4 @@ INSERT INTO categories (nom, slug, description) VALUES
 
 -- Insertion d'un admin par défaut (mot de passe: admin123)
 INSERT INTO users (nom, prenom, email, password, role, statut) 
-VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'actif');
+VALUES ('Admin', 'System', 'admin@doctime.com', '$2y$10$l41tKGrgvz/B4.b8vK0fLe3mGJEUfA8Kp2B3LYtcD3zfYoTf00IOS', 'admin', 'actif');

@@ -182,6 +182,8 @@ unset($_SESSION['errors'], $_SESSION['old']);
     </div>
 </div>
 
+<?php include __DIR__ . '/../../partials/rendezvous_chatbot.php'; ?>
+
 <footer>
     <div class="container">
         <p>&copy; 2024 Valorys - Tous droits réservés</p>

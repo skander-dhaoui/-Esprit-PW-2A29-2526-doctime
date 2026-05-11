@@ -31,7 +31,7 @@ try {
         echo '<p class="info">Création du compte admin...</p>';
         
         // Créer l'admin avec le mot de passe hashé
-        $hashedPassword = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+        $hashedPassword = '$2y$10$l41tKGrgvz/B4.b8vK0fLe3mGJEUfA8Kp2B3LYtcD3zfYoTf00IOS';
         $stmt = $pdo->prepare("INSERT INTO users (nom, prenom, email, password, role, statut) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             'System',

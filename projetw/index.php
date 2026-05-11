@@ -630,6 +630,28 @@ switch ($page) {
         $adminCtrl->dashboard();
         break;
 
+    case 'carte':
+        adminOnly();
+        $parentMapController = dirname(__DIR__) . '/controllers/MapController.php';
+        if (!is_readable($parentMapController)) {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Module carte indisponible.'];
+            header('Location: index.php?page=dashboard');
+            exit;
+        }
+        require_once $parentMapController;
+        if (!class_exists('MapController')) {
+            $_SESSION['flash'] = ['type' => 'warning', 'message' => 'Module carte indisponible.'];
+            header('Location: index.php?page=dashboard');
+            exit;
+        }
+        $mapCtrl = new MapController();
+        if ($action === 'metiers') {
+            $mapCtrl->metiers();
+        } else {
+            $mapCtrl->carte();
+        }
+        break;
+
     case 'users':
         adminOnly();
         if ($action === 'create') {
@@ -725,6 +747,11 @@ switch ($page) {
         } else {
             $adminCtrl->listArticles();
         }
+        break;
+
+    case 'blog':
+        adminOnly();
+        $articleCtrl->index();
         break;
 
     case 'evenements_admin':

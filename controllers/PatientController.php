@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../models/Patient.php';
 require_once __DIR__ . '/../models/User.php';
 require_once __DIR__ . '/../models/Medecin.php';
+require_once __DIR__ . '/../models/RendezVous.php';
 require_once __DIR__ . '/AuthController.php';
 
 class PatientController {
@@ -135,11 +136,20 @@ public function deleteRendezVous(int $id): void {
             exit;
         }
         
+        $wasBlocking = !in_array((string)($rdv['statut'] ?? ''), ['annulé', 'terminé'], true);
+        $slotMid     = (int)$rdv['medecin_id'];
+        $slotDate    = (string)$rdv['date_rendezvous'];
+        $slotHeure   = RendezVous::normalizeHeureRendezvous((string)($rdv['heure_rendezvous'] ?? ''));
+
         // Supprimer le rendez-vous
         $stmt = $db->prepare("DELETE FROM rendez_vous WHERE id = :id");
         $result = $stmt->execute([':id' => $id]);
         
         if ($result) {
+            if ($wasBlocking) {
+                $rvModel = new RendezVous();
+                $rvModel->fillWaitlistForFreedSlot($slotMid, $slotDate, $slotHeure);
+            }
             $_SESSION['success'] = 'Rendez-vous supprimé avec succès.';
         } else {
             throw new Exception('Erreur lors de la suppression.');
@@ -441,7 +451,7 @@ public function createAppointment(): void {
         $patient_id = (int)$_SESSION['user_id'];
         $medecin_id = (int)$_POST['medecin_id'];
         $date_rendezvous = $_POST['date_rendezvous'];
-        $heure_rendezvous = $_POST['heure_rendezvous'];
+        $heure_rendezvous = RendezVous::normalizeHeureRendezvous((string)$_POST['heure_rendezvous']);
         $motif = $_POST['motif'] ?? '';
         
         // Vérifier que la date n'est pas passée
@@ -451,41 +461,89 @@ public function createAppointment(): void {
             header('Location: index.php?page=prendre_rendez_vous');
             exit;
         }
-        
-        // Vérifier que le créneau est disponible
-        $stmt = $db->prepare("SELECT COUNT(*) FROM rendez_vous WHERE medecin_id = :medecin_id AND date_rendezvous = :date AND heure_rendezvous = :heure AND statut NOT IN ('annulé', 'terminé')");
-        $stmt->execute([
-            ':medecin_id' => $medecin_id,
-            ':date' => $date_rendezvous,
-            ':heure' => $heure_rendezvous
-        ]);
-        $existing = $stmt->fetchColumn();
-        
-        if ($existing > 0) {
-            $_SESSION['error'] = 'Ce créneau horaire est déjà pris. Veuillez choisir un autre horaire.';
-            $_SESSION['old'] = $old;
-            header('Location: index.php?page=prendre_rendez_vous');
-            exit;
-        }
-        
-        $sql = "INSERT INTO rendez_vous (patient_id, medecin_id, date_rendezvous, heure_rendezvous, motif, statut, created_at) 
-                VALUES (:patient_id, :medecin_id, :date_rendezvous, :heure_rendezvous, :motif, 'en_attente', NOW())";
-        
-        $stmt = $db->prepare($sql);
-        $result = $stmt->execute([
-            ':patient_id' => $patient_id,
-            ':medecin_id' => $medecin_id,
-            ':date_rendezvous' => $date_rendezvous,
-            ':heure_rendezvous' => $heure_rendezvous,
-            ':motif' => $motif
-        ]);
-        
-        if ($result) {
-            $_SESSION['success'] = 'Votre rendez-vous a été demandé avec succès. En attente de confirmation.';
-            header('Location: index.php?page=mes_rendez_vous');
-            exit;
-        } else {
+
+        $lockName = 'vr_rdv_' . md5($medecin_id . '|' . $date_rendezvous . '|' . $heure_rendezvous);
+        $gotLock  = false;
+
+        try {
+            $lk = $db->prepare('SELECT GET_LOCK(?, 25)');
+            $lk->execute([$lockName]);
+            if ((int)$lk->fetchColumn() !== 1) {
+                $_SESSION['error'] = 'Impossible de réserver ce créneau pour le moment. Réessayez dans quelques secondes.';
+                $_SESSION['old'] = $old;
+                header('Location: index.php?page=prendre_rendez_vous');
+                exit;
+            }
+            $gotLock = true;
+
+            $stmtOwn = $db->prepare(
+                "SELECT COUNT(*) FROM rendez_vous
+                 WHERE medecin_id = :medecin_id AND date_rendezvous = :date
+                   AND TIME(heure_rendezvous) = TIME(:heure)
+                   AND patient_id = :patient_id
+                   AND statut NOT IN ('annulé', 'terminé')"
+            );
+            $stmtOwn->execute([
+                ':medecin_id' => $medecin_id,
+                ':date' => $date_rendezvous,
+                ':heure' => $heure_rendezvous,
+                ':patient_id' => $patient_id,
+            ]);
+            if ((int)$stmtOwn->fetchColumn() > 0) {
+                $_SESSION['error'] = 'Vous avez déjà un rendez-vous à ce créneau.';
+                $_SESSION['old'] = $old;
+                header('Location: index.php?page=prendre_rendez_vous');
+                exit;
+            }
+
+            $stmt = $db->prepare(
+                "SELECT COUNT(*) FROM rendez_vous
+                 WHERE medecin_id = :medecin_id AND date_rendezvous = :date
+                   AND TIME(heure_rendezvous) = TIME(:heure)
+                   AND statut NOT IN ('annulé', 'terminé')"
+            );
+            $stmt->execute([
+                ':medecin_id' => $medecin_id,
+                ':date' => $date_rendezvous,
+                ':heure' => $heure_rendezvous,
+            ]);
+            $taken = (int)$stmt->fetchColumn();
+
+            if ($taken > 0) {
+                $rvModel = new RendezVous();
+                if ($rvModel->addToWaitlist($patient_id, $medecin_id, $date_rendezvous, $heure_rendezvous, $motif)) {
+                    $_SESSION['success'] = 'Ce créneau est déjà réservé. Vous êtes inscrit sur la liste d\'attente pour cette date et cette heure. Si une place se libère, un rendez-vous vous sera attribué automatiquement.';
+                } else {
+                    $_SESSION['error'] = 'Ce créneau est pris et l\'inscription sur la liste d\'attente a échoué. Réessayez plus tard.';
+                    $_SESSION['old'] = $old;
+                }
+                header('Location: index.php?page=mes_rendez_vous');
+                exit;
+            }
+
+            $sql = "INSERT INTO rendez_vous (patient_id, medecin_id, date_rendezvous, heure_rendezvous, motif, statut, created_at) 
+                    VALUES (:patient_id, :medecin_id, :date_rendezvous, :heure_rendezvous, :motif, 'en_attente', NOW())";
+
+            $stmt = $db->prepare($sql);
+            $result = $stmt->execute([
+                ':patient_id' => $patient_id,
+                ':medecin_id' => $medecin_id,
+                ':date_rendezvous' => $date_rendezvous,
+                ':heure_rendezvous' => $heure_rendezvous,
+                ':motif' => $motif,
+            ]);
+
+            if ($result) {
+                $_SESSION['success'] = 'Votre rendez-vous a été demandé avec succès. En attente de confirmation.';
+                header('Location: index.php?page=mes_rendez_vous');
+                exit;
+            }
             throw new Exception('Erreur lors de la création du rendez-vous.');
+        } finally {
+            if ($gotLock) {
+                $rel = $db->prepare('SELECT RELEASE_LOCK(?)');
+                $rel->execute([$lockName]);
+            }
         }
     } catch (Exception $e) {
         error_log('Erreur createAppointment - ' . $e->getMessage());
@@ -508,7 +566,16 @@ public function createAppointment(): void {
             exit;
         }
 
+        $wasBlocking = !in_array((string)($appt['statut'] ?? ''), ['annulé', 'terminé'], true);
+        $slotMid     = (int)$appt['medecin_id'];
+        $slotDate    = (string)$appt['date_rendezvous'];
+        $slotHeure   = RendezVous::normalizeHeureRendezvous((string)($appt['heure_rendezvous'] ?? ''));
+
         $this->patientModel->updateAppointmentStatus($id, 'annulé');
+        if ($wasBlocking) {
+            $rvModel = new RendezVous();
+            $rvModel->fillWaitlistForFreedSlot($slotMid, $slotDate, $slotHeure);
+        }
         $_SESSION['success'] = 'Rendez-vous annulé.';
         header('Location: index.php?page=mes_rendez_vous');
         exit;

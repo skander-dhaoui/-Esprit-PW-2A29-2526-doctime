@@ -56,25 +56,26 @@ class FaceRecognition {
      * Vérifier si l'utilisateur existe et récupérer ses infos
      */
     public function findUserByFace($imageData): array|false {
-        // Sauvegarder l'image temporairement
-        $tempFile = __DIR__ . '/../uploads/temp_face_' . time() . '.jpg';
-        $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
-        $imageData = str_replace(' ', '+', $imageData);
-        file_put_contents($tempFile, base64_decode($imageData));
-        
-        // Récupérer tous les utilisateurs qui ont une photo de visage
-        $stmt = $this->db->prepare("SELECT id, nom, prenom, email, role, statut, face_photo FROM users WHERE face_photo IS NOT NULL AND statut = 'actif'");
-        $stmt->execute();
-        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Pour l'instant, version simplifiée : 
-        // En production, utilisez une API de reconnaissance faciale (Face++, Microsoft, etc.)
-        // Ici on simule la reconnaissance en prenant le premier utilisateur trouvé
-        if (!empty($users)) {
-            return $users[0];
+        $tempFile = __DIR__ . '/../uploads/temp_face_' . time() . '_' . bin2hex(random_bytes(3)) . '.jpg';
+        try {
+            $imageData = str_replace('data:image/jpeg;base64,', '', (string) $imageData);
+            $imageData = str_replace(' ', '+', $imageData);
+            file_put_contents($tempFile, base64_decode($imageData, true) ?: '');
+
+            $stmt = $this->db->prepare("SELECT id, nom, prenom, email, role, statut, face_photo FROM users WHERE face_photo IS NOT NULL AND statut = 'actif'");
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($users)) {
+                return $users[0];
+            }
+
+            return false;
+        } finally {
+            if (is_file($tempFile)) {
+                @unlink($tempFile);
+            }
         }
-        
-        return false;
     }
 }
 ?>

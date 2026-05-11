@@ -239,22 +239,139 @@ public function deleteFromRendezVous(int $ordonnanceId, int $rdvId): void {
 }
 
 /**
+ * Vérifie que l'utilisateur connecté peut consulter cette ordonnance.
+ */
+private function userCanAccessOrdonnance(array $ordonnance): bool {
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    $role   = $_SESSION['user_role'] ?? '';
+    if ($userId <= 0) {
+        return false;
+    }
+    if ($role === 'admin') {
+        return true;
+    }
+    if ($role === 'patient' && (int)($ordonnance['patient_id'] ?? 0) === $userId) {
+        return true;
+    }
+    if ($role === 'medecin' && (int)($ordonnance['medecin_id'] ?? 0) === $userId) {
+        return true;
+    }
+    return false;
+}
+
+/** Texte PDF (accents) via ISO-8859-1 pour FPDF classique */
+private function pdfText(string $s): string {
+    $t = @iconv('UTF-8', 'ISO-8859-1//TRANSLIT', $s);
+    return ($t !== false) ? $t : $s;
+}
+
+/**
  * API - Récupérer une ordonnance
  */
 public function apiGet(int $id): void {
-    header('Content-Type: application/json');
-    
+    header('Content-Type: application/json; charset=utf-8');
+
     $ordonnance = $this->ordonnanceModel->getById($id);
-    
-    if ($ordonnance) {
-        echo json_encode(['success' => true, 'ordonnance' => $ordonnance]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Ordonnance non trouvée']);
+
+    if (!$ordonnance || !$this->userCanAccessOrdonnance($ordonnance)) {
+        http_response_code($ordonnance ? 403 : 404);
+        echo json_encode(['success' => false, 'message' => $ordonnance ? 'Accès refusé' : 'Ordonnance non trouvée']);
+        exit;
     }
+
+    $full = trim((string)($ordonnance['medecin_nom'] ?? ''));
+    $full = preg_replace('/^Dr\.\s*/iu', '', $full);
+    $parts = preg_split('/\s+/', $full, 2, PREG_SPLIT_NO_EMPTY);
+    $ordonnance['medecin_prenom'] = $parts[0] ?? '';
+    $ordonnance['medecin_nom']    = $parts[1] ?? ($parts[0] ?? '');
+
+    echo json_encode(['success' => true, 'ordonnance' => $ordonnance], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
+/**
+ * Export PDF ordonnance (patient propriétaire ou médecin prescripteur).
+ */
+public function downloadPdf(int $id): void {
+    $fpdf = __DIR__ . '/../libraries/FPDF/fpdf.php';
+    if (!is_readable($fpdf)) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Génération PDF indisponible (bibliothèque FPDF manquante).';
+        exit;
+    }
+    require_once $fpdf;
 
+    $ordonnance = $this->ordonnanceModel->getById($id);
+    if (!$ordonnance || !$this->userCanAccessOrdonnance($ordonnance)) {
+        http_response_code($ordonnance ? 403 : 404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $ordonnance ? 'Accès refusé.' : 'Ordonnance introuvable.';
+        exit;
+    }
+
+    $medicaments = $this->ordonnanceModel->getMedicaments($id);
+
+    $medecinLabel = preg_replace('/^Dr\.\s*/iu', '', trim((string)($ordonnance['medecin_nom'] ?? 'Médecin')));
+    $patientLabel = trim((string)($ordonnance['patient_nom'] ?? 'Patient'));
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    try {
+        $pdf = new FPDF();
+        $pdf->AddPage();
+        $pdf->SetFont('Arial', 'B', 16);
+        $pdf->Cell(0, 10, $this->pdfText('Ordonnance médicale - Valorys'), 0, 1, 'C');
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->Ln(4);
+        $pdf->Cell(0, 7, $this->pdfText('N° : ' . ($ordonnance['numero_ordonnance'] ?? '')), 0, 1);
+        $pdf->Cell(0, 7, $this->pdfText('Date : ' . date('d/m/Y', strtotime((string)($ordonnance['date_ordonnance'] ?? date('Y-m-d'))))), 0, 1);
+        if (!empty($ordonnance['date_expiration'])) {
+            $pdf->Cell(0, 7, $this->pdfText('Expiration : ' . date('d/m/Y', strtotime((string)$ordonnance['date_expiration']))), 0, 1);
+        }
+        $pdf->Cell(0, 7, $this->pdfText('Patient : ' . $patientLabel), 0, 1);
+        $pdf->Cell(0, 7, $this->pdfText('Prescripteur : Dr. ' . $medecinLabel), 0, 1);
+        if (!empty($ordonnance['specialite'])) {
+            $pdf->Cell(0, 7, $this->pdfText('Spécialité : ' . (string)$ordonnance['specialite']), 0, 1);
+        }
+        $pdf->Ln(3);
+        $pdf->SetFont('Arial', 'B', 12);
+        $pdf->Cell(0, 8, $this->pdfText('Diagnostic'), 0, 1);
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->MultiCell(0, 6, $this->pdfText(trim((string)($ordonnance['diagnostic'] ?? '—'))));
+        $pdf->Ln(2);
+        $pdf->SetFont('Arial', 'B', 12);
+        $pdf->Cell(0, 8, $this->pdfText('Prescription / contenu'), 0, 1);
+        $pdf->SetFont('Arial', '', 11);
+        $pdf->MultiCell(0, 6, $this->pdfText(trim((string)($ordonnance['contenu'] ?? '—'))));
+
+        if ($medicaments !== []) {
+            $pdf->Ln(3);
+            $pdf->SetFont('Arial', 'B', 12);
+            $pdf->Cell(0, 8, $this->pdfText('Médicaments détaillés'), 0, 1);
+            $pdf->SetFont('Arial', '', 10);
+            foreach ($medicaments as $m) {
+                $line = ($m['medicament_nom'] ?? '') . ' — ' . ($m['dosage'] ?? '') . ' — ' . ($m['posologie'] ?? '');
+                $pdf->MultiCell(0, 5, $this->pdfText(trim($line)));
+            }
+        }
+
+        $pdf->Ln(8);
+        $pdf->SetFont('Arial', 'I', 9);
+        $pdf->MultiCell(0, 5, $this->pdfText('Document généré depuis l\'espace Valorys. Ce PDF ne remplace pas l\'original signé si applicable.'));
+
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string)($ordonnance['numero_ordonnance'] ?? 'ordonnance'));
+        $pdf->Output('D', 'ordonnance_' . $safeName . '.pdf');
+    } catch (\Throwable $e) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        error_log('Ordonnance PDF: ' . $e->getMessage());
+        echo 'Impossible de générer le PDF. Réessayez plus tard ou contactez l\'administrateur.';
+    }
+    exit;
+}
 
 
 public function storeAdmin(): void {

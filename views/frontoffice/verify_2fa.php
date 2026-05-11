@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 $pending2fa = $_SESSION['pending_2fa'] ?? [];
-$maskedEmail = $pending2fa['masked_phone'] ?? 'votre adresse email';
+$maskedEmail = $pending2fa['masked_email'] ?? $pending2fa['masked_phone'] ?? 'votre adresse email';
 $expiresAt = $pending2fa['expires_at'] ?? null;
 $remainingSeconds = 0;
 
@@ -15,7 +15,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verification 2FA - DocTime</title>
+    <title>Vérification 2FA - DocTime</title>
     <style>
         body {
             margin: 0;
@@ -122,8 +122,8 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
 <div class="wrap">
     <div class="card">
         <div class="badge">@</div>
-        <h1>Verification email</h1>
-        <p>Un code a 6 chiffres a ete envoye a <strong><?= htmlspecialchars((string) $maskedEmail) ?></strong>.</p>
+        <h1>Vérification en deux étapes</h1>
+        <p>Un code à 6 chiffres a été envoyé à <strong><?= htmlspecialchars((string) $maskedEmail) ?></strong>.</p>
 
         <?php if (!empty($_SESSION['errors']['__form'])): ?>
             <div class="alert alert-error"><?= htmlspecialchars((string) $_SESSION['errors']['__form']) ?></div>
@@ -136,7 +136,7 @@ if (is_int($expiresAt) || ctype_digit((string) $expiresAt)) {
         <?php unset($_SESSION['errors'], $_SESSION['success']); ?>
 
         <form method="POST" action="index.php?page=verify_2fa" autocomplete="one-time-code">
-            <label for="verification_code">Code de verification</label>
+            <label for="verification_code">Code de vérification</label>
             <input id="verification_code" name="verification_code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
 
             <div class="actions">

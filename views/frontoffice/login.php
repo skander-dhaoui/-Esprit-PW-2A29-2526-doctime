@@ -1,3 +1,11 @@
+<?php
+declare(strict_types=1);
+$errors = $errors ?? [];
+$old = $old ?? [];
+$socialButtons = $socialButtons ?? [];
+$recaptchaSiteKey = trim((string) ($recaptchaSiteKey ?? ''));
+$useRecaptcha = $recaptchaSiteKey !== '';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -39,8 +47,12 @@
         .modal-camera-content canvas { display: none; }
         .captcha-box { background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center; margin-bottom: 20px; }
         .captcha-code { font-size: 28px; font-weight: bold; letter-spacing: 8px; background: #2A7FAA; color: white; display: inline-block; padding: 10px 20px; border-radius: 10px; font-family: monospace; margin-bottom: 10px; }
-        .captcha-refresh { cursor: pointer; color: #2A7FAA; margin-left: 10px; }
-        .captcha-refresh:hover { color: #4CAF50; }
+        .social-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 18px; }
+        .btn-social { flex: 1; min-width: 120px; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 600; color: #fff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-social:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: #fff; }
+        .btn-google { background: #DB4437; }
+        .btn-github { background: #333; }
+        .btn-facebook { background: #1877F2; }
         
         /* Spinner */
         .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
@@ -61,10 +73,22 @@
         <div class="login-body">
             <h4 class="text-center mb-4">Connexion</h4>
 
-            <?php if (!empty($error)): ?>
+            <?php if (!empty($errors['__form'])): ?>
                 <div class="alert alert-danger alert-php">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    <?= htmlspecialchars($error) ?>
+                    <?= htmlspecialchars((string) $errors['__form']) ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($errors['credentials'])): ?>
+                <div class="alert alert-danger alert-php">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <?= htmlspecialchars((string) $errors['credentials']) ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($errors['compte'])): ?>
+                <div class="alert alert-danger alert-php">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <?= htmlspecialchars((string) $errors['compte']) ?>
                 </div>
             <?php endif; ?>
 
@@ -84,6 +108,22 @@
                 <i class="fas fa-check-circle me-2"></i>
                 <span id="successText"></span>
             </div>
+
+            <?php if (!empty($socialButtons)): ?>
+                <p class="text-center text-muted small mb-2">Continuer avec</p>
+                <div class="social-row">
+                    <?php if (!empty($socialButtons['google'])): ?>
+                        <a class="btn-social btn-google" href="index.php?page=social_login&amp;provider=google"><i class="fab fa-google"></i> Google</a>
+                    <?php endif; ?>
+                    <?php if (!empty($socialButtons['github'])): ?>
+                        <a class="btn-social btn-github" href="index.php?page=social_login&amp;provider=github"><i class="fab fa-github"></i> GitHub</a>
+                    <?php endif; ?>
+                    <?php if (!empty($socialButtons['facebook'])): ?>
+                        <a class="btn-social btn-facebook" href="index.php?page=social_login&amp;provider=facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
+                    <?php endif; ?>
+                </div>
+                <div class="text-center mb-3"><span class="text-muted">ou</span></div>
+            <?php endif; ?>
 
             <button type="button" class="btn-camera" onclick="openCameraModal()">
                 <i class="fas fa-camera me-2"></i> Connexion avec reconnaissance faciale
@@ -108,24 +148,37 @@
 
                 <div class="mb-3">
                     <label class="form-label">Email</label>
-                    <input type="email" name="email" id="email" class="form-control"
+                    <input type="email" name="email" id="email" class="form-control <?= !empty($errors['email']) ? 'is-invalid' : '' ?>"
                            placeholder="exemple@email.com"
-                           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+                           value="<?= htmlspecialchars((string)($old['email'] ?? '')) ?>" required>
+                    <?php if (!empty($errors['email'])): ?><div class="text-danger small mt-1"><?= htmlspecialchars((string)$errors['email']) ?></div><?php endif; ?>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Mot de passe</label>
-                    <input type="password" name="password" id="password" class="form-control"
+                    <input type="password" name="password" id="password" class="form-control <?= !empty($errors['password']) ? 'is-invalid' : '' ?>"
                            placeholder="••••••••" required>
+                    <div class="d-flex justify-content-end mt-1">
+                        <a href="index.php?page=forgot_password" class="forgot-link small">Mot de passe oublié ?</a>
+                    </div>
+                    <?php if (!empty($errors['password'])): ?><div class="text-danger small mt-1"><?= htmlspecialchars((string)$errors['password']) ?></div><?php endif; ?>
                 </div>
 
                 <div class="captcha-box">
-                    <div>
-                        <span class="captcha-code" id="captchaCode"></span>
-                        <i class="fas fa-sync-alt captcha-refresh" onclick="generateCaptcha()" title="Recharger"></i>
-                    </div>
-                    <input type="text" id="captchaInput" class="form-control mt-2"
-                           placeholder="Saisissez le code ci-dessus" style="text-align:center;">
+                    <?php if ($useRecaptcha): ?>
+                        <label class="form-label d-block text-start">Je ne suis pas un robot</label>
+                        <div class="g-recaptcha d-inline-block" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+                        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                        <?php if (!empty($errors['recaptcha'])): ?><div class="text-danger small mt-2"><?= htmlspecialchars((string)$errors['recaptcha']) ?></div><?php endif; ?>
+                    <?php else: ?>
+                        <label class="form-label">Vérification anti-robot</label>
+                        <div>
+                            <span class="captcha-code"><?= htmlspecialchars((string)($_SESSION['captcha_code'] ?? '')) ?></span>
+                        </div>
+                        <input type="text" name="captcha_response" id="captchaInput" class="form-control mt-2 <?= !empty($errors['captcha_response']) ? 'is-invalid' : '' ?>"
+                               placeholder="Recopiez le code ci-dessus" style="text-align:center;" autocomplete="off">
+                        <?php if (!empty($errors['captcha_response'])): ?><div class="text-danger small mt-1"><?= htmlspecialchars((string)$errors['captcha_response']) ?></div><?php endif; ?>
+                    <?php endif; ?>
                 </div>
 
                 <div class="mb-3 form-check d-flex justify-content-between align-items-center">
@@ -133,7 +186,7 @@
                         <input type="checkbox" class="form-check-input" id="remember" name="remember">
                         <label class="form-check-label" for="remember">Se souvenir de moi</label>
                     </div>
-                    <a href="index.php?page=forgot_password" class="forgot-link">Mot de passe oublié ?</a>
+                    <a href="index.php?page=forgot_password" class="forgot-link" title="Recevoir un lien par email">Mot de passe oublié ?</a>
                 </div>
 
                 <button type="submit" class="btn-login">
@@ -147,6 +200,15 @@
                     Pas encore de compte ?
                     <a href="index.php?page=register" class="register-link">S'inscrire</a>
                 </p>
+                <?php
+                $h = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+                $isLocalDev = $h !== '' && (strpos($h, 'localhost') !== false || strpos($h, '127.0.0.1') !== false);
+                ?>
+                <?php if ($isLocalDev): ?>
+                    <p class="mb-0 mt-2 small">
+                        <a href="debug_login_help.php?email=<?= urlencode((string) ($old['email'] ?? '')) ?>" class="text-muted">Problème de connexion ? Diagnostic (localhost)</a>
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -156,7 +218,7 @@
         <div class="modal-camera-content">
             <h4><i class="fas fa-camera"></i> Reconnaissance faciale</h4>
             <p class="text-muted">Placez votre visage devant la caméra</p>
-            <video id="video" autoplay playsinline></video>
+            <video id="video" autoplay playsinline muted></video>
             <canvas id="canvas"></canvas>
             <div class="d-flex gap-2 mt-3">
                 <button class="btn btn-success w-50" onclick="captureFace()">
@@ -170,20 +232,9 @@
         </div>
     </div>
 
+    <script src="assets/js/camera-stream.js"></script>
     <script>
-        // ── CAPTCHA ──────────────────────────────────
-        let currentCaptcha = "";
-        function generateCaptcha() {
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
-            let c = "";
-            for (let i = 0; i < 6; i++) c += chars.charAt(Math.floor(Math.random() * chars.length));
-            currentCaptcha = c;
-            document.getElementById("captchaCode").innerText = c;
-        }
-        function verifyCaptcha() {
-            return document.getElementById("captchaInput").value.toUpperCase() === currentCaptcha;
-        }
-        generateCaptcha();
+        const useRecaptcha = <?= $useRecaptcha ? 'true' : 'false' ?>;
 
         // ── RÔLE ─────────────────────────────────────
         document.querySelectorAll('.role-option').forEach(o => {
@@ -204,12 +255,13 @@
                 showError('Veuillez remplir tous les champs.');
                 return;
             }
-            if (!verifyCaptcha()) {
-                e.preventDefault();
-                showError('Code CAPTCHA incorrect. Réessayez.');
-                generateCaptcha();
-                document.getElementById('captchaInput').value = '';
-                return;
+            if (!useRecaptcha) {
+                const ci = document.getElementById('captchaInput');
+                if (ci && !ci.value.trim()) {
+                    e.preventDefault();
+                    showError('Recopiez le code anti-robot.');
+                    return;
+                }
             }
         });
 
@@ -242,12 +294,23 @@
         }
         
         async function startCamera() {
+            const msgDiv = document.getElementById('cameraMessage');
+            const video = document.getElementById('video');
+            if (!window.DoctimeCamera || typeof window.DoctimeCamera.acquireVideoStream !== 'function') {
+                if (msgDiv) msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Script caméra indisponible.</span>';
+                return;
+            }
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                document.getElementById('video').srcObject = stream;
+                stream = await window.DoctimeCamera.acquireVideoStream();
+                video.srcObject = stream;
+                await video.play();
             } catch (err) {
-                const msgDiv = document.getElementById('cameraMessage');
-                if (msgDiv) msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Impossible d\'accéder à la caméra.</span>';
+                const hint = window.DoctimeCamera.formatHint(err);
+                const base = err && err.message ? err.message : 'Impossible d\'accéder à la caméra.';
+                if (msgDiv) {
+                    msgDiv.innerHTML = '<span class="text-danger d-block"><i class="fas fa-exclamation-circle me-1"></i>' +
+                        base + '</span>' + (hint ? '<small class="text-muted d-block mt-2">' + hint + '</small>' : '');
+                }
             }
         }
         
@@ -273,9 +336,19 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'face_image=' + encodeURIComponent(imageData)
                 });
-                
-                const result = await response.json();
-                
+                const raw = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(raw);
+                } catch (parseErr) {
+                    console.error('Réponse non-JSON (face_login):', raw.substring(0, 500));
+                    if (msgDiv) {
+                        msgDiv.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>Erreur serveur (réponse invalide). Consultez logs/php_error.log</span>';
+                    }
+                    setTimeout(() => closeCameraModal(), 2500);
+                    return;
+                }
+
                 if (result.success) {
                     if (msgDiv) {
                         msgDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>' + result.message + '</span>';

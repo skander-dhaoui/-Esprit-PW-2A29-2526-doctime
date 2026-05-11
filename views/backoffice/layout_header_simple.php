@@ -191,12 +191,6 @@ $currentPage = $_GET['page'] ?? '';
                 <i class="bi bi-map"></i> Carte Tunisie
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $currentPage === 'carte' && ($_GET['action'] ?? '') === 'metiers' ? 'active' : '' ?>"
-               href="/valorys_Copie/index.php?page=carte&action=metiers">
-                <i class="bi bi-brain"></i> IA Métiers Créatifs
-            </a>
-        </li>
         <li class="nav-section">Analytique</li>
         <li class="nav-item">
             <a class="nav-link <?= $currentPage === 'stats' ? 'active' : '' ?>"

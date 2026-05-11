@@ -42,9 +42,61 @@ class User {
     }
 
     public function findByEmail(string $email): array|false {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+        $email = trim($email);
+        $stmt = $this->db->prepare(
+            'SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(:email) LIMIT 1'
+        );
         $stmt->execute([':email' => $email]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Vérifie le mot de passe (password_hash) ou un ancien hash MD5 (32 hex), puis migre vers bcrypt si besoin.
+     */
+    public function verifyPasswordAndMigrate(array $user, string $plainPassword): bool {
+        $hash = (string) ($user['password'] ?? '');
+        $id = (int) ($user['id'] ?? 0);
+        if ($hash === '' || $id <= 0) {
+            return false;
+        }
+
+        if (password_verify($plainPassword, $hash)) {
+            if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
+                try {
+                    $this->update($id, ['password' => password_hash($plainPassword, PASSWORD_DEFAULT)]);
+                } catch (Throwable $e) {
+                    error_log('User password rehash: ' . $e->getMessage());
+                }
+            }
+
+            return true;
+        }
+
+        if (strlen($hash) === 32 && ctype_xdigit($hash)) {
+            if (hash_equals(strtolower($hash), md5($plainPassword))) {
+                try {
+                    $this->update($id, ['password' => password_hash($plainPassword, PASSWORD_DEFAULT)]);
+                } catch (Throwable $e) {
+                    error_log('User MD5 migrate: ' . $e->getMessage());
+                }
+
+                return true;
+            }
+        }
+
+        if (strlen($hash) === 40 && ctype_xdigit($hash)) {
+            if (hash_equals(strtolower($hash), sha1($plainPassword))) {
+                try {
+                    $this->update($id, ['password' => password_hash($plainPassword, PASSWORD_DEFAULT)]);
+                } catch (Throwable $e) {
+                    error_log('User SHA1 migrate: ' . $e->getMessage());
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Compat: utilisé par FrontController
@@ -68,7 +120,7 @@ class User {
 
     private function getMedecinExtras(int $userId): array {
         $stmt = $this->db->prepare(
-            "SELECT specialite, numero_ordre, cabinet_adresse, description, statut_validation
+            "SELECT specialite, numero_ordre, cabinet_adresse, consultation_prix, annee_experience, description, statut_validation
              FROM medecins WHERE user_id = :uid LIMIT 1"
         );
         $stmt->execute([':uid' => $userId]);
@@ -144,6 +196,8 @@ class User {
             'nom', 'prenom', 'email', 'telephone', 'adresse',
             'date_naissance', 'role', 'statut', 'password', 'derniere_connexion',
             'avatar', 'face_photo', 'face_descriptor', 'face_encoding',
+            'reset_token', 'reset_expires',
+            'social_provider', 'social_provider_id', 'social_avatar',
         ];
 
         $fields = [];
@@ -207,19 +261,29 @@ class User {
     }
 
     public function upsertMedecin(int $userId, array $data): void {
+        $cabinet = $data['adresse_cabinet'] ?? '';
+        $prixRaw = $data['tarif'] ?? $data['consultation_prix'] ?? null;
+        $prix = ($prixRaw === null || $prixRaw === '') ? null : (float) $prixRaw;
+        $expRaw = $data['experience'] ?? $data['annee_experience'] ?? null;
+        $exp = ($expRaw === null || $expRaw === '') ? null : (int) $expRaw;
+
         $stmt = $this->db->prepare(
-            "INSERT INTO medecins (user_id, specialite, numero_ordre, cabinet_adresse)
-             VALUES (:user_id, :specialite, :numero_ordre, :cabinet_adresse)
+            "INSERT INTO medecins (user_id, specialite, numero_ordre, cabinet_adresse, consultation_prix, annee_experience)
+             VALUES (:user_id, :specialite, :numero_ordre, :cabinet_adresse, :consultation_prix, :annee_experience)
              ON DUPLICATE KEY UPDATE
-                specialite      = VALUES(specialite),
-                numero_ordre    = VALUES(numero_ordre),
-                cabinet_adresse = VALUES(cabinet_adresse)"
+                specialite = VALUES(specialite),
+                numero_ordre = VALUES(numero_ordre),
+                cabinet_adresse = VALUES(cabinet_adresse),
+                consultation_prix = VALUES(consultation_prix),
+                annee_experience = VALUES(annee_experience)"
         );
         $stmt->execute([
-            ':user_id'         => $userId,
-            ':specialite'      => $data['specialite']      ?? '',
-            ':numero_ordre'    => $data['numero_ordre']    ?? '',
-            ':cabinet_adresse' => $data['adresse_cabinet'] ?? '',
+            ':user_id'            => $userId,
+            ':specialite'         => $data['specialite'] ?? '',
+            ':numero_ordre'       => $data['numero_ordre'] ?? '',
+            ':cabinet_adresse'    => $cabinet,
+            ':consultation_prix'  => $prix,
+            ':annee_experience'   => $exp,
         ]);
     }
 

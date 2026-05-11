@@ -13,8 +13,8 @@ class Reply {
      */
     public function getByArticle(int $articleId): array {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
-                    r.emoji, r.photo, r.date_reply,
+            "SELECT r.id_reply, r.id_article, r.parent_reply_id, r.type_reply, r.contenu_text, 
+                    r.emoji, r.photo, r.date_reply, r.user_id,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
              LEFT JOIN users u ON u.id = r.user_id
@@ -28,7 +28,7 @@ class Reply {
  * Crée un commentaire mixte (texte + image possible)
  */
 public function createMixte(int $articleId, ?string $contenuText, ?string $emoji, 
-                           ?string $imagePath, ?string $auteur, ?int $userId = null): int {
+                           ?string $imagePath, ?string $auteur, ?int $userId = null, ?int $parentReplyId = null): int {
     
     if ($userId === null && !empty($_SESSION['user_id'])) {
         $userId = (int)$_SESSION['user_id'];
@@ -44,11 +44,12 @@ public function createMixte(int $articleId, ?string $contenuText, ?string $emoji
     }
     
     $stmt = $this->db->prepare(
-        "INSERT INTO reply (id_article, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
-         VALUES (:article_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
+        "INSERT INTO reply (id_article, parent_reply_id, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
+         VALUES (:article_id, :parent_reply_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
     );
     $stmt->execute([
         ':article_id' => $articleId,
+        ':parent_reply_id' => ($parentReplyId !== null && $parentReplyId > 0) ? $parentReplyId : null,
         ':user_id' => $userId,
         ':type_reply' => $type,
         ':contenu_text' => $contenuText,
@@ -63,7 +64,7 @@ public function createMixte(int $articleId, ?string $contenuText, ?string $emoji
      */
     public function getByArticleRecent(int $articleId): array {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.type_reply, r.contenu_text, 
+            "SELECT r.id_reply, r.id_article, r.parent_reply_id, r.type_reply, r.contenu_text, 
                     r.emoji, r.photo, r.date_reply,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
@@ -80,7 +81,7 @@ public function createMixte(int $articleId, ?string $contenuText, ?string $emoji
      */
     public function getById(int $id): array|false {
         $stmt = $this->db->prepare(
-            "SELECT r.id_reply, r.id_article, r.user_id, r.type_reply, r.contenu_text, 
+            "SELECT r.id_reply, r.id_article, r.parent_reply_id, r.user_id, r.type_reply, r.contenu_text, 
                     r.emoji, r.photo, r.date_reply,
                     COALESCE(CONCAT(u.nom, ' ', u.prenom), r.auteur, 'Anonyme') AS auteur
              FROM reply r
@@ -104,7 +105,7 @@ public function createMixte(int $articleId, ?string $contenuText, ?string $emoji
      * Crée un nouveau commentaire
      */
 public function create(int $articleId, ?string $contenuText, ?string $emoji,
-                       ?string $photo, ?string $auteur, string $typeReply, ?int $userId = null): int {
+                       ?string $photo, ?string $auteur, string $typeReply, ?int $userId = null, ?int $parentReplyId = null): int {
     
     // Si userId n'est pas passé, on essaie de le récupérer de la session
     if ($userId === null && !empty($_SESSION['user_id'])) {
@@ -112,11 +113,12 @@ public function create(int $articleId, ?string $contenuText, ?string $emoji,
     }
     
     $stmt = $this->db->prepare(
-        "INSERT INTO reply (id_article, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
-         VALUES (:article_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
+        "INSERT INTO reply (id_article, parent_reply_id, user_id, type_reply, contenu_text, emoji, photo, auteur, date_reply)
+         VALUES (:article_id, :parent_reply_id, :user_id, :type_reply, :contenu_text, :emoji, :photo, :auteur, NOW())"
     );
     $stmt->execute([
         ':article_id' => $articleId,
+        ':parent_reply_id' => ($parentReplyId !== null && $parentReplyId > 0) ? $parentReplyId : null,
         ':user_id' => $userId,
         ':type_reply' => $typeReply,
         ':contenu_text' => $contenuText,

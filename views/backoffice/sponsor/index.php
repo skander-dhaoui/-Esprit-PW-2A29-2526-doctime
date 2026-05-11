@@ -1,6 +1,14 @@
 <?php $pageTitle = 'Gestion des Sponsors'; ?>
 <?php require __DIR__ . '/../layout_header.php'; ?>
 
+<?php if (!empty($_SESSION['flash'])): ?>
+    <?php $f = $_SESSION['flash']; unset($_SESSION['flash']); ?>
+    <div class="alert alert-<?= (($f['type'] ?? '') === 'error' || ($f['type'] ?? '') === 'danger') ? 'danger' : 'success' ?> alert-dismissible fade show">
+        <?= htmlspecialchars($f['message'] ?? '') ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+<?php endif; ?>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h5 class="mb-0 fw-semibold">Liste des Sponsors</h5>

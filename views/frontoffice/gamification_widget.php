@@ -1,60 +1,41 @@
 <?php
-declare(strict_types=1);
-
-require_once __DIR__ . '/../models/Gamification.php';
-require_once __DIR__ . '/../services/RewardEmailService.php';
-
-class GamificationController
-{
-    public static function grantPoints(int $userId, string $action, ?int $refId = null): array
-    {
-        try {
-            $g      = new Gamification();
-            $result = $g->addPoints($userId, $action, $refId);
-
-            if (!empty($result['new_rewards'])) {
-                try {
-                    $db   = Database::getInstance()->getConnection();
-                    $stmt = $db->prepare("SELECT email, CONCAT(COALESCE(prenom,''),' ',COALESCE(nom,'')) AS name FROM users WHERE id=?");
-                    $stmt->execute([$userId]);
-                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($user && !empty($user['email'])) {
-                        $svc = new RewardEmailService();
-                        $svc->processPendingRewards($userId, $user['email'], $user['name']);
-                    }
-                } catch (Exception $e) {
-                    error_log('GamificationController email: ' . $e->getMessage());
-                }
-            }
-            return $result;
-        } catch (Exception $e) {
-            error_log('GamificationController::grantPoints - ' . $e->getMessage());
-            return ['success' => false, 'points_added' => 0, 'total_points' => 0, 'level' => [], 'new_rewards' => []];
-        }
-    }
-
-    public function stats(): void
-    {
-        header('Content-Type: application/json');
-        $userId = (int)($_GET['user_id'] ?? $_SESSION['user_id'] ?? 0);
-        if (!$userId) { echo json_encode(['success'=>false,'message'=>'Non identifié']); return; }
-        $g = new Gamification();
-        echo json_encode(['success'=>true,'stats'=>$g->getUserStats($userId)]);
-    }
-
-    public function leaderboard(): void
-    {
-        header('Content-Type: application/json');
-        $g = new Gamification();
-        echo json_encode(['success'=>true,'leaderboard'=>$g->getLeaderboard(10)]);
-    }
-
-    public function history(): void
-    {
-        header('Content-Type: application/json');
-        $userId = (int)($_GET['user_id'] ?? $_SESSION['user_id'] ?? 0);
-        $g      = new Gamification();
-        echo json_encode(['success'=>true,'history'=>$g->getHistory($userId)]);
-    }
-}
+/** Petit bloc profil : points & niveau (JSON via api_gamification). */
 ?>
+<div id="gamification-widget" class="mb-4 p-3 rounded-3" style="background: linear-gradient(135deg, #f0f7ff 0%, #e8f5e9 100%); border: 1px solid #cfe2ff;">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span style="font-size: 1.5rem;">🏅</span>
+        <strong style="color: #1c1e21;">Progression</strong>
+    </div>
+    <div id="gamification-widget-body" class="small text-muted">Chargement…</div>
+    <div id="gamification-widget-bar" class="progress mt-2 d-none" style="height: 8px;">
+        <div id="gamification-widget-bar-fill" class="progress-bar" role="progressbar" style="background: #2A7FAA;"></div>
+    </div>
+</div>
+<script>
+(function () {
+    var el = document.getElementById('gamification-widget-body');
+    var barWrap = document.getElementById('gamification-widget-bar');
+    var barFill = document.getElementById('gamification-widget-bar-fill');
+    if (!el) return;
+    fetch('index.php?page=api_gamification&action=stats', { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!data.success || !data.stats) {
+                el.textContent = data.message || 'Indisponible pour le moment.';
+                return;
+            }
+            var s = data.stats;
+            var lvl = s.level || {};
+            var line = '<span style="font-size:1.25rem;">' + (lvl.badge || '') + '</span> ' +
+                '<strong>' + (lvl.name || '') + '</strong> — ' + (s.total_points != null ? s.total_points : 0) + ' pts';
+            el.innerHTML = line;
+            if (lvl.next_level && barWrap && barFill) {
+                barWrap.classList.remove('d-none');
+                var p = typeof lvl.progress === 'number' ? lvl.progress : 0;
+                barFill.style.width = Math.min(100, p) + '%';
+                barFill.setAttribute('aria-valuenow', String(p));
+            }
+        })
+        .catch(function () { el.textContent = 'Impossible de charger la progression.'; });
+})();
+</script>

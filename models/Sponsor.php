@@ -27,22 +27,18 @@ class Sponsor {
     }
 
     public function getById(int $id): ?array {
-        try {
-            $sql = "SELECT s.*, 
-                           COUNT(DISTINCT p.id) as nb_produits,
-                           COUNT(DISTINCT ev.id) as nb_evenements,
-                           COUNT(DISTINCT c.id) as nb_campagnes
-                    FROM sponsors s
-                    LEFT JOIN sponsor_produits p ON s.id = p.sponsor_id
-                    LEFT JOIN sponsor_evenements ev ON s.id = ev.sponsor_id
-                    LEFT JOIN sponsor_campagnes c ON s.id = c.sponsor_id
-                    WHERE s.id = :id
-                    GROUP BY s.id";
+        return $this->getByIdForBackoffice($id);
+    }
 
-            $result = $this->db->query($sql, ['id' => $id]);
-            return $result ? $result[0] : null;
+    /** Une ligne `sponsors` uniquement (sans jointures tables métier optionnelles). */
+    public function getByIdForBackoffice(int $id): ?array {
+        try {
+            return $this->db->queryOne(
+                'SELECT * FROM sponsors WHERE id = :id LIMIT 1',
+                ['id' => $id]
+            );
         } catch (Exception $e) {
-            error_log('Erreur Sponsor::getById - ' . $e->getMessage());
+            error_log('Erreur Sponsor::getByIdForBackoffice - ' . $e->getMessage());
             return null;
         }
     }
@@ -73,6 +69,63 @@ class Sponsor {
             return $this->db->execute($sql, ['id' => $id]);
         } catch (Exception $e) {
             error_log('Erreur Sponsor::delete - ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function findByEmail(string $email): ?array {
+        if ($email === '') {
+            return null;
+        }
+        return $this->db->queryOne(
+            'SELECT id, email FROM sponsors WHERE email = :e LIMIT 1',
+            ['e' => $email]
+        );
+    }
+
+    /** Insertion formulaire back-office (schéma doctime / Valorys). */
+    public function createBackoffice(array $data): ?int {
+        try {
+            $sql = 'INSERT INTO sponsors (nom, email, telephone, logo, site_web, description, niveau, actif, created_at, updated_at)
+                    VALUES (:nom, :email, :telephone, :logo, :site_web, :description, :niveau, :actif, NOW(), NOW())';
+            $params = [
+                'nom' => $data['nom'],
+                'email' => $data['email'] !== '' ? $data['email'] : null,
+                'telephone' => $data['telephone'] !== '' ? $data['telephone'] : null,
+                'logo' => $data['logo'] ?? null,
+                'site_web' => $data['site_web'] ?? null,
+                'description' => $data['description'] ?? null,
+                'niveau' => $data['niveau'],
+                'actif' => isset($data['actif']) ? (int)(bool)$data['actif'] : 1,
+            ];
+            $ok = $this->db->execute($sql, $params);
+            return $ok ? (int)$this->db->lastInsertId() : null;
+        } catch (Exception $e) {
+            error_log('Erreur Sponsor::createBackoffice - ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /** Mise à jour formulaire back-office (colonnes schéma Valorys / doctime). */
+    public function updateBackoffice(int $id, array $data): bool {
+        try {
+            $sql = 'UPDATE sponsors SET nom = :nom, email = :email, telephone = :telephone,
+                    site_web = :site_web, description = :description, niveau = :niveau,
+                    actif = :actif, updated_at = NOW()
+                    WHERE id = :id';
+            $params = [
+                'id' => $id,
+                'nom' => $data['nom'],
+                'email' => $data['email'] !== '' ? $data['email'] : null,
+                'telephone' => $data['telephone'] !== '' ? $data['telephone'] : null,
+                'site_web' => $data['site_web'] ?? null,
+                'description' => $data['description'] ?? null,
+                'niveau' => $data['niveau'],
+                'actif' => isset($data['actif']) ? (int)(bool)$data['actif'] : 1,
+            ];
+            return $this->db->execute($sql, $params);
+        } catch (Exception $e) {
+            error_log('Erreur Sponsor::updateBackoffice - ' . $e->getMessage());
             return false;
         }
     }
@@ -853,6 +906,35 @@ class Sponsor {
         } catch (Exception $e) {
             error_log('Erreur Sponsor::importFromArray - ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Liste admin compatible schéma Valorys / doctime (table sponsors seule, sans jointures métier).
+     */
+    public function getAllForBackoffice(string $filter = 'all', string $search = '', int $limit = 500): array {
+        try {
+            $where  = 'WHERE 1=1';
+            $params = [];
+
+            if ($filter === 'actif') {
+                $where .= ' AND s.actif = 1';
+            } elseif ($filter === 'inactif' || $filter === 'archive') {
+                $where .= ' AND s.actif = 0';
+            }
+
+            if ($search !== '') {
+                $where .= ' AND (s.nom LIKE :search OR s.email LIKE :search OR COALESCE(s.telephone,\'\') LIKE :search)';
+                $params['search'] = '%' . $search . '%';
+            }
+
+            $lim = max(1, min(2000, $limit));
+            $sql = "SELECT s.*, 0 AS montant FROM sponsors s $where ORDER BY s.created_at DESC LIMIT {$lim}";
+
+            return $this->db->query($sql, $params);
+        } catch (Exception $e) {
+            error_log('Erreur Sponsor::getAllForBackoffice - ' . $e->getMessage());
+            return [];
         }
     }
 }

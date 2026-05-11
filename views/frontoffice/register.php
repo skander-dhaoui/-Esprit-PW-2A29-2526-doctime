@@ -1,6 +1,9 @@
 <?php
 // $errors (tableau champ => message), $old : AuthController::showRegister()
 $errors = $errors ?? [];
+$socialButtons = $socialButtons ?? [];
+$recaptchaSiteKey = trim((string) ($recaptchaSiteKey ?? ''));
+$useRecaptcha = $recaptchaSiteKey !== '';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -43,6 +46,22 @@ $errors = $errors ?? [];
         .login-link:hover { color: #4CAF50; text-decoration: underline; }
         hr { margin: 20px 0; }
         .medecin-fields { display: none; animation: fadeIn 0.3s ease; }
+        .social-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 18px; }
+        .btn-social { flex: 1; min-width: 120px; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 600; color: #fff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-social:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: #fff; }
+        .btn-google { background: #DB4437; }
+        .btn-github { background: #333; }
+        .btn-facebook { background: #1877F2; }
+        .pw-strength-track { height: 8px; background: #e9ecef; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+        .pw-strength-track span { display: block; height: 100%; width: 0; border-radius: 6px; transition: width .2s, background .2s; }
+        .pw-strength-empty { background: #dee2e6 !important; }
+        .pw-strength-weak { background: #dc3545 !important; }
+        .pw-strength-medium { background: #fd7e14 !important; }
+        .pw-strength-strong { background: #198754 !important; }
+        .pw-strength-text { font-size: 12px; font-weight: 600; margin-top: 6px; display: inline-block; min-height: 1.2em; }
+        .pw-strength-text.pw-strength-weak { color: #dc3545; }
+        .pw-strength-text.pw-strength-medium { color: #c35d00; }
+        .pw-strength-text.pw-strength-strong { color: #198754; }
     </style>
 </head>
 <body>
@@ -77,6 +96,22 @@ $errors = $errors ?? [];
                 <i class="fas fa-check-circle me-2"></i>
                 <span id="successText"></span>
             </div>
+
+            <?php if (!empty($socialButtons)): ?>
+                <p class="text-center text-muted small mb-2">S'inscrire avec</p>
+                <div class="social-row">
+                    <?php if (!empty($socialButtons['google'])): ?>
+                        <a class="btn-social btn-google" href="index.php?page=social_login&amp;provider=google"><i class="fab fa-google"></i> Google</a>
+                    <?php endif; ?>
+                    <?php if (!empty($socialButtons['github'])): ?>
+                        <a class="btn-social btn-github" href="index.php?page=social_login&amp;provider=github"><i class="fab fa-github"></i> GitHub</a>
+                    <?php endif; ?>
+                    <?php if (!empty($socialButtons['facebook'])): ?>
+                        <a class="btn-social btn-facebook" href="index.php?page=social_login&amp;provider=facebook"><i class="fab fa-facebook-f"></i> Facebook</a>
+                    <?php endif; ?>
+                </div>
+                <div class="text-center mb-3"><span class="text-muted">ou formulaire ci-dessous</span></div>
+            <?php endif; ?>
 
             <div class="role-selector">
                 <div class="role-option active" data-role="patient">
@@ -152,6 +187,11 @@ $errors = $errors ?? [];
                                 <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($errors['password']) ?></div>
                             <?php endif; ?>
                         </div>
+                        <div class="pw-strength-track"><span id="regPwdStrengthFill"></span></div>
+                        <span id="regPwdStrengthLabel" class="pw-strength-text"></span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 mb-1" id="regGenPwdBtn" title="Mot de passe aléatoire sécurisé">
+                            <i class="fas fa-dice me-1"></i> Générer un mot de passe fort
+                        </button>
                         <div class="password-requirements">
                             <span id="reqLength" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins 8 caractères</span><br>
                             <span id="reqUpper" class="requirement-invalid"><i class="fas fa-circle me-1"></i> Au moins une majuscule</span><br>
@@ -242,6 +282,17 @@ $errors = $errors ?? [];
                     <?php endif; ?>
                 </div>
 
+                <?php if ($useRecaptcha): ?>
+                    <div class="mb-3">
+                        <label class="form-label">Je ne suis pas un robot</label>
+                        <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+                        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                        <?php if (!empty($errors['__form']) && str_contains((string)$errors['__form'], 'reCAPTCHA')): ?>
+                            <div class="field-error mt-2"><?= htmlspecialchars((string)$errors['__form']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
                 <button type="submit" class="btn-register">
                     <i class="fas fa-user-plus me-2"></i> S'inscrire
                 </button>
@@ -254,6 +305,7 @@ $errors = $errors ?? [];
         </div>
     </div>
 
+    <script src="assets/js/password-strength.js"></script>
     <script>
         // ── RÔLE ─────────────────────────────────────
         function setMedecinSectionVisible(isMedecin) {
@@ -336,6 +388,16 @@ $errors = $errors ?? [];
 
         // ── SOUMISSION → PHP ──────────────────────────
         document.getElementById('registerForm').addEventListener('submit', function (e) {
+            <?php if ($useRecaptcha): ?>
+            if (typeof grecaptcha !== 'undefined') {
+                const r = grecaptcha.getResponse();
+                if (!r) {
+                    e.preventDefault();
+                    alert('Veuillez cocher « Je ne suis pas un robot ».');
+                    return;
+                }
+            }
+            <?php endif; ?>
             clearClientFieldErrors();
             const nom      = document.getElementById('nom').value.trim();
             const prenom   = document.getElementById('prenom').value.trim();
@@ -375,6 +437,17 @@ $errors = $errors ?? [];
             document.getElementById('successText').innerText = msg;
             d.style.display = 'block';
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof DoctimePassword !== 'undefined') {
+                var refreshBar = DoctimePassword.bindMeter('password', 'regPwdStrengthFill', 'regPwdStrengthLabel');
+                DoctimePassword.wireGenerator('regGenPwdBtn', 'password', 'passwordConfirm', function () {
+                    if (typeof refreshBar === 'function') refreshBar();
+                    updatePasswordRequirements();
+                    document.getElementById('passwordConfirm').dispatchEvent(new Event('input'));
+                });
+            }
+        });
     </script>
 </body>
 </html>

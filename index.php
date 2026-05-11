@@ -9,29 +9,44 @@ if (is_file(__DIR__ . '/error_handler.php')) {
 if (is_file(__DIR__ . '/config/env.php')) {
     require_once __DIR__ . '/config/env.php';
 }
+if (is_file(__DIR__ . '/config/recaptcha.php')) {
+    require_once __DIR__ . '/config/recaptcha.php';
+}
+if (is_file(__DIR__ . '/config/app_logger.php')) {
+    require_once __DIR__ . '/config/app_logger.php';
+}
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_lifetime', 0);
     session_start();
 }
 
+@ini_set('default_charset', 'UTF-8');
+if (function_exists('mb_internal_encoding')) {
+    mb_internal_encoding('UTF-8');
+}
+
 ob_start(static function ($buffer) {
     if (stripos($buffer, '</head>') === false) {
         return $buffer;
     }
+    $inject = '';
     $hasThemeScript = strpos($buffer, 'assets/js/theme-mode.js') !== false;
     $hasThemeStyle = strpos($buffer, 'assets/css/theme-mode.css') !== false;
-    if ($hasThemeScript && $hasThemeStyle) {
-        return $buffer;
-    }
-    $themeAssets = '';
     if (!$hasThemeScript) {
-        $themeAssets .= "    <script src=\"assets/js/theme-mode.js\"></script>\n";
+        $inject .= "    <script src=\"assets/js/theme-mode.js\"></script>\n";
     }
     if (!$hasThemeStyle) {
-        $themeAssets .= "    <link rel=\"stylesheet\" href=\"assets/css/theme-mode.css\">\n";
+        $inject .= "    <link rel=\"stylesheet\" href=\"assets/css/theme-mode.css\">\n";
     }
-    return preg_replace('/<\/head>/i', $themeAssets . '</head>', $buffer, 1);
+    /* Toujours après theme-mode.css : menu admin sans dégradé résiduel (même si thème déjà présent). */
+    if (strpos($buffer, 'backoffice-sidebar-overrides.css') === false) {
+        $inject .= "    <link rel=\"stylesheet\" href=\"assets/css/backoffice-sidebar-overrides.css\">\n";
+    }
+    if ($inject === '') {
+        return $buffer;
+    }
+    return preg_replace('/<\/head>/i', $inject . '</head>', $buffer, 1);
 });
 
 define('DEBUG_MODE', false);
@@ -80,6 +95,9 @@ require_once __DIR__ . '/controllers/PatientController.php';
 require_once __DIR__ . '/controllers/MedecinController.php';
 require_once __DIR__ . '/controllers/ArticleController.php';
 require_once __DIR__ . '/controllers/ReplyController.php';
+if (is_file(__DIR__ . '/controllers/GamificationController.php')) {
+    require_once __DIR__ . '/controllers/GamificationController.php';
+}
 
 // Contrôleurs optionnels
 $optionalControllers = [
@@ -120,6 +138,7 @@ $patientCtrl = new PatientController();
 $medecinCtrl = new MedecinController();
 $articleCtrl = new ArticleController();
 $replyCtrl   = new ReplyController();
+$gamificationCtrl = class_exists('GamificationController') ? new GamificationController() : null;
 
 $rendezVousCtrl    = class_exists('RendezVousController')    ? new RendezVousController()    : null;
 $ordonnanceCtrl    = class_exists('OrdonnanceController')    ? new OrdonnanceController()    : null;
@@ -131,15 +150,35 @@ $pharmacieCtrl     = class_exists('PharmacieController')     ? new PharmacieCont
 // =============================================
 $publicPages = [
     'accueil', 'login', 'register', 'forgot_password', 'reset_password',
+    'verify_2fa', 'resend_2fa', 'social_login', 'social_callback',
     'medecins', 'detail_medecin', 'blog_public', 'detail_article_public',
     'evenements', 'detail_evenement', 'event_register', 'sponsors', 'contact', 'about',
     'get_face_photo',
 ];
 
-$guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login'];
+$guestOnlyPages = ['register', 'forgot_password', 'reset_password', 'login', 'verify_2fa', 'resend_2fa'];
 
 $isLoggedIn = !empty($_SESSION['user_id']);
 $userRole   = $_SESSION['user_role'] ?? '';
+
+// Marquer une notification admin comme lue puis redirection (lien depuis la cloche)
+if (!empty($_GET['mark_notif_read']) && $userRole === 'admin') {
+    $mid = (int) $_GET['mark_notif_read'];
+    if ($mid > 0 && is_file(__DIR__ . '/models/AdminNotification.php')) {
+        try {
+            require_once __DIR__ . '/models/AdminNotification.php';
+            (new AdminNotification())->markRead($mid);
+        } catch (Throwable $e) {
+            /* table absente ou erreur */
+        }
+    }
+    $dest = $_GET['notif_redirect'] ?? 'index.php?page=dashboard';
+    if (!is_string($dest) || !preg_match('#^index\.php(\?.*)?$#', $dest)) {
+        $dest = 'index.php?page=dashboard';
+    }
+    header('Location: ' . $dest);
+    exit;
+}
 
 // =============================================
 // ROUTES SPÉCIALES (sans vérification de connexion)
@@ -195,6 +234,61 @@ if ($page === 'register_face') {
     exit;
 }
 
+/**
+ * Traduction via l'API MyMemory (requêtes fragmentées pour limites URL / quota).
+ */
+function valorys_mymemory_translate_chunk(string $text, string $langpair): string|false
+{
+    $url = 'https://api.mymemory.translated.net/get?q=' . rawurlencode($text) . '&langpair=' . rawurlencode($langpair);
+    $ctx = stream_context_create([
+        'http' => [
+            'timeout' => 15,
+            'header'  => "Accept: application/json\r\n",
+        ],
+    ]);
+    $raw = @file_get_contents($url, false, $ctx);
+    if ($raw === false) {
+        return false;
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data) || empty($data['responseData']['translatedText'])) {
+        return false;
+    }
+    $out = (string) $data['responseData']['translatedText'];
+    if (stripos($out, 'MYMEMORY') !== false && (stripos($out, 'QUOTA') !== false || stripos($out, 'LIMIT') !== false)) {
+        return false;
+    }
+    return $out;
+}
+
+function valorys_mymemory_translate(string $text, string $langpair): string|false
+{
+    $text = trim($text);
+    if ($text === '') {
+        return '';
+    }
+    $maxChunk = 400;
+    $parts    = [];
+    $len      = function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
+    $offset   = 0;
+    while ($offset < $len) {
+        if (function_exists('mb_substr')) {
+            $chunk = mb_substr($text, $offset, $maxChunk, 'UTF-8');
+            $step  = mb_strlen($chunk, 'UTF-8');
+        } else {
+            $chunk = substr($text, $offset, $maxChunk);
+            $step  = strlen($chunk);
+        }
+        $translated = valorys_mymemory_translate_chunk($chunk, $langpair);
+        if ($translated === false) {
+            return false;
+        }
+        $parts[] = $translated;
+        $offset += $step;
+    }
+    return implode('', $parts);
+}
+
 // Routes API
 if ($page === 'api_article') {
     $rawBody = file_get_contents('php://input');
@@ -209,10 +303,11 @@ if ($page === 'api_article') {
         $articleCtrl->show($id);
     } elseif ($method === 'POST') {
         requireLogin();
-        $articleCtrl->store();
+        // Corps JSON déjà lu ci-dessus (php://input n’est lisible qu’une fois).
+        $articleCtrl->store($bodyData);
     } elseif ($method === 'PUT' && $id) {
         requireLogin();
-        $articleCtrl->update($id);
+        $articleCtrl->update($id, $bodyData);
     } elseif ($method === 'DELETE' && $id) {
         requireLogin();
         $articleCtrl->destroy($id);
@@ -221,6 +316,66 @@ if ($page === 'api_article') {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
     }
+    exit;
+}
+
+if ($page === 'api_article_like') {
+    $articleCtrl->toggleLikeArticle();
+    exit;
+}
+
+if ($page === 'api_gamification' && $gamificationCtrl) {
+    $act = preg_replace('/[^a-z_]/', '', strtolower($_GET['action'] ?? 'stats'));
+    if ($act === 'stats') {
+        $gamificationCtrl->stats();
+        exit;
+    }
+    if ($act === 'leaderboard') {
+        $gamificationCtrl->leaderboard();
+        exit;
+    }
+    if ($act === 'history') {
+        $gamificationCtrl->history();
+        exit;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'message' => 'Action inconnue']);
+    exit;
+}
+
+// Traduction article (serveur → API MyMemory, sans redirection Google)
+if ($page === 'api_translate') {
+    header('Content-Type: application/json; charset=utf-8');
+    if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+        exit;
+    }
+    $raw = json_decode(file_get_contents('php://input'), true) ?? [];
+    $title = isset($raw['title']) ? (string)$raw['title'] : '';
+    $body  = isset($raw['body']) ? (string)$raw['body'] : '';
+    $lang  = preg_replace('/[^a-z]/', '', strtolower((string)($raw['lang'] ?? 'en')));
+    if (!in_array($lang, ['en', 'ar'], true)) {
+        echo json_encode(['success' => false, 'message' => 'Langue non supportée']);
+        exit;
+    }
+    $source = 'fr';
+    $pair = $source . '|' . $lang;
+    $tTitle = valorys_mymemory_translate($title, $pair);
+    $tBody  = valorys_mymemory_translate($body, $pair);
+    if ($tTitle === false || $tBody === false) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Traduction temporairement indisponible. Réessayez dans quelques instants.',
+        ]);
+        exit;
+    }
+    echo json_encode([
+        'success' => true,
+        'title'   => $tTitle,
+        'body'    => $tBody,
+        'lang'    => $lang,
+    ]);
     exit;
 }
 
@@ -253,13 +408,13 @@ if ($page === 'api_reply') {
     
     if ($method === 'POST') {
         requireLogin();
-        $replyCtrl->store();
+        $replyCtrl->store($bodyData);
         exit;
     }
     
     if ($method === 'PUT' && $id) {
         requireLogin();
-        $replyCtrl->update($id);
+        $replyCtrl->update($id, $bodyData);
         exit;
     }
     
@@ -422,6 +577,14 @@ switch ($page) {
         $front->registerEventAction();
         break;
 
+    case 'event_unregister':
+        $front->unregisterEventAction();
+        break;
+
+    case 'mes_inscriptions':
+        $front->mesInscriptionsEvenements();
+        break;
+
     case 'sponsors':
         $front->listSponsors();
         break;
@@ -477,16 +640,44 @@ case 'admin_article_create':
         $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->resetPassword() : $auth->showResetPassword($_GET['token'] ?? null);
         break;
 
+    case 'social_login':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=' . ($userRole === 'admin' ? 'dashboard' : 'accueil'));
+            exit;
+        }
+        $auth->startSocialLogin($_GET['provider'] ?? '');
+        break;
+
+    case 'social_callback':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=' . ($userRole === 'admin' ? 'dashboard' : 'accueil'));
+            exit;
+        }
+        $auth->handleSocialCallback($_GET['provider'] ?? '');
+        break;
+
+    case 'verify_2fa':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=' . ($userRole === 'admin' ? 'dashboard' : 'accueil'));
+            exit;
+        }
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $auth->verifyTwoFactorCode() : $auth->showVerifyTwoFactor();
+        break;
+
+    case 'resend_2fa':
+        if ($isLoggedIn) {
+            header('Location: index.php?page=accueil');
+            exit;
+        }
+        $auth->resendTwoFactorCode();
+        break;
+
     case 'logout':
         $auth->logout();
         break;
 
-    // ─── Profil utilisateur ────────────────
+    // ─── Profil utilisateur (même traitement : avatar, mot de passe, etc.) ─
     case 'profil':
-        requireLogin();
-        $userCtrl->showProfil();
-        break;
-
     case 'mon_profil':
         requireLogin();
         $front->monProfil();
@@ -530,7 +721,13 @@ case 'modifier_profil':
 
     case 'confirmer_rendez_vous':
         medecinOnly();
-        $front->confirmerRendezVous($id);
+        if ($rendezVousCtrl && $id) {
+            $rendezVousCtrl->medecinConfirmerRendezVous((int)$id);
+        } else {
+            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Confirmation impossible (module RDV ou identifiant manquant).'];
+            header('Location: index.php?page=mes_rendez_vous');
+            exit;
+        }
         break;
 
     case 'mes_ordonnances':
@@ -599,7 +796,17 @@ case 'modifier_profil':
 
     case 'rendez_vous_admin':
         adminOnly();
-        $action === 'delete' && $id ? $adminCtrl->deleteRendezVous($id) : $adminCtrl->listRendezVous();
+        if ($action === 'create') {
+            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createRendezVous() : $adminCtrl->showCreateRendezVous();
+        } elseif ($action === 'edit' && $id) {
+            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateRendezVous($id) : $adminCtrl->editRendezVous($id);
+        } elseif ($action === 'delete' && $id) {
+            $adminCtrl->deleteRendezVous($id);
+        } elseif ($action === 'show' && $id) {
+            $adminCtrl->showRendezVous($id);
+        } else {
+            $adminCtrl->listRendezVous();
+        }
         break;
 
 case 'articles_admin':
@@ -619,7 +826,8 @@ case 'articles_admin':
     } elseif ($action === 'delete' && $id) {
         $front->adminArticleDelete($id);
     } else {
-        header('Location: index.php?page=blog_public');
+        // Liste admin : même écran que blog_public (mode admin), URL cohérente avec la sidebar
+        $front->blogList();
     }
     break;
 
@@ -627,8 +835,13 @@ case 'articles_admin':
         adminOnly();
         if ($action === 'create') {
             $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createEvent() : $adminCtrl->showCreateEvent();
-        } elseif ($action === 'edit' && $id) {
-            $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateEvent($id) : $adminCtrl->editEvent($id);
+        } elseif ($action === 'edit') {
+            $editId = $id ?: (int)($_POST['id'] ?? 0);
+            if ($editId > 0) {
+                $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateEvent($editId) : $adminCtrl->editEvent($editId);
+            } else {
+                $adminCtrl->listEvents();
+            }
         } elseif ($action === 'delete' && $id) {
             $adminCtrl->deleteEvent($id);
         } else {
@@ -771,8 +984,13 @@ case 'articles_admin':
                 $sponsorCtrl->delete($id);
             } elseif ($action === 'create') {
                 $_SERVER['REQUEST_METHOD'] === 'POST' ? $sponsorCtrl->store() : $sponsorCtrl->create();
-            } elseif ($action === 'edit' && $id) {
-                $_SERVER['REQUEST_METHOD'] === 'POST' ? $sponsorCtrl->update($id) : $sponsorCtrl->edit($id);
+            } elseif ($action === 'edit') {
+                $editId = $id ?: (int)($_POST['id'] ?? $_GET['id'] ?? 0);
+                if ($editId > 0) {
+                    $_SERVER['REQUEST_METHOD'] === 'POST' ? $sponsorCtrl->update($editId) : $sponsorCtrl->edit($editId);
+                } else {
+                    $sponsorCtrl->index();
+                }
             } elseif ($action === 'show' && $id) {
                 $sponsorCtrl->show($id);
             } else {
@@ -789,8 +1007,15 @@ case 'articles_admin':
             $partCtrl = new ParticipationController();
             if ($action === 'delete' && $id) {
                 $partCtrl->delete($id);
-            } elseif ($action === 'edit' && $id) {
-                $_SERVER['REQUEST_METHOD'] === 'POST' ? $partCtrl->update($id) : $partCtrl->edit($id);
+            } elseif ($action === 'edit') {
+                $editId = $id ?: (int)($_POST['id'] ?? $_GET['id'] ?? 0);
+                if ($editId > 0) {
+                    $_SERVER['REQUEST_METHOD'] === 'POST' ? $partCtrl->update($editId) : $partCtrl->edit($editId);
+                } else {
+                    $partCtrl->indexAdmin();
+                }
+            } elseif ($action === 'create') {
+                $_SERVER['REQUEST_METHOD'] === 'POST' ? $partCtrl->store() : $partCtrl->create();
             } else {
                 $partCtrl->indexAdmin();
             }
@@ -896,18 +1121,11 @@ case 'ordonnances':
 
    case 'admin_rendezvous':
     adminOnly();
+    // Alias historique (même comportement que rendez_vous_admin ; POST conservé)
     if ($action === 'create') {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $adminCtrl->createRendezVous();
-        } else {
-            $adminCtrl->showCreateRendezVous();
-        }
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->createRendezVous() : $adminCtrl->showCreateRendezVous();
     } elseif ($action === 'edit' && $id) {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $adminCtrl->updateRendezVous($id);
-        } else {
-            $adminCtrl->editRendezVous($id);
-        }
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? $adminCtrl->updateRendezVous($id) : $adminCtrl->editRendezVous($id);
     } elseif ($action === 'delete' && $id) {
         $adminCtrl->deleteRendezVous($id);
     } elseif ($action === 'show' && $id) {
@@ -1026,8 +1244,24 @@ case 'supprimer_ordonnance_rdv':
 
 case 'api_ordonnance':
     requireLogin();
-    if ($action === 'get' && $id) {
-        $ordonnanceCtrl->apiGet($id);
+    $apiOrdId = (int)($_GET['id'] ?? 0);
+    if ($apiOrdId > 0 && $ordonnanceCtrl) {
+        $ordonnanceCtrl->apiGet($apiOrdId);
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => 'ID manquant']);
+    }
+    break;
+
+case 'download_ordonnance':
+    requireLogin();
+    $dlOrdId = (int)($_GET['id'] ?? 0);
+    if ($dlOrdId > 0 && $ordonnanceCtrl) {
+        $ordonnanceCtrl->downloadPdf($dlOrdId);
+    } else {
+        http_response_code(400);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Paramètre id manquant.';
     }
     break;
 
@@ -1062,10 +1296,19 @@ case 'api':
     requireLogin();
     header('Content-Type: application/json');
     
-    // Récupérer l'action depuis $_GET ou $_POST
-    $apiAction = $action;
-    if (empty($apiAction) && isset($_POST['action'])) {
-        $apiAction = $_POST['action'];
+    // Action : GET > POST > corps JSON (les fetch JSON ne remplissent pas $_POST)
+    $apiAction = isset($_GET['action']) ? preg_replace('/[^a-z0-9_]/', '', trim((string)$_GET['action'])) : '';
+    if ($apiAction === '' && isset($_POST['action'])) {
+        $apiAction = preg_replace('/[^a-z0-9_]/', '', trim((string)$_POST['action']));
+    }
+    if ($apiAction === '') {
+        $apiRaw = file_get_contents('php://input');
+        if ($apiRaw !== '' && $apiRaw !== false) {
+            $apiJson = json_decode($apiRaw, true);
+            if (is_array($apiJson) && isset($apiJson['action'])) {
+                $apiAction = preg_replace('/[^a-z0-9_]/', '', trim((string)$apiJson['action']));
+            }
+        }
     }
     
     switch ($apiAction) {

@@ -285,7 +285,7 @@ try {
         
         if (!$result['success']) {
             http_response_code(400);
-            $response['message'] = 'Erreur lors de la création';
+            $response['message'] = $result['message'] ?? 'Erreur lors de la création';
             exit(json_encode($response));
         }
         
@@ -361,15 +361,16 @@ try {
 
     // Parser JSON
     $input = file_get_contents('php://input');
-    $data = json_decode($input, true);
+    $data  = json_decode($input, true);
 
-    if (!$data) {
+    if (!is_array($data)) {
         http_response_code(400);
         $response['message'] = 'Données invalides';
         exit(json_encode($response));
     }
 
     // ============= VALIDATION =============
+    $response['errors'] = [];
     $content = trim($data['content'] ?? '');
     $rating = (int)($data['rating'] ?? 0);
     $emojis = $data['emojis'] ?? [];
@@ -388,41 +389,26 @@ try {
     }
 
     // ============= ANALYSE =============
-    $badWords = ['merde', 'putain', 'con', 'connard', 'salope', 'bâtard', 'idiot', 'stupide', 'abruti', 'salaud', 'foutre', 'chier', 'gueule', 'enculé', 'débile'];
-    // ===== Fonction détection insultes robuste =====
-    $hasProfanity = false;
-    $text = strtolower($content);
-    $words_in_text = preg_split('/[\s\.,!?;:\-0-9]+/', $text, -1, PREG_SPLIT_NO_EMPTY);
-    
-    foreach ($badWords as $word) {
-        // 1. Détection exacte
-        if (strpos($text, $word) !== false) {
-            $hasProfanity = true;
-            break;
-        }
-        
-        // 2. Distance Levenshtein (détecte les typos proches)
-        // putain → putin, puttin, putain, etc.
-        foreach ($words_in_text as $w) {
-            if (strlen($w) >= 4 && strlen($w) <= 10) {
-                $distance = levenshtein($word, $w);
-                // Si distance ≤ 1 et ressemble à 75% c'est suspect
-                if ($distance <= 1 && similar_text($word, $w, $percent) && $percent >= 75) {
+    // Mots entiers uniquement (évite « con » dans « content », « condition », etc.)
+    $badWordsListReview = ['merde', 'putain', 'con', 'connard', 'salope', 'bâtard', 'idiot', 'stupide', 'abruti', 'salaud', 'foutre', 'chier', 'gueule', 'enculé', 'débile'];
+    $hasProfanity         = false;
+    $textNorm             = mb_strtolower($content, 'UTF-8');
+    $tokens               = preg_split('/[^\p{L}\p{N}]+/u', $textNorm, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+    foreach ($tokens as $token) {
+        foreach ($badWordsListReview as $bw) {
+            $bw = mb_strtolower($bw, 'UTF-8');
+            if ($token === $bw) {
+                $hasProfanity = true;
+                break 2;
+            }
+            if (mb_strlen($token) >= 4 && mb_strlen($bw) >= 4) {
+                $pct = 0.0;
+                if (levenshtein($token, $bw) <= 1 && similar_text($token, $bw, $pct) && $pct >= 72.0) {
                     $hasProfanity = true;
                     break 2;
                 }
             }
-        }
-        
-        // 3. Variantes avec substitutions (a→0, e→3, i→1, o→0)
-        $pattern = preg_quote($word, '/');
-        $pattern = str_replace('a', '[a0@â]', $pattern);
-        $pattern = str_replace('e', '[e3é]', $pattern);
-        $pattern = str_replace('i', '[i1!|ï]', $pattern);
-        $pattern = str_replace('o', '[o0ô]', $pattern);
-        if (preg_match('/' . $pattern . '/i', $text)) {
-            $hasProfanity = true;
-            break;
         }
     }
 
@@ -454,7 +440,7 @@ try {
 
     if (!$result['success']) {
         http_response_code(400);
-        $response['message'] = 'Erreur lors de la création';
+        $response['message'] = $result['message'] ?? 'Erreur lors de la création';
         exit(json_encode($response));
     }
 

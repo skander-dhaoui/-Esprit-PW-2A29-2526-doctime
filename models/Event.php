@@ -13,8 +13,8 @@ class Event {
     // ═══════════════════════════════════════════════════════════
     public function create(array $data): int {
         $stmt = $this->db->prepare("
-            INSERT INTO events (titre, slug, description, contenu, date_debut, date_fin, lieu, adresse, capacite_max, places_restantes, image, prix, status, created_at)
-            VALUES (:titre, :slug, :description, :contenu, :date_debut, :date_fin, :lieu, :adresse, :capacite_max, :places_restantes, :image, :prix, :status, NOW())
+            INSERT INTO events (titre, slug, description, contenu, date_debut, date_fin, lieu, categorie, sponsor_id, adresse, capacite_max, places_restantes, image, prix, status, created_at)
+            VALUES (:titre, :slug, :description, :contenu, :date_debut, :date_fin, :lieu, :categorie, :sponsor_id, :adresse, :capacite_max, :places_restantes, :image, :prix, :status, NOW())
         ");
         
         // Générer le slug automatiquement
@@ -31,6 +31,9 @@ class Event {
             ':date_debut' => $data['date_debut'],
             ':date_fin' => $data['date_fin'],
             ':lieu' => $data['lieu'] ?? null,
+            ':categorie' => $data['categorie'] ?? null,
+            ':sponsor_id' => isset($data['sponsor_id']) && $data['sponsor_id'] !== '' && $data['sponsor_id'] !== null
+                ? (int)$data['sponsor_id'] : null,
             ':adresse' => $data['adresse'] ?? null,
             ':capacite_max' => $data['capacite_max'] ?? 0,
             ':places_restantes' => $placesRestantes,
@@ -78,11 +81,16 @@ class Event {
     }
 
     public function getUpcoming(): array {
+        $upcomingCond = "e.date_debut >= NOW() AND (
+            e.status IN ('à venir', 'en_cours', '? venir')
+            OR e.status IS NULL
+            OR TRIM(COALESCE(CAST(e.status AS CHAR), '')) = ''
+        )";
         $stmt = $this->db->query("
             SELECT e.*, 
                    (SELECT COUNT(*) FROM participations WHERE event_id = e.id) as nb_participants
             FROM events e
-            WHERE e.date_debut >= NOW() AND e.status = 'à venir'
+            WHERE {$upcomingCond}
             ORDER BY e.date_debut ASC
             LIMIT 10
         ");
@@ -94,18 +102,23 @@ class Event {
             SELECT e.*, 
                    (SELECT COUNT(*) FROM participations WHERE event_id = e.id) as nb_participants
             FROM events e
-            WHERE e.date_debut < NOW() OR e.status = 'terminé'
+            WHERE e.date_debut < NOW() OR e.status IN ('terminé', 'termin?', 'annulé', 'annul?')
             ORDER BY e.date_debut DESC
         ");
         return $stmt->fetchAll();
     }
 
     public function getFeatured(): array {
+        $upcomingCond = "e.date_debut >= NOW() AND (
+            e.status IN ('à venir', 'en_cours', '? venir')
+            OR e.status IS NULL
+            OR TRIM(COALESCE(CAST(e.status AS CHAR), '')) = ''
+        )";
         $stmt = $this->db->query("
             SELECT e.*, 
                    (SELECT COUNT(*) FROM participations WHERE event_id = e.id) as nb_participants
             FROM events e
-            WHERE e.status = 'à venir' AND e.date_debut >= NOW()
+            WHERE {$upcomingCond}
             ORDER BY e.date_debut ASC
             LIMIT 3
         ");
@@ -119,8 +132,8 @@ class Event {
         $fields = [];
         $params = [':id' => $id];
         
-        $allowed = ['titre', 'description', 'contenu', 'date_debut', 'date_fin', 
-                    'lieu', 'adresse', 'capacite_max', 'image', 'prix', 'status'];
+        $allowed = ['titre', 'description', 'contenu', 'date_debut', 'date_fin',
+                    'lieu', 'categorie', 'sponsor_id', 'adresse', 'capacite_max', 'image', 'prix', 'status'];
         
         foreach ($data as $key => $value) {
             if (in_array($key, $allowed)) {
@@ -168,10 +181,13 @@ class Event {
             $stmt1 = $this->db->prepare("DELETE FROM participations WHERE event_id = :id");
             $stmt1->execute([':id' => $id]);
             
-            // Supprimer les sponsors
-            $stmt2 = $this->db->prepare("DELETE FROM event_sponsors WHERE event_id = :id");
-            $stmt2->execute([':id' => $id]);
-            
+            try {
+                $stmt2 = $this->db->prepare("DELETE FROM event_sponsors WHERE event_id = :id");
+                $stmt2->execute([':id' => $id]);
+            } catch (PDOException $e) {
+                // Table absente sur certains schémas
+            }
+
             // Puis supprimer l'événement
             $stmt3 = $this->db->prepare("DELETE FROM events WHERE id = :id");
             return $stmt3->execute([':id' => $id]);
@@ -236,7 +252,11 @@ class Event {
                 DELETE FROM participations WHERE event_id = :event_id AND user_id = :user_id
             ");
             $stmt->execute([':event_id' => $eventId, ':user_id' => $userId]);
-            
+            if ($stmt->rowCount() === 0) {
+                $this->db->rollBack();
+                return false;
+            }
+
             // Incrémenter les places restantes
             $stmt2 = $this->db->prepare("
                 UPDATE events SET places_restantes = places_restantes + 1 WHERE id = :id
@@ -267,6 +287,38 @@ class Event {
         return (int)$stmt->fetchColumn();
     }
 
+    /**
+     * Vérifie si l’utilisateur peut s’inscrire (sans effectuer l’INSERT).
+     * @return array{ok:bool, code:string, message:string}
+     */
+    public function canUserRegister(int $eventId, int $userId): array {
+        if ($this->isParticipant($eventId, $userId)) {
+            return ['ok' => false, 'code' => 'already', 'message' => 'Vous êtes déjà inscrit à cet événement.'];
+        }
+        $event = $this->getById($eventId);
+        if (!$event) {
+            return ['ok' => false, 'code' => 'not_found', 'message' => 'Événement introuvable.'];
+        }
+        $status = (string)($event['status'] ?? '');
+        if (in_array($status, ['terminé', 'termin?', 'annulé', 'annul?'], true)) {
+            return ['ok' => false, 'code' => 'closed', 'message' => 'Les inscriptions ne sont plus ouvertes pour cet événement.'];
+        }
+        $start = strtotime((string)($event['date_debut']));
+        if ($start !== false && $start < time()) {
+            return ['ok' => false, 'code' => 'started', 'message' => 'Cet événement a déjà commencé ; les inscriptions sont closes.'];
+        }
+        $cap = (int)($event['capacite_max'] ?? 0);
+        $nb  = $this->countParticipants($eventId);
+        if ($cap > 0 && $nb >= $cap) {
+            return ['ok' => false, 'code' => 'full', 'message' => 'Il n’y a plus de places disponibles. Les inscriptions sont complètes.'];
+        }
+        $rest = $event['places_restantes'] ?? null;
+        if ($rest !== null && $rest !== '' && $cap > 0 && (int)$rest <= 0) {
+            return ['ok' => false, 'code' => 'full', 'message' => 'Il n’y a plus de places disponibles.'];
+        }
+        return ['ok' => true, 'code' => 'ok', 'message' => ''];
+    }
+
     public function getParticipants(int $eventId): array {
         $stmt = $this->db->prepare("
             SELECT u.id, u.nom, u.prenom, u.email, u.telephone, p.date_inscription, p.statut
@@ -288,13 +340,17 @@ class Event {
 
     public function countUpcoming(): int {
         return (int)$this->db->query("
-            SELECT COUNT(*) FROM events WHERE date_debut >= NOW() AND status = 'à venir'
+            SELECT COUNT(*) FROM events WHERE date_debut >= NOW() AND (
+                status IN ('à venir', 'en_cours', '? venir')
+                OR status IS NULL
+                OR TRIM(COALESCE(CAST(status AS CHAR), '')) = ''
+            )
         ")->fetchColumn();
     }
 
     public function countPast(): int {
         return (int)$this->db->query("
-            SELECT COUNT(*) FROM events WHERE date_debut < NOW() OR status = 'terminé'
+            SELECT COUNT(*) FROM events WHERE date_debut < NOW() OR status IN ('terminé', 'termin?', 'annulé', 'annul?')
         ")->fetchColumn();
     }
 

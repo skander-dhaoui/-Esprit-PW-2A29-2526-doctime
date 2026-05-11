@@ -1,132 +1,135 @@
 <?php
-// views/backoffice/medecin_edit.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
+$pageTitle = 'Modifier un médecin';
+$errors = $errors ?? [];
 
-// Vérifier que $medecin existe et est un tableau
 if (!isset($medecin) || !is_array($medecin)) {
-    die("ERREUR: Les données du médecin ne sont pas disponibles.");
+    $pageTitle = 'Médecin';
+    require __DIR__ . '/layout_header.php';
+    echo '<div class="alert alert-danger">Données médecin indisponibles.</div>';
+    require __DIR__ . '/layout_footer.php';
+    return;
 }
 
-$page_title = 'Modifier un médecin';
-$current_page = 'medecins_admin';
-$errors = isset($errors) ? $errors : [];
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title><?= $page_title ?> - Valorys</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body.bo-shell-body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .page-header { background: white; border-radius: 12px; padding: 18px 25px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; }
-        .page-header h4 { font-size: 18px; font-weight: 700; color: #1a2035; margin: 0; }
-        .content-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-        .form-label { font-weight: 600; }
-        .btn-submit { background: #4CAF50; color: white; border: none; padding: 10px 25px; border-radius: 8px; }
-        .btn-submit:hover { background: #2A7FAA; }
-        .field-error { font-size: 12px; margin-top: 6px; color: #c62828; font-weight: 500; }
-        .field-error i { margin-right: 5px; }
-        .form-control.error { border-color: #dc3545 !important; }
-    </style>
-</head>
-<body class="bo-shell-body">
-<?php require_once __DIR__ . '/sidebar.php'; ?>
+$m = empty($_POST) ? $medecin : array_merge($medecin, $_POST);
 
-<div class="main-content">
-    <div class="page-header">
-        <h4><i class="fas fa-user-edit"></i> Modifier le médecin</h4>
-        <a href="index.php?page=medecins_admin" class="btn btn-secondary">Retour</a>
+require __DIR__ . '/layout_header.php';
+?>
+
+<div class="bo-create-page">
+    <div class="bo-create-header mb-4">
+        <h1 class="bo-create-title">Modifier le médecin</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="index.php?page=medecins_admin">Médecins</a></li>
+                <li class="breadcrumb-item active" aria-current="page">#<?= (int) ($m['id'] ?? 0) ?></li>
+            </ol>
+        </nav>
     </div>
 
-    <div class="content-card">
-        <form method="POST" action="index.php?page=medecins_admin&action=edit&id=<?= $medecin['id'] ?? '' ?>">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Nom <span class="text-danger">*</span></label>
-                    <input type="text" name="nom" class="form-control<?php echo isset($errors['nom']) ? ' error' : ''; ?>" value="<?= htmlspecialchars($medecin['nom'] ?? $_POST['nom'] ?? '') ?>" required>
-                    <?php if(isset($errors['nom'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['nom']); ?></div>
-                    <?php endif; ?>
+    <div class="card bo-create-card shadow-sm">
+        <div class="card-header bo-create-card-head py-3">
+            <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Fiche médecin</h6>
+        </div>
+        <div class="card-body">
+            <form class="bo-create-form" method="POST" action="index.php?page=medecins_admin&action=edit&id=<?= (int) ($m['id'] ?? 0) ?>" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_nom">Nom <span class="text-danger">*</span></label>
+                        <input type="text" id="me_nom" name="nom" class="form-control <?= isset($errors['nom']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($m['nom'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['nom'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['nom'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_prenom">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" id="me_prenom" name="prenom" class="form-control <?= isset($errors['prenom']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($m['prenom'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['prenom'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['prenom'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_email">Email <span class="text-danger">*</span></label>
+                        <input type="email" id="me_email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($m['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <?php if (!empty($errors['email'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['email'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_tel">Téléphone</label>
+                        <input type="tel" id="me_tel" name="telephone" class="form-control <?= isset($errors['telephone']) ? 'is-invalid' : '' ?>"
+                               value="<?= htmlspecialchars((string) ($m['telephone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                        <?php if (!empty($errors['telephone'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['telephone'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_pass">Nouveau mot de passe</label>
+                        <input type="password" id="me_pass" name="password" class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
+                               autocomplete="new-password" minlength="6" placeholder="Laisser vide pour ne pas changer">
+                        <div class="form-text">Min. 6 caractères si renseigné.</div>
+                        <?php if (!empty($errors['password'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['password'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_spec">Spécialité <span class="text-danger">*</span></label>
+                        <?php
+                        $specialites = ['Généraliste','Cardiologue','Dermatologue','Gynécologue','Pédiatre','Ophtalmologue','Orthopédiste','Neurologue','Psychiatre','Dentiste','Autre'];
+                        $spCur = (string) ($m['specialite'] ?? '');
+                        ?>
+                        <select id="me_spec" name="specialite" class="form-select <?= isset($errors['specialite']) ? 'is-invalid' : '' ?>" required>
+                            <option value="">— Choisir —</option>
+                            <?php foreach ($specialites as $s): ?>
+                                <option value="<?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?>" <?= $spCur === $s ? 'selected' : '' ?>><?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                            <?php if ($spCur !== '' && !in_array($spCur, $specialites, true)): ?>
+                                <option value="<?= htmlspecialchars($spCur, ENT_QUOTES, 'UTF-8') ?>" selected><?= htmlspecialchars($spCur, ENT_QUOTES, 'UTF-8') ?> (actuel)</option>
+                            <?php endif; ?>
+                        </select>
+                        <?php if (!empty($errors['specialite'])): ?>
+                            <div class="invalid-feedback"><?= htmlspecialchars($errors['specialite'], ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_ordre">N° d’ordre</label>
+                        <input type="text" id="me_ordre" name="numero_ordre" class="form-control"
+                               value="<?= htmlspecialchars((string) ($m['numero_ordre'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_prix">Tarif consultation (TND)</label>
+                        <input type="number" id="me_prix" name="consultation_prix" class="form-control" step="0.01" min="0"
+                               value="<?= htmlspecialchars((string) ($m['consultation_prix'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_exp">Années d’expérience</label>
+                        <input type="number" id="me_exp" name="annee_experience" class="form-control" min="0" step="1"
+                               value="<?= htmlspecialchars((string) ($m['annee_experience'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="me_statut">Statut</label>
+                        <?php $st = (string) ($m['statut'] ?? 'actif'); ?>
+                        <select id="me_statut" name="statut" class="form-select">
+                            <option value="actif" <?= $st === 'actif' ? 'selected' : '' ?>>Actif</option>
+                            <option value="inactif" <?= $st === 'inactif' ? 'selected' : '' ?>>Inactif</option>
+                            <option value="en_attente" <?= $st === 'en_attente' ? 'selected' : '' ?>>En attente</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="me_cab">Adresse du cabinet</label>
+                        <textarea id="me_cab" name="cabinet_adresse" class="form-control" rows="3"><?= htmlspecialchars((string) ($m['cabinet_adresse'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Prénom <span class="text-danger">*</span></label>
-                    <input type="text" name="prenom" class="form-control<?php echo isset($errors['prenom']) ? ' error' : ''; ?>" value="<?= htmlspecialchars($medecin['prenom'] ?? $_POST['prenom'] ?? '') ?>" required>
-                    <?php if(isset($errors['prenom'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['prenom']); ?></div>
-                    <?php endif; ?>
+
+                <div class="bo-create-actions d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+                    <a href="index.php?page=medecins_admin" class="btn btn-outline-secondary">Retour à la liste</a>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="email" name="email" class="form-control<?php echo isset($errors['email']) ? ' error' : ''; ?>" value="<?= htmlspecialchars($medecin['email'] ?? $_POST['email'] ?? '') ?>" required>
-                    <?php if(isset($errors['email'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['email']); ?></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Téléphone</label>
-                    <input type="tel" name="telephone" class="form-control<?php echo isset($errors['telephone']) ? ' error' : ''; ?>" value="<?= htmlspecialchars($medecin['telephone'] ?? $_POST['telephone'] ?? '') ?>">
-                    <?php if(isset($errors['telephone'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['telephone']); ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Nouveau mot de passe</label>
-                    <input type="password" name="password" class="form-control<?php echo isset($errors['password']) ? ' error' : ''; ?>" placeholder="Laisser vide pour ne pas changer">
-                    <?php if(isset($errors['password'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['password']); ?></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Spécialité <span class="text-danger">*</span></label>
-                    <input type="text" name="specialite" class="form-control<?php echo isset($errors['specialite']) ? ' error' : ''; ?>" value="<?= htmlspecialchars($medecin['specialite'] ?? $_POST['specialite'] ?? '') ?>" required>
-                    <?php if(isset($errors['specialite'])): ?>
-                        <div class="field-error"><i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($errors['specialite']); ?></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Numéro d'ordre</label>
-                    <input type="text" name="numero_ordre" class="form-control" value="<?= htmlspecialchars($medecin['numero_ordre'] ?? '') ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Tarif consultation (€)</label>
-                    <input type="number" name="consultation_prix" class="form-control" step="1" value="<?= $medecin['consultation_prix'] ?? '' ?>">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Années d'expérience</label>
-                    <input type="number" name="annee_experience" class="form-control" value="<?= $medecin['annee_experience'] ?? '' ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Statut</label>
-                    <select name="statut" class="form-control">
-                        <option value="actif" <?= (($medecin['statut'] ?? '') === 'actif') ? 'selected' : '' ?>>Actif</option>
-                        <option value="inactif" <?= (($medecin['statut'] ?? '') === 'inactif') ? 'selected' : '' ?>>Inactif</option>
-                    </select>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Adresse du cabinet</label>
-                <textarea name="cabinet_adresse" class="form-control" rows="3"><?= htmlspecialchars($medecin['cabinet_adresse'] ?? '') ?></textarea>
-            </div>
-            <hr>
-            <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Enregistrer</button>
-            <a href="index.php?page=medecins_admin" class="btn btn-secondary">Annuler</a>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
-</body>
-</html>
+
+<?php require __DIR__ . '/layout_footer.php'; ?>

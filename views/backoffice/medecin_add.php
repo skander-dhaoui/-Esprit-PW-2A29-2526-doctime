@@ -1,98 +1,101 @@
 <?php
-// views/backoffice/medecins_list.php
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../../index.php?page=login');
-    exit;
-}
-
-$page_title = 'Gestion des médecins';
-$current_page = 'medecins_admin';
+$pageTitle = 'Nouveau médecin';
+require __DIR__ . '/layout_header.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?> - Valorys</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <?php require_once __DIR__ . '/../partials/backoffice_shell_styles.php'; ?>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body.bo-shell-body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .page-header { background: white; border-radius: 12px; padding: 18px 25px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-        .page-header h4 { font-size: 18px; font-weight: 700; color: #1a2035; margin: 0; display: flex; align-items: center; gap: 10px; }
-        .page-header h4 i { color: #4CAF50; }
-        .admin-avatar { width: 40px; height: 40px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: bold; text-decoration: none; }
-        .content-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
-        .card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .btn-action { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin: 0 2px; text-decoration: none; }
-        .btn-view { background: #e3f0ff; color: #1565c0; }
-        .btn-edit { background: #fff3e0; color: #e65100; }
-        .btn-delete { background: #fdecea; color: #c62828; }
-        .badge-actif { background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-        .badge-inactif { background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-        .table thead th { background: #1a2035; color: white; font-weight: 600; font-size: 13px; padding: 12px 14px; border: none; }
-    </style>
-</head>
-<body class="bo-shell-body">
-<?php require_once __DIR__ . '/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="page-header">
-        <h4><i class="fas fa-user-md"></i> Gestion des médecins</h4>
-        <a href="index.php?page=mon_profil" class="admin-avatar"><?= strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1)) ?></a>
-    </div>
-
-    <?php if (isset($_SESSION['flash'])): ?>
-        <div class="alert alert-<?= $_SESSION['flash']['type'] === 'error' ? 'danger' : 'success' ?> alert-dismissible fade show">
-            <?= htmlspecialchars($_SESSION['flash']['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<div class="bo-create-page">
+    <?php if (!empty($_SESSION['flash'])): ?>
+        <?php $f = $_SESSION['flash']; unset($_SESSION['flash']); ?>
+        <div class="alert alert-<?= (($f['type'] ?? '') === 'error' || ($f['type'] ?? '') === 'danger') ? 'danger' : 'success' ?> alert-dismissible fade show mb-4">
+            <?= htmlspecialchars($f['message'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
         </div>
-        <?php unset($_SESSION['flash']); ?>
     <?php endif; ?>
 
-    <div class="content-card">
-        <div class="card-title-row">
-            <h5><i class="fas fa-list"></i> Liste des médecins (<?= count($medecins) ?>)</h5>
-            <a href="index.php?page=medecins_admin&action=add" class="btn btn-success btn-sm">
-                <i class="fas fa-plus"></i> Ajouter un médecin
-            </a>
+    <div class="bo-create-header mb-4">
+        <h1 class="bo-create-title">Nouveau médecin</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="index.php?page=medecins_admin">Médecins</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Ajouter</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="card bo-create-card shadow-sm">
+        <div class="card-header bo-create-card-head py-3">
+            <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Identité et cabinet</h6>
         </div>
-        <div class="table-responsive">
-            <table id="medecinsTable" class="table table-hover align-middle">
-                <thead>
-                    <tr><th>Nom complet</th><th>Email</th><th>Spécialité</th><th>Téléphone</th><th>Statut</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                <?php foreach ($medecins as $m): ?>
-                <tr>
-                    <td><strong>Dr. <?= htmlspecialchars($m['prenom'] . ' ' . $m['nom']) ?></strong></td>
-                    <td><?= htmlspecialchars($m['email']) ?></td>
-                    <td><?= htmlspecialchars($m['specialite'] ?? '—') ?></td>
-                    <td><?= htmlspecialchars($m['telephone'] ?? '—') ?></td>
-                    <td><span class="badge-actif"><?= $m['statut'] === 'actif' ? 'Actif' : 'Inactif' ?></span></td>
-                    <td>
-                        <a href="index.php?page=medecins_admin&action=show&id=<?= $m['id'] ?>" class="btn-action btn-view"><i class="fas fa-eye"></i></a>
-                        <a href="index.php?page=medecins_admin&action=edit&id=<?= $m['id'] ?>" class="btn-action btn-edit"><i class="fas fa-edit"></i></a>
-                        <a href="index.php?page=medecins_admin&action=delete&id=<?= $m['id'] ?>" class="btn-action btn-delete" onclick="return confirm('Supprimer ce médecin ?')"><i class="fas fa-trash"></i></a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
+        <div class="card-body">
+            <form class="bo-create-form" method="POST" action="index.php?page=medecins_admin&action=add" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_nom">Nom <span class="text-danger">*</span></label>
+                        <input type="text" id="ma_nom" name="nom" class="form-control" required
+                               value="<?= htmlspecialchars($_POST['nom'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_prenom">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" id="ma_prenom" name="prenom" class="form-control" required
+                               value="<?= htmlspecialchars($_POST['prenom'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_email">Email <span class="text-danger">*</span></label>
+                        <input type="email" id="ma_email" name="email" class="form-control" required autocomplete="email"
+                               value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_tel">Téléphone</label>
+                        <input type="tel" id="ma_tel" name="telephone" class="form-control" inputmode="tel"
+                               value="<?= htmlspecialchars($_POST['telephone'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Ex. 71 234 567">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_pass">Mot de passe <span class="text-danger">*</span></label>
+                        <input type="password" id="ma_pass" name="password" class="form-control" autocomplete="new-password" required minlength="6">
+                        <div class="form-text">Au moins 6 caractères.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_spec">Spécialité <span class="text-danger">*</span></label>
+                        <?php
+                        $specialites = ['Généraliste','Cardiologue','Dermatologue','Gynécologue','Pédiatre','Ophtalmologue','Orthopédiste','Neurologue','Psychiatre','Dentiste','Autre'];
+                        $sp = $_POST['specialite'] ?? '';
+                        ?>
+                        <select id="ma_spec" name="specialite" class="form-select" required>
+                            <option value="">— Choisir —</option>
+                            <?php foreach ($specialites as $s): ?>
+                                <option value="<?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?>" <?= $sp === $s ? 'selected' : '' ?>><?= htmlspecialchars($s, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_ordre">N° d’ordre</label>
+                        <input type="text" id="ma_ordre" name="numero_ordre" class="form-control"
+                               value="<?= htmlspecialchars($_POST['numero_ordre'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                               placeholder="Unique si renseigné">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_prix">Tarif consultation (TND)</label>
+                        <input type="number" id="ma_prix" name="consultation_prix" class="form-control" step="0.01" min="0"
+                               value="<?= htmlspecialchars($_POST['consultation_prix'] ?? '50', ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ma_exp">Années d’expérience</label>
+                        <input type="number" id="ma_exp" name="annee_experience" class="form-control" min="0" step="1"
+                               value="<?= htmlspecialchars($_POST['annee_experience'] ?? '0', ENT_QUOTES, 'UTF-8') ?>">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="ma_cab">Adresse du cabinet</label>
+                        <textarea id="ma_cab" name="cabinet_adresse" class="form-control" rows="3"><?= htmlspecialchars($_POST['cabinet_adresse'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                    </div>
+                </div>
+
+                <div class="bo-create-actions d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Créer le médecin</button>
+                    <a href="index.php?page=medecins_admin" class="btn btn-outline-secondary">Annuler</a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('#medecinsTable').DataTable({ language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json' }, pageLength: 10 });
-});
-</script>
-</body>
-</html>
+<?php require __DIR__ . '/layout_footer.php'; ?>

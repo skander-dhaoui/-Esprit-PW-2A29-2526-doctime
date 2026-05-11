@@ -110,6 +110,19 @@ class Review {
      */
     public function create(array $data): array {
         try {
+            $title = trim((string)($data['title'] ?? ''));
+            if ($title === '') {
+                $raw = trim((string)($data['content'] ?? ''));
+                if ($raw !== '') {
+                    $title = function_exists('mb_substr')
+                        ? (mb_substr($raw, 0, 120, 'UTF-8') . ((function_exists('mb_strlen') ? mb_strlen($raw, 'UTF-8') : strlen($raw)) > 120 ? '…' : ''))
+                        : (substr($raw, 0, 120) . (strlen($raw) > 120 ? '…' : ''));
+                }
+            }
+            if ($title === '') {
+                $title = 'Avis';
+            }
+
             $stmt = $this->db->prepare("
                 INSERT INTO reviews (user_id, rating, title, content, sentiment, sentiment_score, has_profanity, is_approved)
                 VALUES (:user_id, :rating, :title, :content, :sentiment, :sentiment_score, :has_profanity, :is_approved)
@@ -118,7 +131,7 @@ class Review {
             $stmt->execute([
                 ':user_id' => $data['user_id'],
                 ':rating' => $data['rating'],
-                ':title' => $data['title'],
+                ':title' => $title,
                 ':content' => $data['content'],
                 ':sentiment' => $data['sentiment'] ?? null,
                 ':sentiment_score' => $data['sentiment_score'] ?? null,
